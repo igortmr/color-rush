@@ -20,7 +20,7 @@
     display: none;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
+    gap: 20px;
     padding: 24px;
     width: 100%;
     max-width: 520px;
@@ -28,7 +28,7 @@
   .screen.active { display: flex; }
 
   h1 {
-    font-size: 3rem;
+    font-size: 2.8rem;
     font-weight: 900;
     background: linear-gradient(90deg, #ff4757, #ffa502, #2ed573, #1e90ff, #a55eea);
     -webkit-background-clip: text;
@@ -36,6 +36,52 @@
     color: transparent;
     text-align: center;
   }
+  .card {
+    width: 100%;
+    background: #16213e;
+    border-radius: 16px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 2px solid #0f3460;
+    background: #0f3460;
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+  }
+  input:focus { border-color: #a55eea; }
+  input::placeholder { color: #8a94c8; }
+  button {
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(90deg, #ff4757, #ffa502);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  button:hover { transform: scale(1.04); }
+  button.secondary { background: #16213e; border: 2px solid #a55eea; }
+  button.google { background: #fff; color: #333; }
+  button.link {
+    background: none;
+    border: none;
+    color: #8a94c8;
+    font-size: 0.9rem;
+    font-weight: 400;
+    text-decoration: underline;
+    padding: 4px;
+  }
+  .error { color: #ff6b81; font-size: 0.9rem; text-align: center; min-height: 1.2em; }
+
   .mode-card {
     width: 100%;
     background: #16213e;
@@ -45,12 +91,10 @@
     cursor: pointer;
     transition: transform 0.15s, border-color 0.15s;
     text-align: left;
-    color: #fff;
-    font-size: 1rem;
   }
   .mode-card:hover { transform: scale(1.03); border-color: #a55eea; }
-  .mode-card h2 { font-size: 1.4rem; margin-bottom: 6px; }
-  .mode-card p { color: #cfd8ff; font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px; }
+  .mode-card h2 { font-size: 1.35rem; margin-bottom: 6px; }
+  .mode-card p { color: #cfd8ff; font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
   .record-badge {
     display: inline-block;
     background: #0f3460;
@@ -60,21 +104,16 @@
     border-radius: 20px;
     font-size: 0.85rem;
   }
-  button {
-    font-size: 1.15rem;
-    font-weight: 700;
-    padding: 12px 36px;
-    border: none;
-    border-radius: 50px;
-    background: linear-gradient(90deg, #ff4757, #ffa502);
-    color: #fff;
-    cursor: pointer;
-    transition: transform 0.15s;
+  .user-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-size: 0.95rem;
+    color: #cfd8ff;
   }
-  button:hover { transform: scale(1.06); }
-  button.secondary { background: #16213e; border: 2px solid #a55eea; }
 
-  /* game screen */
+  /* game */
   .hud {
     display: flex;
     justify-content: space-between;
@@ -84,13 +123,7 @@
     flex-wrap: wrap;
     gap: 8px;
   }
-  .timer-track {
-    width: 100%;
-    height: 16px;
-    background: #16213e;
-    border-radius: 8px;
-    overflow: hidden;
-  }
+  .timer-track { width: 100%; height: 16px; background: #16213e; border-radius: 8px; overflow: hidden; }
   .timer-fill {
     height: 100%;
     width: 100%;
@@ -105,12 +138,7 @@
     display: flex;
     align-items: center;
   }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    width: 100%;
-  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
   .square {
     aspect-ratio: 1;
     border-radius: 16px;
@@ -133,12 +161,7 @@
   }
 
   /* game over */
-  .final-score {
-    font-size: 5rem;
-    font-weight: 900;
-    color: #ffa502;
-    line-height: 1;
-  }
+  .final-score { font-size: 5rem; font-weight: 900; color: #ffa502; line-height: 1; }
   .go-title { font-size: 2rem; font-weight: 800; color: #ff4757; }
   .new-record {
     display: none;
@@ -148,30 +171,84 @@
     animation: pulse 0.8s infinite alternate;
   }
   .new-record.show { display: block; }
-  @keyframes pulse {
-    from { transform: scale(1); }
-    to   { transform: scale(1.15); }
-  }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
   .record-line { color: #cfd8ff; font-size: 1rem; }
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* ranking */
+  .tabs { display: flex; gap: 10px; width: 100%; }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    background: #16213e;
+    border: 2px solid transparent;
+    color: #cfd8ff;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+  }
+  .tab.active { border-color: #a55eea; color: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
+  th { color: #8a94c8; font-size: 0.8rem; text-transform: uppercase; }
+  tbody tr { background: #16213e; }
+  tbody tr:nth-child(odd) { background: #131c36; }
+  tbody tr.me { outline: 2px solid #ffd32a; }
+  td.pos { font-weight: 800; color: #ffa502; width: 44px; }
+  td.pts { text-align: right; font-weight: 800; color: #ffd32a; }
+  .muted { color: #8a94c8; font-size: 0.85rem; text-align: center; }
 </style>
 </head>
 <body>
 
-<!-- MENU -->
-<div class="screen active" id="menu-screen">
+<!-- LOADING -->
+<div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><p class="muted">Carregando...</p></div>
+
+<!-- AUTH -->
+<div class="screen" id="auth-screen">
   <h1>COLOR RUSH</h1>
+  <div class="card">
+    <input type="email" id="auth-email" placeholder="E-mail">
+    <input type="password" id="auth-pass" placeholder="Senha (mín. 6 caracteres)">
+    <div class="error" id="auth-error"></div>
+    <button onclick="doLogin()">ENTRAR</button>
+    <button class="secondary" onclick="doSignup()">CRIAR CONTA</button>
+    <button class="google" onclick="doGoogle()">🔵 Entrar com Google</button>
+    <button class="link" onclick="playOffline()">Jogar sem conta (sem ranking)</button>
+  </div>
+</div>
+
+<!-- NICK -->
+<div class="screen" id="nick-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="card">
+    <p style="text-align:center;">Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
+    <input type="text" id="nick-input" maxlength="16" placeholder="Seu nick (3 a 16 caracteres)">
+    <div class="error" id="nick-error"></div>
+    <button onclick="saveNick()">CONFIRMAR</button>
+  </div>
+</div>
+
+<!-- MENU -->
+<div class="screen" id="menu-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="user-bar">
+    <span id="user-label"></span>
+    <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
+  </div>
   <div class="mode-card" onclick="startGame('classic')">
     <h2>🎨 Clássico</h2>
     <p>Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
-    <span class="record-badge">🏆 Recorde: <span id="record-classic">0</span></span>
+    <span class="record-badge">🏆 Seu recorde: <span id="record-classic">0</span></span>
   </div>
   <div class="mode-card" onclick="startGame('reverse')">
     <h2>🔄 Reverso</h2>
     <p>Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
-    <span class="record-badge">🏆 Recorde: <span id="record-reverse">0</span></span>
+    <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
   </div>
-  <p style="color:#8a94c8; font-size:0.85rem; text-align:center;">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
+  <button class="secondary" onclick="showRanking()">🌍 RANKING GLOBAL</button>
+  <p class="muted">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
 <!-- GAME -->
@@ -192,14 +269,54 @@
   <div class="new-record" id="new-record">🎉 NOVO RECORDE! 🎉</div>
   <div>Sua pontuação:</div>
   <div class="final-score" id="final-score">0</div>
-  <div class="record-line">🏆 Recorde neste modo: <span id="record-over">0</span></div>
+  <div class="record-line">🏆 Seu recorde neste modo: <span id="record-over">0</span></div>
+  <div class="muted" id="sync-status"></div>
   <div class="btn-row">
     <button onclick="startGame(mode)">JOGAR DE NOVO</button>
     <button class="secondary" onclick="showMenu()">MENU</button>
   </div>
 </div>
 
-<script>
+<!-- RANKING -->
+<div class="screen" id="ranking-screen">
+  <h1 style="font-size:2rem;">🌍 RANKING GLOBAL</h1>
+  <div class="tabs">
+    <div class="tab active" id="tab-classic" onclick="loadRanking('classic')">🎨 Clássico</div>
+    <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')">🔄 Reverso</div>
+  </div>
+  <div class="card" style="padding:10px;">
+    <table>
+      <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">Pontos</th></tr></thead>
+      <tbody id="ranking-body"><tr><td colspan="3" class="muted">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+  <button class="secondary" onclick="showMenu()">VOLTAR</button>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {
+  getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
+  authDomain: "color-rush-474ee.firebaseapp.com",
+  projectId: "color-rush-474ee",
+  storageBucket: "color-rush-474ee.firebasestorage.app",
+  messagingSenderId: "988545815222",
+  appId: "1:988545815222:web:f0cae8432b04550ca60c17"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* ================== state ================== */
 const COLORS = [
   { name: 'AZUL',     hex: '#1e90ff' },
   { name: 'VERMELHO', hex: '#ff4757' },
@@ -213,6 +330,9 @@ const COLORS = [
 const SQUARES = 4;
 
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
+let currentUser = null;          // usuário do firebase ou null
+let offline = false;             // jogando sem conta
+let myData = { nick: null, classic: 0, reverse: 0 };
 
 const $ = id => document.getElementById(id);
 const show = id => {
@@ -222,42 +342,129 @@ const show = id => {
 const shuffle = a => a.sort(() => Math.random() - 0.5);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
-/* ---- records (localStorage with in-memory fallback) ---- */
-const memRecords = { classic: 0, reverse: 0 };
-function getRecord(m) {
-  try { return parseInt(localStorage.getItem('colorRushRecord_' + m)) || 0; }
-  catch { return memRecords[m]; }
+/* ================== recordes locais (modo sem conta) ================== */
+function getLocalRecord(m) {
+  try { return parseInt(localStorage.getItem('colorRushRecord_' + m)) || 0; } catch { return 0; }
 }
-function setRecord(m, v) {
-  memRecords[m] = v;
+function setLocalRecord(m, v) {
   try { localStorage.setItem('colorRushRecord_' + m, v); } catch {}
 }
-function refreshMenuRecords() {
-  $('record-classic').textContent = getRecord('classic');
-  $('record-reverse').textContent = getRecord('reverse');
+function myRecord(m) {
+  return offline ? getLocalRecord(m) : (myData[m] || 0);
 }
 
-function showMenu() {
-  refreshMenuRecords();
+/* ================== autenticação ================== */
+const AUTH_ERRORS = {
+  'auth/invalid-email': 'E-mail inválido.',
+  'auth/missing-password': 'Digite a senha.',
+  'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+  'auth/email-already-in-use': 'Este e-mail já tem conta. Use ENTRAR.',
+  'auth/invalid-credential': 'E-mail ou senha incorretos.',
+  'auth/wrong-password': 'E-mail ou senha incorretos.',
+  'auth/user-not-found': 'Conta não encontrada. Use CRIAR CONTA.',
+  'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco.',
+  'auth/popup-closed-by-user': 'Login cancelado.',
+  'auth/popup-blocked': 'Popup bloqueado pelo navegador. Permita popups.',
+};
+const authErrMsg = e => AUTH_ERRORS[e.code] || 'Erro: ' + (e.code || e.message);
+
+window.doLogin = async () => {
+  $('auth-error').textContent = '';
+  try {
+    await signInWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.doSignup = async () => {
+  $('auth-error').textContent = '';
+  try {
+    await createUserWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.doGoogle = async () => {
+  $('auth-error').textContent = '';
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.doLogout = async () => {
+  offline = false;
+  await signOut(auth);
+  show('auth-screen');
+};
+window.playOffline = () => {
+  offline = true;
+  currentUser = null;
+  myData = { nick: null, classic: 0, reverse: 0 };
+  showMenu();
+};
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    offline = false;
+    currentUser = user;
+    try {
+      const snap = await getDoc(doc(db, 'scores', user.uid));
+      myData = snap.exists() ? { classic: 0, reverse: 0, ...snap.data() } : { nick: null, classic: 0, reverse: 0 };
+    } catch { myData = { nick: null, classic: 0, reverse: 0 }; }
+    if (!myData.nick) show('nick-screen');
+    else showMenu();
+  } else {
+    currentUser = null;
+    if (!offline) show('auth-screen');
+  }
+});
+
+/* ================== nick ================== */
+window.saveNick = async () => {
+  const nick = $('nick-input').value.trim();
+  $('nick-error').textContent = '';
+  if (nick.length < 3 || nick.length > 16) {
+    $('nick-error').textContent = 'O nick deve ter entre 3 e 16 caracteres.';
+    return;
+  }
+  try {
+    myData.nick = nick;
+    await setDoc(doc(db, 'scores', currentUser.uid), {
+      nick,
+      classic: myData.classic || 0,
+      reverse: myData.reverse || 0,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    showMenu();
+  } catch (e) { $('nick-error').textContent = 'Erro ao salvar: ' + e.message; }
+};
+
+/* ================== menu ================== */
+window.showMenu = () => {
+  $('record-classic').textContent = myRecord('classic');
+  $('record-reverse').textContent = myRecord('reverse');
+  if (offline) {
+    $('user-label').textContent = '👤 Jogando sem conta';
+    $('logout-btn').textContent = 'entrar';
+  } else {
+    $('user-label').textContent = '👤 ' + (myData.nick || '');
+    $('logout-btn').textContent = 'sair';
+  }
   show('menu-screen');
-}
+};
 
-function startGame(m) {
+/* ================== jogo ================== */
+window.startGame = (m) => {
   mode = m;
   score = 0;
   duration = 10000;
   playing = true;
   target = pick(COLORS);
   $('score').textContent = 0;
-  $('record-hud').textContent = getRecord(mode);
+  $('record-hud').textContent = myRecord(mode);
   show('game-screen');
   newRound(true);
-}
+};
 
 function newRound(first) {
   nextTarget = pick(COLORS);
   const others = shuffle(COLORS.filter(c => c !== target)).slice(0, SQUARES - 1);
-  const items = shuffle([target, ...others]); // classic: backgrounds | reverse: words
+  const items = shuffle([target, ...others]); // clássico: fundos | reverso: palavras
   const distractors = shuffle(COLORS.filter(c => c !== nextTarget)).slice(0, SQUARES - 1);
   let d = 0;
 
@@ -265,7 +472,6 @@ function newRound(first) {
   grid.innerHTML = '';
   items.forEach(item => {
     const paired = (item === target) ? nextTarget : distractors[d++];
-    // classic: item = background, paired = word | reverse: item = word, paired = background
     const bg   = (mode === 'classic') ? item : paired;
     const word = (mode === 'classic') ? paired : item;
     const el = document.createElement('div');
@@ -316,20 +522,71 @@ function handleClick(item) {
   }
 }
 
-function gameOver(reason) {
+async function gameOver(reason) {
   playing = false;
   cancelAnimationFrame(rafId);
-  const record = getRecord(mode);
+  const record = myRecord(mode);
   const isNewRecord = score > record;
-  if (isNewRecord) setRecord(mode, score);
+
   $('over-reason').textContent = reason;
   $('final-score').textContent = score;
   $('record-over').textContent = Math.max(score, record);
   $('new-record').classList.toggle('show', isNewRecord);
+  $('sync-status').textContent = '';
   show('over-screen');
+
+  if (isNewRecord) {
+    if (offline) {
+      setLocalRecord(mode, score);
+      $('sync-status').textContent = 'Crie uma conta para entrar no ranking global!';
+    } else {
+      try {
+        await setDoc(doc(db, 'scores', currentUser.uid), {
+          nick: myData.nick,
+          [mode]: score,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        myData[mode] = score;
+        $('sync-status').textContent = '✅ Recorde enviado para o ranking global!';
+      } catch (e) {
+        $('sync-status').textContent = '⚠️ Não foi possível enviar o recorde.';
+      }
+    }
+  }
 }
 
-refreshMenuRecords();
+/* ================== ranking ================== */
+window.showRanking = () => {
+  show('ranking-screen');
+  loadRanking('classic');
+};
+
+window.loadRanking = async (m) => {
+  $('tab-classic').classList.toggle('active', m === 'classic');
+  $('tab-reverse').classList.toggle('active', m === 'reverse');
+  const body = $('ranking-body');
+  body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
+  try {
+    const q = query(collection(db, 'scores'), orderBy(m, 'desc'), limit(20));
+    const snap = await getDocs(q);
+    body.innerHTML = '';
+    let pos = 0;
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (!data.nick || !(data[m] > 0)) return;
+      pos++;
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+      const tr = document.createElement('tr');
+      if (currentUser && docSnap.id === currentUser.uid) tr.className = 'me';
+      tr.innerHTML = `<td class="pos">${medal}</td><td></td><td class="pts">${data[m]}</td>`;
+      tr.children[1].textContent = data.nick; // inserção segura do nick
+      body.appendChild(tr);
+    });
+    if (pos === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+  } catch (e) {
+    body.innerHTML = '<tr><td colspan="3" class="muted">Erro ao carregar ranking.</td></tr>';
+  }
+};
 </script>
 </body>
 </html>
