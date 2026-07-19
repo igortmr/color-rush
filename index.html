@@ -401,12 +401,13 @@ window.shareScore = async () => {
   const modeName = (mode === 'classic') ? 'Clássico' : 'Reverso';
   const rec = $('new-record').classList.contains('show') ? ' 🎉 Novo recorde pessoal!' : '';
   const text = `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${location.href}`;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   try {
-    if (navigator.share) {
+    if (isMobile && navigator.share) {
       await navigator.share({ text });
     } else {
       await navigator.clipboard.writeText(text);
-      $('share-status').textContent = '✅ Copiado! É só colar no WhatsApp.';
+      $('share-status').textContent = '✅ Copiado para a área de transferência!';
       setTimeout(() => { $('share-status').textContent = ''; }, 3000);
     }
   } catch {}
