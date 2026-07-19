@@ -259,7 +259,7 @@
   <div class="user-bar">
     <span id="user-label"></span>
     <span>
-      <button class="link" id="mute-btn" onclick="toggleMute()">🔊 som</button>
+      <button class="link" id="mute-btn" onclick="toggleMute()">🔊</button>
       <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
     </span>
   </div>
@@ -418,7 +418,7 @@ const sfx = {
 window.toggleMute = () => {
   muted = !muted;
   try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
-  $('mute-btn').textContent = muted ? '🔇 mudo' : '🔊 som';
+  $('mute-btn').textContent = muted ? '🔇' : '🔊';
 };
 
 /* ================== compartilhar ================== */
@@ -562,7 +562,7 @@ window.saveNick = async () => {
 window.showMenu = () => {
   $('record-classic').textContent = myRecord('classic');
   $('record-reverse').textContent = myRecord('reverse');
-  $('mute-btn').textContent = muted ? '🔇 mudo' : '🔊 som';
+  $('mute-btn').textContent = muted ? '🔇' : '🔊';
   if (offline) {
     $('user-label').textContent = '👤 Jogando sem conta';
     $('logout-btn').textContent = 'entrar';
