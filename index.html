@@ -235,7 +235,10 @@
   <h1>COLOR RUSH</h1>
   <div class="user-bar">
     <span id="user-label"></span>
-    <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
+    <span>
+      <button class="link" id="mute-btn" onclick="toggleMute()">🔊 som</button>
+      <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
+    </span>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
     <h2>🎨 Clássico</h2>
@@ -273,8 +276,10 @@
   <div class="muted" id="sync-status"></div>
   <div class="btn-row">
     <button onclick="playAgain()">JOGAR DE NOVO</button>
+    <button class="secondary" onclick="shareScore()">📤 COMPARTILHAR</button>
     <button class="secondary" onclick="showMenu()">MENU</button>
   </div>
+  <div class="muted" id="share-status"></div>
 </div>
 
 <!-- RANKING -->
@@ -352,6 +357,60 @@ function setLocalRecord(m, v) {
 function myRecord(m) {
   return offline ? getLocalRecord(m) : (myData[m] || 0);
 }
+
+/* ================== sons (Web Audio, sem arquivos) ================== */
+let audioCtx = null;
+let muted = false;
+try { muted = localStorage.getItem('colorRushMuted') === '1'; } catch {}
+
+function audioContext() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
+  if (muted) return;
+  try {
+    const c = audioContext();
+    const t = c.currentTime + delay;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur);
+  } catch {}
+}
+const sfx = {
+  correct(n) { tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1); }, // sobe o tom a cada acerto
+  wrong()   { tone(160, 0.3, 'sawtooth', 0.15); tone(110, 0.4, 'sawtooth', 0.15, 0.08); },
+  timeout() { tone(300, 0.2, 'triangle', 0.15); tone(200, 0.3, 'triangle', 0.15, 0.15); tone(120, 0.5, 'triangle', 0.15, 0.3); },
+  record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
+  tick()    { tone(1000, 0.03, 'sine', 0.05); },
+};
+window.toggleMute = () => {
+  muted = !muted;
+  try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
+  $('mute-btn').textContent = muted ? '🔇 mudo' : '🔊 som';
+};
+
+/* ================== compartilhar ================== */
+window.shareScore = async () => {
+  const modeName = (mode === 'classic') ? 'Clássico' : 'Reverso';
+  const rec = $('new-record').classList.contains('show') ? ' 🎉 Novo recorde pessoal!' : '';
+  const text = `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${location.href}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ text });
+    } else {
+      await navigator.clipboard.writeText(text);
+      $('share-status').textContent = '✅ Copiado! É só colar no WhatsApp.';
+      setTimeout(() => { $('share-status').textContent = ''; }, 3000);
+    }
+  } catch {}
+};
 
 /* ================== autenticação ================== */
 const AUTH_ERRORS = {
@@ -438,6 +497,7 @@ window.saveNick = async () => {
 window.showMenu = () => {
   $('record-classic').textContent = myRecord('classic');
   $('record-reverse').textContent = myRecord('reverse');
+  $('mute-btn').textContent = muted ? '🔇 mudo' : '🔊 som';
   if (offline) {
     $('user-label').textContent = '👤 Jogando sem conta';
     $('logout-btn').textContent = 'entrar';
@@ -501,11 +561,13 @@ function newRound(first) {
 function startTimer() {
   cancelAnimationFrame(rafId);
   timerStart = performance.now();
+  let lastTick = 0;
   const tick = now => {
     if (!playing) return;
     const left = 1 - (now - timerStart) / duration;
     $('timer-fill').style.width = Math.max(0, left * 100) + '%';
-    if (left <= 0) return gameOver('⏰ TEMPO ESGOTADO!');
+    if (left <= 0) { sfx.timeout(); return gameOver('⏰ TEMPO ESGOTADO!'); }
+    if (left < 0.35 && now - lastTick > 250) { lastTick = now; sfx.tick(); } // tic-tac no fim do tempo
     rafId = requestAnimationFrame(tick);
   };
   rafId = requestAnimationFrame(tick);
@@ -515,11 +577,13 @@ function handleClick(item) {
   if (!playing) return;
   if (item === target) {
     score++;
+    sfx.correct(score);
     $('score').textContent = score;
     target = nextTarget;
     duration *= 0.95;
     newRound(false);
   } else {
+    sfx.wrong();
     gameOver('❌ QUADRADO ERRADO!');
   }
 }
@@ -535,6 +599,8 @@ async function gameOver(reason) {
   $('record-over').textContent = Math.max(score, record);
   $('new-record').classList.toggle('show', isNewRecord);
   $('sync-status').textContent = '';
+  $('share-status').textContent = '';
+  if (isNewRecord) sfx.record();
   show('over-screen');
 
   if (isNewRecord) {
