@@ -272,7 +272,7 @@
   <div class="record-line">🏆 Seu recorde neste modo: <span id="record-over">0</span></div>
   <div class="muted" id="sync-status"></div>
   <div class="btn-row">
-    <button onclick="startGame(mode)">JOGAR DE NOVO</button>
+    <button onclick="playAgain()">JOGAR DE NOVO</button>
     <button class="secondary" onclick="showMenu()">MENU</button>
   </div>
 </div>
@@ -449,6 +449,8 @@ window.showMenu = () => {
 };
 
 /* ================== jogo ================== */
+window.playAgain = () => window.startGame(mode);
+
 window.startGame = (m) => {
   mode = m;
   score = 0;
