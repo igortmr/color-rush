@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Rush</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 24px;
+    width: 100%;
+    max-width: 520px;
+  }
+  .screen.active { display: flex; }
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 900;
+    background: linear-gradient(90deg, #ff4757, #ffa502, #2ed573, #1e90ff, #a55eea);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-align: center;
+  }
+  .mode-card {
+    width: 100%;
+    background: #16213e;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    padding: 20px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+    text-align: left;
+    color: #fff;
+    font-size: 1rem;
+  }
+  .mode-card:hover { transform: scale(1.03); border-color: #a55eea; }
+  .mode-card h2 { font-size: 1.4rem; margin-bottom: 6px; }
+  .mode-card p { color: #cfd8ff; font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px; }
+  .record-badge {
+    display: inline-block;
+    background: #0f3460;
+    color: #ffd32a;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+  }
+  button {
+    font-size: 1.15rem;
+    font-weight: 700;
+    padding: 12px 36px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(90deg, #ff4757, #ffa502);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  button:hover { transform: scale(1.06); }
+  button.secondary { background: #16213e; border: 2px solid #a55eea; }
+
+  /* game screen */
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 1.05rem;
+    font-weight: 700;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .timer-track {
+    width: 100%;
+    height: 16px;
+    background: #16213e;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #2ed573, #ffa502, #ff4757);
+    border-radius: 8px;
+  }
+  .instruction {
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    min-height: 3.2rem;
+    display: flex;
+    align-items: center;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+  }
+  .square {
+    aspect-ratio: 1;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s;
+    border: 4px solid rgba(255,255,255,0.15);
+  }
+  .square:hover { transform: scale(1.04); }
+  .word {
+    background: rgba(255,255,255,0.92);
+    color: #000;
+    font-weight: 800;
+    font-size: 1.15rem;
+    padding: 6px 14px;
+    border-radius: 8px;
+    letter-spacing: 1px;
+  }
+
+  /* game over */
+  .final-score {
+    font-size: 5rem;
+    font-weight: 900;
+    color: #ffa502;
+    line-height: 1;
+  }
+  .go-title { font-size: 2rem; font-weight: 800; color: #ff4757; }
+  .new-record {
+    display: none;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #ffd32a;
+    animation: pulse 0.8s infinite alternate;
+  }
+  .new-record.show { display: block; }
+  @keyframes pulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.15); }
+  }
+  .record-line { color: #cfd8ff; font-size: 1rem; }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div class="screen active" id="menu-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="mode-card" onclick="startGame('classic')">
+    <h2>🎨 Clássico</h2>
+    <p>Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
+    <span class="record-badge">🏆 Recorde: <span id="record-classic">0</span></span>
+  </div>
+  <div class="mode-card" onclick="startGame('reverse')">
+    <h2>🔄 Reverso</h2>
+    <p>Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
+    <span class="record-badge">🏆 Recorde: <span id="record-reverse">0</span></span>
+  </div>
+  <p style="color:#8a94c8; font-size:0.85rem; text-align:center;">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game-screen">
+  <div class="hud">
+    <span>PONTOS: <span id="score">0</span></span>
+    <span>🏆 <span id="record-hud">0</span></span>
+    <span id="speed">⏱️ 10.0s</span>
+  </div>
+  <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+  <div class="instruction" id="instruction"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- GAME OVER -->
+<div class="screen" id="over-screen">
+  <div class="go-title" id="over-reason">FIM DE JOGO</div>
+  <div class="new-record" id="new-record">🎉 NOVO RECORDE! 🎉</div>
+  <div>Sua pontuação:</div>
+  <div class="final-score" id="final-score">0</div>
+  <div class="record-line">🏆 Recorde neste modo: <span id="record-over">0</span></div>
+  <div class="btn-row">
+    <button onclick="startGame(mode)">JOGAR DE NOVO</button>
+    <button class="secondary" onclick="showMenu()">MENU</button>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  { name: 'AZUL',     hex: '#1e90ff' },
+  { name: 'VERMELHO', hex: '#ff4757' },
+  { name: 'VERDE',    hex: '#2ed573' },
+  { name: 'AMARELO',  hex: '#ffd32a' },
+  { name: 'ROXO',     hex: '#a55eea' },
+  { name: 'LARANJA',  hex: '#ff7f24' },
+  { name: 'ROSA',     hex: '#ff6b9d' },
+  { name: 'CIANO',    hex: '#00d2d3' },
+];
+const SQUARES = 4;
+
+let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
+
+const $ = id => document.getElementById(id);
+const show = id => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+};
+const shuffle = a => a.sort(() => Math.random() - 0.5);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/* ---- records (localStorage with in-memory fallback) ---- */
+const memRecords = { classic: 0, reverse: 0 };
+function getRecord(m) {
+  try { return parseInt(localStorage.getItem('colorRushRecord_' + m)) || 0; }
+  catch { return memRecords[m]; }
+}
+function setRecord(m, v) {
+  memRecords[m] = v;
+  try { localStorage.setItem('colorRushRecord_' + m, v); } catch {}
+}
+function refreshMenuRecords() {
+  $('record-classic').textContent = getRecord('classic');
+  $('record-reverse').textContent = getRecord('reverse');
+}
+
+function showMenu() {
+  refreshMenuRecords();
+  show('menu-screen');
+}
+
+function startGame(m) {
+  mode = m;
+  score = 0;
+  duration = 10000;
+  playing = true;
+  target = pick(COLORS);
+  $('score').textContent = 0;
+  $('record-hud').textContent = getRecord(mode);
+  show('game-screen');
+  newRound(true);
+}
+
+function newRound(first) {
+  nextTarget = pick(COLORS);
+  const others = shuffle(COLORS.filter(c => c !== target)).slice(0, SQUARES - 1);
+  const items = shuffle([target, ...others]); // classic: backgrounds | reverse: words
+  const distractors = shuffle(COLORS.filter(c => c !== nextTarget)).slice(0, SQUARES - 1);
+  let d = 0;
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  items.forEach(item => {
+    const paired = (item === target) ? nextTarget : distractors[d++];
+    // classic: item = background, paired = word | reverse: item = word, paired = background
+    const bg   = (mode === 'classic') ? item : paired;
+    const word = (mode === 'classic') ? paired : item;
+    const el = document.createElement('div');
+    el.className = 'square';
+    el.style.background = bg.hex;
+    el.innerHTML = `<span class="word">${word.name}</span>`;
+    el.onclick = () => handleClick(item);
+    grid.appendChild(el);
+  });
+
+  if (first) {
+    $('instruction').textContent = (mode === 'classic')
+      ? `👉 Clique no quadrado ${target.name} (e memorize a palavra dentro dele!)`
+      : `👉 Clique onde está escrito ${target.name} (e memorize a COR do quadrado!)`;
+  } else {
+    $('instruction').textContent = (mode === 'classic')
+      ? '🧠 Clique no quadrado da cor da palavra que você memorizou!'
+      : '🧠 Clique onde está escrito o nome da cor que você memorizou!';
+  }
+  $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
+
+  startTimer();
+}
+
+function startTimer() {
+  cancelAnimationFrame(rafId);
+  timerStart = performance.now();
+  const tick = now => {
+    if (!playing) return;
+    const left = 1 - (now - timerStart) / duration;
+    $('timer-fill').style.width = Math.max(0, left * 100) + '%';
+    if (left <= 0) return gameOver('⏰ TEMPO ESGOTADO!');
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+
+function handleClick(item) {
+  if (!playing) return;
+  if (item === target) {
+    score++;
+    $('score').textContent = score;
+    target = nextTarget;
+    duration *= 0.95;
+    newRound(false);
+  } else {
+    gameOver('❌ QUADRADO ERRADO!');
+  }
+}
+
+function gameOver(reason) {
+  playing = false;
+  cancelAnimationFrame(rafId);
+  const record = getRecord(mode);
+  const isNewRecord = score > record;
+  if (isNewRecord) setRecord(mode, score);
+  $('over-reason').textContent = reason;
+  $('final-score').textContent = score;
+  $('record-over').textContent = Math.max(score, record);
+  $('new-record').classList.toggle('show', isNewRecord);
+  show('over-screen');
+}
+
+refreshMenuRecords();
+</script>
+</body>
+</html>
