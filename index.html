@@ -219,6 +219,19 @@
   </div>
 </div>
 
+<!-- VERIFICAR E-MAIL -->
+<div class="screen" id="verify-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="card">
+    <p style="text-align:center;">📧 Enviamos um link de confirmação para<br><b id="verify-email-label"></b></p>
+    <p class="muted">Clique no link do e-mail e depois volte aqui.<br>(confira também a caixa de spam)</p>
+    <div class="error" id="verify-status"></div>
+    <button onclick="checkVerification()">JÁ CONFIRMEI</button>
+    <button class="secondary" onclick="resendVerification()">REENVIAR E-MAIL</button>
+    <button class="link" onclick="doLogout()">sair</button>
+  </div>
+</div>
+
 <!-- NICK -->
 <div class="screen" id="nick-screen">
   <h1>COLOR RUSH</h1>
@@ -302,10 +315,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut
+  signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut,
+  sendEmailVerification
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, serverTimestamp
+  getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
+  serverTimestamp, writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -437,8 +452,27 @@ window.doLogin = async () => {
 window.doSignup = async () => {
   $('auth-error').textContent = '';
   try {
-    await createUserWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    const cred = await createUserWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    await sendEmailVerification(cred.user);
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.resendVerification = async () => {
+  $('verify-status').textContent = '';
+  try {
+    await sendEmailVerification(auth.currentUser);
+    $('verify-status').textContent = '📧 E-mail reenviado!';
+  } catch (e) { $('verify-status').textContent = authErrMsg(e); }
+};
+window.checkVerification = async () => {
+  $('verify-status').textContent = '';
+  await auth.currentUser.reload();
+  if (auth.currentUser.emailVerified) {
+    await auth.currentUser.getIdToken(true); // atualiza o token para as regras do banco
+    currentUser = auth.currentUser;
+    await proceedAfterLogin(currentUser);
+  } else {
+    $('verify-status').textContent = 'Ainda não confirmado. Confira sua caixa de entrada e o spam.';
+  }
 };
 window.doGoogle = async () => {
   $('auth-error').textContent = '';
@@ -462,17 +496,28 @@ onAuthStateChanged(auth, async user => {
   if (user) {
     offline = false;
     currentUser = user;
-    try {
-      const snap = await getDoc(doc(db, 'scores', user.uid));
-      myData = snap.exists() ? { classic: 0, reverse: 0, ...snap.data() } : { nick: null, classic: 0, reverse: 0 };
-    } catch { myData = { nick: null, classic: 0, reverse: 0 }; }
-    if (!myData.nick) show('nick-screen');
-    else showMenu();
+    // conta por e-mail/senha precisa confirmar o e-mail (Google já vem verificado)
+    const isPassword = user.providerData.some(p => p.providerId === 'password');
+    if (isPassword && !user.emailVerified) {
+      $('verify-email-label').textContent = user.email;
+      show('verify-screen');
+      return;
+    }
+    await proceedAfterLogin(user);
   } else {
     currentUser = null;
     if (!offline) show('auth-screen');
   }
 });
+
+async function proceedAfterLogin(user) {
+  try {
+    const snap = await getDoc(doc(db, 'scores', user.uid));
+    myData = snap.exists() ? { classic: 0, reverse: 0, ...snap.data() } : { nick: null, classic: 0, reverse: 0 };
+  } catch { myData = { nick: null, classic: 0, reverse: 0 }; }
+  if (!myData.nick) show('nick-screen');
+  else showMenu();
+}
 
 /* ================== nick ================== */
 window.saveNick = async () => {
@@ -482,14 +527,23 @@ window.saveNick = async () => {
     $('nick-error').textContent = 'O nick deve ter entre 3 e 16 caracteres.';
     return;
   }
+  const nickKey = nick.toLowerCase(); // "Igor" e "IGOR" contam como o mesmo nick
   try {
-    myData.nick = nick;
-    await setDoc(doc(db, 'scores', currentUser.uid), {
+    const taken = await getDoc(doc(db, 'nicks', nickKey));
+    if (taken.exists()) {
+      $('nick-error').textContent = 'Este nick já está em uso. Escolha outro.';
+      return;
+    }
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'nicks', nickKey), { uid: currentUser.uid });
+    batch.set(doc(db, 'scores', currentUser.uid), {
       nick,
       classic: myData.classic || 0,
       reverse: myData.reverse || 0,
       updatedAt: serverTimestamp(),
     }, { merge: true });
+    await batch.commit();
+    myData.nick = nick;
     showMenu();
   } catch (e) { $('nick-error').textContent = 'Erro ao salvar: ' + e.message; }
 };
