@@ -316,6 +316,8 @@
     <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
   </div>
   <button class="secondary" onclick="showRanking()">🏆 RANKING GLOBAL</button>
+  <button class="secondary" onclick="inviteFriends()">📤 CONVIDAR AMIGOS</button>
+  <div class="muted" id="invite-status"></div>
   <p class="muted">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
@@ -378,6 +380,8 @@
     <div class="big-nick" id="profile-nick"></div>
     <div class="muted" id="profile-summary"></div>
   </div>
+  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;">📤 CONVIDAR AMIGOS</button>
+  <div class="muted" id="profile-invite-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <button class="secondary" onclick="showMenu()">VOLTAR</button>
 </div>
@@ -613,6 +617,29 @@ window.shareScore = async () => {
       await navigator.clipboard.writeText(text);
       $('share-status').textContent = '✅ Copiado para a área de transferência!';
       setTimeout(() => { $('share-status').textContent = ''; }, 3000);
+    }
+  } catch {}
+};
+
+/* ================== convidar amigos (sem precisar terminar partida) ================== */
+window.inviteFriends = async (statusElId = 'invite-status') => {
+  let link = `${location.origin}${location.pathname}`;
+  if (!offline && currentUser) {
+    const code = await ensureRefCode();
+    if (code) link += `?ref=${code}`;
+  }
+  const text = `🎨 Bora jogar Color Rush comigo? Teste seus reflexos e sua memória! 👉 ${link}`;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const statusEl = $(statusElId);
+  try {
+    if (isMobile && navigator.share) {
+      await navigator.share({ text });
+    } else {
+      await navigator.clipboard.writeText(text);
+      if (statusEl) {
+        statusEl.textContent = '✅ Copiado para a área de transferência!';
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      }
     }
   } catch {}
 };
@@ -1001,6 +1028,7 @@ window.showProfile = () => {
 function renderProfile() {
   $('profile-nick').textContent = offline ? '👤 Jogando sem conta' : ('👤 ' + (myData.nick || ''));
   const body = $('profile-body');
+  $('profile-invite-btn').style.display = offline ? 'none' : '';
 
   if (offline) {
     $('profile-summary').textContent = '';
