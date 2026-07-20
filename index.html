@@ -297,6 +297,7 @@
   <div class="final-score" id="final-score">0</div>
   <div class="record-line">🏆 Seu recorde neste modo: <span id="record-over">0</span></div>
   <div class="muted" id="sync-status"></div>
+  <button id="signup-cta" style="display:none;" onclick="goSignup()">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="btn-row">
     <button onclick="playAgain()">JOGAR DE NOVO</button>
     <button class="secondary" onclick="shareScore()">📤 COMPARTILHAR</button>
@@ -362,6 +363,7 @@ const SQUARES = 4;
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
 let currentUser = null;          // usuário do firebase ou null
 let offline = false;             // jogando sem conta
+let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
 let myData = { nick: null, classic: 0, reverse: 0 };
 
 const $ = id => document.getElementById(id);
@@ -526,7 +528,7 @@ async function proceedAfterLogin(user) {
     myData = snap.exists() ? { classic: 0, reverse: 0, ...snap.data() } : { nick: null, classic: 0, reverse: 0 };
   } catch { myData = { nick: null, classic: 0, reverse: 0 }; }
   if (!myData.nick) show('nick-screen');
-  else showMenu();
+  else { await submitPendingScore(); showMenu(); }
 }
 
 /* ================== nick ================== */
@@ -554,6 +556,7 @@ window.saveNick = async () => {
     }, { merge: true });
     await batch.commit();
     myData.nick = nick;
+    await submitPendingScore();
     showMenu();
   } catch (e) { $('nick-error').textContent = 'Erro ao salvar: ' + e.message; }
 };
@@ -671,7 +674,6 @@ async function gameOver(reason) {
   if (isNewRecord) {
     if (offline) {
       setLocalRecord(mode, score);
-      $('sync-status').textContent = 'Crie uma conta para entrar no ranking global!';
     } else {
       try {
         await setDoc(doc(db, 'scores', currentUser.uid), {
@@ -685,6 +687,49 @@ async function gameOver(reason) {
         $('sync-status').textContent = '⚠️ Não foi possível enviar o recorde.';
       }
     }
+  }
+
+  // convite para quem joga sem conta: mostra a posição que ocuparia no ranking
+  $('signup-cta').style.display = 'none';
+  if (offline && score > 0) {
+    pendingScore = { mode, score };
+    $('signup-cta').style.display = '';
+    teaseRankingPosition(mode, score);
+  }
+}
+
+async function teaseRankingPosition(m, s) {
+  try {
+    const snap = await getDocs(query(collection(db, 'scores'), orderBy(m, 'desc'), limit(20)));
+    let ahead = 0, total = 0;
+    snap.forEach(d => {
+      const v = d.data()[m] || 0;
+      if (d.data().nick && v > 0) { total++; if (v >= s) ahead++; }
+    });
+    $('sync-status').textContent = (ahead < 20)
+      ? `👀 Você ficaria em ${ahead + 1}º lugar no ranking global!`
+      : '👀 Crie uma conta e dispute o ranking global!';
+  } catch {}
+}
+
+window.goSignup = () => {
+  offline = false;
+  show('auth-screen');
+};
+
+async function submitPendingScore() {
+  if (!pendingScore || !currentUser || !myData.nick) return;
+  const { mode: m, score: s } = pendingScore;
+  pendingScore = null;
+  if (s > (myData[m] || 0)) {
+    try {
+      await setDoc(doc(db, 'scores', currentUser.uid), {
+        nick: myData.nick,
+        [m]: s,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      myData[m] = s;
+    } catch {}
   }
 }
 
