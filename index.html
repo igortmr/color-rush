@@ -205,6 +205,30 @@
   td.pos { font-weight: 800; color: #ffa502; width: 44px; }
   td.pts { text-align: right; font-weight: 800; color: #ffd32a; }
   .muted { color: #8a94c8; font-size: 0.85rem; text-align: center; }
+
+  /* badges */
+  .badge-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    font-size: 0.68rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+  }
+  .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
+  .badge-chip.locked { opacity: 0.3; filter: grayscale(1); box-shadow: none; }
+  .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge-card { text-align: left; gap: 10px; }
+  .badge-card-head { display: flex; align-items: center; gap: 12px; }
+  .badge-card-head .name { font-weight: 800; }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .progress-track { width: 100%; height: 10px; background: #0f3460; border-radius: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #2ed573, #ffd32a); border-radius: 6px; transition: width 0.3s; }
+  .profile-header { text-align: center; }
+  .profile-header .big-nick { font-size: 1.4rem; font-weight: 800; }
 </style>
 </head>
 <body>
@@ -274,6 +298,7 @@
     <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
   </div>
   <button class="secondary" onclick="showRanking()">🌍 RANKING GLOBAL</button>
+  <button class="secondary" onclick="showProfile()">🎖️ MEU PERFIL E CONQUISTAS</button>
   <p class="muted">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
@@ -329,6 +354,17 @@
   <button class="secondary" onclick="showMenu()">VOLTAR</button>
 </div>
 
+<!-- PERFIL -->
+<div class="screen" id="profile-screen">
+  <h1 style="font-size:2rem;">🎖️ PERFIL</h1>
+  <div class="profile-header">
+    <div class="big-nick" id="profile-nick"></div>
+    <div class="muted" id="profile-summary"></div>
+  </div>
+  <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
+  <button class="secondary" onclick="showMenu()">VOLTAR</button>
+</div>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
@@ -338,7 +374,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
-  serverTimestamp, writeBatch
+  serverTimestamp, writeBatch, increment
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -354,6 +390,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+/* ================== indicação (referral) ================== */
+// captura ?ref=<uid> da URL de compartilhamento e guarda até o cadastro terminar
+let referrerUid = new URLSearchParams(location.search).get('ref') || null;
+if (referrerUid) {
+  try { sessionStorage.setItem('colorRushRef', referrerUid); } catch {}
+  history.replaceState({}, '', location.pathname); // limpa a URL visível
+} else {
+  try { referrerUid = sessionStorage.getItem('colorRushRef'); } catch {}
+}
+
 /* ================== state ================== */
 const COLORS = [
   { name: 'AZUL',     hex: '#1e90ff' },
@@ -367,11 +413,75 @@ const COLORS = [
 ];
 const SQUARES = 4;
 
+/* ================== conquistas (badges) ================== */
+const TIER_COLORS = ['#cd7f32', '#c0c0c0', '#ffd700', '#66ccff', '#a55eea', '#ff4757']; // bronze, prata, ouro, platina, diamante, rubi
+
+const BADGE_DEFS = {
+  points: {
+    icon: '⭐', label: 'Pontos Totais',
+    tiers: [500, 2000, 5000, 15000, 50000],
+    names: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores'],
+    metric: u => u.totalPoints || 0,
+    desc: n => `Acumule ${n} pontos (soma de todas as partidas)`,
+  },
+  games: {
+    icon: '🎮', label: 'Partidas Jogadas',
+    tiers: [10, 50, 100, 250, 500, 1000],
+    names: ['Iniciante', 'Frequentador', 'Dedicado', 'Veterano', 'Lenda', 'Imortal'],
+    metric: u => u.gamesPlayed || 0,
+    desc: n => `Jogue ${n} partidas`,
+  },
+  streak: {
+    icon: '🔥', label: 'Sequência de Dias',
+    tiers: [3, 7, 14, 30, 100],
+    names: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável'],
+    metric: u => u.bestStreak || 0,
+    desc: n => `Jogue ${n} dias seguidos`,
+  },
+  sharer: {
+    icon: '📣', label: 'Divulgador',
+    tiers: [1, 5, 15],
+    names: ['Boca a Boca', 'Influencer', 'Viral'],
+    metric: u => u.referrals || 0,
+    desc: n => `Tenha ${n} amigo${n > 1 ? 's' : ''} cadastrado${n > 1 ? 's' : ''} pelo seu link de compartilhamento`,
+  },
+};
+const BADGE_ORDER = ['points', 'games', 'streak', 'sharer'];
+
+function unlockedTier(def, stats) {
+  const val = def.metric(stats);
+  let tier = -1;
+  for (let i = 0; i < def.tiers.length; i++) {
+    const ok = def.inverse ? val <= def.tiers[i] : val >= def.tiers[i];
+    if (ok) tier = i;
+  }
+  return tier;
+}
+function badgeChip(def, tierIdx, big) {
+  const color = TIER_COLORS[tierIdx] || TIER_COLORS[TIER_COLORS.length - 1];
+  return `<span class="badge-chip${big ? ' big' : ''}" style="background:${color}" title="${def.label}: ${def.names[tierIdx]}">${def.icon}</span>`;
+}
+function topBadgeIcons(stats, count) {
+  let out = [];
+  for (const key of BADGE_ORDER) {
+    const def = BADGE_DEFS[key];
+    const t = unlockedTier(def, stats);
+    if (t >= 0) out.push(badgeChip(def, t));
+    if (out.length >= count) break;
+  }
+  return out.join('');
+}
+function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
+
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
 let currentUser = null;          // usuário do firebase ou null
 let offline = false;             // jogando sem conta
 let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
-let myData = { nick: null, classic: 0, reverse: 0 };
+let myData = {
+  nick: null, classic: 0, reverse: 0,
+  gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null,
+};
 
 const $ = id => document.getElementById(id);
 const show = id => {
@@ -434,7 +544,11 @@ window.toggleMute = () => {
 window.shareScore = async () => {
   const modeName = (mode === 'classic') ? 'Clássico' : 'Reverso';
   const rec = $('new-record').classList.contains('show') ? ' 🎉 Novo recorde pessoal!' : '';
-  const text = `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${location.href}`;
+  // link com ?ref= só existe pra quem tem conta — é o que faz o indicado contar no badge Divulgador
+  const link = (!offline && currentUser)
+    ? `${location.origin}${location.pathname}?ref=${currentUser.uid}`
+    : `${location.origin}${location.pathname}`;
+  const text = `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`;
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   try {
     if (isMobile && navigator.share) {
@@ -507,7 +621,11 @@ window.doLogout = async () => {
 window.playOffline = () => {
   offline = true;
   currentUser = null;
-  myData = { nick: null, classic: 0, reverse: 0 };
+  myData = {
+    nick: null, classic: 0, reverse: 0,
+    gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+    playedClassic: false, playedReverse: false, referrals: 0, bestRank: null,
+  };
   showMenu();
 };
 
@@ -529,11 +647,17 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
+const EMPTY_PROFILE = {
+  nick: null, classic: 0, reverse: 0,
+  gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null,
+};
+
 async function proceedAfterLogin(user) {
   try {
     const snap = await getDoc(doc(db, 'scores', user.uid));
-    myData = snap.exists() ? { classic: 0, reverse: 0, ...snap.data() } : { nick: null, classic: 0, reverse: 0 };
-  } catch { myData = { nick: null, classic: 0, reverse: 0 }; }
+    myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
+  } catch { myData = { ...EMPTY_PROFILE }; }
   if (!myData.nick) show('nick-screen');
   else { await submitPendingScore(); showMenu(); }
 }
@@ -563,6 +687,16 @@ window.saveNick = async () => {
     }, { merge: true });
     await batch.commit();
     myData.nick = nick;
+
+    // credita a indicação para quem trouxe esse jogador (se veio de um link de compartilhamento)
+    if (referrerUid && referrerUid !== currentUser.uid) {
+      try {
+        await setDoc(doc(db, 'scores', referrerUid), { referrals: increment(1), updatedAt: serverTimestamp() }, { merge: true });
+      } catch {}
+      referrerUid = null;
+      try { sessionStorage.removeItem('colorRushRef'); } catch {}
+    }
+
     await submitPendingScore();
     showMenu();
   } catch (e) { $('nick-error').textContent = 'Erro ao salvar: ' + e.message; }
@@ -678,22 +812,10 @@ async function gameOver(reason) {
   if (isNewRecord) sfx.record();
   show('over-screen');
 
-  if (isNewRecord) {
-    if (offline) {
-      setLocalRecord(mode, score);
-    } else {
-      try {
-        await setDoc(doc(db, 'scores', currentUser.uid), {
-          nick: myData.nick,
-          [mode]: score,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        myData[mode] = score;
-        $('sync-status').textContent = '✅ Recorde enviado para o ranking global!';
-      } catch (e) {
-        $('sync-status').textContent = '⚠️ Não foi possível enviar o recorde.';
-      }
-    }
+  if (offline) {
+    if (isNewRecord) setLocalRecord(mode, score);
+  } else if (currentUser && myData.nick) {
+    await persistGameResult(isNewRecord);
   }
 
   // convite para quem joga sem conta
@@ -706,6 +828,44 @@ async function gameOver(reason) {
   renderMiniRanking(mode);
 }
 
+async function persistGameResult(isNewRecord) {
+  const today = todayStr();
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE');
+  let currentStreak = myData.currentStreak || 0;
+  if (myData.lastPlayedDate !== today) {
+    currentStreak = (myData.lastPlayedDate === yesterday) ? currentStreak + 1 : 1;
+  }
+  const bestStreak = Math.max(myData.bestStreak || 0, currentStreak);
+
+  const update = {
+    nick: myData.nick,
+    gamesPlayed: increment(1),
+    totalPoints: increment(score),
+    lastPlayedDate: today,
+    currentStreak,
+    bestStreak,
+    updatedAt: serverTimestamp(),
+  };
+  update[mode === 'classic' ? 'playedClassic' : 'playedReverse'] = true;
+  if (isNewRecord) update[mode] = score;
+
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
+    myData.lastPlayedDate = today;
+    myData.currentStreak = currentStreak;
+    myData.bestStreak = bestStreak;
+    myData.gamesPlayed = (myData.gamesPlayed || 0) + 1;
+    myData.totalPoints = (myData.totalPoints || 0) + score;
+    if (mode === 'classic') myData.playedClassic = true; else myData.playedReverse = true;
+    if (isNewRecord) {
+      myData[mode] = score;
+      $('sync-status').textContent = '✅ Recorde enviado para o ranking global!';
+    }
+  } catch (e) {
+    $('sync-status').textContent = '⚠️ Não foi possível salvar sua partida.';
+  }
+}
+
 async function renderMiniRanking(m) {
   $('mini-mode').textContent = (m === 'classic') ? 'Clássico' : 'Reverso';
   const body = $('mini-ranking-body');
@@ -715,7 +875,7 @@ async function renderMiniRanking(m) {
     const rows = [];
     snap.forEach(d => {
       const data = d.data();
-      if (data.nick && data[m] > 0) rows.push({ uid: d.id, nick: data.nick, pts: data[m] });
+      if (data.nick && data[m] > 0) rows.push({ uid: d.id, nick: data.nick, pts: data[m], stats: data });
     });
 
     // localiza (ou insere) a linha do jogador
@@ -724,7 +884,7 @@ async function renderMiniRanking(m) {
       const myPts = offline ? score : (myData[m] || 0);
       let i = rows.findIndex(r => r.pts < myPts);
       if (i === -1) i = rows.length;
-      rows.splice(i, 0, { uid: '__me__', nick: offline ? 'VOCÊ' : (myData.nick || 'VOCÊ'), pts: myPts });
+      rows.splice(i, 0, { uid: '__me__', nick: offline ? 'VOCÊ' : (myData.nick || 'VOCÊ'), pts: myPts, stats: offline ? null : myData });
       myIndex = i;
     }
 
@@ -743,8 +903,12 @@ async function renderMiniRanking(m) {
       const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + 'º';
       const tr = document.createElement('tr');
       if (i === myIndex) tr.className = 'me';
-      tr.innerHTML = `<td class="pos">${medal}</td><td></td><td class="pts">${r.pts}</td>`;
-      tr.children[1].textContent = r.nick;
+      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+      const nickCell = tr.children[1];
+      const nickSpan = document.createElement('span');
+      nickSpan.textContent = r.nick;
+      nickCell.appendChild(nickSpan);
+      if (r.stats) nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
       body.appendChild(tr);
     }
     if (rows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém no ranking ainda. Seja o primeiro! 🚀</td></tr>';
@@ -757,6 +921,74 @@ window.goSignup = () => {
   offline = false;
   show('auth-screen');
 };
+
+/* ================== perfil / conquistas ================== */
+window.showProfile = () => {
+  show('profile-screen');
+  renderProfile();
+};
+
+function renderProfile() {
+  $('profile-nick').textContent = offline ? '👤 Jogando sem conta' : ('👤 ' + (myData.nick || ''));
+  const body = $('profile-body');
+
+  if (offline) {
+    $('profile-summary').textContent = '';
+    body.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <p>🔒 Suas conquistas não são salvas jogando sem conta.</p>
+        <p class="muted">Crie uma conta para começar a desbloquear badges e acompanhar seu progresso!</p>
+        <button onclick="goSignup()">CRIAR CONTA</button>
+      </div>`;
+    return;
+  }
+
+  const unlockedCount = BADGE_ORDER.reduce((n, k) => n + (unlockedTier(BADGE_DEFS[k], myData) >= 0 ? 1 : 0), 0);
+  $('profile-summary').textContent = `${unlockedCount} de ${BADGE_ORDER.length} categorias de conquista desbloqueadas`;
+  body.innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], myData)).join('');
+}
+
+function renderBadgeCard(def, stats) {
+  const tier = unlockedTier(def, stats);
+  const val = def.metric(stats);
+  const maxed = tier === def.tiers.length - 1;
+  const color = tier >= 0 ? TIER_COLORS[tier] : '#0f3460';
+  const currentName = tier >= 0 ? def.names[tier] : 'Ainda não conquistado';
+
+  let progressHtml;
+  if (maxed) {
+    progressHtml = `<div class="muted" style="text-align:left;">🌟 Nível máximo alcançado!</div>`;
+  } else {
+    const nextThreshold = def.tiers[tier + 1];
+    if (def.inverse) {
+      const posText = (val === Infinity) ? 'Você ainda não pontuou no ranking global.' : `Sua melhor posição até agora: ${val}º lugar.`;
+      progressHtml = `<div class="muted" style="text-align:left;">${posText}<br>🎯 Próxima meta: ${def.desc(nextThreshold)}</div>`;
+    } else {
+      const pct = Math.min(100, Math.max(0, (val / nextThreshold) * 100));
+      progressHtml = `
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="muted" style="text-align:left;">${val} / ${nextThreshold} — ${def.desc(nextThreshold)}</div>`;
+    }
+  }
+
+  const chips = def.tiers.map((th, i) => {
+    const unlocked = i <= tier;
+    return `<span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${unlocked ? TIER_COLORS[i] : '#0f3460'}" title="${def.names[i]}${unlocked ? '' : ' (bloqueado)'}">${unlocked ? def.icon : '🔒'}</span>`;
+  }).join('');
+
+  return `
+    <div class="card badge-card">
+      <div class="badge-card-head">
+        <span class="badge-chip big" style="background:${color}">${def.icon}</span>
+        <div>
+          <div class="name">${def.label}</div>
+          <div class="muted" style="text-align:left;">${currentName}</div>
+        </div>
+      </div>
+      ${progressHtml}
+      <div class="chip-row">${chips}</div>
+    </div>`;
+}
 
 async function submitPendingScore() {
   if (!pendingScore || !currentUser || !myData.nick) return;
@@ -797,8 +1029,12 @@ window.loadRanking = async (m) => {
       const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
       const tr = document.createElement('tr');
       if (currentUser && docSnap.id === currentUser.uid) tr.className = 'me';
-      tr.innerHTML = `<td class="pos">${medal}</td><td></td><td class="pts">${data[m]}</td>`;
-      tr.children[1].textContent = data.nick; // inserção segura do nick
+      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${data[m]}</td>`;
+      const nickCell = tr.children[1];
+      const nickSpan = document.createElement('span'); // inserção segura do nick
+      nickSpan.textContent = data.nick;
+      nickCell.appendChild(nickSpan);
+      nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(data, 3));
       body.appendChild(tr);
     });
     if (pos === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
