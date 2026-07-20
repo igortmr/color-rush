@@ -235,9 +235,21 @@
   .progress-fill { height: 100%; background: linear-gradient(90deg, #2ed573, #ffd32a); border-radius: 6px; transition: width 0.3s; }
   .profile-header { text-align: center; }
   .profile-header .big-nick { font-size: 1.4rem; font-weight: 800; }
+
+  .version-tag {
+    position: fixed;
+    bottom: 6px;
+    right: 10px;
+    font-size: 0.68rem;
+    color: #4a5578;
+    z-index: 1000;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
+
+<div class="version-tag" id="version-tag">carregando versão...</div>
 
 <!-- LOADING -->
 <div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><p class="muted">Carregando...</p></div>
@@ -394,6 +406,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+/* ================== versão (commit real do GitHub) ================== */
+(async () => {
+  const el = document.getElementById('version-tag');
+  try {
+    const res = await fetch('https://api.github.com/repos/igortmr/color-rush/commits?path=index.html&per_page=1');
+    const data = await res.json();
+    if (data && data[0]) {
+      el.textContent = `#${data[0].sha.slice(0, 7)}`;
+    } else {
+      el.textContent = '';
+    }
+  } catch {
+    el.textContent = '';
+  }
+})();
 
 /* ================== indicação (referral) ================== */
 // captura ?ref=<código curto> da URL de compartilhamento e guarda até o cadastro terminar
