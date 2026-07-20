@@ -211,16 +211,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: 19px;
+    height: 19px;
     border-radius: 50%;
-    font-size: 0.95rem;
+    font-size: 0.68rem;
     flex-shrink: 0;
     box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
   }
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
   .badge-chip.locked { opacity: 0.3; filter: grayscale(1); box-shadow: none; }
-  .nick-cell { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .badge-card { text-align: left; gap: 10px; }
   .badge-card-head { display: flex; align-items: center; gap: 12px; }
   .badge-card-head .name { font-weight: 800; }
@@ -407,24 +407,10 @@ const SQUARES = 4;
 const TIER_COLORS = ['#cd7f32', '#c0c0c0', '#ffd700', '#66ccff', '#a55eea', '#ff4757']; // bronze, prata, ouro, platina, diamante, rubi
 
 const BADGE_DEFS = {
-  podium: {
-    icon: '🏆', label: 'Pódio', inverse: true,
-    tiers: [10, 3, 1],
-    names: ['Top 10', 'Top 3', 'Campeão'],
-    metric: u => (u.bestRank == null ? Infinity : u.bestRank),
-    desc: n => n === 1 ? 'Alcance o 1º lugar do ranking global' : `Alcance o Top ${n} do ranking global`,
-  },
-  best: {
-    icon: '⚡', label: 'Recorde Pessoal',
-    tiers: [10, 20, 30, 50, 75],
-    names: ['Aquecendo', 'Afiado', 'Preciso', 'Sobre-humano', 'Impossível'],
-    metric: u => Math.max(u.classic || 0, u.reverse || 0),
-    desc: n => `Faça ${n} pontos numa única partida`,
-  },
   points: {
-    icon: '💰', label: 'Pontos Totais',
+    icon: '⭐', label: 'Pontos Totais',
     tiers: [500, 2000, 5000, 15000, 50000],
-    names: ['Poupador', 'Investidor', 'Magnata', 'Milionário', 'Bilionário das Cores'],
+    names: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores'],
     metric: u => u.totalPoints || 0,
     desc: n => `Acumule ${n} pontos (soma de todas as partidas)`,
   },
@@ -449,15 +435,8 @@ const BADGE_DEFS = {
     metric: u => u.sharesCount || 0,
     desc: n => `Compartilhe sua pontuação ${n}x`,
   },
-  explorer: {
-    icon: '🧭', label: 'Explorador',
-    tiers: [1],
-    names: ['Explorador'],
-    metric: u => (u.playedClassic && u.playedReverse) ? 1 : 0,
-    desc: () => 'Jogue pelo menos 1 partida em cada modo (Clássico e Reverso)',
-  },
 };
-const BADGE_ORDER = ['podium', 'best', 'points', 'games', 'streak', 'sharer', 'explorer'];
+const BADGE_ORDER = ['points', 'games', 'streak', 'sharer'];
 
 function unlockedTier(def, stats) {
   const val = def.metric(stats);
@@ -863,26 +842,10 @@ async function persistGameResult(isNewRecord) {
     if (isNewRecord) {
       myData[mode] = score;
       $('sync-status').textContent = '✅ Recorde enviado para o ranking global!';
-      await updateBestRank();
     }
   } catch (e) {
     $('sync-status').textContent = '⚠️ Não foi possível salvar sua partida.';
   }
-}
-
-async function updateBestRank() {
-  try {
-    const snap = await getDocs(query(collection(db, 'scores'), orderBy(mode, 'desc'), limit(200)));
-    let rank = null, i = 0;
-    for (const d of snap.docs) {
-      i++;
-      if (d.id === currentUser.uid) { rank = i; break; }
-    }
-    if (rank && (myData.bestRank == null || rank < myData.bestRank)) {
-      myData.bestRank = rank;
-      await setDoc(doc(db, 'scores', currentUser.uid), { bestRank: rank }, { merge: true });
-    }
-  } catch {}
 }
 
 async function renderMiniRanking(m) {
@@ -924,7 +887,9 @@ async function renderMiniRanking(m) {
       if (i === myIndex) tr.className = 'me';
       tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
       const nickCell = tr.children[1];
-      nickCell.appendChild(document.createTextNode(r.nick));
+      const nickSpan = document.createElement('span');
+      nickSpan.textContent = r.nick;
+      nickCell.appendChild(nickSpan);
       if (r.stats) nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
       body.appendChild(tr);
     }
@@ -1048,7 +1013,9 @@ window.loadRanking = async (m) => {
       if (currentUser && docSnap.id === currentUser.uid) tr.className = 'me';
       tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${data[m]}</td>`;
       const nickCell = tr.children[1];
-      nickCell.appendChild(document.createTextNode(data.nick)); // inserção segura do nick
+      const nickSpan = document.createElement('span'); // inserção segura do nick
+      nickSpan.textContent = data.nick;
+      nickCell.appendChild(nickSpan);
       nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(data, 3));
       body.appendChild(tr);
     });
