@@ -119,6 +119,12 @@
     font-size: 0.95rem;
     color: #cfd8ff;
   }
+  #user-label {
+    color: #cfd8ff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  #user-label:hover { text-decoration: underline; }
 
   /* game */
   .hud {
@@ -281,7 +287,7 @@
 <div class="screen" id="menu-screen">
   <h1>COLOR RUSH</h1>
   <div class="user-bar">
-    <span id="user-label"></span>
+    <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
     <span>
       <button class="link" id="mute-btn" onclick="toggleMute()">🔊</button>
       <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
@@ -298,7 +304,6 @@
     <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
   </div>
   <button class="secondary" onclick="showRanking()">🌍 RANKING GLOBAL</button>
-  <button class="secondary" onclick="showProfile()">🎖️ MEU PERFIL E CONQUISTAS</button>
   <p class="muted">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
@@ -745,10 +750,10 @@ window.showMenu = () => {
   $('record-reverse').textContent = myRecord('reverse');
   $('mute-btn').textContent = muted ? '🔇' : '🔊';
   if (offline) {
-    $('user-label').textContent = '👤 Jogando sem conta';
+    $('user-label').textContent = '👤 Jogando sem conta ›';
     $('logout-btn').textContent = 'entrar';
   } else {
-    $('user-label').textContent = '👤 ' + (myData.nick || '');
+    $('user-label').textContent = '👤 ' + (myData.nick || '') + ' 🎖️ ›';
     $('logout-btn').textContent = 'sair';
   }
   show('menu-screen');
