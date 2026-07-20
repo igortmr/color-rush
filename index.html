@@ -531,6 +531,14 @@ function topBadgeIcons(stats, count) {
 }
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
 
+// maior pontuação primeiro; empate é desempatado por quem bateu o recorde primeiro
+function compareRankRows(a, b) {
+  if (b.pts !== a.pts) return b.pts - a.pts;
+  const at = a.at ? a.at.toMillis() : Infinity;
+  const bt = b.at ? b.at.toMillis() : Infinity;
+  return at - bt;
+}
+
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
 let currentUser = null;          // usuário do firebase ou null
 let offline = false;             // jogando sem conta
@@ -944,7 +952,10 @@ async function persistGameResult(isNewRecord) {
     updatedAt: serverTimestamp(),
   };
   update[mode === 'classic' ? 'playedClassic' : 'playedReverse'] = true;
-  if (isNewRecord) update[mode] = score;
+  if (isNewRecord) {
+    update[mode] = score;
+    update[mode + 'At'] = serverTimestamp(); // guarda quando o recorde foi batido, pra desempate no ranking
+  }
 
   try {
     await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
@@ -972,18 +983,18 @@ async function renderMiniRanking(m) {
     const rows = [];
     snap.forEach(d => {
       const data = d.data();
-      if (data.nick && data[m] > 0) rows.push({ uid: d.id, nick: data.nick, pts: data[m], stats: data });
+      if (data.nick && data[m] > 0) rows.push({ uid: d.id, nick: data.nick, pts: data[m], at: data[m + 'At'], stats: data });
     });
 
     // localiza (ou insere) a linha do jogador
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
     if (myIndex === -1) {
       const myPts = offline ? score : (myData[m] || 0);
-      let i = rows.findIndex(r => r.pts < myPts);
-      if (i === -1) i = rows.length;
-      rows.splice(i, 0, { uid: '__me__', nick: offline ? 'VOCÊ' : (myData.nick || 'VOCÊ'), pts: myPts, stats: offline ? null : myData });
-      myIndex = i;
+      rows.push({ uid: '__me__', nick: offline ? 'VOCÊ' : (myData.nick || 'VOCÊ'), pts: myPts, at: null, stats: offline ? null : myData });
     }
+
+    rows.sort(compareRankRows);
+    myIndex = rows.findIndex(r => r.uid === (!offline && currentUser ? currentUser.uid : '__me__'));
 
     // janela: 2 antes e 2 depois (expande pra manter 5 linhas quando possível)
     let start = Math.max(0, myIndex - 2);
@@ -1097,6 +1108,7 @@ async function submitPendingScore() {
       await setDoc(doc(db, 'scores', currentUser.uid), {
         nick: myData.nick,
         [m]: s,
+        [m + 'At']: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
       myData[m] = s;
@@ -1118,24 +1130,28 @@ window.loadRanking = async (m) => {
   try {
     const q = query(collection(db, 'scores'), orderBy(m, 'desc'), limit(20));
     const snap = await getDocs(q);
-    body.innerHTML = '';
-    let pos = 0;
+    const rows = [];
     snap.forEach(docSnap => {
       const data = docSnap.data();
-      if (!data.nick || !(data[m] > 0)) return;
-      pos++;
+      if (data.nick && data[m] > 0) rows.push({ uid: docSnap.id, nick: data.nick, pts: data[m], at: data[m + 'At'], stats: data });
+    });
+    rows.sort(compareRankRows);
+
+    body.innerHTML = '';
+    rows.forEach((r, i) => {
+      const pos = i + 1;
       const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
       const tr = document.createElement('tr');
-      if (currentUser && docSnap.id === currentUser.uid) tr.className = 'me';
-      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${data[m]}</td>`;
+      if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
       const nickCell = tr.children[1];
       const nickSpan = document.createElement('span'); // inserção segura do nick
-      nickSpan.textContent = data.nick;
+      nickSpan.textContent = r.nick;
       nickCell.appendChild(nickSpan);
-      nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(data, 3));
+      nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
       body.appendChild(tr);
     });
-    if (pos === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+    if (rows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
   } catch (e) {
     body.innerHTML = '<tr><td colspan="3" class="muted">Erro ao carregar ranking.</td></tr>';
   }
