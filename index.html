@@ -298,6 +298,13 @@
   <div class="record-line">🏆 Seu recorde neste modo: <span id="record-over">0</span></div>
   <div class="muted" id="sync-status"></div>
   <button id="signup-cta" style="display:none;" onclick="goSignup()">🏆 CRIAR CONTA E SALVAR PONTOS</button>
+  <div class="card" style="padding:10px; gap:4px;">
+    <table>
+      <thead><tr><th>#</th><th>Ranking — <span id="mini-mode"></span></th><th style="text-align:right;">Pontos</th></tr></thead>
+      <tbody id="mini-ranking-body"></tbody>
+    </table>
+    <button class="link" onclick="showRanking()">ver ranking completo</button>
+  </div>
   <div class="btn-row">
     <button onclick="playAgain()">JOGAR DE NOVO</button>
     <button class="secondary" onclick="shareScore()">📤 COMPARTILHAR</button>
@@ -689,27 +696,61 @@ async function gameOver(reason) {
     }
   }
 
-  // convite para quem joga sem conta: mostra a posição que ocuparia no ranking
+  // convite para quem joga sem conta
   $('signup-cta').style.display = 'none';
   if (offline && score > 0) {
     pendingScore = { mode, score };
     $('signup-cta').style.display = '';
-    teaseRankingPosition(mode, score);
   }
+
+  renderMiniRanking(mode);
 }
 
-async function teaseRankingPosition(m, s) {
+async function renderMiniRanking(m) {
+  $('mini-mode').textContent = (m === 'classic') ? 'Clássico' : 'Reverso';
+  const body = $('mini-ranking-body');
+  body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
   try {
-    const snap = await getDocs(query(collection(db, 'scores'), orderBy(m, 'desc'), limit(20)));
-    let ahead = 0, total = 0;
+    const snap = await getDocs(query(collection(db, 'scores'), orderBy(m, 'desc'), limit(100)));
+    const rows = [];
     snap.forEach(d => {
-      const v = d.data()[m] || 0;
-      if (d.data().nick && v > 0) { total++; if (v >= s) ahead++; }
+      const data = d.data();
+      if (data.nick && data[m] > 0) rows.push({ uid: d.id, nick: data.nick, pts: data[m] });
     });
-    $('sync-status').textContent = (ahead < 20)
-      ? `👀 Você ficaria em ${ahead + 1}º lugar no ranking global!`
-      : '👀 Crie uma conta e dispute o ranking global!';
-  } catch {}
+
+    // localiza (ou insere) a linha do jogador
+    let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
+    if (myIndex === -1) {
+      const myPts = offline ? score : (myData[m] || 0);
+      let i = rows.findIndex(r => r.pts < myPts);
+      if (i === -1) i = rows.length;
+      rows.splice(i, 0, { uid: '__me__', nick: offline ? 'VOCÊ' : (myData.nick || 'VOCÊ'), pts: myPts });
+      myIndex = i;
+    }
+
+    // janela: 2 antes e 2 depois (expande pra manter 5 linhas quando possível)
+    let start = Math.max(0, myIndex - 2);
+    let end = Math.min(rows.length, myIndex + 3);
+    while (end - start < 5 && (start > 0 || end < rows.length)) {
+      if (start > 0) start--;
+      else end++;
+    }
+
+    body.innerHTML = '';
+    for (let i = start; i < end; i++) {
+      const r = rows[i];
+      const pos = i + 1;
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + 'º';
+      const tr = document.createElement('tr');
+      if (i === myIndex) tr.className = 'me';
+      tr.innerHTML = `<td class="pos">${medal}</td><td></td><td class="pts">${r.pts}</td>`;
+      tr.children[1].textContent = r.nick;
+      body.appendChild(tr);
+    }
+    if (rows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém no ranking ainda. Seja o primeiro! 🚀</td></tr>';
+  } catch {
+    body.innerHTML = '<tr><td colspan="3" class="muted">Não foi possível carregar.</td></tr>';
+  }
 }
 
 window.goSignup = () => {
@@ -736,7 +777,7 @@ async function submitPendingScore() {
 /* ================== ranking ================== */
 window.showRanking = () => {
   show('ranking-screen');
-  loadRanking('classic');
+  loadRanking(mode || 'classic'); // abre no modo que a pessoa estava jogando
 };
 
 window.loadRanking = async (m) => {
