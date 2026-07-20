@@ -391,13 +391,34 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 /* ================== indicação (referral) ================== */
-// captura ?ref=<uid> da URL de compartilhamento e guarda até o cadastro terminar
-let referrerUid = new URLSearchParams(location.search).get('ref') || null;
-if (referrerUid) {
-  try { sessionStorage.setItem('colorRushRef', referrerUid); } catch {}
+// captura ?ref=<código curto> da URL de compartilhamento e guarda até o cadastro terminar
+let referrerCode = new URLSearchParams(location.search).get('ref') || null;
+if (referrerCode) {
+  try { sessionStorage.setItem('colorRushRef', referrerCode); } catch {}
   history.replaceState({}, '', location.pathname); // limpa a URL visível
 } else {
-  try { referrerUid = sessionStorage.getItem('colorRushRef'); } catch {}
+  try { referrerCode = sessionStorage.getItem('colorRushRef'); } catch {}
+}
+
+const REF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I/L, pra não confundir
+async function generateUniqueRefCode() {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    let code = '';
+    for (let i = 0; i < 4; i++) code += REF_CHARS[Math.floor(Math.random() * REF_CHARS.length)];
+    const snap = await getDoc(doc(db, 'refcodes', code));
+    if (!snap.exists()) return code;
+  }
+  return Math.random().toString(36).slice(2, 8).toUpperCase(); // fallback improvável
+}
+async function ensureRefCode() {
+  if (myData.refCode) return myData.refCode;
+  try {
+    const code = await generateUniqueRefCode();
+    await setDoc(doc(db, 'refcodes', code), { uid: currentUser.uid });
+    await setDoc(doc(db, 'scores', currentUser.uid), { refCode: code, updatedAt: serverTimestamp() }, { merge: true });
+    myData.refCode = code;
+  } catch {}
+  return myData.refCode;
 }
 
 /* ================== state ================== */
@@ -480,7 +501,7 @@ let pendingScore = null;         // pontuação feita sem conta, aguardando cada
 let myData = {
   nick: null, classic: 0, reverse: 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null,
+  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null, refCode: null,
 };
 
 const $ = id => document.getElementById(id);
@@ -545,9 +566,11 @@ window.shareScore = async () => {
   const modeName = (mode === 'classic') ? 'Clássico' : 'Reverso';
   const rec = $('new-record').classList.contains('show') ? ' 🎉 Novo recorde pessoal!' : '';
   // link com ?ref= só existe pra quem tem conta — é o que faz o indicado contar no badge Divulgador
-  const link = (!offline && currentUser)
-    ? `${location.origin}${location.pathname}?ref=${currentUser.uid}`
-    : `${location.origin}${location.pathname}`;
+  let link = `${location.origin}${location.pathname}`;
+  if (!offline && currentUser) {
+    const code = await ensureRefCode();
+    if (code) link += `?ref=${code}`;
+  }
   const text = `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`;
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   try {
@@ -624,7 +647,7 @@ window.playOffline = () => {
   myData = {
     nick: null, classic: 0, reverse: 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-    playedClassic: false, playedReverse: false, referrals: 0, bestRank: null,
+    playedClassic: false, playedReverse: false, referrals: 0, bestRank: null, refCode: null,
   };
   showMenu();
 };
@@ -650,7 +673,7 @@ onAuthStateChanged(auth, async user => {
 const EMPTY_PROFILE = {
   nick: null, classic: 0, reverse: 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null,
+  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null, refCode: null,
 };
 
 async function proceedAfterLogin(user) {
@@ -677,23 +700,37 @@ window.saveNick = async () => {
       $('nick-error').textContent = 'Este nick já está em uso. Escolha outro.';
       return;
     }
+    const refCode = await generateUniqueRefCode();
+
+    // resolve o código da URL (se veio de um link compartilhado) para o uid de quem indicou
+    let referrerUidResolved = null;
+    if (referrerCode) {
+      try {
+        const refSnap = await getDoc(doc(db, 'refcodes', referrerCode));
+        if (refSnap.exists()) referrerUidResolved = refSnap.data().uid;
+      } catch {}
+    }
+
     const batch = writeBatch(db);
     batch.set(doc(db, 'nicks', nickKey), { uid: currentUser.uid });
+    batch.set(doc(db, 'refcodes', refCode), { uid: currentUser.uid });
     batch.set(doc(db, 'scores', currentUser.uid), {
       nick,
+      refCode,
       classic: myData.classic || 0,
       reverse: myData.reverse || 0,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     await batch.commit();
     myData.nick = nick;
+    myData.refCode = refCode;
 
-    // credita a indicação para quem trouxe esse jogador (se veio de um link de compartilhamento)
-    if (referrerUid && referrerUid !== currentUser.uid) {
+    // credita a indicação para quem trouxe esse jogador
+    if (referrerUidResolved && referrerUidResolved !== currentUser.uid) {
       try {
-        await setDoc(doc(db, 'scores', referrerUid), { referrals: increment(1), updatedAt: serverTimestamp() }, { merge: true });
+        await setDoc(doc(db, 'scores', referrerUidResolved), { referrals: increment(1), updatedAt: serverTimestamp() }, { merge: true });
       } catch {}
-      referrerUid = null;
+      referrerCode = null;
       try { sessionStorage.removeItem('colorRushRef'); } catch {}
     }
 
