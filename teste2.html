@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Rush</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --neon-red: #ff2d6b;
+    --neon-orange: #ff9f1c;
+    --neon-green: #21e6a1;
+    --neon-blue: #2dd6ff;
+    --neon-purple: #b14dff;
+    --neon-yellow: #ffe93c;
+    --bg-deep: #050810;
+    --bg-panel: #0e1224;
+    --bg-panel-2: #131a33;
+  }
+
+  body {
+    font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(177,77,255,0.25), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(45,214,255,0.18), transparent 55%),
+      radial-gradient(ellipse 700px 500px at 50% 110%, rgba(255,45,107,0.16), transparent 55%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
+      var(--bg-deep);
+    color: #eef1ff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 520px;
+  }
+  .screen.active { display: flex; }
+
+  h1 {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange), var(--neon-green), var(--neon-blue), var(--neon-purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-align: center;
+    filter: drop-shadow(0 0 6px rgba(177,77,255,0.55)) drop-shadow(0 0 16px rgba(45,214,255,0.35));
+  }
+  .card {
+    width: 100%;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(177,77,255,0.35);
+    border-radius: 16px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset, 0 0 24px rgba(177,77,255,0.08);
+  }
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(45,214,255,0.35);
+    background: #060a16;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.05rem;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
+  input::placeholder { color: #6b76a8; }
+  button {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 13px 24px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 14px rgba(255,45,107,0.45), 0 0 3px rgba(255,159,28,0.6);
+  }
+  button:hover { transform: scale(1.04); box-shadow: 0 0 22px rgba(255,45,107,0.65), 0 0 6px rgba(255,159,28,0.8); }
+  button.secondary {
+    background: #0a0e1e;
+    border: 1.5px solid var(--neon-purple);
+    box-shadow: 0 0 12px rgba(177,77,255,0.45), inset 0 0 10px rgba(177,77,255,0.08);
+  }
+  button.secondary:hover { box-shadow: 0 0 20px rgba(177,77,255,0.7), inset 0 0 14px rgba(177,77,255,0.15); }
+  button.google {
+    background: #fff;
+    color: #333;
+    box-shadow: 0 0 10px rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  button.link {
+    background: none;
+    border: none;
+    box-shadow: none;
+    color: #8fa0d6;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: underline;
+    padding: 4px;
+  }
+  button.link:hover { box-shadow: none; }
+  .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
+
+  .mode-card {
+    width: 100%;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 20px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    text-align: left;
+  }
+  .mode-card:hover { transform: scale(1.03); border-color: var(--neon-purple); box-shadow: 0 0 22px rgba(177,77,255,0.3); }
+  .mode-card h2 { font-family: 'Orbitron', sans-serif; font-size: 1.15rem; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .mode-card p { color: #a9b4e0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
+  .record-badge {
+    display: inline-block;
+    background: #060a16;
+    border: 1px solid rgba(255,233,60,0.4);
+    color: var(--neon-yellow);
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    text-shadow: 0 0 8px rgba(255,233,60,0.5);
+  }
+  .user-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-size: 0.95rem;
+    color: #a9b4e0;
+  }
+  #user-label {
+    color: #cfd8ff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  #user-label:hover { text-decoration: underline; }
+
+  /* game */
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .timer-track { width: 100%; height: 16px; background: #060a16; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
+  .timer-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow), var(--neon-red));
+    box-shadow: 0 0 12px rgba(33,230,161,0.7);
+    border-radius: 8px;
+  }
+  .instruction {
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: center;
+    min-height: 3.2rem;
+    display: flex;
+    align-items: center;
+    text-shadow: 0 0 12px rgba(45,214,255,0.35);
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+  .square {
+    aspect-ratio: 1;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+    border: 3px solid rgba(255,255,255,0.35);
+  }
+  .square:hover { transform: scale(1.04); filter: brightness(1.12); }
+  .word {
+    background: rgba(6,10,22,0.88);
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.1rem;
+    padding: 6px 14px;
+    border-radius: 8px;
+    letter-spacing: 1px;
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+
+  /* game over */
+  .final-score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4.6rem;
+    font-weight: 900;
+    color: var(--neon-orange);
+    line-height: 1;
+    text-shadow: 0 0 10px rgba(255,159,28,0.7), 0 0 28px rgba(255,159,28,0.4);
+  }
+  .go-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--neon-red);
+    text-shadow: 0 0 10px rgba(255,45,107,0.7);
+  }
+  .new-record {
+    display: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 12px rgba(255,233,60,0.8);
+    animation: pulse 0.8s infinite alternate;
+  }
+  .new-record.show { display: block; }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+  .record-line { color: #a9b4e0; font-size: 1rem; }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* ranking */
+  .tabs { display: flex; gap: 10px; width: 100%; }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    background: #0a0e1e;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #a9b4e0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
+  }
+  .tab.active { border-color: var(--neon-purple); color: #fff; box-shadow: 0 0 16px rgba(177,77,255,0.5); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
+  th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  tbody tr { background: #0e1224; }
+  tbody tr:nth-child(odd) { background: #0a0e1e; }
+  tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
+  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); width: 44px; text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); }
+  .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
+
+  /* badges */
+  .badge-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.2), 0 0 8px rgba(255,255,255,0.25);
+  }
+  .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
+  .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
+  .badge-chip.locked { opacity: 0.45; filter: grayscale(0.6); box-shadow: none; }
+  .chip-wrap { position: relative; display: inline-flex; }
+  .chip-lock {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0a0e1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
+  }
+  .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge-card { text-align: left; gap: 10px; }
+  .badge-card-head { display: flex; align-items: center; gap: 12px; }
+  .badge-card-head .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.95rem; }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .progress-track { width: 100%; height: 10px; background: #060a16; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); box-shadow: 0 0 8px rgba(33,230,161,0.6); border-radius: 6px; transition: width 0.3s; }
+  .profile-header { text-align: center; }
+  .profile-header .big-nick { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 800; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; }
+
+  .version-tag {
+    position: fixed;
+    bottom: 6px;
+    right: 10px;
+    font-family: 'Rajdhani', monospace;
+    font-size: 0.68rem;
+    color: #3d4670;
+    z-index: 1000;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="version-tag" id="version-tag">carregando versão...</div>
+
+<!-- LOADING -->
+<div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><p class="muted">Carregando...</p></div>
+
+<!-- AUTH -->
+<div class="screen" id="auth-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="card">
+    <input type="email" id="auth-email" placeholder="E-mail">
+    <input type="password" id="auth-pass" placeholder="Senha (mín. 6 caracteres)">
+    <div class="error" id="auth-error"></div>
+    <button onclick="doLogin()">ENTRAR</button>
+    <button class="secondary" onclick="doSignup()">CRIAR CONTA</button>
+    <button class="google" onclick="doGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+    <button class="link" onclick="playOffline()">Jogar sem conta (sem ranking)</button>
+  </div>
+</div>
+
+<!-- VERIFICAR E-MAIL -->
+<div class="screen" id="verify-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="card">
+    <p style="text-align:center;">📧 Enviamos um link de confirmação para<br><b id="verify-email-label"></b></p>
+    <p class="muted">Clique no link do e-mail e depois volte aqui.<br>(confira também a caixa de spam)</p>
+    <div class="error" id="verify-status"></div>
+    <button onclick="checkVerification()">JÁ CONFIRMEI</button>
+    <button class="secondary" onclick="resendVerification()">REENVIAR E-MAIL</button>
+    <button class="link" onclick="doLogout()">sair</button>
+  </div>
+</div>
+
+<!-- NICK -->
+<div class="screen" id="nick-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="card">
+    <p style="text-align:center;">Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
+    <input type="text" id="nick-input" maxlength="16" placeholder="Seu nick (3 a 16 caracteres)">
+    <div class="error" id="nick-error"></div>
+    <button onclick="saveNick()">CONFIRMAR</button>
+  </div>
+</div>
+
+<!-- MENU -->
+<div class="screen" id="menu-screen">
+  <h1>COLOR RUSH</h1>
+  <div class="user-bar">
+    <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
+    <span>
+      <button class="link" id="mute-btn" onclick="toggleMute()">🔊</button>
+      <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
+    </span>
+  </div>
+  <div class="mode-card" onclick="startGame('classic')">
+    <h2>🎨 Clássico</h2>
+    <p>Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
+    <span class="record-badge">🏆 Seu recorde: <span id="record-classic">0</span></span>
+  </div>
+  <div class="mode-card" onclick="startGame('reverse')">
+    <h2>🔄 Reverso</h2>
+    <p>Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
+    <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
+  </div>
+  <div class="btn-row" style="width:100%;">
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')">🏆 RANKING</button>
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="inviteFriends()">📤 CONVIDAR AMIGOS</button>
+  </div>
+  <div class="muted" id="invite-status"></div>
+  <p class="muted">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game-screen">
+  <div class="hud">
+    <span>PONTOS: <span id="score">0</span></span>
+    <span>🏆 <span id="record-hud">0</span></span>
+    <span id="speed">⏱️ 10.0s</span>
+  </div>
+  <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+  <div class="instruction" id="instruction"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- GAME OVER -->
+<div class="screen" id="over-screen">
+  <div class="go-title" id="over-reason">FIM DE JOGO</div>
+  <div class="new-record" id="new-record">🎉 NOVO RECORDE! 🎉</div>
+  <div>Sua pontuação:</div>
+  <div class="final-score" id="final-score">0</div>
+  <div class="record-line">🏆 Seu recorde neste modo: <span id="record-over">0</span></div>
+  <div class="muted" id="sync-status"></div>
+  <button id="signup-cta" style="display:none;" onclick="goSignup()">🏆 CRIAR CONTA E SALVAR PONTOS</button>
+  <div class="card" style="padding:10px; gap:4px;">
+    <table>
+      <thead><tr><th>#</th><th>Ranking — <span id="mini-mode"></span></th><th style="text-align:right;">Pontos</th></tr></thead>
+      <tbody id="mini-ranking-body"></tbody>
+    </table>
+    <button class="link" onclick="showRanking()">ver ranking completo</button>
+  </div>
+  <div class="btn-row">
+    <button onclick="playAgain()">JOGAR DE NOVO</button>
+    <button class="secondary" onclick="shareScore()">📤 COMPARTILHAR</button>
+    <button class="secondary" onclick="showMenu()">MENU</button>
+  </div>
+  <div class="muted" id="share-status"></div>
+</div>
+
+<!-- RANKING -->
+<div class="screen" id="ranking-screen">
+  <h1 style="font-size:2rem;">🏆 RANKING</h1>
+  <div class="tabs">
+    <div class="tab" id="tab-geral" onclick="loadRanking('geral')">🌍 Geral</div>
+    <div class="tab" id="tab-classic" onclick="loadRanking('classic')">🎨 Clássico</div>
+    <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')">🔄 Reverso</div>
+  </div>
+  <div class="muted" id="ranking-explain"></div>
+  <div class="card" style="padding:10px;">
+    <table>
+      <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">Pontos</th></tr></thead>
+      <tbody id="ranking-body"><tr><td colspan="3" class="muted">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="ranking-pagination"></div>
+  <button class="secondary" onclick="showMenu()">VOLTAR</button>
+</div>
+
+<!-- PERFIL -->
+<div class="screen" id="profile-screen">
+  <h1 style="font-size:2rem;">🎖️ PERFIL</h1>
+  <div class="profile-header">
+    <div class="big-nick" id="profile-nick"></div>
+    <div class="muted" id="profile-summary"></div>
+  </div>
+  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;">📤 CONVIDAR AMIGOS</button>
+  <div class="muted" id="profile-invite-status"></div>
+  <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
+  <button class="secondary" onclick="showMenu()">VOLTAR</button>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut,
+  sendEmailVerification
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {
+  getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
+  serverTimestamp, writeBatch, increment
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
+  authDomain: "color-rush-474ee.firebaseapp.com",
+  projectId: "color-rush-474ee",
+  storageBucket: "color-rush-474ee.firebasestorage.app",
+  messagingSenderId: "988545815222",
+  appId: "1:988545815222:web:f0cae8432b04550ca60c17"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* ================== versão (commit real do GitHub) ================== */
+(async () => {
+  const el = document.getElementById('version-tag');
+  try {
+    const res = await fetch('https://api.github.com/repos/igortmr/color-rush/commits?path=index.html&per_page=1');
+    const data = await res.json();
+    if (data && data[0]) {
+      el.textContent = `#${data[0].sha.slice(0, 7)}`;
+    } else {
+      el.textContent = '';
+    }
+  } catch {
+    el.textContent = '';
+  }
+})();
+
+/* ================== indicação (referral) ================== */
+// captura ?ref=<código curto> da URL de compartilhamento e guarda até o cadastro terminar
+let referrerCode = new URLSearchParams(location.search).get('ref') || null;
+if (referrerCode) {
+  try { sessionStorage.setItem('colorRushRef', referrerCode); } catch {}
+  history.replaceState({}, '', location.pathname); // limpa a URL visível
+} else {
+  try { referrerCode = sessionStorage.getItem('colorRushRef'); } catch {}
+}
+
+const REF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I/L, pra não confundir
+async function generateUniqueRefCode() {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    let code = '';
+    for (let i = 0; i < 4; i++) code += REF_CHARS[Math.floor(Math.random() * REF_CHARS.length)];
+    const snap = await getDoc(doc(db, 'refcodes', code));
+    if (!snap.exists()) return code;
+  }
+  return Math.random().toString(36).slice(2, 8).toUpperCase(); // fallback improvável
+}
+async function ensureRefCode() {
+  if (myData.refCode) return myData.refCode;
+  try {
+    const code = await generateUniqueRefCode();
+    await setDoc(doc(db, 'refcodes', code), { uid: currentUser.uid });
+    await setDoc(doc(db, 'scores', currentUser.uid), { refCode: code, updatedAt: serverTimestamp() }, { merge: true });
+    myData.refCode = code;
+  } catch {}
+  return myData.refCode;
+}
+
+/* ================== state ================== */
+const COLORS = [
+  { name: 'AZUL',     hex: '#1e90ff' },
+  { name: 'VERMELHO', hex: '#ff4757' },
+  { name: 'VERDE',    hex: '#2ed573' },
+  { name: 'AMARELO',  hex: '#ffd32a' },
+  { name: 'ROXO',     hex: '#a55eea' },
+  { name: 'LARANJA',  hex: '#ff7f24' },
+  { name: 'ROSA',     hex: '#ff6b9d' },
+  { name: 'CIANO',    hex: '#00d2d3' },
+];
+const SQUARES = 4;
+
+/* ================== conquistas (badges) ================== */
+const TIER_COLORS = ['#cd7f32', '#c0c0c0', '#ffd700', '#66ccff', '#a55eea', '#ff4757']; // bronze, prata, ouro, platina, diamante, rubi
+
+const BADGE_DEFS = {
+  points: {
+    icon: '⭐', label: 'Pontos Totais',
+    tiers: [500, 2000, 5000, 15000, 50000],
+    names: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores'],
+    metric: u => u.totalPoints || 0,
+    desc: n => `Acumule ${n} pontos (soma de todas as partidas)`,
+  },
+  games: {
+    icon: '🎮', label: 'Partidas Jogadas',
+    tiers: [10, 50, 100, 250, 500, 1000],
+    names: ['Iniciante', 'Frequentador', 'Dedicado', 'Veterano', 'Lenda', 'Imortal'],
+    metric: u => u.gamesPlayed || 0,
+    desc: n => `Jogue ${n} partidas`,
+  },
+  streak: {
+    icon: '🔥', label: 'Sequência de Dias',
+    tiers: [3, 7, 14, 30, 100],
+    names: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável'],
+    metric: u => u.bestStreak || 0,
+    desc: n => `Jogue ${n} dias seguidos`,
+  },
+  sharer: {
+    icon: '📣', label: 'Divulgador',
+    tiers: [1, 5, 15],
+    names: ['Boca a Boca', 'Influencer', 'Viral'],
+    metric: u => u.referrals || 0,
+    desc: n => `Tenha ${n} amigo${n > 1 ? 's' : ''} cadastrado${n > 1 ? 's' : ''} pelo seu link de compartilhamento`,
+  },
+};
+const BADGE_ORDER = ['points', 'games', 'streak', 'sharer'];
+
+function unlockedTier(def, stats) {
+  const val = def.metric(stats);
+  let tier = -1;
+  for (let i = 0; i < def.tiers.length; i++) {
+    const ok = def.inverse ? val <= def.tiers[i] : val >= def.tiers[i];
+    if (ok) tier = i;
+  }
+  return tier;
+}
+function badgeChip(def, tierIdx, size) {
+  const color = TIER_COLORS[tierIdx] || TIER_COLORS[TIER_COLORS.length - 1];
+  const cls = size ? ` ${size}` : '';
+  return `<span class="badge-chip${cls}" style="background:${color}" title="${def.label}: ${def.names[tierIdx]}">${def.icon}</span>`;
+}
+function topBadgeIcons(stats, count) {
+  let out = [];
+  for (const key of BADGE_ORDER) {
+    const def = BADGE_DEFS[key];
+    const t = unlockedTier(def, stats);
+    if (t >= 0) out.push(badgeChip(def, t, 'small')); // no ranking os ícones ficam menores
+    if (out.length >= count) break;
+  }
+  return out.join('');
+}
+function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
+
+// maior pontuação primeiro; empate é desempatado por quem bateu o recorde primeiro
+function compareRankRows(a, b) {
+  if (b.pts !== a.pts) return b.pts - a.pts;
+  const at = a.at ? a.at.toMillis() : Infinity;
+  const bt = b.at ? b.at.toMillis() : Infinity;
+  return at - bt;
+}
+
+let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
+let currentUser = null;          // usuário do firebase ou null
+let offline = false;             // jogando sem conta
+let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
+let myData = {
+  nick: null, classic: 0, reverse: 0,
+  gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0,
+};
+
+const $ = id => document.getElementById(id);
+const show = id => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+};
+const shuffle = a => a.sort(() => Math.random() - 0.5);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/* ================== recordes locais (modo sem conta) ================== */
+function getLocalRecord(m) {
+  try { return parseInt(localStorage.getItem('colorRushRecord_' + m)) || 0; } catch { return 0; }
+}
+function setLocalRecord(m, v) {
+  try { localStorage.setItem('colorRushRecord_' + m, v); } catch {}
+}
+function myRecord(m) {
+  return offline ? getLocalRecord(m) : (myData[m] || 0);
+}
+
+/* ================== sons (Web Audio, sem arquivos) ================== */
+let audioCtx = null;
+let muted = false;
+try { muted = localStorage.getItem('colorRushMuted') === '1'; } catch {}
+
+function audioContext() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
+  if (muted) return;
+  try {
+    const c = audioContext();
+    const t = c.currentTime + delay;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur);
+  } catch {}
+}
+const sfx = {
+  correct(n) { tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1); }, // sobe o tom a cada acerto
+  wrong()   { tone(160, 0.3, 'sawtooth', 0.15); tone(110, 0.4, 'sawtooth', 0.15, 0.08); },
+  timeout() { tone(300, 0.2, 'triangle', 0.15); tone(200, 0.3, 'triangle', 0.15, 0.15); tone(120, 0.5, 'triangle', 0.15, 0.3); },
+  record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
+  tick()    { tone(1000, 0.03, 'sine', 0.05); },
+};
+window.toggleMute = () => {
+  muted = !muted;
+  try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
+  $('mute-btn').textContent = muted ? '🔇' : '🔊';
+};
+
+/* ================== compartilhar ================== */
+window.shareScore = async () => {
+  const modeName = (mode === 'classic') ? 'Clássico' : 'Reverso';
+  const rec = $('new-record').classList.contains('show') ? ' 🎉 Novo recorde pessoal!' : '';
+  // link com ?ref= só existe pra quem tem conta — é o que faz o indicado contar no badge Divulgador
+  let link = `${location.origin}${location.pathname}`;
+  if (!offline && currentUser) {
+    const code = await ensureRefCode();
+    if (code) link += `?ref=${code}`;
+  }
+  const text = `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  try {
+    if (isMobile && navigator.share) {
+      await navigator.share({ text });
+    } else {
+      await navigator.clipboard.writeText(text);
+      $('share-status').textContent = '✅ Copiado para a área de transferência!';
+      setTimeout(() => { $('share-status').textContent = ''; }, 3000);
+    }
+  } catch {}
+};
+
+/* ================== convidar amigos (sem precisar terminar partida) ================== */
+window.inviteFriends = async (statusElId = 'invite-status') => {
+  let link = `${location.origin}${location.pathname}`;
+  if (!offline && currentUser) {
+    const code = await ensureRefCode();
+    if (code) link += `?ref=${code}`;
+  }
+  const text = `🎨 Bora jogar Color Rush comigo? Teste seus reflexos e sua memória! 👉 ${link}`;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const statusEl = $(statusElId);
+  try {
+    if (isMobile && navigator.share) {
+      await navigator.share({ text });
+    } else {
+      await navigator.clipboard.writeText(text);
+      if (statusEl) {
+        statusEl.textContent = '✅ Copiado para a área de transferência!';
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      }
+    }
+  } catch {}
+};
+
+/* ================== autenticação ================== */
+const AUTH_ERRORS = {
+  'auth/invalid-email': 'E-mail inválido.',
+  'auth/missing-password': 'Digite a senha.',
+  'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+  'auth/email-already-in-use': 'Este e-mail já tem conta. Use ENTRAR.',
+  'auth/invalid-credential': 'E-mail ou senha incorretos.',
+  'auth/wrong-password': 'E-mail ou senha incorretos.',
+  'auth/user-not-found': 'Conta não encontrada. Use CRIAR CONTA.',
+  'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco.',
+  'auth/popup-closed-by-user': 'Login cancelado.',
+  'auth/popup-blocked': 'Popup bloqueado pelo navegador. Permita popups.',
+};
+const authErrMsg = e => AUTH_ERRORS[e.code] || 'Erro: ' + (e.code || e.message);
+
+window.doLogin = async () => {
+  $('auth-error').textContent = '';
+  try {
+    await signInWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.doSignup = async () => {
+  $('auth-error').textContent = '';
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    await sendEmailVerification(cred.user);
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.resendVerification = async () => {
+  $('verify-status').textContent = '';
+  try {
+    await sendEmailVerification(auth.currentUser);
+    $('verify-status').textContent = '📧 E-mail reenviado!';
+  } catch (e) { $('verify-status').textContent = authErrMsg(e); }
+};
+window.checkVerification = async () => {
+  $('verify-status').textContent = '';
+  await auth.currentUser.reload();
+  if (auth.currentUser.emailVerified) {
+    await auth.currentUser.getIdToken(true); // atualiza o token para as regras do banco
+    currentUser = auth.currentUser;
+    await proceedAfterLogin(currentUser);
+  } else {
+    $('verify-status').textContent = 'Ainda não confirmado. Confira sua caixa de entrada e o spam.';
+  }
+};
+window.doGoogle = async () => {
+  $('auth-error').textContent = '';
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.doLogout = async () => {
+  offline = false;
+  await signOut(auth);
+  show('auth-screen');
+};
+window.playOffline = () => {
+  offline = true;
+  currentUser = null;
+  myData = {
+    nick: null, classic: 0, reverse: 0,
+    gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+    playedClassic: false, playedReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0,
+  };
+  showMenu();
+};
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    offline = false;
+    currentUser = user;
+    // conta por e-mail/senha precisa confirmar o e-mail (Google já vem verificado)
+    const isPassword = user.providerData.some(p => p.providerId === 'password');
+    if (isPassword && !user.emailVerified) {
+      $('verify-email-label').textContent = user.email;
+      show('verify-screen');
+      return;
+    }
+    await proceedAfterLogin(user);
+  } else {
+    currentUser = null;
+    if (!offline) show('auth-screen');
+  }
+});
+
+const EMPTY_PROFILE = {
+  nick: null, classic: 0, reverse: 0,
+  gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+  playedClassic: false, playedReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0,
+};
+
+async function proceedAfterLogin(user) {
+  try {
+    const snap = await getDoc(doc(db, 'scores', user.uid));
+    myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
+  } catch { myData = { ...EMPTY_PROFILE }; }
+  if (!myData.nick) show('nick-screen');
+  else { await backfillTotal(); await submitPendingScore(); showMenu(); }
+}
+
+// corrige (silenciosamente) contas antigas que ainda não têm o campo "total" calculado,
+// sem precisar esperar a pessoa bater um novo recorde — roda sozinho ao abrir o jogo
+async function backfillTotal() {
+  const computedTotal = (myData.classic || 0) + (myData.reverse || 0);
+  if (computedTotal === (myData.total || 0)) return; // já está correto
+  // usa o mais recente entre os dois recordes como o momento do total, pra não bagunçar o desempate
+  const at = (myData.classicAt && myData.reverseAt)
+    ? (myData.classicAt.toMillis() >= myData.reverseAt.toMillis() ? myData.classicAt : myData.reverseAt)
+    : (myData.classicAt || myData.reverseAt || null);
+  const update = { total: computedTotal };
+  if (at) update.totalAt = at;
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
+    myData.total = computedTotal;
+    if (at) myData.totalAt = at;
+  } catch {}
+}
+
+/* ================== nick ================== */
+window.saveNick = async () => {
+  const nick = $('nick-input').value.trim();
+  $('nick-error').textContent = '';
+  if (nick.length < 3 || nick.length > 16) {
+    $('nick-error').textContent = 'O nick deve ter entre 3 e 16 caracteres.';
+    return;
+  }
+  const nickKey = nick.toLowerCase(); // "Igor" e "IGOR" contam como o mesmo nick
+  try {
+    const taken = await getDoc(doc(db, 'nicks', nickKey));
+    if (taken.exists()) {
+      $('nick-error').textContent = 'Este nick já está em uso. Escolha outro.';
+      return;
+    }
+    const refCode = await generateUniqueRefCode();
+
+    // resolve o código da URL (se veio de um link compartilhado) para o uid de quem indicou
+    let referrerUidResolved = null;
+    if (referrerCode) {
+      try {
+        const refSnap = await getDoc(doc(db, 'refcodes', referrerCode));
+        if (refSnap.exists()) referrerUidResolved = refSnap.data().uid;
+      } catch {}
+    }
+
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'nicks', nickKey), { uid: currentUser.uid });
+    batch.set(doc(db, 'refcodes', refCode), { uid: currentUser.uid });
+    batch.set(doc(db, 'scores', currentUser.uid), {
+      nick,
+      refCode,
+      classic: myData.classic || 0,
+      reverse: myData.reverse || 0,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    await batch.commit();
+    myData.nick = nick;
+    myData.refCode = refCode;
+
+    // credita a indicação para quem trouxe esse jogador
+    if (referrerUidResolved && referrerUidResolved !== currentUser.uid) {
+      try {
+        await setDoc(doc(db, 'scores', referrerUidResolved), { referrals: increment(1), updatedAt: serverTimestamp() }, { merge: true });
+      } catch {}
+      referrerCode = null;
+      try { sessionStorage.removeItem('colorRushRef'); } catch {}
+    }
+
+    await submitPendingScore();
+    showMenu();
+  } catch (e) { $('nick-error').textContent = 'Erro ao salvar: ' + e.message; }
+};
+
+/* ================== menu ================== */
+window.showMenu = () => {
+  $('record-classic').textContent = myRecord('classic');
+  $('record-reverse').textContent = myRecord('reverse');
+  $('mute-btn').textContent = muted ? '🔇' : '🔊';
+  if (offline) {
+    $('user-label').textContent = '👤 Jogando sem conta ›';
+    $('logout-btn').textContent = 'entrar';
+  } else {
+    $('user-label').textContent = '👤 ' + (myData.nick || '') + ' 🎖️ ›';
+    $('logout-btn').textContent = 'sair';
+  }
+  show('menu-screen');
+};
+
+/* ================== jogo ================== */
+window.playAgain = () => window.startGame(mode);
+
+window.startGame = (m) => {
+  mode = m;
+  score = 0;
+  duration = 10000;
+  playing = true;
+  target = pick(COLORS);
+  $('score').textContent = 0;
+  $('record-hud').textContent = myRecord(mode);
+  show('game-screen');
+  newRound(true);
+};
+
+function newRound(first) {
+  nextTarget = pick(COLORS);
+  const others = shuffle(COLORS.filter(c => c !== target)).slice(0, SQUARES - 1);
+  const items = shuffle([target, ...others]); // clássico: fundos | reverso: palavras
+  const distractors = shuffle(COLORS.filter(c => c !== nextTarget)).slice(0, SQUARES - 1);
+  let d = 0;
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  items.forEach(item => {
+    const paired = (item === target) ? nextTarget : distractors[d++];
+    const bg   = (mode === 'classic') ? item : paired;
+    const word = (mode === 'classic') ? paired : item;
+    const el = document.createElement('div');
+    el.className = 'square';
+    el.style.background = bg.hex;
+    el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`; // brilho neon na própria cor
+    el.innerHTML = `<span class="word">${word.name}</span>`;
+    el.onclick = () => handleClick(item);
+    grid.appendChild(el);
+  });
+
+  if (first) {
+    $('instruction').textContent = (mode === 'classic')
+      ? `👉 Clique no quadrado ${target.name} (e memorize a palavra dentro dele!)`
+      : `👉 Clique onde está escrito ${target.name} (e memorize a COR do quadrado!)`;
+  } else {
+    $('instruction').textContent = (mode === 'classic')
+      ? '🧠 Clique no quadrado da cor da palavra que você memorizou!'
+      : '🧠 Clique onde está escrito o nome da cor que você memorizou!';
+  }
+  $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
+
+  startTimer();
+}
+
+function startTimer() {
+  cancelAnimationFrame(rafId);
+  timerStart = performance.now();
+  let lastTick = 0;
+  const tick = now => {
+    if (!playing) return;
+    const left = 1 - (now - timerStart) / duration;
+    $('timer-fill').style.width = Math.max(0, left * 100) + '%';
+    if (left <= 0) { sfx.timeout(); return gameOver('⏰ TEMPO ESGOTADO!'); }
+    if (left < 0.35 && now - lastTick > 250) { lastTick = now; sfx.tick(); } // tic-tac no fim do tempo
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+
+function handleClick(item) {
+  if (!playing) return;
+  if (item === target) {
+    score++;
+    sfx.correct(score);
+    $('score').textContent = score;
+    target = nextTarget;
+    duration *= 0.95;
+    newRound(false);
+  } else {
+    sfx.wrong();
+    gameOver('❌ QUADRADO ERRADO!');
+  }
+}
+
+async function gameOver(reason) {
+  playing = false;
+  cancelAnimationFrame(rafId);
+  const record = myRecord(mode);
+  const isNewRecord = score > record;
+
+  $('over-reason').textContent = reason;
+  $('final-score').textContent = score;
+  $('record-over').textContent = Math.max(score, record);
+  $('new-record').classList.toggle('show', isNewRecord);
+  $('sync-status').textContent = '';
+  $('share-status').textContent = '';
+  if (isNewRecord) sfx.record();
+  show('over-screen');
+
+  if (offline) {
+    if (isNewRecord) setLocalRecord(mode, score);
+  } else if (currentUser && myData.nick) {
+    await persistGameResult(isNewRecord);
+  }
+
+  // convite para quem joga sem conta
+  $('signup-cta').style.display = 'none';
+  if (offline && score > 0) {
+    pendingScore = { mode, score };
+    $('signup-cta').style.display = '';
+  }
+
+  renderMiniRankings(mode);
+}
+
+async function persistGameResult(isNewRecord) {
+  const today = todayStr();
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE');
+  let currentStreak = myData.currentStreak || 0;
+  if (myData.lastPlayedDate !== today) {
+    currentStreak = (myData.lastPlayedDate === yesterday) ? currentStreak + 1 : 1;
+  }
+  const bestStreak = Math.max(myData.bestStreak || 0, currentStreak);
+
+  const update = {
+    nick: myData.nick,
+    gamesPlayed: increment(1),
+    totalPoints: increment(score),
+    lastPlayedDate: today,
+    currentStreak,
+    bestStreak,
+    updatedAt: serverTimestamp(),
+  };
+  update[mode === 'classic' ? 'playedClassic' : 'playedReverse'] = true;
+  if (isNewRecord) {
+    update[mode] = score;
+    update[mode + 'At'] = serverTimestamp(); // guarda quando o recorde foi batido, pra desempate no ranking
+    // Geral = soma dos recordes nos dois modos (conta 0 pro modo ainda não jogado)
+    const otherMode = mode === 'classic' ? 'reverse' : 'classic';
+    update.total = (myData[otherMode] || 0) + score;
+    update.totalAt = serverTimestamp();
+  }
+
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
+    myData.lastPlayedDate = today;
+    myData.currentStreak = currentStreak;
+    myData.bestStreak = bestStreak;
+    myData.gamesPlayed = (myData.gamesPlayed || 0) + 1;
+    myData.totalPoints = (myData.totalPoints || 0) + score;
+    if (mode === 'classic') myData.playedClassic = true; else myData.playedReverse = true;
+    if (isNewRecord) {
+      myData[mode] = score;
+      myData.total = update.total;
+      $('sync-status').textContent = '✅ Recorde enviado para o ranking global!';
+    }
+  } catch (e) {
+    $('sync-status').textContent = '⚠️ Não foi possível salvar sua partida.';
+  }
+}
+
+async function renderRankPreview(field, bodyElId, myPts) {
+  const body = $(bodyElId);
+  body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
+  try {
+    const snap = await getDocs(query(collection(db, 'scores'), orderBy(field, 'desc'), limit(100)));
+    const rows = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.nick && data[field] > 0) rows.push({ uid: d.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+    });
+
+    // localiza (ou insere) a linha do jogador
+    let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
+    if (myIndex === -1) {
+      rows.push({ uid: '__me__', nick: offline ? 'VOCÊ' : (myData.nick || 'VOCÊ'), pts: myPts, at: null, stats: offline ? null : myData });
+    }
+
+    rows.sort(compareRankRows);
+    myIndex = rows.findIndex(r => r.uid === (!offline && currentUser ? currentUser.uid : '__me__'));
+
+    // janela: 2 antes e 2 depois (expande pra manter 5 linhas quando possível)
+    let start = Math.max(0, myIndex - 2);
+    let end = Math.min(rows.length, myIndex + 3);
+    while (end - start < 5 && (start > 0 || end < rows.length)) {
+      if (start > 0) start--;
+      else end++;
+    }
+
+    body.innerHTML = '';
+    for (let i = start; i < end; i++) {
+      const r = rows[i];
+      const pos = i + 1;
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + 'º';
+      const tr = document.createElement('tr');
+      if (i === myIndex) tr.className = 'me';
+      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+      const nickCell = tr.children[1];
+      const nickSpan = document.createElement('span');
+      nickSpan.textContent = r.nick;
+      nickCell.appendChild(nickSpan);
+      if (r.stats) nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+      body.appendChild(tr);
+    }
+    if (rows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém no ranking ainda. Seja o primeiro! 🚀</td></tr>';
+  } catch {
+    body.innerHTML = '<tr><td colspan="3" class="muted">Não foi possível carregar.</td></tr>';
+  }
+}
+
+function renderMiniRankings(m) {
+  $('mini-mode').textContent = (m === 'classic') ? 'Clássico' : 'Reverso';
+  const myModePts = offline ? score : (myData[m] || 0);
+  renderRankPreview(m, 'mini-ranking-body', myModePts);
+}
+
+window.goSignup = () => {
+  offline = false;
+  show('auth-screen');
+};
+
+/* ================== perfil / conquistas ================== */
+window.showProfile = () => {
+  show('profile-screen');
+  renderProfile();
+};
+
+function renderProfile() {
+  $('profile-nick').textContent = offline ? '👤 Jogando sem conta' : ('👤 ' + (myData.nick || ''));
+  const body = $('profile-body');
+  $('profile-invite-btn').style.display = offline ? 'none' : '';
+
+  if (offline) {
+    $('profile-summary').textContent = '';
+    body.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <p>🔒 Suas conquistas não são salvas jogando sem conta.</p>
+        <p class="muted">Crie uma conta para começar a desbloquear badges e acompanhar seu progresso!</p>
+        <button onclick="goSignup()">CRIAR CONTA</button>
+      </div>`;
+    return;
+  }
+
+  const unlockedCount = BADGE_ORDER.reduce((n, k) => n + (unlockedTier(BADGE_DEFS[k], myData) >= 0 ? 1 : 0), 0);
+  $('profile-summary').textContent = `${unlockedCount} de ${BADGE_ORDER.length} categorias de conquista desbloqueadas`;
+  body.innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], myData)).join('');
+}
+
+function renderBadgeCard(def, stats) {
+  const tier = unlockedTier(def, stats);
+  const val = def.metric(stats);
+  const maxed = tier === def.tiers.length - 1;
+  const color = tier >= 0 ? TIER_COLORS[tier] : '#0f3460';
+  const currentName = tier >= 0 ? def.names[tier] : 'Ainda não conquistado';
+
+  let progressHtml;
+  if (maxed) {
+    progressHtml = `<div class="muted" style="text-align:left;">🌟 Nível máximo alcançado!</div>`;
+  } else {
+    const nextThreshold = def.tiers[tier + 1];
+    if (def.inverse) {
+      const posText = (val === Infinity) ? 'Você ainda não pontuou no ranking global.' : `Sua melhor posição até agora: ${val}º lugar.`;
+      progressHtml = `<div class="muted" style="text-align:left;">${posText}<br>🎯 Próxima meta: ${def.desc(nextThreshold)}</div>`;
+    } else {
+      const pct = Math.min(100, Math.max(0, (val / nextThreshold) * 100));
+      progressHtml = `
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="muted" style="text-align:left;">${val} / ${nextThreshold} — ${def.desc(nextThreshold)}</div>`;
+    }
+  }
+
+  const chips = def.tiers.map((th, i) => {
+    const unlocked = i <= tier;
+    const lockOverlay = unlocked ? '' : '<span class="chip-lock">🔒</span>';
+    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[i]}${unlocked ? '' : ' (bloqueado — prévia de como fica ao desbloquear)'}">${def.icon}</span>${lockOverlay}</span>`;
+  }).join('');
+
+  return `
+    <div class="card badge-card">
+      <div class="badge-card-head">
+        <span class="badge-chip big" style="background:${color}">${def.icon}</span>
+        <div>
+          <div class="name">${def.label}</div>
+          <div class="muted" style="text-align:left;">${currentName}</div>
+        </div>
+      </div>
+      ${progressHtml}
+      <div class="chip-row">${chips}</div>
+    </div>`;
+}
+
+async function submitPendingScore() {
+  if (!pendingScore || !currentUser || !myData.nick) return;
+  const { mode: m, score: s } = pendingScore;
+  pendingScore = null;
+  if (s > (myData[m] || 0)) {
+    const otherMode = m === 'classic' ? 'reverse' : 'classic';
+    const total = (myData[otherMode] || 0) + s;
+    try {
+      await setDoc(doc(db, 'scores', currentUser.uid), {
+        nick: myData.nick,
+        [m]: s,
+        [m + 'At']: serverTimestamp(),
+        total,
+        totalAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      myData[m] = s;
+      myData.total = total;
+    } catch {}
+  }
+}
+
+/* ================== ranking ================== */
+window.showRanking = (tab) => {
+  show('ranking-screen');
+  loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
+};
+
+const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', geral: 'total' };
+
+const RANKING_PAGE_SIZE = 20;
+let rankingRows = [];
+let rankingPage = 0;
+
+window.loadRanking = async (m) => {
+  $('tab-classic').classList.toggle('active', m === 'classic');
+  $('tab-reverse').classList.toggle('active', m === 'reverse');
+  $('tab-geral').classList.toggle('active', m === 'geral');
+  $('ranking-explain').textContent = (m === 'geral') ? '🌍 Geral = soma dos recordes em todos os modos.' : '';
+  const field = RANK_FIELDS[m];
+  const body = $('ranking-body');
+  body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
+  $('ranking-pagination').innerHTML = '';
+  try {
+    const q = query(collection(db, 'scores'), orderBy(field, 'desc'), limit(300));
+    const snap = await getDocs(q);
+    const rows = [];
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.nick && data[field] > 0) rows.push({ uid: docSnap.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+    });
+    rows.sort(compareRankRows);
+    rankingRows = rows;
+    rankingPage = 0;
+    renderRankingPage();
+  } catch (e) {
+    body.innerHTML = '<tr><td colspan="3" class="muted">Erro ao carregar ranking.</td></tr>';
+  }
+};
+
+function renderRankingPage() {
+  const body = $('ranking-body');
+  const start = rankingPage * RANKING_PAGE_SIZE;
+  const pageRows = rankingRows.slice(start, start + RANKING_PAGE_SIZE);
+
+  body.innerHTML = '';
+  pageRows.forEach((r, i) => {
+    const pos = start + i + 1;
+    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const tr = document.createElement('tr');
+    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+    const nickCell = tr.children[1];
+    const nickSpan = document.createElement('span'); // inserção segura do nick
+    nickSpan.textContent = r.nick;
+    nickCell.appendChild(nickSpan);
+    nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+    body.appendChild(tr);
+  });
+  if (rankingRows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  const pag = $('ranking-pagination');
+  if (totalPages <= 1) {
+    pag.innerHTML = '';
+  } else {
+    pag.innerHTML = `
+      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>‹ Anterior</button>
+      <span class="muted">Página ${rankingPage + 1} de ${totalPages}</span>
+      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>Próxima ›</button>`;
+  }
+}
+
+window.rankingGoPage = (p) => {
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  rankingPage = Math.max(0, Math.min(p, totalPages - 1));
+  renderRankingPage();
+};
+</script>
+</body>
+</html>
