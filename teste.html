@@ -251,6 +251,7 @@
   .progress-fill { height: 100%; background: linear-gradient(90deg, #2ed573, #ffd32a); border-radius: 6px; transition: width 0.3s; }
   .profile-header { text-align: center; }
   .profile-header .big-nick { font-size: 1.4rem; font-weight: 800; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; }
 
   .version-tag {
     position: fixed;
@@ -390,6 +391,7 @@
       <tbody id="ranking-body"><tr><td colspan="3" class="muted">Carregando...</td></tr></tbody>
     </table>
   </div>
+  <div class="pagination" id="ranking-pagination"></div>
   <button class="secondary" onclick="showMenu()">VOLTAR</button>
 </div>
 
@@ -1178,6 +1180,10 @@ window.showRanking = (tab) => {
 
 const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', geral: 'total' };
 
+const RANKING_PAGE_SIZE = 20;
+let rankingRows = [];
+let rankingPage = 0;
+
 window.loadRanking = async (m) => {
   $('tab-classic').classList.toggle('active', m === 'classic');
   $('tab-reverse').classList.toggle('active', m === 'reverse');
@@ -1186,8 +1192,9 @@ window.loadRanking = async (m) => {
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
+  $('ranking-pagination').innerHTML = '';
   try {
-    const q = query(collection(db, 'scores'), orderBy(field, 'desc'), limit(20));
+    const q = query(collection(db, 'scores'), orderBy(field, 'desc'), limit(300));
     const snap = await getDocs(q);
     const rows = [];
     snap.forEach(docSnap => {
@@ -1195,25 +1202,51 @@ window.loadRanking = async (m) => {
       if (data.nick && data[field] > 0) rows.push({ uid: docSnap.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
     });
     rows.sort(compareRankRows);
-
-    body.innerHTML = '';
-    rows.forEach((r, i) => {
-      const pos = i + 1;
-      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-      const tr = document.createElement('tr');
-      if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
-      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
-      const nickCell = tr.children[1];
-      const nickSpan = document.createElement('span'); // inserção segura do nick
-      nickSpan.textContent = r.nick;
-      nickCell.appendChild(nickSpan);
-      nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
-      body.appendChild(tr);
-    });
-    if (rows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+    rankingRows = rows;
+    rankingPage = 0;
+    renderRankingPage();
   } catch (e) {
     body.innerHTML = '<tr><td colspan="3" class="muted">Erro ao carregar ranking.</td></tr>';
   }
+};
+
+function renderRankingPage() {
+  const body = $('ranking-body');
+  const start = rankingPage * RANKING_PAGE_SIZE;
+  const pageRows = rankingRows.slice(start, start + RANKING_PAGE_SIZE);
+
+  body.innerHTML = '';
+  pageRows.forEach((r, i) => {
+    const pos = start + i + 1;
+    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const tr = document.createElement('tr');
+    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+    const nickCell = tr.children[1];
+    const nickSpan = document.createElement('span'); // inserção segura do nick
+    nickSpan.textContent = r.nick;
+    nickCell.appendChild(nickSpan);
+    nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+    body.appendChild(tr);
+  });
+  if (rankingRows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  const pag = $('ranking-pagination');
+  if (totalPages <= 1) {
+    pag.innerHTML = '';
+  } else {
+    pag.innerHTML = `
+      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>‹ Anterior</button>
+      <span class="muted">Página ${rankingPage + 1} de ${totalPages}</span>
+      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>Próxima ›</button>`;
+  }
+}
+
+window.rankingGoPage = (p) => {
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  rankingPage = Math.max(0, Math.min(p, totalPages - 1));
+  renderRankingPage();
 };
 </script>
 </body>
