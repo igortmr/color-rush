@@ -4,12 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Color Rush</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --neon-red: #ff2d6b;
+    --neon-orange: #ff9f1c;
+    --neon-green: #21e6a1;
+    --neon-blue: #2dd6ff;
+    --neon-purple: #b14dff;
+    --neon-yellow: #ffe93c;
+    --bg-deep: #050810;
+    --bg-panel: #0e1224;
+    --bg-panel-2: #131a33;
+  }
+
   body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #1a1a2e;
-    color: #fff;
+    font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(177,77,255,0.25), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(45,214,255,0.18), transparent 55%),
+      radial-gradient(ellipse 700px 500px at 50% 110%, rgba(255,45,107,0.16), transparent 55%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
+      var(--bg-deep);
+    color: #eef1ff;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -28,51 +50,68 @@
   .screen.active { display: flex; }
 
   h1 {
-    font-size: 2.8rem;
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    font-size: 2.5rem;
     font-weight: 900;
-    background: linear-gradient(90deg, #ff4757, #ffa502, #2ed573, #1e90ff, #a55eea);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange), var(--neon-green), var(--neon-blue), var(--neon-purple));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     text-align: center;
+    filter: drop-shadow(0 0 6px rgba(177,77,255,0.55)) drop-shadow(0 0 16px rgba(45,214,255,0.35));
   }
   .card {
     width: 100%;
-    background: #16213e;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(177,77,255,0.35);
     border-radius: 16px;
     padding: 22px;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset, 0 0 24px rgba(177,77,255,0.08);
   }
   input {
     width: 100%;
     padding: 12px 14px;
     border-radius: 10px;
-    border: 2px solid #0f3460;
-    background: #0f3460;
+    border: 1px solid rgba(45,214,255,0.35);
+    background: #060a16;
     color: #fff;
-    font-size: 1rem;
-    outline: none;
-  }
-  input:focus { border-color: #a55eea; }
-  input::placeholder { color: #8a94c8; }
-  button {
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.05rem;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
+  input::placeholder { color: #6b76a8; }
+  button {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
     font-weight: 700;
-    padding: 12px 24px;
+    letter-spacing: 1px;
+    padding: 13px 24px;
     border: none;
     border-radius: 50px;
-    background: linear-gradient(90deg, #ff4757, #ffa502);
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
     color: #fff;
     cursor: pointer;
-    transition: transform 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 14px rgba(255,45,107,0.45), 0 0 3px rgba(255,159,28,0.6);
   }
-  button:hover { transform: scale(1.04); }
-  button.secondary { background: #16213e; border: 2px solid #a55eea; }
+  button:hover { transform: scale(1.04); box-shadow: 0 0 22px rgba(255,45,107,0.65), 0 0 6px rgba(255,159,28,0.8); }
+  button.secondary {
+    background: #0a0e1e;
+    border: 1.5px solid var(--neon-purple);
+    box-shadow: 0 0 12px rgba(177,77,255,0.45), inset 0 0 10px rgba(177,77,255,0.08);
+  }
+  button.secondary:hover { box-shadow: 0 0 20px rgba(177,77,255,0.7), inset 0 0 14px rgba(177,77,255,0.15); }
   button.google {
     background: #fff;
     color: #333;
+    box-shadow: 0 0 10px rgba(255,255,255,0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -81,35 +120,40 @@
   button.link {
     background: none;
     border: none;
-    color: #8a94c8;
+    box-shadow: none;
+    color: #8fa0d6;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.9rem;
-    font-weight: 400;
+    font-weight: 600;
     text-decoration: underline;
     padding: 4px;
   }
-  .error { color: #ff6b81; font-size: 0.9rem; text-align: center; min-height: 1.2em; }
+  button.link:hover { box-shadow: none; }
+  .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
 
   .mode-card {
     width: 100%;
-    background: #16213e;
-    border: 2px solid transparent;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 20px;
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
     text-align: left;
   }
-  .mode-card:hover { transform: scale(1.03); border-color: #a55eea; }
-  .mode-card h2 { font-size: 1.35rem; margin-bottom: 6px; }
-  .mode-card p { color: #cfd8ff; font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
+  .mode-card:hover { transform: scale(1.03); border-color: var(--neon-purple); box-shadow: 0 0 22px rgba(177,77,255,0.3); }
+  .mode-card h2 { font-family: 'Orbitron', sans-serif; font-size: 1.15rem; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .mode-card p { color: #a9b4e0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
   .record-badge {
     display: inline-block;
-    background: #0f3460;
-    color: #ffd32a;
+    background: #060a16;
+    border: 1px solid rgba(255,233,60,0.4);
+    color: var(--neon-yellow);
     font-weight: 700;
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 0.85rem;
+    text-shadow: 0 0 8px rgba(255,233,60,0.5);
   }
   .user-bar {
     display: flex;
@@ -117,7 +161,7 @@
     align-items: center;
     width: 100%;
     font-size: 0.95rem;
-    color: #cfd8ff;
+    color: #a9b4e0;
   }
   #user-label {
     color: #cfd8ff;
@@ -131,25 +175,28 @@
     display: flex;
     justify-content: space-between;
     width: 100%;
-    font-size: 1.05rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
     font-weight: 700;
     flex-wrap: wrap;
     gap: 8px;
   }
-  .timer-track { width: 100%; height: 16px; background: #16213e; border-radius: 8px; overflow: hidden; }
+  .timer-track { width: 100%; height: 16px; background: #060a16; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
   .timer-fill {
     height: 100%;
     width: 100%;
-    background: linear-gradient(90deg, #2ed573, #ffa502, #ff4757);
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow), var(--neon-red));
+    box-shadow: 0 0 12px rgba(33,230,161,0.7);
     border-radius: 8px;
   }
   .instruction {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 700;
     text-align: center;
     min-height: 3.2rem;
     display: flex;
     align-items: center;
+    text-shadow: 0 0 12px rgba(45,214,255,0.35);
   }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
   .square {
@@ -159,33 +206,50 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.1s;
-    border: 4px solid rgba(255,255,255,0.15);
+    transition: transform 0.1s, filter 0.1s;
+    border: 3px solid rgba(255,255,255,0.35);
   }
-  .square:hover { transform: scale(1.04); }
+  .square:hover { transform: scale(1.04); filter: brightness(1.12); }
   .word {
-    background: rgba(255,255,255,0.92);
-    color: #000;
+    background: rgba(6,10,22,0.88);
+    color: #fff;
     font-weight: 800;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     padding: 6px 14px;
     border-radius: 8px;
     letter-spacing: 1px;
+    border: 1px solid rgba(255,255,255,0.5);
   }
 
   /* game over */
-  .final-score { font-size: 5rem; font-weight: 900; color: #ffa502; line-height: 1; }
-  .go-title { font-size: 2rem; font-weight: 800; color: #ff4757; }
+  .final-score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4.6rem;
+    font-weight: 900;
+    color: var(--neon-orange);
+    line-height: 1;
+    text-shadow: 0 0 10px rgba(255,159,28,0.7), 0 0 28px rgba(255,159,28,0.4);
+  }
+  .go-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--neon-red);
+    text-shadow: 0 0 10px rgba(255,45,107,0.7);
+  }
   .new-record {
     display: none;
-    font-size: 1.5rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.35rem;
     font-weight: 900;
-    color: #ffd32a;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 12px rgba(255,233,60,0.8);
     animation: pulse 0.8s infinite alternate;
   }
   .new-record.show { display: block; }
   @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
-  .record-line { color: #cfd8ff; font-size: 1rem; }
+  .record-line { color: #a9b4e0; font-size: 1rem; }
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
   /* ranking */
@@ -194,23 +258,26 @@
     flex: 1;
     padding: 10px;
     border-radius: 10px;
-    background: #16213e;
-    border: 2px solid transparent;
-    color: #cfd8ff;
+    background: #0a0e1e;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #a9b4e0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     text-align: center;
+    transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
   }
-  .tab.active { border-color: #a55eea; color: #fff; }
+  .tab.active { border-color: var(--neon-purple); color: #fff; box-shadow: 0 0 16px rgba(177,77,255,0.5); }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
-  th { color: #8a94c8; font-size: 0.8rem; text-transform: uppercase; }
-  tbody tr { background: #16213e; }
-  tbody tr:nth-child(odd) { background: #131c36; }
-  tbody tr.me { outline: 2px solid #ffd32a; }
-  td.pos { font-weight: 800; color: #ffa502; width: 44px; }
-  td.pts { text-align: right; font-weight: 800; color: #ffd32a; }
-  .muted { color: #8a94c8; font-size: 0.85rem; text-align: center; }
+  th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  tbody tr { background: #0e1224; }
+  tbody tr:nth-child(odd) { background: #0a0e1e; }
+  tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
+  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); width: 44px; text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); }
+  .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
 
   /* badges */
   .badge-chip {
@@ -222,7 +289,7 @@
     border-radius: 50%;
     font-size: 0.95rem;
     flex-shrink: 0;
-    box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.2), 0 0 8px rgba(255,255,255,0.25);
   }
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
   .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
@@ -235,7 +302,7 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #0f3460;
+    background: #0a0e1e;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -245,19 +312,21 @@
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .badge-card { text-align: left; gap: 10px; }
   .badge-card-head { display: flex; align-items: center; gap: 12px; }
-  .badge-card-head .name { font-weight: 800; }
+  .badge-card-head .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.95rem; }
   .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
-  .progress-track { width: 100%; height: 10px; background: #0f3460; border-radius: 6px; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, #2ed573, #ffd32a); border-radius: 6px; transition: width 0.3s; }
+  .progress-track { width: 100%; height: 10px; background: #060a16; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); box-shadow: 0 0 8px rgba(33,230,161,0.6); border-radius: 6px; transition: width 0.3s; }
   .profile-header { text-align: center; }
-  .profile-header .big-nick { font-size: 1.4rem; font-weight: 800; }
+  .profile-header .big-nick { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 800; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; }
 
   .version-tag {
     position: fixed;
     bottom: 6px;
     right: 10px;
+    font-family: 'Rajdhani', monospace;
     font-size: 0.68rem;
-    color: #4a5578;
+    color: #3d4670;
     z-index: 1000;
     pointer-events: none;
   }
@@ -390,6 +459,7 @@
       <tbody id="ranking-body"><tr><td colspan="3" class="muted">Carregando...</td></tr></tbody>
     </table>
   </div>
+  <div class="pagination" id="ranking-pagination"></div>
   <button class="secondary" onclick="showMenu()">VOLTAR</button>
 </div>
 
@@ -892,6 +962,7 @@ function newRound(first) {
     const el = document.createElement('div');
     el.className = 'square';
     el.style.background = bg.hex;
+    el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`; // brilho neon na própria cor
     el.innerHTML = `<span class="word">${word.name}</span>`;
     el.onclick = () => handleClick(item);
     grid.appendChild(el);
@@ -1178,6 +1249,10 @@ window.showRanking = (tab) => {
 
 const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', geral: 'total' };
 
+const RANKING_PAGE_SIZE = 20;
+let rankingRows = [];
+let rankingPage = 0;
+
 window.loadRanking = async (m) => {
   $('tab-classic').classList.toggle('active', m === 'classic');
   $('tab-reverse').classList.toggle('active', m === 'reverse');
@@ -1186,8 +1261,9 @@ window.loadRanking = async (m) => {
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
+  $('ranking-pagination').innerHTML = '';
   try {
-    const q = query(collection(db, 'scores'), orderBy(field, 'desc'), limit(20));
+    const q = query(collection(db, 'scores'), orderBy(field, 'desc'), limit(300));
     const snap = await getDocs(q);
     const rows = [];
     snap.forEach(docSnap => {
@@ -1195,25 +1271,51 @@ window.loadRanking = async (m) => {
       if (data.nick && data[field] > 0) rows.push({ uid: docSnap.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
     });
     rows.sort(compareRankRows);
-
-    body.innerHTML = '';
-    rows.forEach((r, i) => {
-      const pos = i + 1;
-      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-      const tr = document.createElement('tr');
-      if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
-      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
-      const nickCell = tr.children[1];
-      const nickSpan = document.createElement('span'); // inserção segura do nick
-      nickSpan.textContent = r.nick;
-      nickCell.appendChild(nickSpan);
-      nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
-      body.appendChild(tr);
-    });
-    if (rows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+    rankingRows = rows;
+    rankingPage = 0;
+    renderRankingPage();
   } catch (e) {
     body.innerHTML = '<tr><td colspan="3" class="muted">Erro ao carregar ranking.</td></tr>';
   }
+};
+
+function renderRankingPage() {
+  const body = $('ranking-body');
+  const start = rankingPage * RANKING_PAGE_SIZE;
+  const pageRows = rankingRows.slice(start, start + RANKING_PAGE_SIZE);
+
+  body.innerHTML = '';
+  pageRows.forEach((r, i) => {
+    const pos = start + i + 1;
+    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const tr = document.createElement('tr');
+    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+    const nickCell = tr.children[1];
+    const nickSpan = document.createElement('span'); // inserção segura do nick
+    nickSpan.textContent = r.nick;
+    nickCell.appendChild(nickSpan);
+    nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+    body.appendChild(tr);
+  });
+  if (rankingRows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  const pag = $('ranking-pagination');
+  if (totalPages <= 1) {
+    pag.innerHTML = '';
+  } else {
+    pag.innerHTML = `
+      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>‹ Anterior</button>
+      <span class="muted">Página ${rankingPage + 1} de ${totalPages}</span>
+      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>Próxima ›</button>`;
+  }
+}
+
+window.rankingGoPage = (p) => {
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  rankingPage = Math.max(0, Math.min(p, totalPages - 1));
+  renderRankingPage();
 };
 </script>
 </body>
