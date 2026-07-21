@@ -4,12 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Color Rush</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --neon-red: #ff2d6b;
+    --neon-orange: #ff9f1c;
+    --neon-green: #21e6a1;
+    --neon-blue: #2dd6ff;
+    --neon-purple: #b14dff;
+    --neon-yellow: #ffe93c;
+    --bg-deep: #050810;
+    --bg-panel: #0e1224;
+    --bg-panel-2: #131a33;
+  }
+
   body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #1a1a2e;
-    color: #fff;
+    font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(177,77,255,0.25), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(45,214,255,0.18), transparent 55%),
+      radial-gradient(ellipse 700px 500px at 50% 110%, rgba(255,45,107,0.16), transparent 55%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
+      var(--bg-deep);
+    color: #eef1ff;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -28,51 +50,68 @@
   .screen.active { display: flex; }
 
   h1 {
-    font-size: 2.8rem;
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    font-size: 2.5rem;
     font-weight: 900;
-    background: linear-gradient(90deg, #ff4757, #ffa502, #2ed573, #1e90ff, #a55eea);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange), var(--neon-green), var(--neon-blue), var(--neon-purple));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     text-align: center;
+    filter: drop-shadow(0 0 6px rgba(177,77,255,0.55)) drop-shadow(0 0 16px rgba(45,214,255,0.35));
   }
   .card {
     width: 100%;
-    background: #16213e;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(177,77,255,0.35);
     border-radius: 16px;
     padding: 22px;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset, 0 0 24px rgba(177,77,255,0.08);
   }
   input {
     width: 100%;
     padding: 12px 14px;
     border-radius: 10px;
-    border: 2px solid #0f3460;
-    background: #0f3460;
+    border: 1px solid rgba(45,214,255,0.35);
+    background: #060a16;
     color: #fff;
-    font-size: 1rem;
-    outline: none;
-  }
-  input:focus { border-color: #a55eea; }
-  input::placeholder { color: #8a94c8; }
-  button {
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.05rem;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
+  input::placeholder { color: #6b76a8; }
+  button {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
     font-weight: 700;
-    padding: 12px 24px;
+    letter-spacing: 1px;
+    padding: 13px 24px;
     border: none;
     border-radius: 50px;
-    background: linear-gradient(90deg, #ff4757, #ffa502);
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
     color: #fff;
     cursor: pointer;
-    transition: transform 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 14px rgba(255,45,107,0.45), 0 0 3px rgba(255,159,28,0.6);
   }
-  button:hover { transform: scale(1.04); }
-  button.secondary { background: #16213e; border: 2px solid #a55eea; }
+  button:hover { transform: scale(1.04); box-shadow: 0 0 22px rgba(255,45,107,0.65), 0 0 6px rgba(255,159,28,0.8); }
+  button.secondary {
+    background: #0a0e1e;
+    border: 1.5px solid var(--neon-purple);
+    box-shadow: 0 0 12px rgba(177,77,255,0.45), inset 0 0 10px rgba(177,77,255,0.08);
+  }
+  button.secondary:hover { box-shadow: 0 0 20px rgba(177,77,255,0.7), inset 0 0 14px rgba(177,77,255,0.15); }
   button.google {
     background: #fff;
     color: #333;
+    box-shadow: 0 0 10px rgba(255,255,255,0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -81,35 +120,40 @@
   button.link {
     background: none;
     border: none;
-    color: #8a94c8;
+    box-shadow: none;
+    color: #8fa0d6;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.9rem;
-    font-weight: 400;
+    font-weight: 600;
     text-decoration: underline;
     padding: 4px;
   }
-  .error { color: #ff6b81; font-size: 0.9rem; text-align: center; min-height: 1.2em; }
+  button.link:hover { box-shadow: none; }
+  .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
 
   .mode-card {
     width: 100%;
-    background: #16213e;
-    border: 2px solid transparent;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 20px;
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
     text-align: left;
   }
-  .mode-card:hover { transform: scale(1.03); border-color: #a55eea; }
-  .mode-card h2 { font-size: 1.35rem; margin-bottom: 6px; }
-  .mode-card p { color: #cfd8ff; font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
+  .mode-card:hover { transform: scale(1.03); border-color: var(--neon-purple); box-shadow: 0 0 22px rgba(177,77,255,0.3); }
+  .mode-card h2 { font-family: 'Orbitron', sans-serif; font-size: 1.15rem; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .mode-card p { color: #a9b4e0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
   .record-badge {
     display: inline-block;
-    background: #0f3460;
-    color: #ffd32a;
+    background: #060a16;
+    border: 1px solid rgba(255,233,60,0.4);
+    color: var(--neon-yellow);
     font-weight: 700;
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 0.85rem;
+    text-shadow: 0 0 8px rgba(255,233,60,0.5);
   }
   .user-bar {
     display: flex;
@@ -117,7 +161,7 @@
     align-items: center;
     width: 100%;
     font-size: 0.95rem;
-    color: #cfd8ff;
+    color: #a9b4e0;
   }
   #user-label {
     color: #cfd8ff;
@@ -131,25 +175,28 @@
     display: flex;
     justify-content: space-between;
     width: 100%;
-    font-size: 1.05rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
     font-weight: 700;
     flex-wrap: wrap;
     gap: 8px;
   }
-  .timer-track { width: 100%; height: 16px; background: #16213e; border-radius: 8px; overflow: hidden; }
+  .timer-track { width: 100%; height: 16px; background: #060a16; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
   .timer-fill {
     height: 100%;
     width: 100%;
-    background: linear-gradient(90deg, #2ed573, #ffa502, #ff4757);
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow), var(--neon-red));
+    box-shadow: 0 0 12px rgba(33,230,161,0.7);
     border-radius: 8px;
   }
   .instruction {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 700;
     text-align: center;
     min-height: 3.2rem;
     display: flex;
     align-items: center;
+    text-shadow: 0 0 12px rgba(45,214,255,0.35);
   }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
   .square {
@@ -159,33 +206,50 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.1s;
-    border: 4px solid rgba(255,255,255,0.15);
+    transition: transform 0.1s, filter 0.1s;
+    border: 3px solid rgba(255,255,255,0.35);
   }
-  .square:hover { transform: scale(1.04); }
+  .square:hover { transform: scale(1.04); filter: brightness(1.12); }
   .word {
-    background: rgba(255,255,255,0.92);
-    color: #000;
+    background: rgba(6,10,22,0.88);
+    color: #fff;
     font-weight: 800;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     padding: 6px 14px;
     border-radius: 8px;
     letter-spacing: 1px;
+    border: 1px solid rgba(255,255,255,0.5);
   }
 
   /* game over */
-  .final-score { font-size: 5rem; font-weight: 900; color: #ffa502; line-height: 1; }
-  .go-title { font-size: 2rem; font-weight: 800; color: #ff4757; }
+  .final-score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4.6rem;
+    font-weight: 900;
+    color: var(--neon-orange);
+    line-height: 1;
+    text-shadow: 0 0 10px rgba(255,159,28,0.7), 0 0 28px rgba(255,159,28,0.4);
+  }
+  .go-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--neon-red);
+    text-shadow: 0 0 10px rgba(255,45,107,0.7);
+  }
   .new-record {
     display: none;
-    font-size: 1.5rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.35rem;
     font-weight: 900;
-    color: #ffd32a;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 12px rgba(255,233,60,0.8);
     animation: pulse 0.8s infinite alternate;
   }
   .new-record.show { display: block; }
   @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
-  .record-line { color: #cfd8ff; font-size: 1rem; }
+  .record-line { color: #a9b4e0; font-size: 1rem; }
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
   /* ranking */
@@ -194,23 +258,26 @@
     flex: 1;
     padding: 10px;
     border-radius: 10px;
-    background: #16213e;
-    border: 2px solid transparent;
-    color: #cfd8ff;
+    background: #0a0e1e;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #a9b4e0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
     text-align: center;
+    transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
   }
-  .tab.active { border-color: #a55eea; color: #fff; }
+  .tab.active { border-color: var(--neon-purple); color: #fff; box-shadow: 0 0 16px rgba(177,77,255,0.5); }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
-  th { color: #8a94c8; font-size: 0.8rem; text-transform: uppercase; }
-  tbody tr { background: #16213e; }
-  tbody tr:nth-child(odd) { background: #131c36; }
-  tbody tr.me { outline: 2px solid #ffd32a; }
-  td.pos { font-weight: 800; color: #ffa502; width: 44px; }
-  td.pts { text-align: right; font-weight: 800; color: #ffd32a; }
-  .muted { color: #8a94c8; font-size: 0.85rem; text-align: center; }
+  th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  tbody tr { background: #0e1224; }
+  tbody tr:nth-child(odd) { background: #0a0e1e; }
+  tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
+  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); width: 44px; text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); }
+  .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
 
   /* badges */
   .badge-chip {
@@ -222,7 +289,7 @@
     border-radius: 50%;
     font-size: 0.95rem;
     flex-shrink: 0;
-    box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.2), 0 0 8px rgba(255,255,255,0.25);
   }
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
   .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
@@ -235,7 +302,7 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #0f3460;
+    background: #0a0e1e;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -245,46 +312,78 @@
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .badge-card { text-align: left; gap: 10px; }
   .badge-card-head { display: flex; align-items: center; gap: 12px; }
-  .badge-card-head .name { font-weight: 800; }
+  .badge-card-head .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.95rem; }
   .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
-  .progress-track { width: 100%; height: 10px; background: #0f3460; border-radius: 6px; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, #2ed573, #ffd32a); border-radius: 6px; transition: width 0.3s; }
+  .progress-track { width: 100%; height: 10px; background: #060a16; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); box-shadow: 0 0 8px rgba(33,230,161,0.6); border-radius: 6px; transition: width 0.3s; }
   .profile-header { text-align: center; }
-  .profile-header .big-nick { font-size: 1.4rem; font-weight: 800; }
+  .profile-header .big-nick { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 800; }
   .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; }
 
   .version-tag {
     position: fixed;
     bottom: 6px;
     right: 10px;
+    font-family: 'Rajdhani', monospace;
     font-size: 0.68rem;
-    color: #4a5578;
+    color: #3d4670;
     z-index: 1000;
     pointer-events: none;
+  }
+
+  .lang-switch {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 6px;
+    z-index: 1000;
+  }
+  .lang-btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 5px 9px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(10,14,30,0.7);
+    color: #8fa0d6;
+    cursor: pointer;
+    box-shadow: none;
+  }
+  .lang-btn.active {
+    border-color: var(--neon-blue);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(45,214,255,0.5);
   }
 </style>
 </head>
 <body>
 
+<div class="lang-switch">
+  <button class="lang-btn" id="lang-pt" onclick="setLang('pt')">🇧🇷 PT</button>
+  <button class="lang-btn" id="lang-en" onclick="setLang('en')">🇺🇸 EN</button>
+</div>
+
 <div class="version-tag" id="version-tag">carregando versão...</div>
 
 <!-- LOADING -->
-<div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><p class="muted">Carregando...</p></div>
+<div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><p class="muted" data-i18n="loading_text">Carregando...</p></div>
 
 <!-- AUTH -->
 <div class="screen" id="auth-screen">
   <h1>COLOR RUSH</h1>
   <div class="card">
-    <input type="email" id="auth-email" placeholder="E-mail">
-    <input type="password" id="auth-pass" placeholder="Senha (mín. 6 caracteres)">
+    <input type="email" id="auth-email" data-i18n-placeholder="auth_email_ph" placeholder="E-mail">
+    <input type="password" id="auth-pass" data-i18n-placeholder="auth_pass_ph" placeholder="Senha (mín. 6 caracteres)">
     <div class="error" id="auth-error"></div>
-    <button onclick="doLogin()">ENTRAR</button>
-    <button class="secondary" onclick="doSignup()">CRIAR CONTA</button>
+    <button onclick="doLogin()" data-i18n="btn_login">ENTRAR</button>
+    <button class="secondary" onclick="doSignup()" data-i18n="btn_signup">CRIAR CONTA</button>
     <button class="google" onclick="doGoogle()">
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      Entrar com Google
+      <span data-i18n="btn_google">Entrar com Google</span>
     </button>
-    <button class="link" onclick="playOffline()">Jogar sem conta (sem ranking)</button>
+    <button class="link" onclick="playOffline()" data-i18n="btn_play_offline">Jogar sem conta (sem ranking)</button>
   </div>
 </div>
 
@@ -292,12 +391,12 @@
 <div class="screen" id="verify-screen">
   <h1>COLOR RUSH</h1>
   <div class="card">
-    <p style="text-align:center;">📧 Enviamos um link de confirmação para<br><b id="verify-email-label"></b></p>
-    <p class="muted">Clique no link do e-mail e depois volte aqui.<br>(confira também a caixa de spam)</p>
+    <p style="text-align:center;"><span data-i18n="verify_sent">📧 Enviamos um link de confirmação para</span><br><b id="verify-email-label"></b></p>
+    <p class="muted" data-i18n-html="verify_instructions">Clique no link do e-mail e depois volte aqui.<br>(confira também a caixa de spam)</p>
     <div class="error" id="verify-status"></div>
-    <button onclick="checkVerification()">JÁ CONFIRMEI</button>
-    <button class="secondary" onclick="resendVerification()">REENVIAR E-MAIL</button>
-    <button class="link" onclick="doLogout()">sair</button>
+    <button onclick="checkVerification()" data-i18n="btn_verified">JÁ CONFIRMEI</button>
+    <button class="secondary" onclick="resendVerification()" data-i18n="btn_resend">REENVIAR E-MAIL</button>
+    <button class="link" onclick="doLogout()" data-i18n="link_logout">sair</button>
   </div>
 </div>
 
@@ -305,10 +404,10 @@
 <div class="screen" id="nick-screen">
   <h1>COLOR RUSH</h1>
   <div class="card">
-    <p style="text-align:center;">Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
-    <input type="text" id="nick-input" maxlength="16" placeholder="Seu nick (3 a 16 caracteres)">
+    <p style="text-align:center;" data-i18n-html="nick_prompt">Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
+    <input type="text" id="nick-input" maxlength="16" data-i18n-placeholder="nick_ph" placeholder="Seu nick (3 a 16 caracteres)">
     <div class="error" id="nick-error"></div>
-    <button onclick="saveNick()">CONFIRMAR</button>
+    <button onclick="saveNick()" data-i18n="btn_confirm">CONFIRMAR</button>
   </div>
 </div>
 
@@ -323,27 +422,27 @@
     </span>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
-    <h2>🎨 Clássico</h2>
-    <p>Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
-    <span class="record-badge">🏆 Seu recorde: <span id="record-classic">0</span></span>
+    <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
+    <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
+    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
   </div>
   <div class="mode-card" onclick="startGame('reverse')">
-    <h2>🔄 Reverso</h2>
-    <p>Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
-    <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
+    <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
+    <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
+    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
   </div>
   <div class="btn-row" style="width:100%;">
-    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')">🏆 RANKING</button>
-    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="inviteFriends()">📤 CONVIDAR AMIGOS</button>
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')" data-i18n="btn_ranking">🏆 RANKING</button>
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="inviteFriends()" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
   </div>
   <div class="muted" id="invite-status"></div>
-  <p class="muted">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
+  <p class="muted" data-i18n="footer_note">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
 <!-- GAME -->
 <div class="screen" id="game-screen">
   <div class="hud">
-    <span>PONTOS: <span id="score">0</span></span>
+    <span><span data-i18n="hud_points">PONTOS:</span> <span id="score">0</span></span>
     <span>🏆 <span id="record-hud">0</span></span>
     <span id="speed">⏱️ 10.0s</span>
   </div>
@@ -354,58 +453,58 @@
 
 <!-- GAME OVER -->
 <div class="screen" id="over-screen">
-  <div class="go-title" id="over-reason">FIM DE JOGO</div>
-  <div class="new-record" id="new-record">🎉 NOVO RECORDE! 🎉</div>
-  <div>Sua pontuação:</div>
+  <div class="go-title" id="over-reason" data-i18n="go_title_default">FIM DE JOGO</div>
+  <div class="new-record" id="new-record" data-i18n="new_record_text">🎉 NOVO RECORDE! 🎉</div>
+  <div data-i18n="your_score">Sua pontuação:</div>
   <div class="final-score" id="final-score">0</div>
-  <div class="record-line">🏆 Seu recorde neste modo: <span id="record-over">0</span></div>
+  <div class="record-line"><span data-i18n="record_mode_label">🏆 Seu recorde neste modo:</span> <span id="record-over">0</span></div>
   <div class="muted" id="sync-status"></div>
-  <button id="signup-cta" style="display:none;" onclick="goSignup()">🏆 CRIAR CONTA E SALVAR PONTOS</button>
+  <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="card" style="padding:10px; gap:4px;">
     <table>
-      <thead><tr><th>#</th><th>Ranking — <span id="mini-mode"></span></th><th style="text-align:right;">Pontos</th></tr></thead>
+      <thead><tr><th>#</th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="mini-ranking-body"></tbody>
     </table>
-    <button class="link" onclick="showRanking()">ver ranking completo</button>
+    <button class="link" onclick="showRanking()" data-i18n="link_view_full">ver ranking completo</button>
   </div>
   <div class="btn-row">
-    <button onclick="playAgain()">JOGAR DE NOVO</button>
-    <button class="secondary" onclick="shareScore()">📤 COMPARTILHAR</button>
-    <button class="secondary" onclick="showMenu()">MENU</button>
+    <button onclick="playAgain()" data-i18n="btn_play_again">JOGAR DE NOVO</button>
+    <button class="secondary" onclick="shareScore()" data-i18n="btn_share">📤 COMPARTILHAR</button>
+    <button class="secondary" onclick="showMenu()" data-i18n="btn_menu">MENU</button>
   </div>
   <div class="muted" id="share-status"></div>
 </div>
 
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
-  <h1 style="font-size:2rem;">🏆 RANKING</h1>
+  <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
   <div class="tabs">
-    <div class="tab" id="tab-geral" onclick="loadRanking('geral')">🌍 Geral</div>
-    <div class="tab" id="tab-classic" onclick="loadRanking('classic')">🎨 Clássico</div>
-    <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')">🔄 Reverso</div>
+    <div class="tab" id="tab-geral" onclick="loadRanking('geral')" data-i18n="tab_geral">🌍 Geral</div>
+    <div class="tab" id="tab-classic" onclick="loadRanking('classic')" data-i18n="tab_classic">🎨 Clássico</div>
+    <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')" data-i18n="tab_reverse">🔄 Reverso</div>
   </div>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
     <table>
-      <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">Pontos</th></tr></thead>
-      <tbody id="ranking-body"><tr><td colspan="3" class="muted">Carregando...</td></tr></tbody>
+      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
+      <tbody id="ranking-body"><tr><td colspan="3" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
   <div class="pagination" id="ranking-pagination"></div>
-  <button class="secondary" onclick="showMenu()">VOLTAR</button>
+  <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <!-- PERFIL -->
 <div class="screen" id="profile-screen">
-  <h1 style="font-size:2rem;">🎖️ PERFIL</h1>
+  <h1 style="font-size:2rem;" data-i18n="profile_title">🎖️ PERFIL</h1>
   <div class="profile-header">
     <div class="big-nick" id="profile-nick"></div>
     <div class="muted" id="profile-summary"></div>
   </div>
-  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;">📤 CONVIDAR AMIGOS</button>
+  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
-  <button class="secondary" onclick="showMenu()">VOLTAR</button>
+  <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <script type="module">
@@ -432,6 +531,166 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+/* ================== idioma ================== */
+let lang = 'pt';
+try { lang = localStorage.getItem('colorRushLang') || 'pt'; } catch {}
+
+const T = {
+  pt: {
+    btn_login: 'ENTRAR', btn_signup: 'CRIAR CONTA', btn_google: 'Entrar com Google',
+    btn_play_offline: 'Jogar sem conta (sem ranking)',
+    auth_email_ph: 'E-mail', auth_pass_ph: 'Senha (mín. 6 caracteres)',
+    verify_sent: '📧 Enviamos um link de confirmação para',
+    verify_instructions: 'Clique no link do e-mail e depois volte aqui.<br>(confira também a caixa de spam)',
+    btn_verified: 'JÁ CONFIRMEI', btn_resend: 'REENVIAR E-MAIL', link_logout: 'sair',
+    nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
+    nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
+    mode_classic_title: '🎨 Clássico',
+    mode_classic_desc: 'Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.',
+    mode_reverse_title: '🔄 Reverso',
+    mode_reverse_desc: 'Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.',
+    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '📤 CONVIDAR AMIGOS',
+    footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
+    hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
+    your_score: 'Sua pontuação:', record_mode_label: '🏆 Seu recorde neste modo:',
+    btn_create_save: '🏆 CRIAR CONTA E SALVAR PONTOS', ranking_dash: 'Ranking —', points_header: 'Pontos',
+    link_view_full: 'ver ranking completo', btn_play_again: 'JOGAR DE NOVO', btn_share: '📤 COMPARTILHAR',
+    btn_menu: 'MENU', ranking_title: '🏆 RANKING', tab_geral: '🌍 Geral', tab_classic: '🎨 Clássico',
+    tab_reverse: '🔄 Reverso', nick_header: 'Nick', loading_text: 'Carregando...', btn_back: 'VOLTAR',
+    profile_title: '🎖️ PERFIL',
+
+    err_nick_length: 'O nick deve ter entre 3 e 16 caracteres.',
+    err_nick_taken: 'Este nick já está em uso. Escolha outro.',
+    err_nick_save: msg => `Erro ao salvar: ${msg}`,
+    sync_success: '✅ Recorde enviado para o ranking global!',
+    sync_fail: '⚠️ Não foi possível salvar sua partida.',
+    share_copied: '✅ Copiado para a área de transferência!',
+    share_text: (score, modeName, rec, link) => `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`,
+    share_new_record_suffix: ' 🎉 Novo recorde pessoal!',
+    invite_text: link => `🎨 Bora jogar Color Rush comigo? Teste seus reflexos e sua memória! 👉 ${link}`,
+    verify_resent: '📧 E-mail reenviado!',
+    verify_not_confirmed: 'Ainda não confirmado. Confira sua caixa de entrada e o spam.',
+    offline_label: '👤 Jogando sem conta ›', entrar_label: 'entrar', sair_label: 'sair',
+    user_greeting: nick => `👤 ${nick} 🎖️ ›`,
+    instr_first_classic: name => `👉 Clique no quadrado ${name} (e memorize a palavra dentro dele!)`,
+    instr_first_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a COR do quadrado!)`,
+    instr_next_classic: '🧠 Clique no quadrado da cor da palavra que você memorizou!',
+    instr_next_reverse: '🧠 Clique onde está escrito o nome da cor que você memorizou!',
+    reason_timeout: '⏰ TEMPO ESGOTADO!', reason_wrong: '❌ QUADRADO ERRADO!',
+    mode_name_classic: 'Clássico', mode_name_reverse: 'Reverso',
+    ranking_no_players: 'Ninguém pontuou ainda. Seja o primeiro! 🚀',
+    ranking_no_players_mini: 'Ninguém no ranking ainda. Seja o primeiro! 🚀',
+    ranking_error: 'Erro ao carregar ranking.', ranking_error_mini: 'Não foi possível carregar.',
+    pagination_prev: '‹ Anterior', pagination_next: 'Próxima ›',
+    pagination_page: (cur, total) => `Página ${cur} de ${total}`,
+    geral_explain: '🌍 Geral = soma dos recordes em todos os modos.',
+    profile_offline_msg1: '🔒 Suas conquistas não são salvas jogando sem conta.',
+    profile_offline_msg2: 'Crie uma conta para começar a desbloquear badges e acompanhar seu progresso!',
+    btn_create_account: 'CRIAR CONTA',
+    profile_offline_label: '👤 Jogando sem conta',
+    profile_nick_label: nick => `👤 ${nick}`,
+    profile_summary: (n, total) => `${n} de ${total} categorias de conquista desbloqueadas`,
+    badge_not_unlocked: 'Ainda não conquistado', badge_maxed: '🌟 Nível máximo alcançado!',
+    badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
+    badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
+    badge_rank_current: n => `Sua melhor posição até agora: ${n}º lugar.`,
+    badge_locked_suffix: ' (bloqueado — prévia de como fica ao desbloquear)',
+  },
+  en: {
+    btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
+    btn_play_offline: 'Play without an account (no leaderboard)',
+    auth_email_ph: 'Email', auth_pass_ph: 'Password (min. 6 characters)',
+    verify_sent: '📧 We sent a confirmation link to',
+    verify_instructions: 'Click the link in the email, then come back here.<br>(check your spam folder too)',
+    btn_verified: "I'VE CONFIRMED", btn_resend: 'RESEND EMAIL', link_logout: 'log out',
+    nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
+    nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
+    mode_classic_title: '🎨 Classic',
+    mode_classic_desc: "Click the square with the <b>requested color</b> and memorize the <b>word</b> inside it. Next round, click the square whose color matches the memorized word.",
+    mode_reverse_title: '🔄 Reverse',
+    mode_reverse_desc: "Click the square where the <b>requested word</b> is written and memorize the <b>square's color</b>. Next round, click where the memorized color's name is written.",
+    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '📤 INVITE FRIENDS',
+    footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
+    hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
+    your_score: 'Your score:', record_mode_label: '🏆 Your record in this mode:',
+    btn_create_save: '🏆 CREATE ACCOUNT AND SAVE SCORE', ranking_dash: 'Leaderboard —', points_header: 'Points',
+    link_view_full: 'view full leaderboard', btn_play_again: 'PLAY AGAIN', btn_share: '📤 SHARE',
+    btn_menu: 'MENU', ranking_title: '🏆 LEADERBOARD', tab_geral: '🌍 Overall', tab_classic: '🎨 Classic',
+    tab_reverse: '🔄 Reverse', nick_header: 'Nickname', loading_text: 'Loading...', btn_back: 'BACK',
+    profile_title: '🎖️ PROFILE',
+
+    err_nick_length: 'Nickname must be between 3 and 16 characters.',
+    err_nick_taken: 'This nickname is already taken. Choose another.',
+    err_nick_save: msg => `Error saving: ${msg}`,
+    sync_success: '✅ Record submitted to the global leaderboard!',
+    sync_fail: '⚠️ Could not save your game.',
+    share_copied: '✅ Copied to clipboard!',
+    share_text: (score, modeName, rec, link) => `🎨 Color Rush — I scored ${score} point${score === 1 ? '' : 's'} in ${modeName} mode!${rec}\nCan you beat me? 👉 ${link}`,
+    share_new_record_suffix: ' 🎉 New personal record!',
+    invite_text: link => `🎨 Wanna play Color Rush with me? Test your reflexes and memory! 👉 ${link}`,
+    verify_resent: '📧 Email resent!',
+    verify_not_confirmed: 'Not confirmed yet. Check your inbox and spam folder.',
+    offline_label: '👤 Playing without an account ›', entrar_label: 'log in', sair_label: 'log out',
+    user_greeting: nick => `👤 ${nick} 🎖️ ›`,
+    instr_first_classic: name => `👉 Click the ${name} square (and memorize the word inside it!)`,
+    instr_first_reverse: name => `👉 Click where it says ${name} (and memorize the square's COLOR!)`,
+    instr_next_classic: "🧠 Click the square whose color matches the word you memorized!",
+    instr_next_reverse: "🧠 Click where the name of the color you memorized is written!",
+    reason_timeout: "⏰ TIME'S UP!", reason_wrong: '❌ WRONG SQUARE!',
+    mode_name_classic: 'Classic', mode_name_reverse: 'Reverse',
+    ranking_no_players: 'No one has scored yet. Be the first! 🚀',
+    ranking_no_players_mini: 'No one on the leaderboard yet. Be the first! 🚀',
+    ranking_error: 'Error loading leaderboard.', ranking_error_mini: 'Could not load.',
+    pagination_prev: '‹ Previous', pagination_next: 'Next ›',
+    pagination_page: (cur, total) => `Page ${cur} of ${total}`,
+    geral_explain: '🌍 Overall = sum of your records across all modes.',
+    profile_offline_msg1: "🔒 Your achievements aren't saved while playing without an account.",
+    profile_offline_msg2: 'Create an account to start unlocking badges and tracking your progress!',
+    btn_create_account: 'CREATE ACCOUNT',
+    profile_offline_label: '👤 Playing without an account',
+    profile_nick_label: nick => `👤 ${nick}`,
+    profile_summary: (n, total) => `${n} of ${total} achievement categories unlocked`,
+    badge_not_unlocked: 'Not unlocked yet', badge_maxed: '🌟 Maximum level reached!',
+    badge_next_goal: desc => `🎯 Next goal: ${desc}`,
+    badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
+    badge_rank_current: n => `Your best position so far: #${n}.`,
+    badge_locked_suffix: ' (locked — preview of how it looks once unlocked)',
+  },
+};
+
+function applyLanguage() {
+  const dict = T[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] != null) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    if (dict[key] != null) el.innerHTML = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key] != null) el.placeholder = dict[key];
+  });
+  document.documentElement.lang = (lang === 'en') ? 'en' : 'pt-BR';
+  $('lang-pt').classList.toggle('active', lang === 'pt');
+  $('lang-en').classList.toggle('active', lang === 'en');
+
+  // re-renderiza a tela dinâmica que já estava aberta, se aplicável
+  if ($('menu-screen').classList.contains('active')) showMenu();
+  if ($('profile-screen').classList.contains('active')) renderProfile();
+  if ($('ranking-screen').classList.contains('active')) {
+    const activeTab = ['geral', 'classic', 'reverse'].find(k => $('tab-' + k).classList.contains('active')) || 'geral';
+    loadRanking(activeTab);
+  }
+}
+
+window.setLang = (l) => {
+  lang = l;
+  try { localStorage.setItem('colorRushLang', l); } catch {}
+  applyLanguage();
+};
 
 /* ================== versão (commit real do GitHub) ================== */
 (async () => {
@@ -482,15 +741,16 @@ async function ensureRefCode() {
 
 /* ================== state ================== */
 const COLORS = [
-  { name: 'AZUL',     hex: '#1e90ff' },
-  { name: 'VERMELHO', hex: '#ff4757' },
-  { name: 'VERDE',    hex: '#2ed573' },
-  { name: 'AMARELO',  hex: '#ffd32a' },
-  { name: 'ROXO',     hex: '#a55eea' },
-  { name: 'LARANJA',  hex: '#ff7f24' },
-  { name: 'ROSA',     hex: '#ff6b9d' },
-  { name: 'CIANO',    hex: '#00d2d3' },
+  { name: { pt: 'AZUL',     en: 'BLUE'   }, hex: '#1e90ff' },
+  { name: { pt: 'VERMELHO', en: 'RED'    }, hex: '#ff4757' },
+  { name: { pt: 'VERDE',    en: 'GREEN'  }, hex: '#2ed573' },
+  { name: { pt: 'AMARELO',  en: 'YELLOW' }, hex: '#ffd32a' },
+  { name: { pt: 'ROXO',     en: 'PURPLE' }, hex: '#a55eea' },
+  { name: { pt: 'LARANJA',  en: 'ORANGE' }, hex: '#ff7f24' },
+  { name: { pt: 'ROSA',     en: 'PINK'   }, hex: '#ff6b9d' },
+  { name: { pt: 'CIANO',    en: 'CYAN'   }, hex: '#00d2d3' },
 ];
+const cName = c => c.name[lang];
 const SQUARES = 4;
 
 /* ================== conquistas (badges) ================== */
@@ -498,32 +758,50 @@ const TIER_COLORS = ['#cd7f32', '#c0c0c0', '#ffd700', '#66ccff', '#a55eea', '#ff
 
 const BADGE_DEFS = {
   points: {
-    icon: '⭐', label: 'Pontos Totais',
+    icon: '⭐',
+    label: { pt: 'Pontos Totais', en: 'Total Points' },
     tiers: [500, 2000, 5000, 15000, 50000],
-    names: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores'],
+    names: {
+      pt: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores'],
+      en: ['Shining', 'Radiant', 'Stellar', 'Supernova', 'Constellation of Colors'],
+    },
     metric: u => u.totalPoints || 0,
-    desc: n => `Acumule ${n} pontos (soma de todas as partidas)`,
+    desc: n => lang === 'en' ? `Accumulate ${n} points (sum of all games)` : `Acumule ${n} pontos (soma de todas as partidas)`,
   },
   games: {
-    icon: '🎮', label: 'Partidas Jogadas',
+    icon: '🎮',
+    label: { pt: 'Partidas Jogadas', en: 'Games Played' },
     tiers: [10, 50, 100, 250, 500, 1000],
-    names: ['Iniciante', 'Frequentador', 'Dedicado', 'Veterano', 'Lenda', 'Imortal'],
+    names: {
+      pt: ['Iniciante', 'Frequentador', 'Dedicado', 'Veterano', 'Lenda', 'Imortal'],
+      en: ['Beginner', 'Regular', 'Dedicated', 'Veteran', 'Legend', 'Immortal'],
+    },
     metric: u => u.gamesPlayed || 0,
-    desc: n => `Jogue ${n} partidas`,
+    desc: n => lang === 'en' ? `Play ${n} games` : `Jogue ${n} partidas`,
   },
   streak: {
-    icon: '🔥', label: 'Sequência de Dias',
+    icon: '🔥',
+    label: { pt: 'Sequência de Dias', en: 'Day Streak' },
     tiers: [3, 7, 14, 30, 100],
-    names: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável'],
+    names: {
+      pt: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável'],
+      en: ['Committed', 'Full Week', 'Fortnightly', 'Monthly', 'Unshakable'],
+    },
     metric: u => u.bestStreak || 0,
-    desc: n => `Jogue ${n} dias seguidos`,
+    desc: n => lang === 'en' ? `Play ${n} days in a row` : `Jogue ${n} dias seguidos`,
   },
   sharer: {
-    icon: '📣', label: 'Divulgador',
+    icon: '📣',
+    label: { pt: 'Divulgador', en: 'Promoter' },
     tiers: [1, 5, 15],
-    names: ['Boca a Boca', 'Influencer', 'Viral'],
+    names: {
+      pt: ['Boca a Boca', 'Influencer', 'Viral'],
+      en: ['Word of Mouth', 'Influencer', 'Viral'],
+    },
     metric: u => u.referrals || 0,
-    desc: n => `Tenha ${n} amigo${n > 1 ? 's' : ''} cadastrado${n > 1 ? 's' : ''} pelo seu link de compartilhamento`,
+    desc: n => lang === 'en'
+      ? `Have ${n} friend${n > 1 ? 's' : ''} sign up through your invite link`
+      : `Tenha ${n} amigo${n > 1 ? 's' : ''} cadastrado${n > 1 ? 's' : ''} pelo seu link de compartilhamento`,
   },
 };
 const BADGE_ORDER = ['points', 'games', 'streak', 'sharer'];
@@ -540,7 +818,7 @@ function unlockedTier(def, stats) {
 function badgeChip(def, tierIdx, size) {
   const color = TIER_COLORS[tierIdx] || TIER_COLORS[TIER_COLORS.length - 1];
   const cls = size ? ` ${size}` : '';
-  return `<span class="badge-chip${cls}" style="background:${color}" title="${def.label}: ${def.names[tierIdx]}">${def.icon}</span>`;
+  return `<span class="badge-chip${cls}" style="background:${color}" title="${def.label[lang]}: ${def.names[lang][tierIdx]}">${def.icon}</span>`;
 }
 function topBadgeIcons(stats, count) {
   let out = [];
@@ -631,22 +909,22 @@ window.toggleMute = () => {
 
 /* ================== compartilhar ================== */
 window.shareScore = async () => {
-  const modeName = (mode === 'classic') ? 'Clássico' : 'Reverso';
-  const rec = $('new-record').classList.contains('show') ? ' 🎉 Novo recorde pessoal!' : '';
+  const modeName = (mode === 'classic') ? T[lang].mode_name_classic : T[lang].mode_name_reverse;
+  const rec = $('new-record').classList.contains('show') ? T[lang].share_new_record_suffix : '';
   // link com ?ref= só existe pra quem tem conta — é o que faz o indicado contar no badge Divulgador
   let link = `${location.origin}${location.pathname}`;
   if (!offline && currentUser) {
     const code = await ensureRefCode();
     if (code) link += `?ref=${code}`;
   }
-  const text = `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`;
+  const text = T[lang].share_text(score, modeName, rec, link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   try {
     if (isMobile && navigator.share) {
       await navigator.share({ text });
     } else {
       await navigator.clipboard.writeText(text);
-      $('share-status').textContent = '✅ Copiado para a área de transferência!';
+      $('share-status').textContent = T[lang].share_copied;
       setTimeout(() => { $('share-status').textContent = ''; }, 3000);
     }
   } catch {}
@@ -659,7 +937,7 @@ window.inviteFriends = async (statusElId = 'invite-status') => {
     const code = await ensureRefCode();
     if (code) link += `?ref=${code}`;
   }
-  const text = `🎨 Bora jogar Color Rush comigo? Teste seus reflexos e sua memória! 👉 ${link}`;
+  const text = T[lang].invite_text(link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const statusEl = $(statusElId);
   try {
@@ -668,7 +946,7 @@ window.inviteFriends = async (statusElId = 'invite-status') => {
     } else {
       await navigator.clipboard.writeText(text);
       if (statusEl) {
-        statusEl.textContent = '✅ Copiado para a área de transferência!';
+        statusEl.textContent = T[lang].share_copied;
         setTimeout(() => { statusEl.textContent = ''; }, 3000);
       }
     }
@@ -677,18 +955,32 @@ window.inviteFriends = async (statusElId = 'invite-status') => {
 
 /* ================== autenticação ================== */
 const AUTH_ERRORS = {
-  'auth/invalid-email': 'E-mail inválido.',
-  'auth/missing-password': 'Digite a senha.',
-  'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
-  'auth/email-already-in-use': 'Este e-mail já tem conta. Use ENTRAR.',
-  'auth/invalid-credential': 'E-mail ou senha incorretos.',
-  'auth/wrong-password': 'E-mail ou senha incorretos.',
-  'auth/user-not-found': 'Conta não encontrada. Use CRIAR CONTA.',
-  'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco.',
-  'auth/popup-closed-by-user': 'Login cancelado.',
-  'auth/popup-blocked': 'Popup bloqueado pelo navegador. Permita popups.',
+  pt: {
+    'auth/invalid-email': 'E-mail inválido.',
+    'auth/missing-password': 'Digite a senha.',
+    'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+    'auth/email-already-in-use': 'Este e-mail já tem conta. Use ENTRAR.',
+    'auth/invalid-credential': 'E-mail ou senha incorretos.',
+    'auth/wrong-password': 'E-mail ou senha incorretos.',
+    'auth/user-not-found': 'Conta não encontrada. Use CRIAR CONTA.',
+    'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco.',
+    'auth/popup-closed-by-user': 'Login cancelado.',
+    'auth/popup-blocked': 'Popup bloqueado pelo navegador. Permita popups.',
+  },
+  en: {
+    'auth/invalid-email': 'Invalid email.',
+    'auth/missing-password': 'Enter your password.',
+    'auth/weak-password': 'Password too weak (minimum 6 characters).',
+    'auth/email-already-in-use': 'This email already has an account. Use LOG IN.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/wrong-password': 'Incorrect email or password.',
+    'auth/user-not-found': 'Account not found. Use SIGN UP.',
+    'auth/too-many-requests': 'Too many attempts. Please wait a moment.',
+    'auth/popup-closed-by-user': 'Login canceled.',
+    'auth/popup-blocked': 'Popup blocked by the browser. Please allow popups.',
+  },
 };
-const authErrMsg = e => AUTH_ERRORS[e.code] || 'Erro: ' + (e.code || e.message);
+const authErrMsg = e => (AUTH_ERRORS[lang][e.code]) || (lang === 'en' ? 'Error: ' : 'Erro: ') + (e.code || e.message);
 
 window.doLogin = async () => {
   $('auth-error').textContent = '';
@@ -707,7 +999,7 @@ window.resendVerification = async () => {
   $('verify-status').textContent = '';
   try {
     await sendEmailVerification(auth.currentUser);
-    $('verify-status').textContent = '📧 E-mail reenviado!';
+    $('verify-status').textContent = T[lang].verify_resent;
   } catch (e) { $('verify-status').textContent = authErrMsg(e); }
 };
 window.checkVerification = async () => {
@@ -718,7 +1010,7 @@ window.checkVerification = async () => {
     currentUser = auth.currentUser;
     await proceedAfterLogin(currentUser);
   } else {
-    $('verify-status').textContent = 'Ainda não confirmado. Confira sua caixa de entrada e o spam.';
+    $('verify-status').textContent = T[lang].verify_not_confirmed;
   }
 };
 window.doGoogle = async () => {
@@ -799,14 +1091,14 @@ window.saveNick = async () => {
   const nick = $('nick-input').value.trim();
   $('nick-error').textContent = '';
   if (nick.length < 3 || nick.length > 16) {
-    $('nick-error').textContent = 'O nick deve ter entre 3 e 16 caracteres.';
+    $('nick-error').textContent = T[lang].err_nick_length;
     return;
   }
   const nickKey = nick.toLowerCase(); // "Igor" e "IGOR" contam como o mesmo nick
   try {
     const taken = await getDoc(doc(db, 'nicks', nickKey));
     if (taken.exists()) {
-      $('nick-error').textContent = 'Este nick já está em uso. Escolha outro.';
+      $('nick-error').textContent = T[lang].err_nick_taken;
       return;
     }
     const refCode = await generateUniqueRefCode();
@@ -845,7 +1137,7 @@ window.saveNick = async () => {
 
     await submitPendingScore();
     showMenu();
-  } catch (e) { $('nick-error').textContent = 'Erro ao salvar: ' + e.message; }
+  } catch (e) { $('nick-error').textContent = T[lang].err_nick_save(e.message); }
 };
 
 /* ================== menu ================== */
@@ -854,11 +1146,11 @@ window.showMenu = () => {
   $('record-reverse').textContent = myRecord('reverse');
   $('mute-btn').textContent = muted ? '🔇' : '🔊';
   if (offline) {
-    $('user-label').textContent = '👤 Jogando sem conta ›';
-    $('logout-btn').textContent = 'entrar';
+    $('user-label').textContent = T[lang].offline_label;
+    $('logout-btn').textContent = T[lang].entrar_label;
   } else {
-    $('user-label').textContent = '👤 ' + (myData.nick || '') + ' 🎖️ ›';
-    $('logout-btn').textContent = 'sair';
+    $('user-label').textContent = T[lang].user_greeting(myData.nick || '');
+    $('logout-btn').textContent = T[lang].sair_label;
   }
   show('menu-screen');
 };
@@ -894,19 +1186,20 @@ function newRound(first) {
     const el = document.createElement('div');
     el.className = 'square';
     el.style.background = bg.hex;
-    el.innerHTML = `<span class="word">${word.name}</span>`;
+    el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`; // brilho neon na própria cor
+    el.innerHTML = `<span class="word">${cName(word)}</span>`;
     el.onclick = () => handleClick(item);
     grid.appendChild(el);
   });
 
   if (first) {
     $('instruction').textContent = (mode === 'classic')
-      ? `👉 Clique no quadrado ${target.name} (e memorize a palavra dentro dele!)`
-      : `👉 Clique onde está escrito ${target.name} (e memorize a COR do quadrado!)`;
+      ? T[lang].instr_first_classic(cName(target))
+      : T[lang].instr_first_reverse(cName(target));
   } else {
     $('instruction').textContent = (mode === 'classic')
-      ? '🧠 Clique no quadrado da cor da palavra que você memorizou!'
-      : '🧠 Clique onde está escrito o nome da cor que você memorizou!';
+      ? T[lang].instr_next_classic
+      : T[lang].instr_next_reverse;
   }
   $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
 
@@ -921,7 +1214,7 @@ function startTimer() {
     if (!playing) return;
     const left = 1 - (now - timerStart) / duration;
     $('timer-fill').style.width = Math.max(0, left * 100) + '%';
-    if (left <= 0) { sfx.timeout(); return gameOver('⏰ TEMPO ESGOTADO!'); }
+    if (left <= 0) { sfx.timeout(); return gameOver(T[lang].reason_timeout); }
     if (left < 0.35 && now - lastTick > 250) { lastTick = now; sfx.tick(); } // tic-tac no fim do tempo
     rafId = requestAnimationFrame(tick);
   };
@@ -939,7 +1232,7 @@ function handleClick(item) {
     newRound(false);
   } else {
     sfx.wrong();
-    gameOver('❌ QUADRADO ERRADO!');
+    gameOver(T[lang].reason_wrong);
   }
 }
 
@@ -1013,16 +1306,16 @@ async function persistGameResult(isNewRecord) {
     if (isNewRecord) {
       myData[mode] = score;
       myData.total = update.total;
-      $('sync-status').textContent = '✅ Recorde enviado para o ranking global!';
+      $('sync-status').textContent = T[lang].sync_success;
     }
   } catch (e) {
-    $('sync-status').textContent = '⚠️ Não foi possível salvar sua partida.';
+    $('sync-status').textContent = T[lang].sync_fail;
   }
 }
 
 async function renderRankPreview(field, bodyElId, myPts) {
   const body = $(bodyElId);
-  body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
     const snap = await getDocs(query(collection(db, 'scores'), orderBy(field, 'desc'), limit(100)));
     const rows = [];
@@ -1032,9 +1325,10 @@ async function renderRankPreview(field, bodyElId, myPts) {
     });
 
     // localiza (ou insere) a linha do jogador
+    const youLabel = lang === 'en' ? 'YOU' : 'VOCÊ';
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
     if (myIndex === -1) {
-      rows.push({ uid: '__me__', nick: offline ? 'VOCÊ' : (myData.nick || 'VOCÊ'), pts: myPts, at: null, stats: offline ? null : myData });
+      rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData });
     }
 
     rows.sort(compareRankRows);
@@ -1052,7 +1346,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
     for (let i = start; i < end; i++) {
       const r = rows[i];
       const pos = i + 1;
-      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + 'º';
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + (lang === 'en' ? '' : 'º');
       const tr = document.createElement('tr');
       if (i === myIndex) tr.className = 'me';
       tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
@@ -1063,14 +1357,14 @@ async function renderRankPreview(field, bodyElId, myPts) {
       if (r.stats) nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
       body.appendChild(tr);
     }
-    if (rows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém no ranking ainda. Seja o primeiro! 🚀</td></tr>';
+    if (rows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players_mini}</td></tr>`;
   } catch {
-    body.innerHTML = '<tr><td colspan="3" class="muted">Não foi possível carregar.</td></tr>';
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error_mini}</td></tr>`;
   }
 }
 
 function renderMiniRankings(m) {
-  $('mini-mode').textContent = (m === 'classic') ? 'Clássico' : 'Reverso';
+  $('mini-mode').textContent = (m === 'classic') ? T[lang].mode_name_classic : T[lang].mode_name_reverse;
   const myModePts = offline ? score : (myData[m] || 0);
   renderRankPreview(m, 'mini-ranking-body', myModePts);
 }
@@ -1087,7 +1381,7 @@ window.showProfile = () => {
 };
 
 function renderProfile() {
-  $('profile-nick').textContent = offline ? '👤 Jogando sem conta' : ('👤 ' + (myData.nick || ''));
+  $('profile-nick').textContent = offline ? T[lang].profile_offline_label : T[lang].profile_nick_label(myData.nick || '');
   const body = $('profile-body');
   $('profile-invite-btn').style.display = offline ? 'none' : '';
 
@@ -1095,15 +1389,15 @@ function renderProfile() {
     $('profile-summary').textContent = '';
     body.innerHTML = `
       <div class="card" style="text-align:center;">
-        <p>🔒 Suas conquistas não são salvas jogando sem conta.</p>
-        <p class="muted">Crie uma conta para começar a desbloquear badges e acompanhar seu progresso!</p>
-        <button onclick="goSignup()">CRIAR CONTA</button>
+        <p>${T[lang].profile_offline_msg1}</p>
+        <p class="muted">${T[lang].profile_offline_msg2}</p>
+        <button onclick="goSignup()">${T[lang].btn_create_account}</button>
       </div>`;
     return;
   }
 
   const unlockedCount = BADGE_ORDER.reduce((n, k) => n + (unlockedTier(BADGE_DEFS[k], myData) >= 0 ? 1 : 0), 0);
-  $('profile-summary').textContent = `${unlockedCount} de ${BADGE_ORDER.length} categorias de conquista desbloqueadas`;
+  $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, BADGE_ORDER.length);
   body.innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], myData)).join('');
 }
 
@@ -1112,16 +1406,16 @@ function renderBadgeCard(def, stats) {
   const val = def.metric(stats);
   const maxed = tier === def.tiers.length - 1;
   const color = tier >= 0 ? TIER_COLORS[tier] : '#0f3460';
-  const currentName = tier >= 0 ? def.names[tier] : 'Ainda não conquistado';
+  const currentName = tier >= 0 ? def.names[lang][tier] : T[lang].badge_not_unlocked;
 
   let progressHtml;
   if (maxed) {
-    progressHtml = `<div class="muted" style="text-align:left;">🌟 Nível máximo alcançado!</div>`;
+    progressHtml = `<div class="muted" style="text-align:left;">${T[lang].badge_maxed}</div>`;
   } else {
     const nextThreshold = def.tiers[tier + 1];
     if (def.inverse) {
-      const posText = (val === Infinity) ? 'Você ainda não pontuou no ranking global.' : `Sua melhor posição até agora: ${val}º lugar.`;
-      progressHtml = `<div class="muted" style="text-align:left;">${posText}<br>🎯 Próxima meta: ${def.desc(nextThreshold)}</div>`;
+      const posText = (val === Infinity) ? T[lang].badge_rank_unknown : T[lang].badge_rank_current(val);
+      progressHtml = `<div class="muted" style="text-align:left;">${posText}<br>${T[lang].badge_next_goal(def.desc(nextThreshold))}</div>`;
     } else {
       const pct = Math.min(100, Math.max(0, (val / nextThreshold) * 100));
       progressHtml = `
@@ -1133,7 +1427,7 @@ function renderBadgeCard(def, stats) {
   const chips = def.tiers.map((th, i) => {
     const unlocked = i <= tier;
     const lockOverlay = unlocked ? '' : '<span class="chip-lock">🔒</span>';
-    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[i]}${unlocked ? '' : ' (bloqueado — prévia de como fica ao desbloquear)'}">${def.icon}</span>${lockOverlay}</span>`;
+    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[lang][i]}${unlocked ? '' : T[lang].badge_locked_suffix}">${def.icon}</span>${lockOverlay}</span>`;
   }).join('');
 
   return `
@@ -1141,7 +1435,7 @@ function renderBadgeCard(def, stats) {
       <div class="badge-card-head">
         <span class="badge-chip big" style="background:${color}">${def.icon}</span>
         <div>
-          <div class="name">${def.label}</div>
+          <div class="name">${def.label[lang]}</div>
           <div class="muted" style="text-align:left;">${currentName}</div>
         </div>
       </div>
@@ -1188,10 +1482,10 @@ window.loadRanking = async (m) => {
   $('tab-classic').classList.toggle('active', m === 'classic');
   $('tab-reverse').classList.toggle('active', m === 'reverse');
   $('tab-geral').classList.toggle('active', m === 'geral');
-  $('ranking-explain').textContent = (m === 'geral') ? '🌍 Geral = soma dos recordes em todos os modos.' : '';
+  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : '';
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
-  body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
   $('ranking-pagination').innerHTML = '';
   try {
     const q = query(collection(db, 'scores'), orderBy(field, 'desc'), limit(300));
@@ -1206,7 +1500,7 @@ window.loadRanking = async (m) => {
     rankingPage = 0;
     renderRankingPage();
   } catch (e) {
-    body.innerHTML = '<tr><td colspan="3" class="muted">Erro ao carregar ranking.</td></tr>';
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error}</td></tr>`;
   }
 };
 
@@ -1229,7 +1523,7 @@ function renderRankingPage() {
     nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
     body.appendChild(tr);
   });
-  if (rankingRows.length === 0) body.innerHTML = '<tr><td colspan="3" class="muted">Ninguém pontuou ainda. Seja o primeiro! 🚀</td></tr>';
+  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players}</td></tr>`;
 
   const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
@@ -1237,9 +1531,9 @@ function renderRankingPage() {
     pag.innerHTML = '';
   } else {
     pag.innerHTML = `
-      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>‹ Anterior</button>
-      <span class="muted">Página ${rankingPage + 1} de ${totalPages}</span>
-      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>Próxima ›</button>`;
+      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_prev}</button>
+      <span class="muted">${T[lang].pagination_page(rankingPage + 1, totalPages)}</span>
+      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
   }
 }
 
@@ -1248,6 +1542,8 @@ window.rankingGoPage = (p) => {
   rankingPage = Math.max(0, Math.min(p, totalPages - 1));
   renderRankingPage();
 };
+
+applyLanguage();
 </script>
 </body>
 </html>
