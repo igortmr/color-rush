@@ -217,15 +217,31 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 19px;
-    height: 19px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    font-size: 0.68rem;
+    font-size: 0.95rem;
     flex-shrink: 0;
     box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
   }
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
-  .badge-chip.locked { opacity: 0.3; filter: grayscale(1); box-shadow: none; }
+  .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
+  .badge-chip.locked { opacity: 0.45; filter: grayscale(0.6); box-shadow: none; }
+  .chip-wrap { position: relative; display: inline-flex; }
+  .chip-lock {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0f3460;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
+  }
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .badge-card { text-align: left; gap: 10px; }
   .badge-card-head { display: flex; align-items: center; gap: 12px; }
@@ -519,16 +535,17 @@ function unlockedTier(def, stats) {
   }
   return tier;
 }
-function badgeChip(def, tierIdx, big) {
+function badgeChip(def, tierIdx, size) {
   const color = TIER_COLORS[tierIdx] || TIER_COLORS[TIER_COLORS.length - 1];
-  return `<span class="badge-chip${big ? ' big' : ''}" style="background:${color}" title="${def.label}: ${def.names[tierIdx]}">${def.icon}</span>`;
+  const cls = size ? ` ${size}` : '';
+  return `<span class="badge-chip${cls}" style="background:${color}" title="${def.label}: ${def.names[tierIdx]}">${def.icon}</span>`;
 }
 function topBadgeIcons(stats, count) {
   let out = [];
   for (const key of BADGE_ORDER) {
     const def = BADGE_DEFS[key];
     const t = unlockedTier(def, stats);
-    if (t >= 0) out.push(badgeChip(def, t));
+    if (t >= 0) out.push(badgeChip(def, t, 'small')); // no ranking os ícones ficam menores
     if (out.length >= count) break;
   }
   return out.join('');
@@ -1113,7 +1130,8 @@ function renderBadgeCard(def, stats) {
 
   const chips = def.tiers.map((th, i) => {
     const unlocked = i <= tier;
-    return `<span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${unlocked ? TIER_COLORS[i] : '#0f3460'}" title="${def.names[i]}${unlocked ? '' : ' (bloqueado)'}">${unlocked ? def.icon : '🔒'}</span>`;
+    const lockOverlay = unlocked ? '' : '<span class="chip-lock">🔒</span>';
+    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[i]}${unlocked ? '' : ' (bloqueado — prévia de como fica ao desbloquear)'}">${def.icon}</span>${lockOverlay}</span>`;
   }).join('');
 
   return `
