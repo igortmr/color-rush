@@ -355,8 +355,6 @@
       <tbody id="mini-ranking-geral-body"></tbody>
     </table>
     <button class="link" onclick="showRanking('geral')">ver ranking completo</button>
-    <!-- 'geral' é literal (string) então funciona; 'mode' acima usa o padrão interno da função -->
-  </div>
   </div>
   <div class="btn-row">
     <button onclick="playAgain()">JOGAR DE NOVO</button>
@@ -761,7 +759,25 @@ async function proceedAfterLogin(user) {
     myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
   } catch { myData = { ...EMPTY_PROFILE }; }
   if (!myData.nick) show('nick-screen');
-  else { await submitPendingScore(); showMenu(); }
+  else { await backfillTotal(); await submitPendingScore(); showMenu(); }
+}
+
+// corrige (silenciosamente) contas antigas que ainda não têm o campo "total" calculado,
+// sem precisar esperar a pessoa bater um novo recorde — roda sozinho ao abrir o jogo
+async function backfillTotal() {
+  const computedTotal = (myData.classic || 0) + (myData.reverse || 0);
+  if (computedTotal === (myData.total || 0)) return; // já está correto
+  // usa o mais recente entre os dois recordes como o momento do total, pra não bagunçar o desempate
+  const at = (myData.classicAt && myData.reverseAt)
+    ? (myData.classicAt.toMillis() >= myData.reverseAt.toMillis() ? myData.classicAt : myData.reverseAt)
+    : (myData.classicAt || myData.reverseAt || null);
+  const update = { total: computedTotal };
+  if (at) update.totalAt = at;
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
+    myData.total = computedTotal;
+    if (at) myData.totalAt = at;
+  } catch {}
 }
 
 /* ================== nick ================== */
