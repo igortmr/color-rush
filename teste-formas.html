@@ -391,17 +391,12 @@
   .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
   .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
 
-  /* palavra um pouco menor dentro das formas, meio-termo entre o tamanho original e o mini demais */
+  /* mesmo tamanho de palavra em todas as formas */
   .square.shape-square .word {
     font-size: 0.96rem;
     padding: 5px 11px;
     letter-spacing: 0.5px;
     white-space: nowrap;
-  }
-  /* o triângulo é o mais estreito no centro, então a palavra ali fica um pouco menor ainda (mas continua no meio) */
-  .square.shape-triangle .word {
-    font-size: 0.72rem;
-    padding: 3px 7px;
   }
   .square.shape-square .word { position: relative; z-index: 1; }
 </style>
