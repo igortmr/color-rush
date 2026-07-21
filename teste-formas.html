@@ -390,6 +390,19 @@
   .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
   .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
   .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+
+  /* palavra menor dentro das formas, pra não estourar as pontas mais estreitas (triângulo, losango) */
+  .square.shape-square .word {
+    font-size: 0.82rem;
+    padding: 4px 9px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  /* no triângulo a base (embaixo) é a parte mais larga — empurra a palavra pra lá */
+  .square.shape-triangle .word {
+    align-self: flex-end;
+    margin-bottom: 8%;
+  }
   .square.shape-square .word { position: relative; z-index: 1; }
 </style>
 </head>
@@ -1246,7 +1259,7 @@ function newRound(first) {
     el.className = 'square';
     if (mode === 'shapes') {
       // item = forma mostrada (o próprio azulejo vira a silhueta) | paired = forma cujo nome é escrito dentro dela
-      el.classList.add('shape-square');
+      el.classList.add('shape-square', item.shapeClass);
       el.innerHTML = `<span class="shape-fill ${item.shapeClass}"></span><span class="word">${cName(paired)}</span>`;
     } else {
       const bg   = (mode === 'classic') ? item : paired;
