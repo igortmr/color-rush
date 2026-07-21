@@ -595,7 +595,6 @@ const T = {
     badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
     badge_rank_current: n => `Sua melhor posição até agora: ${n}º lugar.`,
-    badge_locked_suffix: ' (bloqueado — prévia de como fica ao desbloquear)',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -655,7 +654,6 @@ const T = {
     badge_next_goal: desc => `🎯 Next goal: ${desc}`,
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
     badge_rank_current: n => `Your best position so far: #${n}.`,
-    badge_locked_suffix: ' (locked — preview of how it looks once unlocked)',
   },
 };
 
@@ -760,10 +758,10 @@ const BADGE_DEFS = {
   points: {
     icon: '⭐',
     label: { pt: 'Pontos Totais', en: 'Total Points' },
-    tiers: [500, 2000, 5000, 15000, 50000],
+    tiers: [500, 2000, 5000, 15000, 50000, 150000],
     names: {
-      pt: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores'],
-      en: ['Shining', 'Radiant', 'Stellar', 'Supernova', 'Constellation of Colors'],
+      pt: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores', 'Universo Cromático'],
+      en: ['Shining', 'Radiant', 'Stellar', 'Supernova', 'Constellation of Colors', 'Chromatic Universe'],
     },
     metric: u => u.totalPoints || 0,
     desc: n => lang === 'en' ? `Accumulate ${n} points (sum of all games)` : `Acumule ${n} pontos (soma de todas as partidas)`,
@@ -782,10 +780,10 @@ const BADGE_DEFS = {
   streak: {
     icon: '🔥',
     label: { pt: 'Sequência de Dias', en: 'Day Streak' },
-    tiers: [3, 7, 14, 30, 100],
+    tiers: [3, 7, 14, 30, 100, 365],
     names: {
-      pt: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável'],
-      en: ['Committed', 'Full Week', 'Fortnightly', 'Monthly', 'Unshakable'],
+      pt: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável', 'Chama Eterna'],
+      en: ['Committed', 'Full Week', 'Fortnightly', 'Monthly', 'Unshakable', 'Eternal Flame'],
     },
     metric: u => u.bestStreak || 0,
     desc: n => lang === 'en' ? `Play ${n} days in a row` : `Jogue ${n} dias seguidos`,
@@ -793,10 +791,10 @@ const BADGE_DEFS = {
   sharer: {
     icon: '📣',
     label: { pt: 'Divulgador', en: 'Promoter' },
-    tiers: [1, 5, 15],
+    tiers: [1, 5, 15, 30, 50, 100],
     names: {
-      pt: ['Boca a Boca', 'Influencer', 'Viral'],
-      en: ['Word of Mouth', 'Influencer', 'Viral'],
+      pt: ['Boca a Boca', 'Influencer', 'Viral', 'Embaixador', 'Celebridade', 'Fenômeno'],
+      en: ['Word of Mouth', 'Influencer', 'Viral', 'Ambassador', 'Celebrity', 'Phenomenon'],
     },
     metric: u => u.referrals || 0,
     desc: n => lang === 'en'
@@ -1427,7 +1425,7 @@ function renderBadgeCard(def, stats) {
   const chips = def.tiers.map((th, i) => {
     const unlocked = i <= tier;
     const lockOverlay = unlocked ? '' : '<span class="chip-lock">🔒</span>';
-    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[lang][i]}${unlocked ? '' : T[lang].badge_locked_suffix}">${def.icon}</span>${lockOverlay}</span>`;
+    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[lang][i]}">${def.icon}</span>${lockOverlay}</span>`;
   }).join('');
 
   return `
