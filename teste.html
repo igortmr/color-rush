@@ -315,8 +315,10 @@
     <p>Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
     <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
   </div>
-  <button class="secondary" onclick="showRanking()">🏆 RANKING GLOBAL</button>
-  <button class="secondary" onclick="inviteFriends()">📤 CONVIDAR AMIGOS</button>
+  <div class="btn-row" style="width:100%;">
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking()">🏆 RANKINGS</button>
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="inviteFriends()">📤 CONVIDAR AMIGOS</button>
+  </div>
   <div class="muted" id="invite-status"></div>
   <p class="muted">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
@@ -366,7 +368,7 @@
 
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
-  <h1 style="font-size:2rem;">🏆 RANKING GLOBAL</h1>
+  <h1 style="font-size:2rem;">🏆 RANKINGS</h1>
   <div class="tabs">
     <div class="tab active" id="tab-classic" onclick="loadRanking('classic')">🎨 Clássico</div>
     <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')">🔄 Reverso</div>
@@ -1171,7 +1173,7 @@ window.loadRanking = async (m) => {
   $('tab-classic').classList.toggle('active', m === 'classic');
   $('tab-reverse').classList.toggle('active', m === 'reverse');
   $('tab-geral').classList.toggle('active', m === 'geral');
-  $('ranking-explain').textContent = (m === 'geral') ? '🌍 Geral = soma dos recordes em todos os modos (conta 0 pro modo que a pessoa ainda não jogou).' : '';
+  $('ranking-explain').textContent = (m === 'geral') ? '🌍 Geral = soma dos recordes em todos os modos.' : '';
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = '<tr><td colspan="3" class="muted">Carregando...</td></tr>';
