@@ -316,7 +316,7 @@
     <span class="record-badge">🏆 Seu recorde: <span id="record-reverse">0</span></span>
   </div>
   <div class="btn-row" style="width:100%;">
-    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking()">🏆 RANKINGS</button>
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')">🏆 RANKING</button>
     <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="inviteFriends()">📤 CONVIDAR AMIGOS</button>
   </div>
   <div class="muted" id="invite-status"></div>
@@ -351,13 +351,6 @@
     </table>
     <button class="link" onclick="showRanking()">ver ranking completo</button>
   </div>
-  <div class="card" style="padding:10px; gap:4px;">
-    <table>
-      <thead><tr><th>#</th><th>🌍 Geral <span class="muted" style="font-size:0.7rem;">(soma dos modos)</span></th><th style="text-align:right;">Pontos</th></tr></thead>
-      <tbody id="mini-ranking-geral-body"></tbody>
-    </table>
-    <button class="link" onclick="showRanking('geral')">ver ranking completo</button>
-  </div>
   <div class="btn-row">
     <button onclick="playAgain()">JOGAR DE NOVO</button>
     <button class="secondary" onclick="shareScore()">📤 COMPARTILHAR</button>
@@ -368,11 +361,11 @@
 
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
-  <h1 style="font-size:2rem;">🏆 RANKINGS</h1>
+  <h1 style="font-size:2rem;">🏆 RANKING</h1>
   <div class="tabs">
-    <div class="tab active" id="tab-classic" onclick="loadRanking('classic')">🎨 Clássico</div>
-    <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')">🔄 Reverso</div>
     <div class="tab" id="tab-geral" onclick="loadRanking('geral')">🌍 Geral</div>
+    <div class="tab" id="tab-classic" onclick="loadRanking('classic')">🎨 Clássico</div>
+    <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')">🔄 Reverso</div>
   </div>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
@@ -1060,9 +1053,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
 function renderMiniRankings(m) {
   $('mini-mode').textContent = (m === 'classic') ? 'Clássico' : 'Reverso';
   const myModePts = offline ? score : (myData[m] || 0);
-  const myTotalPts = offline ? score : ((myData.classic || 0) + (myData.reverse || 0));
   renderRankPreview(m, 'mini-ranking-body', myModePts);
-  renderRankPreview('total', 'mini-ranking-geral-body', myTotalPts);
 }
 
 window.goSignup = () => {
