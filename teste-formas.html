@@ -373,17 +373,24 @@
     z-index: 1000;
   }
 
-  .shape-square {
-    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
-    flex-direction: column;
-    gap: 10px;
+  .square.shape-square {
+    position: relative;
+    background: transparent;
+    border: none;
   }
-  .shape-icon {
-    font-size: 2.6rem;
-    line-height: 1;
-    color: var(--neon-blue);
-    text-shadow: 0 0 10px rgba(45,214,255,0.7), 0 0 24px rgba(45,214,255,0.4);
+  .shape-fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    filter: drop-shadow(0 0 14px rgba(45,214,255,0.55)) drop-shadow(0 0 26px rgba(177,77,255,0.35));
   }
+  .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); }
+  .shape-fill.shape-square-shape  { clip-path: inset(6% round 14px); }
+  .shape-fill.shape-triangle      { clip-path: polygon(50% 4%, 4% 96%, 96% 96%); }
+  .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
+  .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+  .square.shape-square .word { position: relative; z-index: 1; }
 </style>
 </head>
 <body>
@@ -796,12 +803,12 @@ const cName = c => c.name[lang];
 const SQUARES = 4;
 
 const SHAPES = [
-  { name: { pt: 'CÍRCULO',    en: 'CIRCLE'   }, glyph: '●' },
-  { name: { pt: 'QUADRADO',   en: 'SQUARE'   }, glyph: '■' },
-  { name: { pt: 'TRIÂNGULO',  en: 'TRIANGLE' }, glyph: '▲' },
-  { name: { pt: 'LOSANGO',    en: 'DIAMOND'  }, glyph: '◆' },
-  { name: { pt: 'ESTRELA',    en: 'STAR'     }, glyph: '★' },
-  { name: { pt: 'CRUZ',       en: 'CROSS'    }, glyph: '✚' },
+  { name: { pt: 'CÍRCULO',    en: 'CIRCLE'   }, shapeClass: 'shape-circle' },
+  { name: { pt: 'QUADRADO',   en: 'SQUARE'   }, shapeClass: 'shape-square-shape' },
+  { name: { pt: 'TRIÂNGULO',  en: 'TRIANGLE' }, shapeClass: 'shape-triangle' },
+  { name: { pt: 'LOSANGO',    en: 'DIAMOND'  }, shapeClass: 'shape-diamond' },
+  { name: { pt: 'ESTRELA',    en: 'STAR'     }, shapeClass: 'shape-star' },
+  { name: { pt: 'CRUZ',       en: 'CROSS'    }, shapeClass: 'shape-cross' },
 ];
 const poolFor = m => (m === 'shapes') ? SHAPES : COLORS;
 
@@ -1238,9 +1245,9 @@ function newRound(first) {
     const el = document.createElement('div');
     el.className = 'square';
     if (mode === 'shapes') {
-      // item = forma mostrada (ícone) | paired = forma cujo nome é escrito nela
+      // item = forma mostrada (o próprio azulejo vira a silhueta) | paired = forma cujo nome é escrito dentro dela
       el.classList.add('shape-square');
-      el.innerHTML = `<span class="shape-icon">${item.glyph}</span><span class="word">${cName(paired)}</span>`;
+      el.innerHTML = `<span class="shape-fill ${item.shapeClass}"></span><span class="word">${cName(paired)}</span>`;
     } else {
       const bg   = (mode === 'classic') ? item : paired;
       const word = (mode === 'classic') ? paired : item;
