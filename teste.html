@@ -667,7 +667,7 @@
 
 <div class="levelup-banner" id="tut-intro-banner" onclick="this.classList.remove('show')">
   <div class="levelup-inner" style="border-color: var(--neon-blue); box-shadow: 0 0 30px rgba(45,214,255,0.5), 0 0 80px rgba(45,214,255,0.2);">
-    <div class="levelup-title" style="color: var(--neon-blue); text-shadow: 0 0 14px rgba(45,214,255,0.8);" data-i18n="tut_intro_banner">📖 MODO TUTORIAL</div>
+    <div class="levelup-title" style="color: var(--neon-blue); text-shadow: 0 0 14px rgba(45,214,255,0.8);" data-i18n="tut_intro_banner">📖 TUTORIAL</div>
   </div>
 </div>
 
@@ -977,7 +977,7 @@ const T = {
     levelup_title: '🎉 SUBIU DE NÍVEL!',
 
     tut_btn: '❓ Como jogar',
-    tut_intro_banner: '📖 MODO TUTORIAL',
+    tut_intro_banner: '📖 TUTORIAL',
     tut_title: '📖 TUTORIAL — MODO CLÁSSICO',
     tut_skip: 'Pular tutorial',
     tut_prev: '‹ Anterior',
@@ -1065,7 +1065,7 @@ const T = {
     levelup_title: '🎉 LEVEL UP!',
 
     tut_btn: '❓ How to play',
-    tut_intro_banner: '📖 TUTORIAL MODE',
+    tut_intro_banner: '📖 TUTORIAL',
     tut_title: '📖 TUTORIAL — CLASSIC MODE',
     tut_skip: 'Skip tutorial',
     tut_prev: '‹ Previous',
@@ -2351,7 +2351,7 @@ function showTutStep(n) {
     sq.classList.add('tut-glow');
     tutHighlightInstrWord(cName(TUT_ROUNDS[0].target));
     tutPointAt(sq, { static: true, yr: 0.78 });
-    tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
+    tutSlideInFromLeft($('tut-caption'), { yr: 0.4, gap: -10 });
   } else if (n === 2) {
     // memorize a palavra do meio do quadrado certo
     round0();
@@ -2387,7 +2387,7 @@ function showTutStep(n) {
   // (no último passo o botão vira "jogar", não precisa da dica)
   if (n < TUT_TOTAL) {
     tutAfter(4000, () => {
-      tutSlideInFromRight($('tut-next-btn'));
+      tutSlideInFromRight($('tut-next-btn'), { gap: -10 });
       if (n === 1) $('tut-pointer').classList.remove('visible');
     });
   }
