@@ -766,6 +766,7 @@
       <div class="instruction" id="tut-instruction"></div>
       <div class="grid" id="tut-grid"></div>
       <span class="tut-pointer" id="tut-pointer">👉</span>
+      <span class="tut-pointer" id="tut-pointer-static">👉</span>
       <span class="tut-brain" id="tut-brain">🧠</span>
     </div>
   </div>
@@ -2213,6 +2214,7 @@ function tutClearHighlights() {
     sq.querySelector('.word')?.classList.remove('tut-word-glow');
   });
   $('tut-pointer').classList.remove('visible', 'tapping');
+  $('tut-pointer-static').classList.remove('visible');
   $('tut-brain').classList.remove('visible', 'pulsing');
 }
 
@@ -2220,7 +2222,7 @@ function tutPointAt(targetEl, opts = {}) {
   const stage = $('tut-stage');
   const stageRect = stage.getBoundingClientRect();
   const r = targetEl.getBoundingClientRect();
-  const el = opts.brain ? $('tut-brain') : $('tut-pointer');
+  const el = opts.brain ? $('tut-brain') : opts.static ? $('tut-pointer-static') : $('tut-pointer');
   const xr = opts.xr ?? 0.5, yr = opts.yr ?? 0.42;
   el.style.left = (r.left + r.width * xr - stageRect.left) + 'px';
   el.style.top = (r.top + r.height * yr - stageRect.top) + 'px';
@@ -2281,14 +2283,15 @@ function showTutStep(n) {
     sq.querySelector('.word').classList.add('tut-word-glow');
     tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
   };
-  // mãozinha "chega" deslizando pela esquerda até o alvo (efeito de entrada lateral)
+  // mãozinha "chega" deslizando pela esquerda e para na borda do alvo, sem sobrepor o texto
   const tutSlideInFromLeft = (targetEl, opts = {}) => {
     const stage = $('tut-stage');
     const stageRect = stage.getBoundingClientRect();
     const r = targetEl.getBoundingClientRect();
     const el = $('tut-pointer');
-    const xr = opts.xr ?? 0.5, yr = opts.yr ?? 0.5;
-    const finalLeft = r.left + r.width * xr - stageRect.left;
+    const yr = opts.yr ?? 0.5;
+    const gap = opts.gap ?? 26; // px de folga antes da borda esquerda do alvo (evita sobrepor o texto)
+    const finalLeft = r.left - stageRect.left - gap;
     const finalTop = r.top + r.height * yr - stageRect.top;
     el.style.left = '-120px';
     el.style.top = finalTop + 'px';
@@ -2313,7 +2316,8 @@ function showTutStep(n) {
     const sq = tutCorrectSquare(0);
     sq.classList.add('tut-glow');
     tutHighlightInstrWord(cName(TUT_ROUNDS[0].target));
-    tutSlideInFromLeft($('tut-caption'), { xr: 0.14, yr: 0.4 });
+    tutPointAt(sq, { static: true, yr: 0.78 });
+    tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
   } else if (n === 2) {
     // memorize a palavra do meio do quadrado certo
     round0();
@@ -2350,7 +2354,7 @@ window.startTutorial = () => {
   show('tutorial-screen');
   showTutStep(1);
   $('tut-intro-banner').classList.add('show');
-  setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1500);
+  setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1000);
 };
 window.tutNext = () => { if (tutStep < TUT_TOTAL) showTutStep(tutStep + 1); };
 window.tutPrev = () => { if (tutStep > 1) showTutStep(tutStep - 1); };
