@@ -416,6 +416,9 @@
 
   .mode-card { position: relative; }
   .mode-card.locked { filter: grayscale(1) brightness(0.75); cursor: not-allowed; }
+  .mode-card.locked p,
+  .mode-card.locked .record-badge:not(.lock-badge) { display: none; }
+  .mode-card.locked h2 { margin-bottom: 10px; }
   .mode-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.08); box-shadow: none; }
   .mode-card.locked::after {
     content: '🔒';
@@ -976,6 +979,10 @@ const SHAPES = [
 ];
 const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : COLORS;
 const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse' };
+const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse'];
+// Geral = soma dos recordes em TODOS os modos (conta 0 pro modo ainda não jogado)
+const computeTotal = (overrideMode, overrideScore) =>
+  ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (myData[k] || 0)), 0);
 
 /* ================== níveis / XP ================== */
 // XP por rodada certa: 3 - 0,2 * segundos gastos (quanto mais rápido, mais XP)
@@ -1324,12 +1331,11 @@ async function proceedAfterLogin(user) {
 // corrige (silenciosamente) contas antigas que ainda não têm o campo "total" calculado,
 // sem precisar esperar a pessoa bater um novo recorde — roda sozinho ao abrir o jogo
 async function backfillTotal() {
-  const computedTotal = (myData.classic || 0) + (myData.reverse || 0);
+  const computedTotal = computeTotal(); // soma dos recordes de todos os modos
   if (computedTotal === (myData.total || 0)) return; // já está correto
-  // usa o mais recente entre os dois recordes como o momento do total, pra não bagunçar o desempate
-  const at = (myData.classicAt && myData.reverseAt)
-    ? (myData.classicAt.toMillis() >= myData.reverseAt.toMillis() ? myData.classicAt : myData.reverseAt)
-    : (myData.classicAt || myData.reverseAt || null);
+  // usa o mais recente entre os recordes como o momento do total, pra não bagunçar o desempate
+  const ats = ALL_MODES.map(k => myData[k + 'At']).filter(Boolean);
+  const at = ats.length ? ats.reduce((a, b) => (a.toMillis() >= b.toMillis() ? a : b)) : null;
   const update = { total: computedTotal };
   if (at) update.totalAt = at;
   try {
@@ -1627,12 +1633,8 @@ async function persistGameResult(isNewRecord, xpEarned = 0) {
   if (isNewRecord) {
     update[mode] = score;
     update[mode + 'At'] = serverTimestamp(); // guarda quando o recorde foi batido, pra desempate no ranking
-    // Geral = soma dos recordes em Clássico + Reverso (o modo Formas ainda não entra nessa soma — decisão em aberto)
-    if (mode === 'classic' || mode === 'reverse') {
-      const otherMode = mode === 'classic' ? 'reverse' : 'classic';
-      update.total = (myData[otherMode] || 0) + score;
-      update.totalAt = serverTimestamp();
-    }
+    update.total = computeTotal(mode, score); // Geral = soma dos recordes de todos os modos
+    update.totalAt = serverTimestamp();
   }
 
   try {
@@ -1803,11 +1805,8 @@ async function submitPendingScore() {
   if (isRecord) {
     update[m] = s;
     update[m + 'At'] = serverTimestamp();
-    if (m === 'classic' || m === 'reverse') {
-      const otherMode = m === 'classic' ? 'reverse' : 'classic';
-      update.total = (myData[otherMode] || 0) + s;
-      update.totalAt = serverTimestamp();
-    }
+    update.total = computeTotal(m, s); // Geral = soma dos recordes de todos os modos
+    update.totalAt = serverTimestamp();
   }
   try {
     await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
@@ -1846,12 +1845,21 @@ window.loadRanking = async (m) => {
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
   $('ranking-pagination').innerHTML = '';
   try {
-    const q = query(collection(db, 'scores'), orderBy(field, 'desc'), limit(300));
+    // no ranking de nível todo mundo entra (mesmo com 0 XP), então busca sem ordenar
+    // pelo campo (senão o Firestore excluiria contas antigas que ainda não têm o campo xp)
+    const q = (m === 'level')
+      ? query(collection(db, 'scores'), limit(300))
+      : query(collection(db, 'scores'), orderBy(field, 'desc'), limit(300));
     const snap = await getDocs(q);
     const rows = [];
     snap.forEach(docSnap => {
       const data = docSnap.data();
-      if (data.nick && data[field] > 0) rows.push({ uid: docSnap.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+      if (!data.nick) return;
+      if (m === 'level') {
+        rows.push({ uid: docSnap.id, nick: data.nick, pts: data.xp || 0, at: null, stats: data });
+      } else if (data[field] > 0) {
+        rows.push({ uid: docSnap.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+      }
     });
     rows.sort(compareRankRows);
     rankingRows = rows;
