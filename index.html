@@ -729,6 +729,7 @@ const db = getFirestore(app);
 /* ================== idioma ================== */
 let lang = 'pt';
 try { lang = localStorage.getItem('colorRushLang') || 'pt'; } catch {}
+auth.languageCode = (lang === 'en') ? 'en' : 'pt'; // e-mails do Firebase (verificação etc.) saem no idioma do jogo
 
 const T = {
   pt: {
@@ -904,6 +905,7 @@ function applyLanguage() {
 window.setLang = (l) => {
   lang = l;
   try { localStorage.setItem('colorRushLang', l); } catch {}
+  auth.languageCode = (l === 'en') ? 'en' : 'pt';
   applyLanguage();
 };
 
