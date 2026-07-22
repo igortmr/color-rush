@@ -486,8 +486,8 @@
   .combo-icon .combo-bg {
     position: absolute;
     inset: 0;
-    font-size: 1em;
-    line-height: 1;
+    background: linear-gradient(135deg, #ffc447, #ff9f1c);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
   }
   .combo-icon .combo-fg {
     position: absolute;
@@ -495,9 +495,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.52em;
+    font-size: 0.55em;
+    line-height: 1;
     font-weight: 900;
     color: #2b1400;
+    transform: translateY(-0.04em);
   }
 </style>
 </head>
@@ -592,7 +594,7 @@
     <span class="record-badge lock-badge" id="lock-shapes" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes-reverse" onclick="startGame('shapes-reverse')">
-    <h2 data-i18n-html="mode_shapes_reverse_title"><span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Formas Reverso</h2>
+    <h2 data-i18n-html="mode_shapes_reverse_title"><span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso</h2>
     <p data-i18n-html="mode_shapes_reverse_desc">Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.</p>
     <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
     <span class="record-badge lock-badge" id="lock-shapes-reverse" style="display:none;"></span>
@@ -655,7 +657,7 @@
     <div class="tab" id="tab-classic" onclick="loadRanking('classic')" data-i18n="tab_classic">🎨 Clássico</div>
     <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')" data-i18n="tab_reverse">🔄 Reverso</div>
     <div class="tab" id="tab-shapes" onclick="loadRanking('shapes')" data-i18n="tab_shapes">🔶 Formas</div>
-    <div class="tab" id="tab-shapes-reverse" onclick="loadRanking('shapes-reverse')" data-i18n-html="tab_shapes_reverse"><span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Formas Reverso</div>
+    <div class="tab" id="tab-shapes-reverse" onclick="loadRanking('shapes-reverse')" data-i18n-html="tab_shapes_reverse"><span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso</div>
   </div>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
@@ -726,7 +728,7 @@ const T = {
     mode_reverse_desc: 'Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.',
     mode_shapes_title: '🔶 Formas',
     mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
-    mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Formas Reverso',
+    mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
     record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '📤 CONVIDAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
@@ -735,7 +737,7 @@ const T = {
     btn_create_save: '🏆 CRIAR CONTA E SALVAR PONTOS', ranking_dash: 'Ranking —', points_header: 'Pontos',
     link_view_full: 'ver ranking completo', btn_play_again: 'JOGAR DE NOVO', btn_share: '📤 COMPARTILHAR',
     btn_menu: 'MENU', ranking_title: '🏆 RANKING', tab_geral: '🌍 Geral', tab_classic: '🎨 Clássico',
-    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Formas Reverso', nick_header: 'Nick', loading_text: 'Carregando...', btn_back: 'VOLTAR',
+    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', nick_header: 'Nick', loading_text: 'Carregando...', btn_back: 'VOLTAR',
     profile_title: '🎖️ PERFIL',
 
     err_nick_length: 'O nick deve ter entre 3 e 16 caracteres.',
@@ -797,7 +799,7 @@ const T = {
     mode_reverse_desc: "Click the square where the <b>requested word</b> is written and memorize the <b>square's color</b>. Next round, click where the memorized color's name is written.",
     mode_shapes_title: '🔶 Shapes',
     mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
-    mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Shapes Reverse',
+    mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
     record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '📤 INVITE FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
@@ -806,7 +808,7 @@ const T = {
     btn_create_save: '🏆 CREATE ACCOUNT AND SAVE SCORE', ranking_dash: 'Leaderboard —', points_header: 'Points',
     link_view_full: 'view full leaderboard', btn_play_again: 'PLAY AGAIN', btn_share: '📤 SHARE',
     btn_menu: 'MENU', ranking_title: '🏆 LEADERBOARD', tab_geral: '🌍 Overall', tab_classic: '🎨 Classic',
-    tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Shapes Reverse', nick_header: 'Nickname', loading_text: 'Loading...', btn_back: 'BACK',
+    tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse', nick_header: 'Nickname', loading_text: 'Loading...', btn_back: 'BACK',
     profile_title: '🎖️ PROFILE',
 
     err_nick_length: 'Nickname must be between 3 and 16 characters.',
