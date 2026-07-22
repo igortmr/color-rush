@@ -2301,17 +2301,20 @@ function showTutStep(n) {
     sq.querySelector('.word').classList.add('tut-word-glow');
     tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
   };
-  // mãozinha "chega" deslizando pela esquerda e para na borda do alvo, sem sobrepor o texto
+  // mãozinha "chega" deslizando pela esquerda e para bem na borda do alvo, sem entrar no texto
   const tutSlideInFromLeft = (targetEl, opts = {}) => {
     const stage = $('tut-stage');
     const stageRect = stage.getBoundingClientRect();
     const r = targetEl.getBoundingClientRect();
     const el = $('tut-pointer');
     const yr = opts.yr ?? 0.5;
-    const gap = opts.gap ?? 26; // px de folga antes da borda esquerda do alvo (evita sobrepor o texto)
-    const finalLeft = r.left - stageRect.left - gap;
+    const gap = opts.gap ?? 0; // px de folga extra entre a ponta do dedo e a borda esquerda do alvo
+    // o transform da mãozinha (translate(-38%,...)) desloca o emoji ~62% do seu tamanho pra direita
+    // do ponto de ancoragem — compensamos isso aqui pra ponta do dedo parar exatamente na borda
+    const rightExtent = el.offsetWidth * 0.62;
+    const finalLeft = r.left - stageRect.left - rightExtent - gap;
     const finalTop = r.top + r.height * yr - stageRect.top;
-    el.style.left = '-120px';
+    el.style.left = '-160px';
     el.style.top = finalTop + 'px';
     el.classList.add('visible');
     void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
@@ -2351,7 +2354,7 @@ function showTutStep(n) {
     sq.classList.add('tut-glow');
     tutHighlightInstrWord(cName(TUT_ROUNDS[0].target));
     tutPointAt(sq, { static: true, yr: 0.78 });
-    tutSlideInFromLeft($('tut-caption'), { yr: 0.4, gap: -1 });
+    tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
   } else if (n === 2) {
     // memorize a palavra do meio do quadrado certo
     round0();
