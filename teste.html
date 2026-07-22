@@ -497,6 +497,22 @@
     0%, 100% { transform: translate(-50%, -120%) scale(1); }
     50% { transform: translate(-50%, -120%) scale(1.18); }
   }
+  .tut-pointer-next {
+    position: absolute;
+    font-size: 2.1rem;
+    line-height: 1;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 20;
+    transition: left 0.55s cubic-bezier(.4,0,.2,1), top 0.55s cubic-bezier(.4,0,.2,1), opacity 0.3s;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(255,255,255,0.35));
+    transform: translate(0%, -50%);
+  }
+  .tut-pointer-next.visible { opacity: 1; animation: tutNudgeLeft 0.9s ease-in-out infinite; }
+  @keyframes tutNudgeLeft {
+    0%, 100% { transform: translate(0%, -50%) translateX(0); }
+    50% { transform: translate(0%, -50%) translateX(-8px); }
+  }
   .tut-word-glow { box-shadow: 0 0 0 2px var(--neon-green), 0 0 14px rgba(33,230,161,0.85) !important; animation: tutPulseGlow 1.1s ease-in-out infinite; }
   .tut-caption {
     width: 100%;
@@ -767,6 +783,7 @@
       <div class="grid" id="tut-grid"></div>
       <span class="tut-pointer" id="tut-pointer">👉</span>
       <span class="tut-pointer" id="tut-pointer-static">👉</span>
+      <span class="tut-pointer-next" id="tut-pointer-next">👈</span>
       <span class="tut-brain" id="tut-brain">🧠</span>
     </div>
   </div>
@@ -2215,6 +2232,7 @@ function tutClearHighlights() {
   });
   $('tut-pointer').classList.remove('visible', 'tapping');
   $('tut-pointer-static').classList.remove('visible');
+  $('tut-pointer-next').classList.remove('visible');
   $('tut-brain').classList.remove('visible', 'pulsing');
 }
 
@@ -2299,6 +2317,22 @@ function showTutStep(n) {
     void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
     el.style.left = finalLeft + 'px';
   };
+  // mãozinha "chega" deslizando pela direita e para na borda do alvo (usada pra apontar o botão Próximo)
+  const tutSlideInFromRight = (targetEl, opts = {}) => {
+    const stage = $('tut-stage');
+    const stageRect = stage.getBoundingClientRect();
+    const r = targetEl.getBoundingClientRect();
+    const el = $('tut-pointer-next');
+    const yr = opts.yr ?? 0.5;
+    const gap = opts.gap ?? 26; // px de folga antes da borda direita do alvo (evita sobrepor o texto/botão)
+    const finalLeft = r.right - stageRect.left + gap;
+    const finalTop = r.top + r.height * yr - stageRect.top;
+    el.style.left = (stageRect.width + 120) + 'px';
+    el.style.top = finalTop + 'px';
+    el.classList.add('visible');
+    void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
+    el.style.left = finalLeft + 'px';
+  };
   // mãozinha tocando o quadrado (lateralizada, embaixo) + flash verde — sem checkmark, a animação da mão já basta
   const tutShowClick = (sq, delay = 500) => {
     sq.classList.add('tut-glow');
@@ -2347,6 +2381,13 @@ function showTutStep(n) {
     tutShowMemorize(sq);
     tutShowClick(sq);
   }
+
+  // depois de 2s, uma mãozinha vindo da direita aponta pro botão de avançar;
+  // se for a mãozinha que chegou pela esquerda (passo 1), ela some pra não poluir a tela
+  tutAfter(2000, () => {
+    tutSlideInFromRight($('tut-next-btn'));
+    if (n === 1) $('tut-pointer').classList.remove('visible');
+  });
 }
 
 window.startTutorial = () => {
