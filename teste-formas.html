@@ -400,6 +400,96 @@
   }
   .square.shape-square .word { position: relative; z-index: 1; }
 
+  /* níveis / XP */
+  .xp-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+  .xp-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--neon-green);
+    text-shadow: 0 0 8px rgba(33,230,161,0.5);
+  }
+  .xp-track { width: 100%; height: 10px; background: #060a16; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; }
+  .xp-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--neon-green), var(--neon-blue)); box-shadow: 0 0 8px rgba(33,230,161,0.6); border-radius: 6px; transition: width 0.4s; }
+
+  .mode-card { position: relative; }
+  .mode-card.locked { filter: grayscale(1) brightness(0.75); cursor: not-allowed; }
+  .mode-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.08); box-shadow: none; }
+  .mode-card.locked::after {
+    content: '🔒';
+    position: absolute;
+    top: 50%;
+    right: 18px;
+    transform: translateY(-50%);
+    font-size: 2rem;
+    filter: none;
+  }
+  .lock-badge { border-color: rgba(255,255,255,0.3); color: #cfd8ff; text-shadow: none; }
+
+  .xp-gain {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--neon-green);
+    text-shadow: 0 0 10px rgba(33,230,161,0.7);
+  }
+  .levelup-banner {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5,8,16,0.75);
+    z-index: 2000;
+  }
+  .levelup-banner.show { display: flex; }
+  .levelup-inner {
+    text-align: center;
+    padding: 30px 46px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 2px solid var(--neon-yellow);
+    box-shadow: 0 0 30px rgba(255,233,60,0.5), 0 0 80px rgba(255,233,60,0.2);
+    animation: levelup-pop 0.5s ease-out;
+  }
+  @keyframes levelup-pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    70% { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .levelup-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 14px rgba(255,233,60,0.8);
+  }
+  .levelup-lv {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 900;
+    margin-top: 8px;
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 10px rgba(33,230,161,0.6));
+  }
+  .lv-chip {
+    display: inline-block;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--neon-green);
+    border: 1px solid rgba(33,230,161,0.45);
+    border-radius: 10px;
+    padding: 1px 6px;
+    text-shadow: 0 0 6px rgba(33,230,161,0.5);
+    flex-shrink: 0;
+  }
+
   /* ícone composto: losango + seta de reverso centralizada por cima, num glifo só */
   .combo-icon {
     position: relative;
@@ -429,6 +519,13 @@
 <body>
 
 <div class="test-banner">🧪 TESTE — Modo Formas</div>
+
+<div class="levelup-banner" id="levelup-banner" onclick="dismissLevelUp()">
+  <div class="levelup-inner">
+    <div class="levelup-title" id="levelup-title">🎉 SUBIU DE NÍVEL!</div>
+    <div class="levelup-lv" id="levelup-lv"></div>
+  </div>
+</div>
 
 <div class="lang-switch">
   <button class="lang-btn" id="lang-pt" onclick="setLang('pt')">🇧🇷 PT</button>
@@ -491,6 +588,10 @@
       <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
     </span>
   </div>
+  <div class="xp-wrap">
+    <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/500</span></div>
+    <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
+  </div>
   <div class="mode-card" onclick="startGame('classic')">
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
@@ -501,15 +602,17 @@
     <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
     <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
   </div>
-  <div class="mode-card" onclick="startGame('shapes')">
+  <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
     <h2 data-i18n="mode_shapes_title">🔶 Formas</h2>
     <p data-i18n-html="mode_shapes_desc">Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.</p>
     <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+    <span class="record-badge lock-badge" id="lock-shapes" style="display:none;"></span>
   </div>
-  <div class="mode-card" onclick="startGame('shapes-reverse')">
+  <div class="mode-card" id="card-shapes-reverse" onclick="startGame('shapes-reverse')">
     <h2 data-i18n-html="mode_shapes_reverse_title"><span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Formas Reverso</h2>
     <p data-i18n-html="mode_shapes_reverse_desc">Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.</p>
     <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
+    <span class="record-badge lock-badge" id="lock-shapes-reverse" style="display:none;"></span>
   </div>
   <div class="btn-row" style="width:100%;">
     <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')" data-i18n="btn_ranking">🏆 RANKING</button>
@@ -538,6 +641,11 @@
   <div data-i18n="your_score">Sua pontuação:</div>
   <div class="final-score" id="final-score">0</div>
   <div class="record-line"><span data-i18n="record_mode_label">🏆 Seu recorde neste modo:</span> <span id="record-over">0</span></div>
+  <div class="xp-gain" id="xp-gain" style="display:none;">✨ +<span id="xp-gain-num">0</span> XP</div>
+  <div class="xp-wrap" id="over-xp-wrap" style="display:none;">
+    <div class="xp-labels"><span id="over-xp-lv"></span><span id="over-xp-nums"></span></div>
+    <div class="xp-track"><div class="xp-fill" id="over-xp-fill"></div></div>
+  </div>
   <div class="muted" id="sync-status"></div>
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="card" style="padding:10px; gap:4px;">
@@ -563,6 +671,7 @@
     <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')" data-i18n="tab_reverse">🔄 Reverso</div>
     <div class="tab" id="tab-shapes" onclick="loadRanking('shapes')" data-i18n="tab_shapes">🔶 Formas</div>
     <div class="tab" id="tab-shapes-reverse" onclick="loadRanking('shapes-reverse')" data-i18n-html="tab_shapes_reverse"><span class="combo-icon"><span class="combo-bg">🔶</span><span class="combo-fg">↺</span></span> Formas Reverso</div>
+    <div class="tab" id="tab-level" onclick="loadRanking('level')" data-i18n="tab_level">🆙 Nível</div>
     <div class="tab" id="tab-geral" onclick="loadRanking('geral')" data-i18n="tab_geral">🌍 Geral</div>
   </div>
   <div class="muted" id="ranking-explain"></div>
@@ -685,6 +794,10 @@ const T = {
     badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
     badge_rank_current: n => `Sua melhor posição até agora: ${n}º lugar.`,
+    tab_level: '🆙 Nível',
+    level_explain: '🆙 Ranking por experiência (XP) acumulada.',
+    unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
+    levelup_title: '🎉 SUBIU DE NÍVEL!',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -752,6 +865,10 @@ const T = {
     badge_next_goal: desc => `🎯 Next goal: ${desc}`,
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
     badge_rank_current: n => `Your best position so far: #${n}.`,
+    tab_level: '🆙 Level',
+    level_explain: '🆙 Ranked by total experience (XP).',
+    unlock_at: n => `🔒 Unlocks at level ${n}`,
+    levelup_title: '🎉 LEVEL UP!',
   },
 };
 
@@ -777,7 +894,7 @@ function applyLanguage() {
   if ($('menu-screen').classList.contains('active')) showMenu();
   if ($('profile-screen').classList.contains('active')) renderProfile();
   if ($('ranking-screen').classList.contains('active')) {
-    const activeTab = ['geral', 'classic', 'reverse', 'shapes', 'shapes-reverse'].find(k => $('tab-' + k).classList.contains('active')) || 'geral';
+    const activeTab = ['geral', 'classic', 'reverse', 'shapes', 'shapes-reverse', 'level'].find(k => $('tab-' + k).classList.contains('active')) || 'geral';
     loadRanking(activeTab);
   }
 }
@@ -859,6 +976,27 @@ const SHAPES = [
 ];
 const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : COLORS;
 const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse' };
+
+/* ================== níveis / XP ================== */
+// XP por rodada certa: 3 - 0,2 * segundos gastos (quanto mais rápido, mais XP)
+// Nível N -> N+1 custa N * 500 de XP (500, 1000, 1500, ...)
+const MODE_UNLOCK = { shapes: 10, 'shapes-reverse': 15 }; // nível mínimo pra jogar cada modo
+const xpForNext = lv => lv * 500;
+const totalXpForLevel = lv => 250 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
+function levelFromXp(xp) {
+  let lv = 1;
+  while (xp >= totalXpForLevel(lv + 1)) lv++;
+  return lv;
+}
+function xpInfo(xp) {
+  const lv = levelFromXp(xp);
+  return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
+}
+function getLocalXp() { try { return parseInt(localStorage.getItem('colorRushXp')) || 0; } catch { return 0; } }
+function setLocalXp(v) { try { localStorage.setItem('colorRushXp', v); } catch {} }
+function myXp() { return offline ? getLocalXp() : (myData.xp || 0); }
+function modeUnlocked(m) { return !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+function lvChip(xp) { return `<span class="lv-chip">Lv ${levelFromXp(xp || 0)}</span>`; }
 function modeLabel(m) {
   return m === 'classic' ? T[lang].mode_name_classic
     : m === 'reverse' ? T[lang].mode_name_reverse
@@ -954,13 +1092,14 @@ function compareRankRows(a, b) {
 }
 
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
+let xpGain = 0; // XP acumulada na partida atual
 let currentUser = null;          // usuário do firebase ou null
 let offline = false;             // jogando sem conta
 let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0,
 };
 
 const $ = id => document.getElementById(id);
@@ -1013,6 +1152,7 @@ const sfx = {
   timeout() { tone(300, 0.2, 'triangle', 0.15); tone(200, 0.3, 'triangle', 0.15, 0.15); tone(120, 0.5, 'triangle', 0.15, 0.3); },
   record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
   tick()    { tone(1000, 0.03, 'sine', 0.05); },
+  levelUp() { [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'square', 0.12, i * 0.09)); },
 };
 window.toggleMute = () => {
   muted = !muted;
@@ -1143,7 +1283,7 @@ window.playOffline = () => {
   myData = {
     nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0,
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0,
   };
   showMenu();
 };
@@ -1169,7 +1309,7 @@ onAuthStateChanged(auth, async user => {
 const EMPTY_PROFILE = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0,
 };
 
 async function proceedAfterLogin(user) {
@@ -1260,6 +1400,21 @@ window.showMenu = () => {
   $('record-shapes').textContent = myRecord('shapes');
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
   $('mute-btn').textContent = muted ? '🔇' : '🔊';
+
+  // nível e barra de XP
+  const xi = xpInfo(myXp());
+  $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
+  $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
+  $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
+
+  // bloqueio dos modos por nível
+  for (const [m, minLv] of Object.entries(MODE_UNLOCK)) {
+    const locked = !modeUnlocked(m);
+    $('card-' + m).classList.toggle('locked', locked);
+    const lockEl = $('lock-' + m);
+    lockEl.style.display = locked ? '' : 'none';
+    if (locked) lockEl.textContent = T[lang].unlock_at(minLv);
+  }
   if (offline) {
     $('user-label').textContent = T[lang].offline_label;
     $('logout-btn').textContent = T[lang].entrar_label;
@@ -1274,8 +1429,10 @@ window.showMenu = () => {
 window.playAgain = () => window.startGame(mode);
 
 window.startGame = (m) => {
+  if (!modeUnlocked(m)) return; // modo ainda bloqueado pelo nível
   mode = m;
   score = 0;
+  xpGain = 0;
   duration = 10000;
   playing = true;
   target = pick(poolFor(mode));
@@ -1353,6 +1510,9 @@ function handleClick(item) {
   if (!playing) return;
   if (item === target) {
     score++;
+    // XP da rodada: quanto mais rápido acertar, mais ganha
+    const elapsed = (performance.now() - timerStart) / 1000;
+    xpGain += Math.max(0, 3 - 0.2 * elapsed);
     sfx.correct(score);
     $('score').textContent = score;
     target = nextTarget;
@@ -1369,6 +1529,10 @@ async function gameOver(reason) {
   cancelAnimationFrame(rafId);
   const record = myRecord(mode);
   const isNewRecord = score > record;
+  const xpEarned = Math.round(xpGain);
+  const xpBefore = myXp();
+  const xpAfter = xpBefore + xpEarned;
+  const leveledUp = levelFromXp(xpAfter) > levelFromXp(xpBefore);
 
   $('over-reason').textContent = reason;
   $('final-score').textContent = score;
@@ -1379,23 +1543,68 @@ async function gameOver(reason) {
   if (isNewRecord) sfx.record();
   show('over-screen');
 
+  // XP ganho + animação da barra subindo
+  if (xpEarned > 0) {
+    $('xp-gain').style.display = '';
+    $('over-xp-wrap').style.display = '';
+    animateXpGain(xpEarned, xpBefore, xpAfter, leveledUp);
+  } else {
+    $('xp-gain').style.display = 'none';
+    $('over-xp-wrap').style.display = 'none';
+  }
+
   if (offline) {
     if (isNewRecord) setLocalRecord(mode, score);
+    setLocalXp(xpAfter);
   } else if (currentUser && myData.nick) {
-    await persistGameResult(isNewRecord);
+    await persistGameResult(isNewRecord, xpEarned);
   }
 
   // convite para quem joga sem conta
   $('signup-cta').style.display = 'none';
   if (offline && score > 0) {
-    pendingScore = { mode, score };
+    pendingScore = { mode, score, xp: xpEarned };
     $('signup-cta').style.display = '';
   }
 
   renderMiniRankings(mode);
 }
 
-async function persistGameResult(isNewRecord) {
+// anima o número de XP subindo e a barra de progresso enchendo (com virada de nível se houver)
+function animateXpGain(earned, before, after, leveledUp) {
+  const durMs = 1100;
+  const start = performance.now();
+  const numEl = $('xp-gain-num');
+  const lvEl = $('over-xp-lv');
+  const numsEl = $('over-xp-nums');
+  const fillEl = $('over-xp-fill');
+  fillEl.style.transition = 'none'; // a animação aqui é frame a frame
+
+  const step = now => {
+    const t = Math.min(1, (now - start) / durMs);
+    const eased = 1 - Math.pow(1 - t, 3); // desacelera no final
+    const xpNow = Math.round(before + (after - before) * eased);
+    const xi = xpInfo(xpNow);
+    numEl.textContent = Math.round(earned * eased);
+    lvEl.textContent = `Lv ${xi.lv}`;
+    numsEl.textContent = `${xi.into}/${xi.need}`;
+    fillEl.style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
+    if (t < 1) requestAnimationFrame(step);
+    else if (leveledUp) showLevelUp(levelFromXp(after));
+  };
+  requestAnimationFrame(step);
+}
+
+function showLevelUp(newLv) {
+  $('levelup-title').textContent = T[lang].levelup_title;
+  $('levelup-lv').textContent = `Lv ${newLv}`;
+  $('levelup-banner').classList.add('show');
+  sfx.levelUp();
+  setTimeout(() => $('levelup-banner').classList.remove('show'), 3200);
+}
+window.dismissLevelUp = () => $('levelup-banner').classList.remove('show');
+
+async function persistGameResult(isNewRecord, xpEarned = 0) {
   const today = todayStr();
   const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE');
   let currentStreak = myData.currentStreak || 0;
@@ -1408,6 +1617,7 @@ async function persistGameResult(isNewRecord) {
     nick: myData.nick,
     gamesPlayed: increment(1),
     totalPoints: increment(score),
+    xp: increment(xpEarned),
     lastPlayedDate: today,
     currentStreak,
     bestStreak,
@@ -1432,6 +1642,7 @@ async function persistGameResult(isNewRecord) {
     myData.bestStreak = bestStreak;
     myData.gamesPlayed = (myData.gamesPlayed || 0) + 1;
     myData.totalPoints = (myData.totalPoints || 0) + score;
+    myData.xp = (myData.xp || 0) + xpEarned;
     myData[PLAYED_FIELD[mode]] = true;
     if (isNewRecord) {
       myData[mode] = score;
@@ -1484,7 +1695,10 @@ async function renderRankPreview(field, bodyElId, myPts) {
       const nickSpan = document.createElement('span');
       nickSpan.textContent = r.nick;
       nickCell.appendChild(nickSpan);
-      if (r.stats) nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+      if (r.stats) {
+        nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats.xp));
+        nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+      }
       body.appendChild(tr);
     }
     if (rows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players_mini}</td></tr>`;
@@ -1576,26 +1790,33 @@ function renderBadgeCard(def, stats) {
 
 async function submitPendingScore() {
   if (!pendingScore || !currentUser || !myData.nick) return;
-  const { mode: m, score: s } = pendingScore;
+  const { mode: m, score: s, xp: pendingXp = 0 } = pendingScore;
   pendingScore = null;
-  if (s > (myData[m] || 0)) {
-    const update = {
-      nick: myData.nick,
-      [m]: s,
-      [m + 'At']: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
+  const isRecord = s > (myData[m] || 0);
+  if (!isRecord && pendingXp <= 0) return;
+
+  const update = {
+    nick: myData.nick,
+    updatedAt: serverTimestamp(),
+  };
+  if (pendingXp > 0) update.xp = increment(pendingXp);
+  if (isRecord) {
+    update[m] = s;
+    update[m + 'At'] = serverTimestamp();
     if (m === 'classic' || m === 'reverse') {
       const otherMode = m === 'classic' ? 'reverse' : 'classic';
       update.total = (myData[otherMode] || 0) + s;
       update.totalAt = serverTimestamp();
     }
-    try {
-      await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
+  }
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
+    if (pendingXp > 0) myData.xp = (myData.xp || 0) + pendingXp;
+    if (isRecord) {
       myData[m] = s;
       if (update.total !== undefined) myData.total = update.total;
-    } catch {}
-  }
+    }
+  } catch {}
 }
 
 /* ================== ranking ================== */
@@ -1604,19 +1825,22 @@ window.showRanking = (tab) => {
   loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
 };
 
-const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', geral: 'total' };
+const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', level: 'xp', geral: 'total' };
 
 const RANKING_PAGE_SIZE = 20;
 let rankingRows = [];
 let rankingPage = 0;
+let rankingTab = 'geral';
 
 window.loadRanking = async (m) => {
+  rankingTab = m;
   $('tab-classic').classList.toggle('active', m === 'classic');
   $('tab-reverse').classList.toggle('active', m === 'reverse');
   $('tab-shapes').classList.toggle('active', m === 'shapes');
   $('tab-shapes-reverse').classList.toggle('active', m === 'shapes-reverse');
+  $('tab-level').classList.toggle('active', m === 'level');
   $('tab-geral').classList.toggle('active', m === 'geral');
-  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : '';
+  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : '';
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
@@ -1647,13 +1871,15 @@ function renderRankingPage() {
   pageRows.forEach((r, i) => {
     const pos = start + i + 1;
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const ptsDisplay = (rankingTab === 'level') ? `Lv ${levelFromXp(r.pts)}` : r.pts;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
-    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
     const nickCell = tr.children[1];
     const nickSpan = document.createElement('span'); // inserção segura do nick
     nickSpan.textContent = r.nick;
     nickCell.appendChild(nickSpan);
+    nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
     nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
     body.appendChild(tr);
   });
