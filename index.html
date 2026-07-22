@@ -590,7 +590,7 @@
       <button class="link" id="logout-btn" onclick="doLogout()">sair</button>
     </span>
   </div>
-  <div class="xp-wrap">
+  <div class="xp-wrap" id="menu-xp-wrap">
     <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/100</span></div>
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
@@ -1016,9 +1016,7 @@ function xpInfo(xp) {
   const lv = levelFromXp(xp);
   return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
 }
-function getLocalXp() { try { return parseInt(localStorage.getItem('colorRushXp')) || 0; } catch { return 0; } }
-function setLocalXp(v) { try { localStorage.setItem('colorRushXp', v); } catch {} }
-function myXp() { return offline ? getLocalXp() : (myData.xp || 0); }
+function myXp() { return offline ? 0 : (myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
 function modeUnlocked(m) { return !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
 
 // cor do emblema de nível muda a cada faixa de 5 níveis (1-4 verde, 5-9 azul, 10-14 roxo, ...)
@@ -1431,7 +1429,8 @@ window.showMenu = () => {
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
   $('mute-btn').textContent = muted ? '🔇' : '🔊';
 
-  // nível e barra de XP
+  // nível e barra de XP (só aparece pra quem tem conta)
+  $('menu-xp-wrap').style.display = offline ? 'none' : '';
   const xi = xpInfo(myXp());
   $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
   $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
@@ -1559,7 +1558,8 @@ async function gameOver(reason) {
   cancelAnimationFrame(rafId);
   const record = myRecord(mode);
   const isNewRecord = score > record;
-  const xpEarned = Math.round(xpGain);
+  // XP só pra quem está logado com conta
+  const xpEarned = (!offline && currentUser && myData.nick) ? Math.round(xpGain) : 0;
   const xpBefore = myXp();
   const xpAfter = xpBefore + xpEarned;
   const leveledUp = levelFromXp(xpAfter) > levelFromXp(xpBefore);
@@ -1585,7 +1585,6 @@ async function gameOver(reason) {
 
   if (offline) {
     if (isNewRecord) setLocalRecord(mode, score);
-    setLocalXp(xpAfter);
   } else if (currentUser && myData.nick) {
     await persistGameResult(isNewRecord, xpEarned);
   }
@@ -1593,7 +1592,7 @@ async function gameOver(reason) {
   // convite para quem joga sem conta
   $('signup-cta').style.display = 'none';
   if (offline && score > 0) {
-    pendingScore = { mode, score, xp: xpEarned };
+    pendingScore = { mode, score };
     $('signup-cta').style.display = '';
   }
 
