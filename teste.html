@@ -2384,10 +2384,13 @@ function showTutStep(n) {
 
   // depois de 2s, uma mãozinha vindo da direita aponta pro botão de avançar;
   // se for a mãozinha que chegou pela esquerda (passo 1), ela some pra não poluir a tela
-  tutAfter(2000, () => {
-    tutSlideInFromRight($('tut-next-btn'));
-    if (n === 1) $('tut-pointer').classList.remove('visible');
-  });
+  // (no último passo o botão vira "jogar", não precisa da dica)
+  if (n < TUT_TOTAL) {
+    tutAfter(2000, () => {
+      tutSlideInFromRight($('tut-next-btn'));
+      if (n === 1) $('tut-pointer').classList.remove('visible');
+    });
+  }
 }
 
 window.startTutorial = () => {
