@@ -572,7 +572,7 @@
     </span>
   </div>
   <div class="xp-wrap">
-    <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/500</span></div>
+    <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/200</span></div>
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
@@ -966,10 +966,10 @@ const computeTotal = (overrideMode, overrideScore) =>
 
 /* ================== níveis / XP ================== */
 // XP por rodada certa: 3 - 0,2 * segundos gastos (quanto mais rápido, mais XP)
-// Nível N -> N+1 custa N * 500 de XP (500, 1000, 1500, ...)
+// Nível N -> N+1 custa N * 200 de XP (200, 400, 600, ...)
 const MODE_UNLOCK = { shapes: 10, 'shapes-reverse': 15 }; // nível mínimo pra jogar cada modo
-const xpForNext = lv => lv * 500;
-const totalXpForLevel = lv => 250 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
+const xpForNext = lv => lv * 200;
+const totalXpForLevel = lv => 100 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
 function levelFromXp(xp) {
   let lv = 1;
   while (xp >= totalXpForLevel(lv + 1)) lv++;
