@@ -1643,16 +1643,39 @@ async function persistGameResult(isNewRecord, xpEarned = 0) {
   }
 }
 
+/* ================== cache de leituras do ranking ================== */
+// Uma única busca da lista de contas serve todos os rankings por 2 minutos,
+// pra não consultar o banco a cada partida (economiza a cota do Firestore).
+// Os dados do PRÓPRIO jogador são sempre mesclados por cima do cache, então o
+// seu recorde aparece na hora — só o dos outros pode demorar até 2 min.
+const SCORES_CACHE_MS = 2 * 60 * 1000;
+let scoresCache = { rows: null, at: 0 };
+async function fetchAllScores() {
+  if (scoresCache.rows && Date.now() - scoresCache.at < SCORES_CACHE_MS) return scoresCache.rows;
+  const snap = await getDocs(query(collection(db, 'scores'), limit(300)));
+  const rows = [];
+  snap.forEach(d => {
+    const data = d.data();
+    if (data.nick) rows.push({ uid: d.id, data });
+  });
+  scoresCache = { rows, at: Date.now() };
+  return rows;
+}
+// linha de ranking com os dados do próprio jogador sempre frescos
+function rowData(r) {
+  return (!offline && currentUser && r.uid === currentUser.uid) ? { ...r.data, ...myData } : r.data;
+}
+
 async function renderRankPreview(field, bodyElId, myPts) {
   const body = $(bodyElId);
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
-    const snap = await getDocs(query(collection(db, 'scores'), orderBy(field, 'desc'), limit(100)));
+    const all = await fetchAllScores();
     const rows = [];
-    snap.forEach(d => {
-      const data = d.data();
-      if (data.nick && data[field] > 0) rows.push({ uid: d.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
-    });
+    for (const r of all) {
+      const data = rowData(r);
+      if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+    }
 
     // localiza (ou insere) a linha do jogador
     const youLabel = lang === 'en' ? 'YOU' : 'VOCÊ';
@@ -1832,22 +1855,22 @@ window.loadRanking = async (m) => {
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
   $('ranking-pagination').innerHTML = '';
   try {
-    // no ranking de nível todo mundo entra (mesmo com 0 XP), então busca sem ordenar
-    // pelo campo (senão o Firestore excluiria contas antigas que ainda não têm o campo xp)
-    const q = (m === 'level')
-      ? query(collection(db, 'scores'), limit(300))
-      : query(collection(db, 'scores'), orderBy(field, 'desc'), limit(300));
-    const snap = await getDocs(q);
+    const all = await fetchAllScores();
     const rows = [];
-    snap.forEach(docSnap => {
-      const data = docSnap.data();
-      if (!data.nick) return;
+    for (const r of all) {
+      const data = rowData(r);
+      // no ranking de nível todo mundo entra (mesmo com 0 XP)
       if (m === 'level') {
-        rows.push({ uid: docSnap.id, nick: data.nick, pts: data.xp || 0, at: null, stats: data });
+        rows.push({ uid: r.uid, nick: data.nick, pts: data.xp || 0, at: null, stats: data });
       } else if (data[field] > 0) {
-        rows.push({ uid: docSnap.id, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+        rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
       }
-    });
+    }
+    // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
+    if (!offline && currentUser && myData.nick && !rows.some(r => r.uid === currentUser.uid)) {
+      if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
+      else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData });
+    }
     rows.sort(compareRankRows);
     rankingRows = rows;
     rankingPage = 0;
