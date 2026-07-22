@@ -2351,7 +2351,7 @@ function showTutStep(n) {
     sq.classList.add('tut-glow');
     tutHighlightInstrWord(cName(TUT_ROUNDS[0].target));
     tutPointAt(sq, { static: true, yr: 0.78 });
-    tutSlideInFromLeft($('tut-caption'), { yr: 0.4, gap: -10 });
+    tutSlideInFromLeft($('tut-caption'), { yr: 0.4, gap: -1 });
   } else if (n === 2) {
     // memorize a palavra do meio do quadrado certo
     round0();
@@ -2398,7 +2398,7 @@ window.startTutorial = () => {
   show('tutorial-screen');
   showTutStep(1);
   $('tut-intro-banner').classList.add('show');
-  setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1000);
+  setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1500);
 };
 window.tutNext = () => { if (tutStep < TUT_TOTAL) showTutStep(tutStep + 1); };
 window.tutPrev = () => { if (tutStep > 1) showTutStep(tutStep - 1); };
