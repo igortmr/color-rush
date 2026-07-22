@@ -485,11 +485,9 @@
     font-family: 'Orbitron', sans-serif;
     font-size: 0.62rem;
     font-weight: 700;
-    color: var(--neon-green);
-    border: 1px solid rgba(33,230,161,0.45);
+    border: 1px solid;
     border-radius: 10px;
     padding: 1px 6px;
-    text-shadow: 0 0 6px rgba(33,230,161,0.5);
     flex-shrink: 0;
   }
 
@@ -1003,7 +1001,14 @@ function getLocalXp() { try { return parseInt(localStorage.getItem('colorRushXp'
 function setLocalXp(v) { try { localStorage.setItem('colorRushXp', v); } catch {} }
 function myXp() { return offline ? getLocalXp() : (myData.xp || 0); }
 function modeUnlocked(m) { return !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
-function lvChip(xp) { return `<span class="lv-chip">Lv ${levelFromXp(xp || 0)}</span>`; }
+
+// cor do emblema de nível muda a cada faixa de 5 níveis (1-4 verde, 5-9 azul, 10-14 roxo, ...)
+const LV_COLORS = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffe93c', '#ff9f1c', '#ff2d6b', '#ffffff'];
+function lvChip(xp) {
+  const lv = levelFromXp(xp || 0);
+  const c = LV_COLORS[Math.min(Math.floor(lv / 5), LV_COLORS.length - 1)];
+  return `<span class="lv-chip" style="color:${c}; border-color:${c}88; text-shadow:0 0 6px ${c}80">Lv ${lv}</span>`;
+}
 function modeLabel(m) {
   return m === 'classic' ? T[lang].mode_name_classic
     : m === 'reverse' ? T[lang].mode_name_reverse
@@ -1879,7 +1884,7 @@ function renderRankingPage() {
   pageRows.forEach((r, i) => {
     const pos = start + i + 1;
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-    const ptsDisplay = (rankingTab === 'level') ? `Lv ${levelFromXp(r.pts)}` : r.pts;
+    const ptsDisplay = (rankingTab === 'level') ? `${r.pts} XP` : r.pts;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
