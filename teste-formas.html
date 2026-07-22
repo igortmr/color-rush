@@ -483,7 +483,7 @@
   </div>
   <div class="mode-card" onclick="startGame('shapes-reverse')">
     <h2 data-i18n="mode_shapes_reverse_title">🔷🔄 Formas Reverso</h2>
-    <p data-i18n-html="mode_shapes_reverse_desc">Clique onde a <b>palavra pedida</b> está escrita e memorize a <b>forma do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da forma memorizada.</p>
+    <p data-i18n-html="mode_shapes_reverse_desc">Clique onde a <b>palavra pedida</b> está escrita e memorize a <b>forma daquela figura</b>. Na próxima rodada, clique onde está escrito o nome da forma memorizada.</p>
     <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
   </div>
   <div class="btn-row" style="width:100%;">
@@ -610,7 +610,7 @@ const T = {
     mode_shapes_title: '🔷 Formas',
     mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
     mode_shapes_reverse_title: '🔷🔄 Formas Reverso',
-    mode_shapes_reverse_desc: 'Clique onde a <b>palavra pedida</b> está escrita e memorize a <b>forma do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da forma memorizada.',
+    mode_shapes_reverse_desc: 'Clique onde a <b>palavra pedida</b> está escrita e memorize a <b>forma daquela figura</b>. Na próxima rodada, clique onde está escrito o nome da forma memorizada.',
     record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '📤 CONVIDAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
@@ -637,7 +637,7 @@ const T = {
     instr_first_classic: name => `👉 Clique no quadrado ${name} (e memorize a palavra dentro dele!)`,
     instr_first_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a COR do quadrado!)`,
     instr_first_shapes: name => `👉 Clique na forma ${name} (e memorize a palavra escrita nela!)`,
-    instr_first_shapes_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a FORMA do quadrado!)`,
+    instr_first_shapes_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a FORMA daquela figura!)`,
     instr_next_classic: '🧠 Clique no quadrado da cor da palavra que você memorizou!',
     instr_next_reverse: '🧠 Clique onde está escrito o nome da cor que você memorizou!',
     instr_next_shapes: '🧠 Clique na forma cujo nome você memorizou!',
@@ -677,7 +677,7 @@ const T = {
     mode_shapes_title: '🔷 Shapes',
     mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
     mode_shapes_reverse_title: '🔷🔄 Shapes Reverse',
-    mode_shapes_reverse_desc: "Click where the <b>requested word</b> is written and memorize the <b>square's shape</b>. Next round, click where the memorized shape's name is written.",
+    mode_shapes_reverse_desc: "Click where the <b>requested word</b> is written and memorize the <b>shape of that figure</b>. Next round, click where the memorized shape's name is written.",
     record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '📤 INVITE FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
@@ -704,7 +704,7 @@ const T = {
     instr_first_classic: name => `👉 Click the ${name} square (and memorize the word inside it!)`,
     instr_first_reverse: name => `👉 Click where it says ${name} (and memorize the square's COLOR!)`,
     instr_first_shapes: name => `👉 Click the ${name} shape (and memorize the word written on it!)`,
-    instr_first_shapes_reverse: name => `👉 Click where it says ${name} (and memorize the square's SHAPE!)`,
+    instr_first_shapes_reverse: name => `👉 Click where it says ${name} (and memorize the SHAPE of that figure!)`,
     instr_next_classic: "🧠 Click the square whose color matches the word you memorized!",
     instr_next_reverse: "🧠 Click where the name of the color you memorized is written!",
     instr_next_shapes: "🧠 Click the shape whose name you memorized!",
