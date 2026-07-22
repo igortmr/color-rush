@@ -483,13 +483,12 @@
     background: rgba(6,10,22,0.7);
     border: 1px solid rgba(45,214,255,0.3);
     border-radius: 12px;
-    padding: 14px 16px;
+    padding: 16px;
     font-size: 0.95rem;
     line-height: 1.55;
     color: #dfe6ff;
     min-height: 4.6rem;
-    display: flex;
-    align-items: center;
+    box-sizing: border-box;
   }
   .tut-caption b { color: var(--neon-green); text-shadow: 0 0 8px rgba(33,230,161,0.5); }
   .tut-nav { display: flex; gap: 10px; width: 100%; }
@@ -932,14 +931,11 @@ const T = {
     tut_next: 'Próximo ›',
     tut_play_btn: '🎮 JOGAR MODO CLÁSSICO',
     tut_back_btn: 'VOLTAR AO MENU',
-    tut_caption_1: 'Este é o modo <b>Clássico</b>. A cada rodada, uma instrução aparece no topo pedindo uma cor — e 4 quadrados coloridos aparecem embaixo.',
-    tut_caption_2: 'Leia sempre a instrução no topo primeiro: ela diz qual cor você precisa procurar nesta rodada.',
-    tut_caption_3: 'Repare que cada quadrado tem uma <b>cor de fundo</b> e também uma <b>palavra escrita</b> dentro dele — e elas quase nunca combinam!',
-    tut_caption_4: 'Clique no quadrado cuja <b>cor de fundo</b> é a pedida (VERMELHO). Ignore a palavra escrita nele — ela não importa agora.',
-    tut_caption_5: 'Antes de continuar, memorize a <b>nova palavra</b> que estava escrita nesse quadrado: <b>VERDE</b>. Ela será a cor pedida na próxima rodada!',
-    tut_caption_6: 'A instrução mudou! Agora ela pede a cor da palavra que você memorizou. Como você memorizou VERDE, procure o quadrado verde.',
-    tut_caption_7: 'Clique no quadrado <b>VERDE</b> — a cor que estava escrita na palavra memorizada. Depois memorize a nova palavra (AMARELO) e repita!',
-    tut_caption_8: 'É isso! O ciclo é sempre o mesmo: <b>clique na cor pedida → memorize a nova palavra → repita</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_1: 'Este é o modo <b>Clássico</b>. A instrução no topo pede uma cor, e cada quadrado tem uma <b>cor de fundo</b> diferente da <b>palavra escrita</b> nele.',
+    tut_caption_2: 'Clique no quadrado cuja <b>cor de fundo</b> é a pedida (VERMELHO) — ignore a palavra escrita nele!',
+    tut_caption_3: 'Antes de continuar, memorize a <b>nova palavra</b> que apareceu: <b>VERDE</b>. Na próxima rodada, a instrução vai pedir essa cor.',
+    tut_caption_4: 'Agora clique no quadrado <b>VERDE</b> — a cor que você memorizou. Depois memorize a nova palavra (AMARELO) e repita!',
+    tut_caption_5: 'É isso! O ciclo é sempre: <b>clique na cor pedida → memorize a nova palavra → repita</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -1020,14 +1016,11 @@ const T = {
     tut_next: 'Next ›',
     tut_play_btn: '🎮 PLAY CLASSIC MODE',
     tut_back_btn: 'BACK TO MENU',
-    tut_caption_1: 'This is <b>Classic</b> mode. Each round, an instruction appears on top asking for a color — and 4 colored squares appear below.',
-    tut_caption_2: 'Always read the instruction on top first: it tells you which color to look for this round.',
-    tut_caption_3: 'Notice each square has a <b>background color</b> and also a <b>word written</b> inside it — and they almost never match!',
-    tut_caption_4: "Click the square whose <b>background color</b> is the requested one (RED). Ignore the word written on it — it doesn't matter right now.",
-    tut_caption_5: 'Before moving on, memorize the <b>new word</b> that was written on that square: <b>GREEN</b>. It will be the requested color next round!',
-    tut_caption_6: 'The instruction changed! Now it asks for the color of the word you memorized. Since you memorized GREEN, look for the green square.',
-    tut_caption_7: 'Click the <b>GREEN</b> square — the color that was written in the memorized word. Then memorize the new word (YELLOW) and repeat!',
-    tut_caption_8: "That's it! The cycle is always the same: <b>click the requested color → memorize the new word → repeat</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_1: 'This is <b>Classic</b> mode. The instruction on top asks for a color, and each square has a <b>background color</b> different from the <b>word written</b> on it.',
+    tut_caption_2: "Click the square whose <b>background color</b> is the requested one (RED) — ignore the word written on it!",
+    tut_caption_3: 'Before moving on, memorize the <b>new word</b> that appeared: <b>GREEN</b>. Next round, the instruction will ask for that color.',
+    tut_caption_4: 'Now click the <b>GREEN</b> square — the color you memorized. Then memorize the new word (YELLOW) and repeat!',
+    tut_caption_5: "That's it! The cycle is always: <b>click the requested color → memorize the new word → repeat</b>, getting faster each time. Ready to play? 🚀",
   },
 };
 
@@ -2141,7 +2134,7 @@ const TUT_ROUNDS = [
     ],
   },
 ];
-const TUT_TOTAL = 8;
+const TUT_TOTAL = 5;
 let tutStep = 1;
 let tutTimers = [];
 function tutClearTimers() { tutTimers.forEach(clearTimeout); tutTimers = []; }
@@ -2226,14 +2219,12 @@ function showTutStep(n) {
   const round1 = () => tutRenderRound(1, T[lang].instr_next_classic);
 
   if (n === 1) {
-    round0();
-  } else if (n === 2) {
+    // intro: mostra a instrução e os 4 quadrados, destacando ambos
     round0();
     $('tut-instruction').classList.add('tut-glow');
-  } else if (n === 3) {
-    round0();
     document.querySelectorAll('#tut-grid .square').forEach(sq => sq.classList.add('tut-glow'));
-  } else if (n === 4) {
+  } else if (n === 2) {
+    // clique no quadrado da cor pedida
     round0();
     const sq = tutCorrectSquare(0);
     tutPointAt(sq);
@@ -2242,17 +2233,17 @@ function showTutStep(n) {
       sq.classList.add('tut-correct-flash');
       sq.querySelector('.tut-check').classList.add('show');
     });
-  } else if (n === 5) {
+  } else if (n === 3) {
+    // memorize a nova palavra do quadrado certo
     round0();
     const sq = tutCorrectSquare(0);
     sq.classList.add('tut-correct-flash');
     sq.querySelector('.word').classList.add('tut-word-glow');
     tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.5 });
-  } else if (n === 6) {
+  } else if (n === 4) {
+    // instrução mudou (rodada 2): clique na cor memorizada
     round1();
     $('tut-instruction').classList.add('tut-glow');
-  } else if (n === 7) {
-    round1();
     const sq = tutCorrectSquare(1);
     tutPointAt(sq);
     tutAfter(500, () => {
@@ -2260,7 +2251,8 @@ function showTutStep(n) {
       sq.classList.add('tut-correct-flash');
       sq.querySelector('.tut-check').classList.add('show');
     });
-  } else if (n === 8) {
+  } else if (n === 5) {
+    // recapitulação final
     round1();
     const sq = tutCorrectSquare(1);
     sq.classList.add('tut-correct-flash');
