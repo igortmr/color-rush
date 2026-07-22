@@ -2382,11 +2382,11 @@ function showTutStep(n) {
     tutShowClick(sq);
   }
 
-  // depois de 2s, uma mãozinha vindo da direita aponta pro botão de avançar;
+  // depois de 4s, uma mãozinha vindo da direita aponta pro botão de avançar;
   // se for a mãozinha que chegou pela esquerda (passo 1), ela some pra não poluir a tela
   // (no último passo o botão vira "jogar", não precisa da dica)
   if (n < TUT_TOTAL) {
-    tutAfter(2000, () => {
+    tutAfter(4000, () => {
       tutSlideInFromRight($('tut-next-btn'));
       if (n === 1) $('tut-pointer').classList.remove('visible');
     });
