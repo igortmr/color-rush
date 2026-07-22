@@ -2,6 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SYFPC05BQJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SYFPC05BQJ');
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Color Rush</title>
 <meta name="description" content="Teste seus reflexos e sua memória! Clique na cor certa antes do tempo acabar, suba de nível e dispute o ranking global com seus amigos. Jogue de graça!">
@@ -731,6 +740,9 @@ let lang = 'pt';
 try { lang = localStorage.getItem('colorRushLang') || 'pt'; } catch {}
 auth.languageCode = (lang === 'en') ? 'en' : 'pt'; // e-mails do Firebase (verificação etc.) saem no idioma do jogo
 
+// eventos pro Google Analytics (se o gtag não estiver na página, vira um no-op silencioso)
+const track = (name, params) => { try { if (window.gtag) window.gtag('event', name, params || {}); } catch {} };
+
 const T = {
   pt: {
     btn_login: 'ENTRAR', btn_signup: 'CRIAR CONTA', btn_google: 'Entrar com Google',
@@ -1193,6 +1205,7 @@ window.toggleMute = () => {
 
 /* ================== compartilhar ================== */
 window.shareScore = async () => {
+  track('share', { content_type: 'score', mode });
   const modeName = modeLabel(mode);
   const rec = $('new-record').classList.contains('show') ? T[lang].share_new_record_suffix : '';
   // link com ?ref= só existe pra quem tem conta — é o que faz o indicado contar no badge Divulgador
@@ -1216,6 +1229,7 @@ window.shareScore = async () => {
 
 /* ================== convidar amigos (sem precisar terminar partida) ================== */
 window.inviteFriends = async (statusElId = 'invite-status') => {
+  track('share', { content_type: 'invite' });
   let link = `${location.origin}${location.pathname}`;
   if (!offline && currentUser) {
     const code = await ensureRefCode();
@@ -1270,6 +1284,7 @@ window.doLogin = async () => {
   $('auth-error').textContent = '';
   try {
     await signInWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    track('login', { method: 'password' });
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
 };
 window.doSignup = async () => {
@@ -1301,6 +1316,7 @@ window.doGoogle = async () => {
   $('auth-error').textContent = '';
   try {
     await signInWithPopup(auth, new GoogleAuthProvider());
+    track('login', { method: 'google' });
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
 };
 window.doLogout = async () => {
@@ -1309,6 +1325,7 @@ window.doLogout = async () => {
   show('auth-screen');
 };
 window.playOffline = () => {
+  track('play_offline');
   offline = true;
   currentUser = null;
   myData = {
@@ -1406,6 +1423,7 @@ window.saveNick = async () => {
       updatedAt: serverTimestamp(),
     }, { merge: true });
     await batch.commit();
+    track('sign_up');
     myData.nick = nick;
     myData.refCode = refCode;
 
@@ -1461,6 +1479,7 @@ window.playAgain = () => window.startGame(mode);
 
 window.startGame = (m) => {
   if (!modeUnlocked(m)) return; // modo ainda bloqueado pelo nível
+  track('game_start', { mode: m });
   mode = m;
   score = 0;
   xpGain = 0;
@@ -1565,6 +1584,7 @@ async function gameOver(reason) {
   const xpBefore = myXp();
   const xpAfter = xpBefore + xpEarned;
   const leveledUp = levelFromXp(xpAfter) > levelFromXp(xpBefore);
+  track('game_over', { mode, score, new_record: isNewRecord, xp_earned: xpEarned });
 
   $('over-reason').textContent = reason;
   $('final-score').textContent = score;
@@ -1627,6 +1647,7 @@ function animateXpGain(earned, before, after, leveledUp) {
 }
 
 function showLevelUp(newLv) {
+  track('level_up', { level: newLv });
   $('levelup-title').textContent = T[lang].levelup_title;
   $('levelup-lv').textContent = `Lv ${newLv}`;
   $('levelup-banner').classList.add('show');
