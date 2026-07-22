@@ -588,10 +588,11 @@
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
     <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
   </div>
-  <div class="mode-card" onclick="startGame('reverse')">
+  <div class="mode-card" id="card-reverse" onclick="startGame('reverse')">
     <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
     <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
     <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+    <span class="record-badge lock-badge" id="lock-reverse" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
     <h2 data-i18n="mode_shapes_title">🔶 Formas</h2>
@@ -992,7 +993,7 @@ const computeTotal = (overrideMode, overrideScore) =>
 /* ================== níveis / XP ================== */
 // XP por rodada certa: 3 - 0,2 * segundos gastos (quanto mais rápido, mais XP)
 // Nível N -> N+1 custa N * 100 de XP (100, 200, 300, ...)
-const MODE_UNLOCK = { shapes: 10, 'shapes-reverse': 15 }; // nível mínimo pra jogar cada modo
+const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15 }; // nível mínimo pra jogar cada modo
 const xpForNext = lv => lv * 100;
 const totalXpForLevel = lv => 50 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
 function levelFromXp(xp) {
