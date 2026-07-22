@@ -2281,6 +2281,21 @@ function showTutStep(n) {
     sq.querySelector('.word').classList.add('tut-word-glow');
     tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
   };
+  // mãozinha "chega" deslizando pela esquerda até o alvo (efeito de entrada lateral)
+  const tutSlideInFromLeft = (targetEl, opts = {}) => {
+    const stage = $('tut-stage');
+    const stageRect = stage.getBoundingClientRect();
+    const r = targetEl.getBoundingClientRect();
+    const el = $('tut-pointer');
+    const xr = opts.xr ?? 0.5, yr = opts.yr ?? 0.5;
+    const finalLeft = r.left + r.width * xr - stageRect.left;
+    const finalTop = r.top + r.height * yr - stageRect.top;
+    el.style.left = '-120px';
+    el.style.top = finalTop + 'px';
+    el.classList.add('visible');
+    void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
+    el.style.left = finalLeft + 'px';
+  };
   // mãozinha tocando o quadrado (lateralizada, embaixo) + flash verde — sem checkmark, a animação da mão já basta
   const tutShowClick = (sq, delay = 500) => {
     sq.classList.add('tut-glow');
@@ -2292,12 +2307,13 @@ function showTutStep(n) {
   };
 
   if (n === 1) {
-    // destaca a cor pedida na instrução (piscando) + o quadrado certo + mãozinha nele, mais pra baixo
+    // destaca a cor pedida na instrução (piscando) + o quadrado certo, e a mãozinha desliza pela
+    // esquerda até chegar na caixa de texto embaixo (reforça que é ali que se deve ler primeiro)
     round0();
     const sq = tutCorrectSquare(0);
     sq.classList.add('tut-glow');
     tutHighlightInstrWord(cName(TUT_ROUNDS[0].target));
-    tutPointAt(sq, { yr: 0.78 });
+    tutSlideInFromLeft($('tut-caption'), { xr: 0.14, yr: 0.4 });
   } else if (n === 2) {
     // memorize a palavra do meio do quadrado certo
     round0();
