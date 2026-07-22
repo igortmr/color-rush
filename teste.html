@@ -421,7 +421,21 @@
   .square.shape-square .word { position: relative; z-index: 1; }
 
   /* tutorial passo a passo (modo clássico) */
-  .tut-link-btn { margin-top: 4px; padding: 4px 0; }
+  .mode-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .tut-link-btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--neon-blue);
+    background: rgba(45,214,255,0.08);
+    border: 1px solid rgba(45,214,255,0.4);
+    border-radius: 20px;
+    padding: 4px 12px;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+  .tut-link-btn:hover { background: rgba(45,214,255,0.18); box-shadow: none; transform: none; }
   #tutorial-screen .card { padding: 18px; gap: 14px; }
   .tut-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
   .tut-header h2 { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; letter-spacing: 0.5px; color: #cfd8ff; }
@@ -487,7 +501,7 @@
   .tut-caption {
     width: 100%;
     background: rgba(6,10,22,0.7);
-    border: 1px solid rgba(45,214,255,0.3);
+    border: 2px solid rgba(33,230,161,0.55);
     border-radius: 12px;
     padding: 16px;
     font-size: 0.95rem;
@@ -495,6 +509,12 @@
     color: #dfe6ff;
     min-height: 4.6rem;
     box-sizing: border-box;
+    box-shadow: 0 0 14px rgba(33,230,161,0.3);
+    animation: tutCaptionPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes tutCaptionPulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(33,230,161,0.28); border-color: rgba(33,230,161,0.5); }
+    50% { box-shadow: 0 0 22px rgba(33,230,161,0.6); border-color: rgba(33,230,161,0.95); }
   }
   .tut-caption b { color: var(--neon-green); text-shadow: 0 0 8px rgba(33,230,161,0.5); }
   .tut-nav { display: flex; gap: 10px; width: 100%; }
@@ -629,6 +649,12 @@
   </div>
 </div>
 
+<div class="levelup-banner" id="tut-intro-banner" onclick="this.classList.remove('show')">
+  <div class="levelup-inner" style="border-color: var(--neon-blue); box-shadow: 0 0 30px rgba(45,214,255,0.5), 0 0 80px rgba(45,214,255,0.2);">
+    <div class="levelup-title" style="color: var(--neon-blue); text-shadow: 0 0 14px rgba(45,214,255,0.8);" data-i18n="tut_intro_banner">📖 MODO TUTORIAL</div>
+  </div>
+</div>
+
 <div class="lang-switch">
   <button class="lang-btn" id="lang-pt" onclick="setLang('pt')">🇧🇷 PT</button>
   <button class="lang-btn" id="lang-en" onclick="setLang('en')">🇺🇸 EN</button>
@@ -697,8 +723,10 @@
   <div class="mode-card" onclick="startGame('classic')">
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
-    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
-    <button class="link tut-link-btn" onclick="event.stopPropagation(); startTutorial();" data-i18n="tut_btn">❓ Como jogar</button>
+    <div class="mode-card-footer">
+      <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial();" data-i18n="tut_btn">❓ Como jogar</button>
+    </div>
   </div>
   <div class="mode-card" id="card-reverse" onclick="startGame('reverse')">
     <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
@@ -931,6 +959,7 @@ const T = {
     levelup_title: '🎉 SUBIU DE NÍVEL!',
 
     tut_btn: '❓ Como jogar',
+    tut_intro_banner: '📖 MODO TUTORIAL',
     tut_title: '📖 TUTORIAL — MODO CLÁSSICO',
     tut_skip: 'Pular tutorial',
     tut_prev: '‹ Anterior',
@@ -943,7 +972,7 @@ const T = {
     tut_caption_4: 'Agora encontre o quadrado com a <b>cor</b> que você acabou de memorizar (<b>VERDE</b>).',
     tut_caption_5: 'Memorize a <b>palavra</b> escrita nesse quadrado: <b>AMARELO</b>.',
     tut_caption_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
-    tut_caption_7: 'Clique! É isso — o ciclo é sempre: <b>procure a cor pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_7: 'É isso — o ciclo é sempre: <b>procure a cor pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -1018,6 +1047,7 @@ const T = {
     levelup_title: '🎉 LEVEL UP!',
 
     tut_btn: '❓ How to play',
+    tut_intro_banner: '📖 TUTORIAL MODE',
     tut_title: '📖 TUTORIAL — CLASSIC MODE',
     tut_skip: 'Skip tutorial',
     tut_prev: '‹ Previous',
@@ -1030,7 +1060,7 @@ const T = {
     tut_caption_4: 'Now find the square with the <b>color</b> you just memorized (<b>GREEN</b>).',
     tut_caption_5: 'Memorize the <b>word</b> written on that square: <b>YELLOW</b>.',
     tut_caption_6: 'After memorizing, <b>click</b> that square.',
-    tut_caption_7: "Click! That's it — the cycle is always: <b>find the requested color → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_7: "That's it — the cycle is always: <b>find the requested color → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
   },
 };
 
@@ -2303,6 +2333,8 @@ window.startTutorial = () => {
   track('tutorial_start');
   show('tutorial-screen');
   showTutStep(1);
+  $('tut-intro-banner').classList.add('show');
+  setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1500);
 };
 window.tutNext = () => { if (tutStep < TUT_TOTAL) showTutStep(tutStep + 1); };
 window.tutPrev = () => { if (tutStep > 1) showTutStep(tutStep - 1); };
