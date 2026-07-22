@@ -253,22 +253,22 @@
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
   /* ranking */
-  .tabs { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
-  .tab {
-    flex: 1 1 40%;
-    padding: 10px;
+  .ranking-select {
+    width: 100%;
+    padding: 12px 14px;
     border-radius: 10px;
+    border: 1px solid var(--neon-purple);
     background: #0a0e1e;
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #a9b4e0;
+    color: #fff;
     font-family: 'Orbitron', sans-serif;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
+    letter-spacing: 0.5px;
+    outline: none;
     cursor: pointer;
-    text-align: center;
-    transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
+    box-shadow: 0 0 12px rgba(177,77,255,0.35);
   }
-  .tab.active { border-color: var(--neon-purple); color: #fff; box-shadow: 0 0 16px rgba(177,77,255,0.5); }
+  .ranking-select option { background: #0a0e1e; color: #fff; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
   th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -651,14 +651,14 @@
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
   <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
-  <div class="tabs">
-    <div class="tab" id="tab-level" onclick="loadRanking('level')" data-i18n="tab_level">🆙 Nível</div>
-    <div class="tab" id="tab-geral" onclick="loadRanking('geral')" data-i18n="tab_geral">🌍 Geral</div>
-    <div class="tab" id="tab-classic" onclick="loadRanking('classic')" data-i18n="tab_classic">🎨 Clássico</div>
-    <div class="tab" id="tab-reverse" onclick="loadRanking('reverse')" data-i18n="tab_reverse">🔄 Reverso</div>
-    <div class="tab" id="tab-shapes" onclick="loadRanking('shapes')" data-i18n="tab_shapes">🔶 Formas</div>
-    <div class="tab" id="tab-shapes-reverse" onclick="loadRanking('shapes-reverse')" data-i18n-html="tab_shapes_reverse"><span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso</div>
-  </div>
+  <select class="ranking-select" id="ranking-select" onchange="loadRanking(this.value)">
+    <option value="geral" data-i18n="tab_geral">🌍 Geral</option>
+    <option value="classic" data-i18n="tab_classic">🎨 Clássico</option>
+    <option value="reverse" data-i18n="tab_reverse">🔄 Reverso</option>
+    <option value="shapes" data-i18n="tab_shapes">🔶 Formas</option>
+    <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
+    <option value="level" data-i18n="tab_level">🆙 Nível</option>
+  </select>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
     <table>
@@ -780,6 +780,7 @@ const T = {
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
     badge_rank_current: n => `Sua melhor posição até agora: ${n}º lugar.`,
     tab_level: '🆙 Nível',
+    tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
     levelup_title: '🎉 SUBIU DE NÍVEL!',
@@ -851,6 +852,7 @@ const T = {
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
     badge_rank_current: n => `Your best position so far: #${n}.`,
     tab_level: '🆙 Level',
+    tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
     levelup_title: '🎉 LEVEL UP!',
@@ -878,10 +880,7 @@ function applyLanguage() {
   // re-renderiza a tela dinâmica que já estava aberta, se aplicável
   if ($('menu-screen').classList.contains('active')) showMenu();
   if ($('profile-screen').classList.contains('active')) renderProfile();
-  if ($('ranking-screen').classList.contains('active')) {
-    const activeTab = ['geral', 'classic', 'reverse', 'shapes', 'shapes-reverse', 'level'].find(k => $('tab-' + k).classList.contains('active')) || 'geral';
-    loadRanking(activeTab);
-  }
+  if ($('ranking-screen').classList.contains('active')) loadRanking(rankingTab || 'geral');
 }
 
 window.setLang = (l) => {
@@ -1863,12 +1862,7 @@ let rankingTab = 'geral';
 
 window.loadRanking = async (m) => {
   rankingTab = m;
-  $('tab-classic').classList.toggle('active', m === 'classic');
-  $('tab-reverse').classList.toggle('active', m === 'reverse');
-  $('tab-shapes').classList.toggle('active', m === 'shapes');
-  $('tab-shapes-reverse').classList.toggle('active', m === 'shapes-reverse');
-  $('tab-level').classList.toggle('active', m === 'level');
-  $('tab-geral').classList.toggle('active', m === 'geral');
+  $('ranking-select').value = m;
   $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : '';
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
