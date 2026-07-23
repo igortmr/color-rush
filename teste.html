@@ -90,6 +90,7 @@
     align-items: center;
     gap: 20px;
     padding: 24px;
+    padding-top: 52px;
     width: 100%;
     max-width: 520px;
     max-height: 100vh;
@@ -183,27 +184,26 @@
     padding: 4px;
   }
   button.link:hover { box-shadow: none; }
+  .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
 
   /* toggle de som (mute) */
   button.icon-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
     background: none;
     border: none;
     box-shadow: none;
     padding: 4px 2px;
     cursor: pointer;
     vertical-align: middle;
-    font-size: 1rem;
     line-height: 1;
   }
   button.icon-toggle:hover { box-shadow: none; transform: none; }
   .tgl-track {
     position: relative;
     display: inline-block;
-    width: 34px;
-    height: 18px;
+    width: 38px;
+    height: 20px;
     border-radius: 20px;
     background: #131834;
     border: 1px solid rgba(255,255,255,0.18);
@@ -213,10 +213,15 @@
     position: absolute;
     top: 1px;
     left: 1px;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #6b76a8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
     transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
   }
   button.icon-toggle.on .tgl-track {
@@ -225,7 +230,7 @@
     box-shadow: 0 0 10px rgba(33,230,161,0.4);
   }
   button.icon-toggle.on .tgl-knob {
-    transform: translateX(16px);
+    transform: translateX(20px);
     background: var(--neon-green);
     box-shadow: 0 0 8px rgba(33,230,161,0.9);
   }
@@ -249,7 +254,6 @@
     border-color: var(--neon-red);
     transform: none;
   }
-  .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
 
   .mode-card {
     width: 100%;
@@ -396,14 +400,15 @@
     background-size: 14px 9px;
   }
   .ranking-select option { background: #0a0e1e; color: #fff; }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
-  th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; overflow-wrap: break-word; }
   tbody tr { background: #0e1224; }
   tbody tr:nth-child(odd) { background: #0a0e1e; }
   tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
-  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); width: 44px; text-shadow: 0 0 8px rgba(255,159,28,0.5); }
-  td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); }
+  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
+  td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
   .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
 
   /* badges */
@@ -421,6 +426,19 @@
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
   .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
   .badge-chip.locked { opacity: 0.45; filter: grayscale(0.6); box-shadow: none; }
+  .class-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0a0e1e;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25), 0 0 8px rgba(255,255,255,0.25);
+  }
   .chip-wrap { position: relative; display: inline-flex; }
   .chip-lock {
     position: absolute;
@@ -437,6 +455,8 @@
     box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
   }
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
+  .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
   .badge-card { text-align: left; gap: 10px; }
   .badge-card-head { display: flex; align-items: center; gap: 12px; }
   .badge-card-head .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.95rem; }
@@ -528,9 +548,9 @@
   }
   .tut-link-btn:hover { background: rgba(45,214,255,0.18); box-shadow: none; transform: none; }
   #tutorial-screen .card { padding: 18px; gap: 14px; }
-  .tut-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+  .tut-header { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-shrink: 0; }
   .tut-header h2 { font-family: 'Orbitron', sans-serif; font-size: clamp(0.78rem, 3.4vw, 0.92rem); letter-spacing: 0.3px; color: #cfd8ff; white-space: nowrap; }
-  .tut-dots { display: flex; gap: 6px; justify-content: center; }
+  .tut-dots { display: flex; gap: 6px; justify-content: center; flex-shrink: 0; }
   .tut-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.18); transition: background 0.2s, transform 0.2s; }
   .tut-dot.active { background: var(--neon-green); box-shadow: 0 0 8px rgba(33,230,161,0.8); transform: scale(1.25); }
   .tut-dot.done { background: rgba(33,230,161,0.45); }
@@ -540,6 +560,10 @@
   .tut-stage .grid { gap: 12px; }
   .tut-stage .square.tut-glow { box-shadow: 0 0 0 4px rgba(33,230,161,0.85), 0 0 22px rgba(33,230,161,0.75); animation: tutPulseGlow 1.1s ease-in-out infinite; }
   .tut-stage .square.tut-correct-flash { animation: tutCorrectFlash 0.7s ease; }
+  /* nas figuras (formas), box-shadow forma um halo quadrado que ignora o recorte —
+     troca por drop-shadow, que acompanha o contorno real da forma renderizada */
+  .tut-stage .square.shape-square.tut-glow { box-shadow: none; animation: tutPulseGlowShape 1.1s ease-in-out infinite; }
+  .tut-stage .square.shape-square.tut-correct-flash { box-shadow: none; animation: tutCorrectFlashShape 0.7s ease; }
   .tut-stage .square { transition: opacity 2s ease-out, filter 2s ease-out; }
   .tut-stage .square.tut-dim { opacity: 0.4; filter: saturate(0.4) brightness(0.55); }
   .tut-check {
@@ -559,6 +583,15 @@
     0% { box-shadow: 0 0 0 4px rgba(33,230,161,0.9); }
     55% { box-shadow: 0 0 0 4px rgba(33,230,161,0.95), 0 0 46px rgba(33,230,161,1); }
     100% { box-shadow: 0 0 0 3px rgba(255,255,255,0.35); }
+  }
+  @keyframes tutPulseGlowShape {
+    0%, 100% { filter: brightness(1) drop-shadow(0 0 4px rgba(33,230,161,0.85)) drop-shadow(0 0 16px rgba(33,230,161,0.75)); }
+    50% { filter: brightness(1.25) drop-shadow(0 0 6px rgba(33,230,161,0.95)) drop-shadow(0 0 26px rgba(33,230,161,0.9)); }
+  }
+  @keyframes tutCorrectFlashShape {
+    0% { filter: drop-shadow(0 0 4px rgba(33,230,161,0.9)); }
+    55% { filter: drop-shadow(0 0 8px rgba(33,230,161,0.95)) drop-shadow(0 0 36px rgba(33,230,161,1)); }
+    100% { filter: drop-shadow(0 0 3px rgba(255,255,255,0.35)); }
   }
   @keyframes tutCheckPop {
     0% { opacity: 0; transform: scale(0.3); }
@@ -622,13 +655,14 @@
     box-shadow: 0 0 14px rgba(33,230,161,0.3);
     animation: tutCaptionPulse 2.4s ease-in-out infinite;
     overflow-wrap: break-word;
+    flex-shrink: 0;
   }
   @keyframes tutCaptionPulse {
     0%, 100% { box-shadow: 0 0 12px rgba(33,230,161,0.28); border-color: rgba(33,230,161,0.5); }
     50% { box-shadow: 0 0 22px rgba(33,230,161,0.6); border-color: rgba(33,230,161,0.95); }
   }
   .tut-caption b { color: var(--neon-green); text-shadow: 0 0 8px rgba(33,230,161,0.5); }
-  .tut-nav { display: flex; gap: 10px; width: 100%; }
+  .tut-nav { display: flex; gap: 10px; width: 100%; flex-shrink: 0; }
   .tut-nav button { flex: 1; }
   .tut-skip { align-self: center; }
 
@@ -649,6 +683,7 @@
   .mode-card { position: relative; }
   .mode-card.locked { filter: grayscale(1) brightness(0.75); cursor: not-allowed; }
   .mode-card.locked p,
+  .mode-card.locked .tut-link-btn,
   .mode-card.locked .record-badge:not(.lock-badge) { display: none; }
   .mode-card.locked h2 { margin-bottom: 10px; }
   .mode-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.08); box-shadow: none; }
@@ -824,8 +859,7 @@
     <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
     <span>
       <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som">
-        <span class="tgl-icon">🔊</span>
-        <span class="tgl-track"><span class="tgl-knob"></span></span>
+        <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">🔊</span></span></span>
       </button>
       <button class="pill-btn" id="logout-btn" onclick="doLogout()">sair</button>
     </span>
@@ -854,7 +888,10 @@
   <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
     <h2 data-i18n="mode_shapes_title">🔶 Formas</h2>
     <p data-i18n-html="mode_shapes_desc">Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.</p>
-    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+    <div class="mode-card-footer">
+      <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes');" data-i18n="tut_btn">❓ Como jogar</button>
+    </div>
     <span class="record-badge lock-badge" id="lock-shapes" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes-reverse" onclick="startGame('shapes-reverse')">
@@ -923,6 +960,7 @@
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="card" style="padding:10px; gap:4px;">
     <table>
+      <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
       <thead><tr><th>#</th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="mini-ranking-body"></tbody>
     </table>
@@ -946,11 +984,13 @@
     <option value="shapes" data-i18n="tab_shapes">🔶 Formas</option>
     <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
+    <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
   </select>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
     <table>
-      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
+      <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
+      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="ranking-body"><tr><td colspan="3" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -968,7 +1008,7 @@
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
-  <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  <button class="secondary" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <script type="module">
@@ -1029,7 +1069,17 @@ const callRecomputeTotal = httpsCallable(functions, 'recomputeMyTotal');
 
 /* ================== idioma ================== */
 let lang = 'pt';
-try { lang = localStorage.getItem('colorRushLang') || 'pt'; } catch {}
+try {
+  // link de compartilhamento pode vir com ?lang=en — se vier, abre já traduzido
+  // e lembra a escolha (senão cai no idioma salvo, ou português por padrão)
+  const urlLang = new URLSearchParams(location.search).get('lang');
+  if (urlLang === 'en' || urlLang === 'pt') {
+    lang = urlLang;
+    localStorage.setItem('colorRushLang', urlLang);
+  } else {
+    lang = localStorage.getItem('colorRushLang') || 'pt';
+  }
+} catch {}
 auth.languageCode = (lang === 'en') ? 'en' : 'pt'; // e-mails do Firebase (verificação etc.) saem no idioma do jogo
 
 // eventos pro Google Analytics (se o gtag não estiver na página, vira um no-op silencioso)
@@ -1060,10 +1110,11 @@ const T = {
     btn_create_save: '🏆 CRIAR CONTA E SALVAR PONTOS', ranking_dash: 'Ranking —', points_header: 'Pontos',
     link_view_full: 'ver ranking completo', btn_play_again: 'JOGAR DE NOVO', btn_share: '📤 COMPARTILHAR',
     btn_menu: 'MENU', ranking_title: '🏆 RANKING', tab_geral: '🌍 Geral', tab_classic: '🎨 Clássico',
-    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', nick_header: 'Nick', loading_text: 'Carregando...', btn_back: 'VOLTAR',
+    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', nick_header: 'Jogador', loading_text: 'Carregando...', btn_back: 'VOLTAR',
     profile_title: '🎖️ PERFIL',
 
     err_nick_length: 'O nick deve ter entre 3 e 16 caracteres.',
+    err_nick_spaces: 'O nick não pode ter espaços.',
     err_nick_taken: 'Este nick já está em uso. Escolha outro.',
     err_nick_save: msg => `Erro ao salvar: ${msg}`,
     sync_success: '✅ Recorde enviado para o ranking global!',
@@ -1103,18 +1154,22 @@ const T = {
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
     badge_rank_current: n => `Sua melhor posição até agora: ${n}º lugar.`,
     tab_level: '🆙 Nível',
+    tab_divulgador: '📣 Divulgador',
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
+    divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
+    points_header_divulgador: 'Convites',
+    points_header_level: 'XP',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
     levelup_title: '🎉 SUBIU DE NÍVEL!',
 
     tut_btn: '❓ Como jogar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO' },
+    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS' },
     tut_skip: 'Pular tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
-    tut_play_btn: { classic: '🎮 JOGAR MODO CLÁSSICO', reverse: '🎮 JOGAR MODO REVERSO' },
+    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR' },
     tut_back_btn: 'VOLTAR AO MENU',
     tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
     tut_caption_classic_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
@@ -1130,6 +1185,13 @@ const T = {
     tut_caption_reverse_5: 'Memorize a <b>cor de fundo</b> desse quadrado: <b>AMARELO</b>.',
     tut_caption_reverse_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
     tut_caption_reverse_7: 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a cor de fundo → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_shapes_1: 'Repare: a instrução lá em cima pede uma forma (<b>CÍRCULO</b>). Você deve então procurar a figura com essa <b>forma desenhada</b>.',
+    tut_caption_shapes_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> dessa figura: <b>QUADRADO</b>.',
+    tut_caption_shapes_3: 'Após memorizar, <b>clique</b> nessa figura.',
+    tut_caption_shapes_4: 'Agora encontre a figura com a <b>forma</b> que você acabou de memorizar (<b>QUADRADO</b>).',
+    tut_caption_shapes_5: 'Memorize a <b>palavra</b> escrita nessa figura: <b>TRIÂNGULO</b>.',
+    tut_caption_shapes_6: 'Após memorizar, <b>clique</b> nessa figura.',
+    tut_caption_shapes_7: 'É isso — o ciclo será sempre: <b>procure a forma pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -1155,10 +1217,11 @@ const T = {
     btn_create_save: '🏆 CREATE ACCOUNT AND SAVE SCORE', ranking_dash: 'Leaderboard —', points_header: 'Points',
     link_view_full: 'view full leaderboard', btn_play_again: 'PLAY AGAIN', btn_share: '📤 SHARE',
     btn_menu: 'MENU', ranking_title: '🏆 LEADERBOARD', tab_geral: '🌍 Overall', tab_classic: '🎨 Classic',
-    tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse', nick_header: 'Nickname', loading_text: 'Loading...', btn_back: 'BACK',
+    tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse', nick_header: 'Player', loading_text: 'Loading...', btn_back: 'BACK',
     profile_title: '🎖️ PROFILE',
 
     err_nick_length: 'Nickname must be between 3 and 16 characters.',
+    err_nick_spaces: 'Nickname can\'t contain spaces.',
     err_nick_taken: 'This nickname is already taken. Choose another.',
     err_nick_save: msg => `Error saving: ${msg}`,
     sync_success: '✅ Record submitted to the global leaderboard!',
@@ -1198,18 +1261,22 @@ const T = {
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
     badge_rank_current: n => `Your best position so far: #${n}.`,
     tab_level: '🆙 Level',
+    tab_divulgador: '📣 Promoter',
     tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
+    divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
+    points_header_divulgador: 'Invites',
+    points_header_level: 'XP',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
     levelup_title: '🎉 LEVEL UP!',
 
     tut_btn: '❓ How to play',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL' },
+    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL', shapes: '📖 SHAPES TUTORIAL' },
     tut_skip: 'Skip tutorial',
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
-    tut_play_btn: { classic: '🎮 PLAY CLASSIC MODE', reverse: '🎮 PLAY REVERSE MODE' },
+    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY' },
     tut_back_btn: 'BACK TO MENU',
     tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
     tut_caption_classic_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
@@ -1225,6 +1292,13 @@ const T = {
     tut_caption_reverse_5: 'Memorize the <b>background color</b> of that square: <b>YELLOW</b>.',
     tut_caption_reverse_6: 'After memorizing, <b>click</b> that square.',
     tut_caption_reverse_7: "That's it — the cycle is always: <b>find the requested word → memorize the background color → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_shapes_1: 'Notice: the instruction up top asks for a shape (<b>CIRCLE</b>). You should then look for the square drawn with that <b>shape</b>.',
+    tut_caption_shapes_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>SQUARE</b>.',
+    tut_caption_shapes_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_shapes_4: 'Now find the square with the <b>shape</b> you just memorized (<b>SQUARE</b>).',
+    tut_caption_shapes_5: 'Memorize the <b>word</b> written on that square: <b>TRIANGLE</b>.',
+    tut_caption_shapes_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_shapes_7: "That's it — the cycle is always: <b>find the requested shape → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
   },
 };
 
@@ -1260,6 +1334,16 @@ window.setLang = (l) => {
   lang = l;
   try { localStorage.setItem('colorRushLang', l); } catch {}
   auth.languageCode = (l === 'en') ? 'en' : 'pt';
+  // reflete o idioma na URL da barra de endereço (sem recarregar a página), pra
+  // quem copiar o link diretamente dali — não só pelo botão de compartilhar — já
+  // levar o idioma junto. Mantém outros parâmetros existentes (ex.: ?ref=)
+  try {
+    const params = new URLSearchParams(location.search);
+    if (l === 'pt') params.delete('lang'); else params.set('lang', l);
+    const qs = params.toString();
+    const newUrl = location.pathname + (qs ? `?${qs}` : '') + location.hash;
+    history.replaceState(null, '', newUrl);
+  } catch {}
   applyLanguage();
 };
 
@@ -1358,8 +1442,17 @@ const computeTotal = (overrideMode, overrideScore) =>
   ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (myData[k] || 0)), 0);
 
 /* ================== níveis / XP ================== */
-// XP por rodada certa: 3 - 0,2 * segundos gastos (quanto mais rápido, mais XP)
+// XP por rodada certa: (3 - 0,2 * segundos gastos) * multiplicador de sequência
+// (quanto mais rápido, mais XP; quanto mais longa a sequência, maior o multiplicador)
 // Nível N -> N+1 custa N * 100 de XP (100, 200, 300, ...)
+// bônus de sequência: recompensa acertos mais avançados no run, já que ficam mais difíceis
+// (o tempo por rodada encolhe 5% a cada acerto)
+function xpStreakMultiplier(streak) {
+  if (streak <= 10) return 1;
+  if (streak <= 25) return 1.25;
+  if (streak <= 50) return 1.5;
+  return 2;
+}
 const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15 }; // nível mínimo pra jogar cada modo
 const xpForNext = lv => lv * 100;
 const totalXpForLevel = lv => 50 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
@@ -1373,7 +1466,7 @@ function xpInfo(xp) {
   return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
 }
 function myXp() { return offline ? 0 : (myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
-function modeUnlocked(m) { return !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+function modeUnlocked(m) { return myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
 
 // cor do emblema de nível muda a cada faixa de 5 níveis (1-4 verde, 5-9 azul, 10-14 roxo, ...)
 const LV_COLORS = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffe93c', '#ff9f1c', '#ff2d6b', '#ffffff'];
@@ -1431,7 +1524,7 @@ const BADGE_DEFS = {
     label: { pt: 'Divulgador', en: 'Promoter' },
     tiers: [1, 5, 15, 30, 50, 100],
     names: {
-      pt: ['Boca a Boca', 'Influencer', 'Viral', 'Embaixador', 'Celebridade', 'Fenômeno'],
+      pt: ['Recruta', 'Influencer', 'Viral', 'Embaixador', 'Celebridade', 'Fenômeno'],
       en: ['Word of Mouth', 'Influencer', 'Viral', 'Ambassador', 'Celebrity', 'Phenomenon'],
     },
     metric: u => u.referrals || 0,
@@ -1465,6 +1558,15 @@ function topBadgeIcons(stats, count) {
     if (out.length >= count) break;
   }
   return out.join('');
+}
+// nome da classe de divulgador (ex.: "Viral") com a cor da medalha — usado só no ranking de divulgador
+function sharerTierLabel(stats) {
+  const def = BADGE_DEFS.sharer;
+  const t = unlockedTier(def, stats);
+  if (t < 0) return '';
+  const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
+  const name = def.names[lang][t];
+  return `<span class="class-pill" style="background:${color}" title="${def.label[lang]}: ${name}">${name}</span>`;
 }
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
 
@@ -1548,16 +1650,26 @@ window.toggleMute = () => {
 };
 
 /* ================== compartilhar ================== */
+// monta o link de compartilhamento — ?ref= só existe pra quem tem conta (conta pro
+// badge Divulgador) e &lang= só é incluído quando o idioma não é o padrão (pt), pra
+// quem clicar já abrir o site traduzido em vez de cair sempre em português
+async function buildShareLink() {
+  let link = `${location.origin}${location.pathname}`;
+  const params = [];
+  if (!offline && currentUser) {
+    const code = await ensureRefCode();
+    if (code) params.push(`ref=${code}`);
+  }
+  if (lang !== 'pt') params.push(`lang=${lang}`);
+  if (params.length) link += `?${params.join('&')}`;
+  return link;
+}
+
 window.shareScore = async () => {
   track('share', { content_type: 'score', mode });
   const modeName = modeLabel(mode);
   const rec = $('new-record').classList.contains('show') ? T[lang].share_new_record_suffix : '';
-  // link com ?ref= só existe pra quem tem conta — é o que faz o indicado contar no badge Divulgador
-  let link = `${location.origin}${location.pathname}`;
-  if (!offline && currentUser) {
-    const code = await ensureRefCode();
-    if (code) link += `?ref=${code}`;
-  }
+  const link = await buildShareLink();
   const text = T[lang].share_text(score, modeName, rec, link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   try {
@@ -1574,11 +1686,7 @@ window.shareScore = async () => {
 /* ================== convidar amigos (sem precisar terminar partida) ================== */
 window.inviteFriends = async (statusElId = 'invite-status') => {
   track('share', { content_type: 'invite' });
-  let link = `${location.origin}${location.pathname}`;
-  if (!offline && currentUser) {
-    const code = await ensureRefCode();
-    if (code) link += `?ref=${code}`;
-  }
+  const link = await buildShareLink();
   const text = T[lang].invite_text(link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const statusEl = $(statusElId);
@@ -1731,6 +1839,10 @@ window.saveNick = async () => {
   $('nick-error').textContent = '';
   if (nick.length < 3 || nick.length > 16) {
     $('nick-error').textContent = T[lang].err_nick_length;
+    return;
+  }
+  if (/\s/.test(nick)) {
+    $('nick-error').textContent = T[lang].err_nick_spaces;
     return;
   }
   const nickKey = nick.toLowerCase(); // "Igor" e "IGOR" contam como o mesmo nick
@@ -1897,9 +2009,9 @@ function handleClick(item) {
   if (!playing) return;
   if (item === target) {
     score++;
-    // XP da rodada: quanto mais rápido acertar, mais ganha
+    // XP da rodada: quanto mais rápido acertar, mais ganha — e quanto mais longa a sequência, maior o bônus
     const elapsed = (performance.now() - timerStart) / 1000;
-    xpGain += Math.max(0, 3 - 0.2 * elapsed);
+    xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
     sfx.correct(score);
     $('score').textContent = score;
     target = nextTarget;
@@ -2038,7 +2150,9 @@ async function fetchAllScores() {
   const rows = [];
   snap.forEach(d => {
     const data = d.data();
-    if (data.nick) rows.push({ uid: d.id, data });
+    // contas admin (campo definido só pelo Firebase Console) ficam de fora de
+    // qualquer ranking, embora tenham acesso liberado a tudo no jogo
+    if (data.nick && data.admin !== true) rows.push({ uid: d.id, data });
   });
   scoresCache = { rows, at: Date.now() };
   return rows;
@@ -2059,10 +2173,10 @@ async function renderRankPreview(field, bodyElId, myPts) {
       if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
     }
 
-    // localiza (ou insere) a linha do jogador
+    // localiza (ou insere) a linha do jogador (admin nunca aparece, nem pra si mesma)
     const youLabel = lang === 'en' ? 'YOU' : 'VOCÊ';
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
-    if (myIndex === -1) {
+    if (myIndex === -1 && myData.admin !== true) {
       rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData });
     }
 
@@ -2086,11 +2200,13 @@ async function renderRankPreview(field, bodyElId, myPts) {
       if (i === myIndex) tr.className = 'me';
       tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
       const nickCell = tr.children[1];
+      if (r.stats) nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats.xp));
       const nickSpan = document.createElement('span');
       nickSpan.textContent = r.nick;
+      nickSpan.className = 'nick-click';
+      nickSpan.onclick = () => openProfileFromRanking(r, 'over-screen');
       nickCell.appendChild(nickSpan);
       if (r.stats) {
-        nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats.xp));
         nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
       }
       body.appendChild(tr);
@@ -2113,19 +2229,41 @@ window.goSignup = () => {
 };
 
 /* ================== perfil / conquistas ================== */
+// pra onde o botão "voltar" do perfil deve levar — muda conforme de onde o
+// perfil foi aberto (menu, ranking completo, ou mini-ranking do fim de jogo)
+let profileBackTarget = 'menu-screen';
 window.showProfile = () => {
+  profileBackTarget = 'menu-screen';
   show('profile-screen');
   renderProfile();
 };
+window.profileBack = () => show(profileBackTarget);
 
-function renderProfile() {
-  $('profile-nick').textContent = offline ? T[lang].profile_offline_label : T[lang].profile_nick_label(myData.nick || '');
-  const body = $('profile-body');
-  $('profile-invite-btn').style.display = offline ? 'none' : '';
+// abre o perfil ao clicar num nick do ranking (mini ou completo). Se for você
+// mesmo, abre a versão própria de sempre (editável, dados sempre frescos);
+// senão, abre uma versão somente-leitura com os dados que a linha do ranking já
+// tinha em mãos — sem precisar de nenhuma consulta nova ao Firestore.
+function openProfileFromRanking(r, backTarget) {
+  profileBackTarget = backTarget;
+  show('profile-screen');
+  const isMe = !offline && currentUser && (r.uid === currentUser.uid || r.uid === '__me__');
+  if (isMe) renderProfile();
+  else renderProfile(r.stats, r.nick);
+}
 
-  if (offline) {
+// sem argumentos: perfil PRÓPRIO (editável, lê de myData ao vivo). Com
+// viewStats/viewNick: perfil de OUTRO jogador, somente leitura, a partir dos
+// dados já carregados na linha do ranking (ver openProfileFromRanking acima).
+function renderProfile(viewStats, viewNick) {
+  const isOther = !!viewStats;
+  const stats = isOther ? viewStats : myData;
+
+  $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
+
+  if (!isOther && offline) {
+    $('profile-nick').textContent = T[lang].profile_offline_label;
     $('profile-summary').textContent = '';
-    body.innerHTML = `
+    $('profile-body').innerHTML = `
       <div class="card" style="text-align:center;">
         <p>${T[lang].profile_offline_msg1}</p>
         <p class="muted">${T[lang].profile_offline_msg2}</p>
@@ -2134,9 +2272,11 @@ function renderProfile() {
     return;
   }
 
-  const unlockedCount = BADGE_ORDER.reduce((n, k) => n + (unlockedTier(BADGE_DEFS[k], myData) >= 0 ? 1 : 0), 0);
+  $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+
+  const unlockedCount = BADGE_ORDER.reduce((n, k) => n + (unlockedTier(BADGE_DEFS[k], stats) >= 0 ? 1 : 0), 0);
   $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, BADGE_ORDER.length);
-  body.innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], myData)).join('');
+  $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], stats)).join('');
 }
 
 function renderBadgeCard(def, stats) {
@@ -2206,7 +2346,7 @@ window.showRanking = (tab) => {
   loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
 };
 
-const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', level: 'xp', geral: 'total' };
+const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', level: 'xp', geral: 'total', divulgador: 'referrals' };
 
 const RANKING_PAGE_SIZE = 20;
 let rankingRows = [];
@@ -2216,7 +2356,8 @@ let rankingTab = 'geral';
 window.loadRanking = async (m) => {
   rankingTab = m;
   $('ranking-select').value = m;
-  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : '';
+  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
+  $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : (m === 'level') ? T[lang].points_header_level : T[lang].points_header;
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
@@ -2234,7 +2375,8 @@ window.loadRanking = async (m) => {
       }
     }
     // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
-    if (!offline && currentUser && myData.nick && !rows.some(r => r.uid === currentUser.uid)) {
+    // (exceto se for admin — essa nunca deve aparecer no ranking, nem pra si mesma)
+    if (!offline && currentUser && myData.nick && myData.admin !== true && !rows.some(r => r.uid === currentUser.uid)) {
       if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
       else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData });
     }
@@ -2256,16 +2398,18 @@ function renderRankingPage() {
   pageRows.forEach((r, i) => {
     const pos = start + i + 1;
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-    const ptsDisplay = (rankingTab === 'level') ? `${r.pts} XP` : r.pts;
+    const ptsDisplay = r.pts;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
     const nickCell = tr.children[1];
+    nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
     const nickSpan = document.createElement('span'); // inserção segura do nick
     nickSpan.textContent = r.nick;
+    nickSpan.className = 'nick-click';
+    nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
-    nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
-    nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+    nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : topBadgeIcons(r.stats, 3));
     body.appendChild(tr);
   });
   if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players}</td></tr>`;
@@ -2353,6 +2497,37 @@ const TUT_DATA = {
       ],
     },
   ],
+  // formas: funciona igual ao clássico — o alvo é a FORMA desenhada no quadrado certo,
+  // o que se memoriza é a PALAVRA (nome de outra forma) escrita nele
+  shapes: [
+    {
+      target: SHAPES[0], // círculo
+      squares: [
+        { shape: SHAPES[3], word: SHAPES[4] },
+        { shape: SHAPES[0], word: SHAPES[1], correct: true }, // silhueta círculo / palavra quadrado (a memorizar)
+        { shape: SHAPES[2], word: SHAPES[5] },
+        { shape: SHAPES[4], word: SHAPES[3] },
+      ],
+    },
+    {
+      target: SHAPES[1], // quadrado (o que foi memorizado na rodada A)
+      squares: [
+        { shape: SHAPES[5], word: SHAPES[0] },
+        { shape: SHAPES[4], word: SHAPES[3] },
+        { shape: SHAPES[1], word: SHAPES[2], correct: true }, // silhueta quadrado / palavra triângulo (posição diferente da rodada A)
+        { shape: SHAPES[3], word: SHAPES[4] },
+      ],
+    },
+    {
+      target: SHAPES[2], // triângulo (o que foi memorizado na rodada B)
+      squares: [
+        { shape: SHAPES[4], word: SHAPES[5] },
+        { shape: SHAPES[0], word: SHAPES[3] },
+        { shape: SHAPES[3], word: SHAPES[0] },
+        { shape: SHAPES[2], word: SHAPES[4], correct: true }, // silhueta triângulo / palavra estrela (posição diferente das anteriores)
+      ],
+    },
+  ],
 };
 const TUT_TOTAL = 7;
 let tutMode = 'classic';
@@ -2369,9 +2544,14 @@ function tutRenderRound(roundIdx, instrText) {
     const el = document.createElement('div');
     el.className = 'square';
     el.dataset.i = i;
-    el.style.background = s.bg.hex;
-    el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-    el.innerHTML = `<span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    if (tutMode === 'shapes') {
+      el.classList.add('shape-square', s.shape.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${s.shape.shapeClass}"></span><span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    } else {
+      el.style.background = s.bg.hex;
+      el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    }
     grid.appendChild(el);
   });
   $('tut-instruction').textContent = instrText;
@@ -2442,8 +2622,10 @@ function showTutStep(n) {
   tutSetNav();
   $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
 
-  const instrFirst = tutMode === 'reverse' ? T[lang].instr_first_reverse : T[lang].instr_first_classic;
-  const instrNext = tutMode === 'reverse' ? T[lang].instr_next_reverse : T[lang].instr_next_classic;
+  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes };
+  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes };
+  const instrFirst = INSTR_FIRST_BY_TUT_MODE[tutMode];
+  const instrNext = INSTR_NEXT_BY_TUT_MODE[tutMode];
   const round0 = () => tutRenderRound(0, instrFirst(cName(TUT_DATA[tutMode][0].target)));
   const round1 = () => tutRenderRound(1, instrNext);
   const round2 = () => tutRenderRound(2, instrNext);
