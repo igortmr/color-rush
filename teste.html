@@ -484,6 +484,7 @@
     filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(255,255,255,0.35));
   }
   .tut-pointer { transform: translate(-38%, -78%) rotate(-14deg); }
+  .tut-pointer.tut-pointer-up { transform: translate(-50%, 4px) rotate(0deg); }
   .tut-brain { transform: translate(-50%, -120%); font-size: 1.9rem; }
   .tut-pointer.visible, .tut-brain.visible { opacity: 1; }
   .tut-pointer.tapping { animation: tutTap 0.45s ease; }
@@ -2284,8 +2285,12 @@ function tutClearHighlights() {
     sq.querySelector('.tut-check')?.classList.remove('show');
     sq.querySelector('.word')?.classList.remove('tut-word-glow');
   });
-  $('tut-pointer').classList.remove('visible', 'tapping');
-  $('tut-pointer-static').classList.remove('visible');
+  const ptrEl = $('tut-pointer');
+  ptrEl.classList.remove('visible', 'tapping', 'tut-pointer-up');
+  ptrEl.textContent = '👉';
+  const staticEl = $('tut-pointer-static');
+  staticEl.classList.remove('visible', 'tut-pointer-up');
+  staticEl.textContent = '👉';
   $('tut-pointer-next').classList.remove('visible');
   $('tut-brain').classList.remove('visible', 'pulsing');
 }
@@ -2355,12 +2360,21 @@ function showTutStep(n) {
   const tutShowMemorize = (sq) => {
     sq.classList.add('tut-glow');
     if (tutMode === 'reverse') {
-      // no reverso memoriza-se a COR DE FUNDO do quadrado, não a palavra escrita nele
-      tutPointAt(sq, { brain: true, yr: 0.5 });
+      // no reverso memoriza-se a COR DE FUNDO do quadrado, não a palavra escrita nele — por isso o
+      // cérebro fica num canto do quadrado, longe da palavra centralizada, pra não parecer que é ela
+      tutPointAt(sq, { brain: true, xr: 0.8, yr: 0.2 });
     } else {
       sq.querySelector('.word').classList.add('tut-word-glow');
       tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
     }
+  };
+  // mãozinha apontando pra palavra escrita no meio do quadrado, parada logo abaixo dela sem sobrepor
+  // (usada no reverso pra deixar claro que é o texto que está sendo procurado, não a cor de fundo)
+  const tutPointAtWord = (sq, opts = {}) => {
+    const el = opts.static ? $('tut-pointer-static') : $('tut-pointer');
+    el.textContent = '👆';
+    el.classList.add('tut-pointer-up');
+    tutPointAt(sq.querySelector('.word'), { static: !!opts.static, yr: 1.35 });
   };
   // mãozinha "chega" deslizando pela esquerda e para bem na borda do alvo, sem entrar no texto
   const tutSlideInFromLeft = (targetEl, opts = {}) => {
@@ -2414,10 +2428,14 @@ function showTutStep(n) {
     const sq = tutCorrectSquare(0);
     sq.classList.add('tut-glow');
     tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
-    tutPointAt(sq, { static: true, yr: 0.78 });
+    if (tutMode === 'reverse') {
+      tutPointAtWord(sq, { static: true }); // no reverso, aponta pra palavra (é ela que se procura)
+    } else {
+      tutPointAt(sq, { static: true, yr: 0.78 });
+    }
     tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
   } else if (n === 2) {
-    // memorize a palavra do meio do quadrado certo
+    // memorize a palavra do meio (clássico) ou a cor de fundo (reverso) do quadrado certo
     round0();
     tutShowMemorize(tutCorrectSquare(0));
   } else if (n === 3) {
@@ -2425,11 +2443,15 @@ function showTutStep(n) {
     round0();
     tutShowClick(tutCorrectSquare(0));
   } else if (n === 4) {
-    // rodada 2: destaca o quadrado da cor que acabou de memorizar + mãozinha nele
+    // rodada 2: destaca o quadrado certo + mãozinha (aponta pra palavra no reverso, pro quadrado no clássico)
     round1();
     const sq = tutCorrectSquare(1);
     sq.classList.add('tut-glow');
-    tutPointAt(sq, { yr: 0.42 });
+    if (tutMode === 'reverse') {
+      tutPointAtWord(sq);
+    } else {
+      tutPointAt(sq, { yr: 0.42 });
+    }
   } else if (n === 5) {
     // memoriza a nova palavra (sem clicar ainda)
     round1();
