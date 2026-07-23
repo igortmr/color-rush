@@ -433,6 +433,19 @@
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
   .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
   .badge-chip.locked { opacity: 0.45; filter: grayscale(0.6); box-shadow: none; }
+  .class-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0a0e1e;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25), 0 0 8px rgba(255,255,255,0.25);
+  }
   .chip-wrap { position: relative; display: inline-flex; }
   .chip-lock {
     position: absolute;
@@ -963,7 +976,7 @@
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
     <table>
-      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
+      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="ranking-body"><tr><td colspan="3" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -1119,7 +1132,8 @@ const T = {
     tab_divulgador: '📣 Divulgador',
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
-    divulgador_explain: '📣 Quem mais convidou amigos que se cadastraram pelo seu link de compartilhamento.',
+    divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
+    points_header_divulgador: 'Pessoas convidadas',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
     levelup_title: '🎉 SUBIU DE NÍVEL!',
 
@@ -1217,6 +1231,7 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
     divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
+    points_header_divulgador: 'People invited',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
     levelup_title: '🎉 LEVEL UP!',
 
@@ -1483,11 +1498,14 @@ function topBadgeIcons(stats, count) {
   }
   return out.join('');
 }
-// só a medalha de divulgador — usada no ranking de divulgador, onde os outros badges não fazem sentido
-function sharerBadgeIcon(stats) {
+// nome da classe de divulgador (ex.: "Viral") com a cor da medalha — usado só no ranking de divulgador
+function sharerTierLabel(stats) {
   const def = BADGE_DEFS.sharer;
   const t = unlockedTier(def, stats);
-  return t >= 0 ? badgeChip(def, t, 'small') : '';
+  if (t < 0) return '';
+  const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
+  const name = def.names[lang][t];
+  return `<span class="class-pill" style="background:${color}" title="${def.label[lang]}: ${name}">${name}</span>`;
 }
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
 
@@ -2109,11 +2127,11 @@ async function renderRankPreview(field, bodyElId, myPts) {
       if (i === myIndex) tr.className = 'me';
       tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
       const nickCell = tr.children[1];
+      if (r.stats) nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats.xp));
       const nickSpan = document.createElement('span');
       nickSpan.textContent = r.nick;
       nickCell.appendChild(nickSpan);
       if (r.stats) {
-        nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats.xp));
         nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
       }
       body.appendChild(tr);
@@ -2240,6 +2258,7 @@ window.loadRanking = async (m) => {
   rankingTab = m;
   $('ranking-select').value = m;
   $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
+  $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : T[lang].points_header;
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
@@ -2284,11 +2303,11 @@ function renderRankingPage() {
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
     const nickCell = tr.children[1];
+    nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
     const nickSpan = document.createElement('span'); // inserção segura do nick
     nickSpan.textContent = r.nick;
     nickCell.appendChild(nickSpan);
-    nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
-    nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerBadgeIcon(r.stats) : topBadgeIcons(r.stats, 3));
+    nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : topBadgeIcons(r.stats, 3));
     body.appendChild(tr);
   });
   if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players}</td></tr>`;
