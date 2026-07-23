@@ -880,7 +880,10 @@
   <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
     <h2 data-i18n="mode_shapes_title">🔶 Formas</h2>
     <p data-i18n-html="mode_shapes_desc">Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.</p>
-    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+    <div class="mode-card-footer">
+      <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes');" data-i18n="tut_btn">❓ Como jogar</button>
+    </div>
     <span class="record-badge lock-badge" id="lock-shapes" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes-reverse" onclick="startGame('shapes-reverse')">
@@ -1143,11 +1146,11 @@ const T = {
 
     tut_btn: '❓ Como jogar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO' },
+    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS' },
     tut_skip: 'Pular tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
-    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR' },
+    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR' },
     tut_back_btn: 'VOLTAR AO MENU',
     tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
     tut_caption_classic_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
@@ -1163,6 +1166,13 @@ const T = {
     tut_caption_reverse_5: 'Memorize a <b>cor de fundo</b> desse quadrado: <b>AMARELO</b>.',
     tut_caption_reverse_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
     tut_caption_reverse_7: 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a cor de fundo → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_shapes_1: 'Repare: a instrução lá em cima pede uma forma (<b>CÍRCULO</b>). Você deve então procurar o quadrado com essa <b>forma desenhada</b>.',
+    tut_caption_shapes_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>QUADRADO</b>.',
+    tut_caption_shapes_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_shapes_4: 'Agora encontre o quadrado com a <b>forma</b> que você acabou de memorizar (<b>QUADRADO</b>).',
+    tut_caption_shapes_5: 'Memorize a <b>palavra</b> escrita nesse quadrado: <b>TRIÂNGULO</b>.',
+    tut_caption_shapes_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_shapes_7: 'É isso — o ciclo será sempre: <b>procure a forma pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -1242,11 +1252,11 @@ const T = {
 
     tut_btn: '❓ How to play',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL' },
+    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL', shapes: '📖 SHAPES TUTORIAL' },
     tut_skip: 'Skip tutorial',
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
-    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY' },
+    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY' },
     tut_back_btn: 'BACK TO MENU',
     tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
     tut_caption_classic_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
@@ -1262,6 +1272,13 @@ const T = {
     tut_caption_reverse_5: 'Memorize the <b>background color</b> of that square: <b>YELLOW</b>.',
     tut_caption_reverse_6: 'After memorizing, <b>click</b> that square.',
     tut_caption_reverse_7: "That's it — the cycle is always: <b>find the requested word → memorize the background color → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_shapes_1: 'Notice: the instruction up top asks for a shape (<b>CIRCLE</b>). You should then look for the square drawn with that <b>shape</b>.',
+    tut_caption_shapes_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>SQUARE</b>.',
+    tut_caption_shapes_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_shapes_4: 'Now find the square with the <b>shape</b> you just memorized (<b>SQUARE</b>).',
+    tut_caption_shapes_5: 'Memorize the <b>word</b> written on that square: <b>TRIANGLE</b>.',
+    tut_caption_shapes_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_shapes_7: "That's it — the cycle is always: <b>find the requested shape → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
   },
 };
 
@@ -2412,6 +2429,37 @@ const TUT_DATA = {
       ],
     },
   ],
+  // formas: funciona igual ao clássico — o alvo é a FORMA desenhada no quadrado certo,
+  // o que se memoriza é a PALAVRA (nome de outra forma) escrita nele
+  shapes: [
+    {
+      target: SHAPES[0], // círculo
+      squares: [
+        { shape: SHAPES[3], word: SHAPES[4] },
+        { shape: SHAPES[0], word: SHAPES[1], correct: true }, // silhueta círculo / palavra quadrado (a memorizar)
+        { shape: SHAPES[2], word: SHAPES[5] },
+        { shape: SHAPES[4], word: SHAPES[3] },
+      ],
+    },
+    {
+      target: SHAPES[1], // quadrado (o que foi memorizado na rodada A)
+      squares: [
+        { shape: SHAPES[5], word: SHAPES[0] },
+        { shape: SHAPES[4], word: SHAPES[3] },
+        { shape: SHAPES[1], word: SHAPES[2], correct: true }, // silhueta quadrado / palavra triângulo (posição diferente da rodada A)
+        { shape: SHAPES[3], word: SHAPES[4] },
+      ],
+    },
+    {
+      target: SHAPES[2], // triângulo (o que foi memorizado na rodada B)
+      squares: [
+        { shape: SHAPES[4], word: SHAPES[5] },
+        { shape: SHAPES[0], word: SHAPES[3] },
+        { shape: SHAPES[3], word: SHAPES[0] },
+        { shape: SHAPES[2], word: SHAPES[4], correct: true }, // silhueta triângulo / palavra estrela (posição diferente das anteriores)
+      ],
+    },
+  ],
 };
 const TUT_TOTAL = 7;
 let tutMode = 'classic';
@@ -2428,9 +2476,14 @@ function tutRenderRound(roundIdx, instrText) {
     const el = document.createElement('div');
     el.className = 'square';
     el.dataset.i = i;
-    el.style.background = s.bg.hex;
-    el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-    el.innerHTML = `<span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    if (tutMode === 'shapes') {
+      el.classList.add('shape-square', s.shape.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${s.shape.shapeClass}"></span><span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    } else {
+      el.style.background = s.bg.hex;
+      el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    }
     grid.appendChild(el);
   });
   $('tut-instruction').textContent = instrText;
@@ -2501,8 +2554,10 @@ function showTutStep(n) {
   tutSetNav();
   $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
 
-  const instrFirst = tutMode === 'reverse' ? T[lang].instr_first_reverse : T[lang].instr_first_classic;
-  const instrNext = tutMode === 'reverse' ? T[lang].instr_next_reverse : T[lang].instr_next_classic;
+  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes };
+  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes };
+  const instrFirst = INSTR_FIRST_BY_TUT_MODE[tutMode];
+  const instrNext = INSTR_NEXT_BY_TUT_MODE[tutMode];
   const round0 = () => tutRenderRound(0, instrFirst(cName(TUT_DATA[tutMode][0].target)));
   const round1 = () => tutRenderRound(1, instrNext);
   const round2 = () => tutRenderRound(2, instrNext);
