@@ -1337,6 +1337,16 @@ window.setLang = (l) => {
   lang = l;
   try { localStorage.setItem('colorRushLang', l); } catch {}
   auth.languageCode = (l === 'en') ? 'en' : 'pt';
+  // reflete o idioma na URL da barra de endereço (sem recarregar a página), pra
+  // quem copiar o link diretamente dali — não só pelo botão de compartilhar — já
+  // levar o idioma junto. Mantém outros parâmetros existentes (ex.: ?ref=)
+  try {
+    const params = new URLSearchParams(location.search);
+    if (l === 'pt') params.delete('lang'); else params.set('lang', l);
+    const qs = params.toString();
+    const newUrl = location.pathname + (qs ? `?${qs}` : '') + location.hash;
+    history.replaceState(null, '', newUrl);
+  } catch {}
   applyLanguage();
 };
 
