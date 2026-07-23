@@ -237,13 +237,14 @@
   }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
   .square {
+    position: relative;
     aspect-ratio: 1;
     border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.1s, filter 0.1s;
+    transition: transform 0.1s, filter 0.1s, box-shadow 0.2s;
     border: 3px solid rgba(255,255,255,0.35);
   }
   .square:hover { transform: scale(1.04); filter: brightness(1.12); }
@@ -427,6 +428,124 @@
   }
   .square.shape-square .word { position: relative; z-index: 1; }
 
+  /* tutorial passo a passo (modo clássico) */
+  .mode-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .tut-link-btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--neon-blue);
+    background: rgba(45,214,255,0.08);
+    border: 1px solid rgba(45,214,255,0.4);
+    border-radius: 20px;
+    padding: 4px 12px;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+  .tut-link-btn:hover { background: rgba(45,214,255,0.18); box-shadow: none; transform: none; }
+  #tutorial-screen .card { padding: 18px; gap: 14px; }
+  .tut-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+  .tut-header h2 { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; letter-spacing: 0.5px; color: #cfd8ff; }
+  .tut-dots { display: flex; gap: 6px; justify-content: center; }
+  .tut-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.18); transition: background 0.2s, transform 0.2s; }
+  .tut-dot.active { background: var(--neon-green); box-shadow: 0 0 8px rgba(33,230,161,0.8); transform: scale(1.25); }
+  .tut-dot.done { background: rgba(33,230,161,0.45); }
+  .tut-stage { position: relative; width: 100%; display: flex; flex-direction: column; gap: 14px; }
+  .tut-stage .instruction { display: block; min-height: 2.6rem; font-size: 1.02rem; border-radius: 10px; background: rgba(6,10,22,0.55); border: 2px solid transparent; transition: border-color 0.2s, box-shadow 0.2s; padding: 10px 8px; }
+  .tut-stage .instruction.tut-glow { border-color: var(--neon-green); box-shadow: 0 0 16px rgba(33,230,161,0.55); animation: tutPulseGlow 1.1s ease-in-out infinite; }
+  .tut-stage .grid { gap: 12px; }
+  .tut-stage .square.tut-glow { box-shadow: 0 0 0 4px rgba(33,230,161,0.85), 0 0 22px rgba(33,230,161,0.75); animation: tutPulseGlow 1.1s ease-in-out infinite; }
+  .tut-stage .square.tut-correct-flash { animation: tutCorrectFlash 0.7s ease; }
+  .tut-check {
+    position: absolute; right: 6%; bottom: 6%;
+    font-size: 1.7rem; opacity: 0; pointer-events: none; z-index: 5;
+    filter: drop-shadow(0 0 8px rgba(33,230,161,0.9));
+  }
+  .tut-check.show { opacity: 1; animation: tutCheckPop 0.7s ease; }
+  .tut-instr-color {
+    color: var(--neon-green);
+    text-shadow: 0 0 10px rgba(33,230,161,0.9), 0 0 18px rgba(33,230,161,0.6);
+    animation: tutTextBlink 1.1s ease-in-out infinite;
+  }
+  @keyframes tutTextBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @keyframes tutPulseGlow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+  @keyframes tutCorrectFlash {
+    0% { box-shadow: 0 0 0 4px rgba(33,230,161,0.9); }
+    55% { box-shadow: 0 0 0 4px rgba(33,230,161,0.95), 0 0 46px rgba(33,230,161,1); }
+    100% { box-shadow: 0 0 0 3px rgba(255,255,255,0.35); }
+  }
+  @keyframes tutCheckPop {
+    0% { opacity: 0; transform: scale(0.3); }
+    35% { opacity: 1; transform: scale(1.25); }
+    55% { transform: scale(1); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .tut-pointer, .tut-brain {
+    position: absolute;
+    font-size: 2.1rem;
+    line-height: 1;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 20;
+    transition: left 0.55s cubic-bezier(.4,0,.2,1), top 0.55s cubic-bezier(.4,0,.2,1), opacity 0.3s;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(255,255,255,0.35));
+  }
+  .tut-pointer { transform: translate(-38%, -78%) rotate(-14deg); }
+  .tut-pointer.tut-pointer-up { transform: translate(-50%, 4px) rotate(0deg); }
+  .tut-brain { transform: translate(-50%, -120%); font-size: 1.9rem; }
+  .tut-pointer.visible, .tut-brain.visible { opacity: 1; }
+  .tut-pointer.tapping { animation: tutTap 0.45s ease; }
+  .tut-brain.pulsing { animation: tutBrainPulse 1s ease-in-out infinite; }
+  @keyframes tutTap {
+    0% { transform: translate(-38%, -78%) rotate(-14deg) scale(1); }
+    40% { transform: translate(-38%, -70%) rotate(-14deg) scale(0.82); }
+    100% { transform: translate(-38%, -78%) rotate(-14deg) scale(1); }
+  }
+  @keyframes tutBrainPulse {
+    0%, 100% { transform: translate(-50%, -120%) scale(1); }
+    50% { transform: translate(-50%, -120%) scale(1.18); }
+  }
+  .tut-pointer-next {
+    position: absolute;
+    font-size: 2.1rem;
+    line-height: 1;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 20;
+    transition: left 0.55s cubic-bezier(.4,0,.2,1), top 0.55s cubic-bezier(.4,0,.2,1), opacity 0.3s;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(255,255,255,0.35));
+    transform: translate(0%, -50%);
+  }
+  .tut-pointer-next.visible { opacity: 1; animation: tutNudgeLeft 0.9s ease-in-out infinite; }
+  @keyframes tutNudgeLeft {
+    0%, 100% { transform: translate(0%, -50%) translateX(0); }
+    50% { transform: translate(0%, -50%) translateX(-8px); }
+  }
+  .tut-word-glow { box-shadow: 0 0 0 2px var(--neon-green), 0 0 14px rgba(33,230,161,0.85) !important; animation: tutPulseGlow 1.1s ease-in-out infinite; }
+  .tut-caption {
+    width: 100%;
+    background: rgba(6,10,22,0.7);
+    border: 2px solid rgba(33,230,161,0.55);
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: #dfe6ff;
+    min-height: 4.6rem;
+    box-sizing: border-box;
+    box-shadow: 0 0 14px rgba(33,230,161,0.3);
+    animation: tutCaptionPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes tutCaptionPulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(33,230,161,0.28); border-color: rgba(33,230,161,0.5); }
+    50% { box-shadow: 0 0 22px rgba(33,230,161,0.6); border-color: rgba(33,230,161,0.95); }
+  }
+  .tut-caption b { color: var(--neon-green); text-shadow: 0 0 8px rgba(33,230,161,0.5); }
+  .tut-nav { display: flex; gap: 10px; width: 100%; }
+  .tut-nav button { flex: 1; }
+  .tut-skip { align-self: center; }
+
   /* níveis / XP */
   .xp-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
   .xp-labels {
@@ -555,6 +674,12 @@
   </div>
 </div>
 
+<div class="levelup-banner" id="tut-intro-banner" onclick="this.classList.remove('show')">
+  <div class="levelup-inner" style="border-color: var(--neon-blue); box-shadow: 0 0 30px rgba(45,214,255,0.5), 0 0 80px rgba(45,214,255,0.2);">
+    <div class="levelup-title" style="color: var(--neon-blue); text-shadow: 0 0 14px rgba(45,214,255,0.8);" data-i18n="tut_intro_banner">📖 TUTORIAL</div>
+  </div>
+</div>
+
 <div class="lang-switch">
   <button class="lang-btn" id="lang-pt" onclick="setLang('pt')">🇧🇷 PT</button>
   <button class="lang-btn" id="lang-en" onclick="setLang('en')">🇺🇸 EN</button>
@@ -623,12 +748,18 @@
   <div class="mode-card" onclick="startGame('classic')">
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
-    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
+    <div class="mode-card-footer">
+      <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('classic');" data-i18n="tut_btn">❓ Como jogar</button>
+    </div>
   </div>
   <div class="mode-card" id="card-reverse" onclick="startGame('reverse')">
     <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
     <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
-    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+    <div class="mode-card-footer">
+      <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('reverse');" data-i18n="tut_btn">❓ Como jogar</button>
+    </div>
     <span class="record-badge lock-badge" id="lock-reverse" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
@@ -649,6 +780,30 @@
   </div>
   <div class="muted" id="invite-status"></div>
   <p class="muted" data-i18n="footer_note">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
+</div>
+
+<!-- TUTORIAL (passo a passo, funciona pros modos clássico e reverso) -->
+<div class="screen" id="tutorial-screen">
+  <div class="tut-header">
+    <h2 id="tut-title-el">📖 TUTORIAL — MODO CLÁSSICO</h2>
+    <button class="link tut-skip" onclick="tutBack()" data-i18n="tut_skip">Pular tutorial</button>
+  </div>
+  <div class="tut-dots" id="tut-dots"></div>
+  <div class="card">
+    <div class="tut-stage" id="tut-stage">
+      <div class="instruction" id="tut-instruction"></div>
+      <div class="grid" id="tut-grid"></div>
+      <span class="tut-pointer" id="tut-pointer">👉</span>
+      <span class="tut-pointer" id="tut-pointer-static">👉</span>
+      <span class="tut-pointer-next" id="tut-pointer-next">👈</span>
+      <span class="tut-brain" id="tut-brain">🧠</span>
+    </div>
+  </div>
+  <div class="tut-caption" id="tut-caption"></div>
+  <div class="tut-nav">
+    <button class="secondary" id="tut-prev-btn" onclick="tutPrev()" data-i18n="tut_prev">‹ Anterior</button>
+    <button id="tut-next-btn" onclick="tutNext()" data-i18n="tut_next">Próximo ›</button>
+  </div>
 </div>
 
 <!-- GAME -->
@@ -832,6 +987,29 @@ const T = {
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
     levelup_title: '🎉 SUBIU DE NÍVEL!',
+
+    tut_btn: '❓ Como jogar',
+    tut_intro_banner: '📖 TUTORIAL',
+    tut_title: { classic: '📖 TUTORIAL — MODO CLÁSSICO', reverse: '📖 TUTORIAL — MODO REVERSO' },
+    tut_skip: 'Pular tutorial',
+    tut_prev: '‹ Anterior',
+    tut_next: 'Próximo ›',
+    tut_play_btn: { classic: '🎮 JOGAR MODO CLÁSSICO', reverse: '🎮 JOGAR MODO REVERSO' },
+    tut_back_btn: 'VOLTAR AO MENU',
+    tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
+    tut_caption_classic_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
+    tut_caption_classic_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_classic_4: 'Agora encontre o quadrado com a <b>cor</b> que você acabou de memorizar (<b>VERDE</b>).',
+    tut_caption_classic_5: 'Memorize a <b>palavra</b> escrita nesse quadrado: <b>AMARELO</b>.',
+    tut_caption_classic_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_classic_7: 'É isso — o ciclo será sempre: <b>procure a cor pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_reverse_1: 'Repare: a instrução lá em cima pede uma palavra (<b>VERMELHO</b>). Você deve então procurar o quadrado onde essa <b>palavra está escrita</b>.',
+    tut_caption_reverse_2: 'Antes de clicar, memorize a <b>cor de fundo</b> desse quadrado: <b>ROSA</b>.',
+    tut_caption_reverse_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_reverse_4: 'Agora encontre o quadrado onde está escrita a <b>palavra</b> da cor que você acabou de memorizar (<b>ROSA</b>).',
+    tut_caption_reverse_5: 'Memorize a <b>cor de fundo</b> desse quadrado: <b>AMARELO</b>.',
+    tut_caption_reverse_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_reverse_7: 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a cor de fundo → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -904,6 +1082,29 @@ const T = {
     level_explain: '🆙 Ranked by total experience (XP).',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
     levelup_title: '🎉 LEVEL UP!',
+
+    tut_btn: '❓ How to play',
+    tut_intro_banner: '📖 TUTORIAL',
+    tut_title: { classic: '📖 TUTORIAL — CLASSIC MODE', reverse: '📖 TUTORIAL — REVERSE MODE' },
+    tut_skip: 'Skip tutorial',
+    tut_prev: '‹ Previous',
+    tut_next: 'Next ›',
+    tut_play_btn: { classic: '🎮 PLAY CLASSIC MODE', reverse: '🎮 PLAY REVERSE MODE' },
+    tut_back_btn: 'BACK TO MENU',
+    tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
+    tut_caption_classic_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
+    tut_caption_classic_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_classic_4: 'Now find the square with the <b>color</b> you just memorized (<b>GREEN</b>).',
+    tut_caption_classic_5: 'Memorize the <b>word</b> written on that square: <b>YELLOW</b>.',
+    tut_caption_classic_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_classic_7: "That's it — the cycle is always: <b>find the requested color → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_reverse_1: 'Notice: the instruction up top asks for a word (<b>RED</b>). You should then look for the square where that <b>word is written</b>.',
+    tut_caption_reverse_2: 'Before clicking, memorize the <b>background color</b> of that square: <b>PINK</b>.',
+    tut_caption_reverse_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_reverse_4: 'Now find the square where the <b>word</b> for the color you just memorized is written (<b>PINK</b>).',
+    tut_caption_reverse_5: 'Memorize the <b>background color</b> of that square: <b>YELLOW</b>.',
+    tut_caption_reverse_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_reverse_7: "That's it — the cycle is always: <b>find the requested word → memorize the background color → click</b>, getting faster each time. Ready to play? 🚀",
   },
 };
 
@@ -929,6 +1130,10 @@ function applyLanguage() {
   if ($('menu-screen').classList.contains('active')) showMenu();
   if ($('profile-screen').classList.contains('active')) renderProfile();
   if ($('ranking-screen').classList.contains('active')) loadRanking(rankingTab || 'geral');
+  if ($('tutorial-screen').classList.contains('active')) {
+    $('tut-title-el').textContent = T[lang].tut_title[tutMode];
+    showTutStep(tutStep);
+  }
 }
 
 window.setLang = (l) => {
@@ -1991,6 +2196,311 @@ window.rankingGoPage = (p) => {
   rankingPage = Math.max(0, Math.min(p, totalPages - 1));
   renderRankingPage();
 };
+
+/* ================== tutorial passo a passo (modo clássico) ================== */
+// dados fixos (não aleatórios) pra ensinar o mecanismo com previsibilidade.
+// rodada A: pedem VERMELHO, quadrado certo tem a palavra VERDE (a memorizar).
+// rodada B: pedem VERDE (a cor memorizada), quadrado certo tem a palavra AMARELO.
+// clássico: o alvo é uma COR (fundo do quadrado certo) — o que se memoriza é a PALAVRA escrita nele.
+// reverso: o alvo é uma PALAVRA (escrita no quadrado certo) — o que se memoriza é a COR DE FUNDO dele.
+const TUT_DATA = {
+  classic: [
+    {
+      target: COLORS[1], // vermelho
+      squares: [
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[1], word: COLORS[2], correct: true }, // fundo vermelho / palavra verde
+        { bg: COLORS[3], word: COLORS[6] },
+        { bg: COLORS[4], word: COLORS[7] },
+      ],
+    },
+    {
+      target: COLORS[2], // verde (o que foi memorizado na rodada A)
+      squares: [
+        { bg: COLORS[6], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[0] },
+        { bg: COLORS[2], word: COLORS[3], correct: true }, // fundo verde / palavra amarela (posição diferente da rodada A)
+        { bg: COLORS[0], word: COLORS[4] },
+      ],
+    },
+    {
+      target: COLORS[3], // amarelo (o que foi memorizado na rodada B)
+      squares: [
+        { bg: COLORS[5], word: COLORS[6] },
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[2], word: COLORS[5] },
+        { bg: COLORS[3], word: COLORS[7], correct: true }, // fundo amarelo / palavra ciano (posição diferente das anteriores)
+      ],
+    },
+  ],
+  reverse: [
+    {
+      target: COLORS[1], // pedem a palavra "vermelho"
+      squares: [
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[6], word: COLORS[1], correct: true }, // palavra vermelho / fundo rosa (o que se memoriza) — evita verde, que brigava com o brilho do destaque
+        { bg: COLORS[3], word: COLORS[6] },
+        { bg: COLORS[4], word: COLORS[7] },
+      ],
+    },
+    {
+      target: COLORS[6], // pedem a palavra "rosa" (cor memorizada na rodada A)
+      squares: [
+        { bg: COLORS[6], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[0] },
+        { bg: COLORS[3], word: COLORS[6], correct: true }, // palavra rosa / fundo amarelo (posição diferente da rodada A)
+        { bg: COLORS[0], word: COLORS[4] },
+      ],
+    },
+    {
+      target: COLORS[3], // pedem a palavra "amarelo" (cor memorizada na rodada B)
+      squares: [
+        { bg: COLORS[5], word: COLORS[6] },
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[2], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[3], correct: true }, // palavra amarelo / fundo ciano (posição diferente das anteriores)
+      ],
+    },
+  ],
+};
+const TUT_TOTAL = 7;
+let tutMode = 'classic';
+let tutStep = 1;
+let tutTimers = [];
+function tutClearTimers() { tutTimers.forEach(clearTimeout); tutTimers = []; }
+function tutAfter(ms, fn) { const id = setTimeout(fn, ms); tutTimers.push(id); return id; }
+
+function tutRenderRound(roundIdx, instrText) {
+  const round = TUT_DATA[tutMode][roundIdx];
+  const grid = $('tut-grid');
+  grid.innerHTML = '';
+  round.squares.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'square';
+    el.dataset.i = i;
+    el.style.background = s.bg.hex;
+    el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+    el.innerHTML = `<span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    grid.appendChild(el);
+  });
+  $('tut-instruction').textContent = instrText;
+}
+
+function tutClearHighlights() {
+  $('tut-instruction').classList.remove('tut-glow');
+  document.querySelectorAll('#tut-grid .square').forEach(sq => {
+    sq.classList.remove('tut-glow', 'tut-correct-flash');
+    sq.querySelector('.tut-check')?.classList.remove('show');
+    sq.querySelector('.word')?.classList.remove('tut-word-glow');
+  });
+  const ptrEl = $('tut-pointer');
+  ptrEl.classList.remove('visible', 'tapping', 'tut-pointer-up');
+  ptrEl.textContent = '👉';
+  const staticEl = $('tut-pointer-static');
+  staticEl.classList.remove('visible', 'tut-pointer-up');
+  staticEl.textContent = '👉';
+  $('tut-pointer-next').classList.remove('visible');
+  $('tut-brain').classList.remove('visible', 'pulsing');
+}
+
+function tutPointAt(targetEl, opts = {}) {
+  const stage = $('tut-stage');
+  const stageRect = stage.getBoundingClientRect();
+  const r = targetEl.getBoundingClientRect();
+  const el = opts.brain ? $('tut-brain') : opts.static ? $('tut-pointer-static') : $('tut-pointer');
+  const xr = opts.xr ?? 0.5, yr = opts.yr ?? 0.42;
+  el.style.left = (r.left + r.width * xr - stageRect.left) + 'px';
+  el.style.top = (r.top + r.height * yr - stageRect.top) + 'px';
+  el.classList.add('visible');
+  if (opts.brain) el.classList.add('pulsing');
+  return el;
+}
+
+function tutCorrectSquare(roundIdx) {
+  const idx = TUT_DATA[tutMode][roundIdx].squares.findIndex(s => s.correct);
+  return document.querySelectorAll('#tut-grid .square')[idx];
+}
+
+function tutSetDots() {
+  const wrap = $('tut-dots');
+  wrap.innerHTML = '';
+  for (let i = 1; i <= TUT_TOTAL; i++) {
+    const d = document.createElement('span');
+    d.className = 'tut-dot' + (i === tutStep ? ' active' : i < tutStep ? ' done' : '');
+    wrap.appendChild(d);
+  }
+}
+
+function tutSetNav() {
+  $('tut-prev-btn').style.visibility = tutStep === 1 ? 'hidden' : 'visible';
+  const nextBtn = $('tut-next-btn');
+  if (tutStep === TUT_TOTAL) {
+    nextBtn.textContent = T[lang].tut_play_btn[tutMode];
+    nextBtn.onclick = tutPlay;
+  } else {
+    nextBtn.textContent = T[lang].tut_next;
+    nextBtn.onclick = tutNext;
+  }
+}
+
+function showTutStep(n) {
+  tutClearTimers();
+  tutClearHighlights();
+  tutStep = n;
+  tutSetDots();
+  tutSetNav();
+  $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
+
+  const instrFirst = tutMode === 'reverse' ? T[lang].instr_first_reverse : T[lang].instr_first_classic;
+  const instrNext = tutMode === 'reverse' ? T[lang].instr_next_reverse : T[lang].instr_next_classic;
+  const round0 = () => tutRenderRound(0, instrFirst(cName(TUT_DATA[tutMode][0].target)));
+  const round1 = () => tutRenderRound(1, instrNext);
+  const round2 = () => tutRenderRound(2, instrNext);
+  // destaca (pisca) o nome da cor/palavra dentro da instrução no topo
+  const tutHighlightInstrWord = (name) => {
+    const el = $('tut-instruction');
+    const raw = el.textContent;
+    const idx = raw.indexOf(name);
+    if (idx === -1) return;
+    el.innerHTML = raw.slice(0, idx) + `<span class="tut-instr-color">${name}</span>` + raw.slice(idx + name.length);
+  };
+  // mostra o cérebro sobre o que precisa ser memorizado (a palavra no clássico, a cor no reverso)
+  const tutShowMemorize = (sq) => {
+    sq.classList.add('tut-glow');
+    if (tutMode === 'reverse') {
+      // no reverso memoriza-se a COR DE FUNDO do quadrado, não a palavra escrita nele — por isso o
+      // cérebro fica num canto do quadrado, longe da palavra centralizada, pra não parecer que é ela
+      tutPointAt(sq, { brain: true, xr: 0.8, yr: 0.2 });
+    } else {
+      sq.querySelector('.word').classList.add('tut-word-glow');
+      tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
+    }
+  };
+  // mãozinha apontando pra palavra escrita no meio do quadrado, parada logo abaixo dela sem sobrepor
+  // (usada no reverso pra deixar claro que é o texto que está sendo procurado, não a cor de fundo)
+  const tutPointAtWord = (sq, opts = {}) => {
+    const el = opts.static ? $('tut-pointer-static') : $('tut-pointer');
+    el.textContent = '👆';
+    el.classList.add('tut-pointer-up');
+    sq.querySelector('.word').classList.add('tut-word-glow');
+    tutPointAt(sq.querySelector('.word'), { static: !!opts.static, yr: 1.35 });
+  };
+  // mãozinha "chega" deslizando pela esquerda e para bem na borda do alvo, sem entrar no texto
+  const tutSlideInFromLeft = (targetEl, opts = {}) => {
+    const stage = $('tut-stage');
+    const stageRect = stage.getBoundingClientRect();
+    const r = targetEl.getBoundingClientRect();
+    const el = $('tut-pointer');
+    const yr = opts.yr ?? 0.5;
+    const gap = opts.gap ?? 0; // px de folga extra entre a ponta do dedo e a borda esquerda do alvo
+    // o transform da mãozinha (translate(-38%,...)) desloca o emoji ~62% do seu tamanho pra direita
+    // do ponto de ancoragem — compensamos isso aqui pra ponta do dedo parar exatamente na borda
+    const rightExtent = el.offsetWidth * 0.62;
+    const finalLeft = r.left - stageRect.left - rightExtent - gap;
+    const finalTop = r.top + r.height * yr - stageRect.top;
+    el.style.left = '-160px';
+    el.style.top = finalTop + 'px';
+    el.classList.add('visible');
+    void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
+    el.style.left = finalLeft + 'px';
+  };
+  // mãozinha "chega" deslizando pela direita e para na borda do alvo (usada pra apontar o botão Próximo)
+  const tutSlideInFromRight = (targetEl, opts = {}) => {
+    const stage = $('tut-stage');
+    const stageRect = stage.getBoundingClientRect();
+    const r = targetEl.getBoundingClientRect();
+    const el = $('tut-pointer-next');
+    const yr = opts.yr ?? 0.5;
+    const gap = opts.gap ?? 26; // px de folga antes da borda direita do alvo (evita sobrepor o texto/botão)
+    const finalLeft = r.right - stageRect.left + gap;
+    const finalTop = r.top + r.height * yr - stageRect.top;
+    el.style.left = (stageRect.width + 120) + 'px';
+    el.style.top = finalTop + 'px';
+    el.classList.add('visible');
+    void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
+    el.style.left = finalLeft + 'px';
+  };
+  // mãozinha tocando o quadrado (lateralizada, embaixo) + flash verde — sem checkmark, a animação da mão já basta
+  const tutShowClick = (sq, delay = 500) => {
+    sq.classList.add('tut-glow');
+    tutPointAt(sq, { xr: 0.24, yr: 0.84 });
+    tutAfter(delay, () => {
+      $('tut-pointer').classList.add('tapping');
+      sq.classList.add('tut-correct-flash');
+    });
+  };
+
+  if (n === 1) {
+    // destaca a cor pedida na instrução (piscando) + o quadrado certo, e a mãozinha desliza pela
+    // esquerda até chegar na caixa de texto embaixo (reforça que é ali que se deve ler primeiro)
+    round0();
+    const sq = tutCorrectSquare(0);
+    tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
+    if (tutMode === 'reverse') {
+      tutPointAtWord(sq, { static: true }); // no reverso, destaca só a palavra (é ela que se procura)
+    } else {
+      sq.classList.add('tut-glow');
+      tutPointAt(sq, { static: true, yr: 0.78 });
+    }
+    tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
+  } else if (n === 2) {
+    // memorize a palavra do meio (clássico) ou a cor de fundo (reverso) do quadrado certo
+    round0();
+    tutShowMemorize(tutCorrectSquare(0));
+  } else if (n === 3) {
+    // agora clica, depois de já ter memorizado (mãozinha lateralizada embaixo, sem check)
+    round0();
+    tutShowClick(tutCorrectSquare(0));
+  } else if (n === 4) {
+    // rodada 2: destaca o quadrado certo + mãozinha (aponta pra palavra no reverso, pro quadrado no clássico)
+    round1();
+    const sq = tutCorrectSquare(1);
+    if (tutMode === 'reverse') {
+      tutPointAtWord(sq); // destaca só a palavra, sem piscar o quadrado inteiro
+    } else {
+      sq.classList.add('tut-glow');
+      tutPointAt(sq, { yr: 0.42 });
+    }
+  } else if (n === 5) {
+    // memoriza a nova palavra (sem clicar ainda)
+    round1();
+    tutShowMemorize(tutCorrectSquare(1));
+  } else if (n === 6) {
+    // igual ao passo 3: clica depois de memorizar, sem check
+    round1();
+    tutShowClick(tutCorrectSquare(1));
+  } else if (n === 7) {
+    // recapitulação final: destaca o quadrado amarelo (rodada 3), memoriza e clica, sem check
+    round2();
+    const sq = tutCorrectSquare(2);
+    tutShowMemorize(sq);
+    tutShowClick(sq);
+  }
+
+  // depois de 4s, uma mãozinha vindo da direita aponta pro botão de avançar;
+  // se for a mãozinha que chegou pela esquerda (passo 1), ela some pra não poluir a tela
+  // (no último passo o botão vira "jogar", não precisa da dica)
+  if (n < TUT_TOTAL) {
+    tutAfter(4000, () => {
+      tutSlideInFromRight($('tut-next-btn'), { gap: -10 });
+      if (n === 1) $('tut-pointer').classList.remove('visible');
+    });
+  }
+}
+
+window.startTutorial = (mode = 'classic') => {
+  tutMode = mode;
+  track('tutorial_start', { mode });
+  show('tutorial-screen');
+  $('tut-title-el').textContent = T[lang].tut_title[tutMode];
+  showTutStep(1);
+  $('tut-intro-banner').classList.add('show');
+  setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1500);
+};
+window.tutNext = () => { if (tutStep < TUT_TOTAL) showTutStep(tutStep + 1); };
+window.tutPrev = () => { if (tutStep > 1) showTutStep(tutStep - 1); };
+window.tutBack = () => { tutClearTimers(); track('tutorial_skip', { step: tutStep }); showMenu(); };
+window.tutPlay = () => { tutClearTimers(); track('tutorial_complete', { mode: tutMode }); startGame(tutMode); };
 
 applyLanguage();
 </script>
