@@ -1153,6 +1153,9 @@ const T = {
     profile_offline_label: '👤 Jogando sem conta',
     profile_nick_label: nick => `👤 ${nick}`,
     profile_summary: (n, total) => `${n} de ${total} categorias de conquista desbloqueadas`,
+    profile_badges_section: '🏅 Medalhas',
+    profile_ranks_section: '🏆 Posição no ranking',
+    profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
     badge_not_unlocked: 'Ainda não conquistado', badge_maxed: '🌟 Nível máximo alcançado!',
     badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
@@ -1260,6 +1263,9 @@ const T = {
     profile_offline_label: '👤 Playing without an account',
     profile_nick_label: nick => `👤 ${nick}`,
     profile_summary: (n, total) => `${n} of ${total} achievement categories unlocked`,
+    profile_badges_section: '🏅 Medals',
+    profile_ranks_section: '🏆 Leaderboard position',
+    profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
     badge_not_unlocked: 'Not unlocked yet', badge_maxed: '🌟 Maximum level reached!',
     badge_next_goal: desc => `🎯 Next goal: ${desc}`,
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
@@ -2245,20 +2251,83 @@ window.profileBack = () => show(profileBackTarget);
 
 // abre o perfil ao clicar num nick do ranking (mini ou completo). Se for você
 // mesmo, abre a versão própria de sempre (editável, dados sempre frescos);
-// senão, abre uma versão somente-leitura com os dados que a linha do ranking já
-// tinha em mãos — sem precisar de nenhuma consulta nova ao Firestore.
+// senão, abre a versão somente-leitura (medalhas + posição no ranking).
 function openProfileFromRanking(r, backTarget) {
   profileBackTarget = backTarget;
   show('profile-screen');
   const isMe = !offline && currentUser && (r.uid === currentUser.uid || r.uid === '__me__');
   if (isMe) renderProfile();
-  else renderProfile(r.stats, r.nick);
+  else renderProfile(r.stats, r.nick, r.uid);
 }
 
-// sem argumentos: perfil PRÓPRIO (editável, lê de myData ao vivo). Com
-// viewStats/viewNick: perfil de OUTRO jogador, somente leitura, a partir dos
-// dados já carregados na linha do ranking (ver openProfileFromRanking acima).
-function renderProfile(viewStats, viewNick) {
+// pra cada modo em que o jogador já pontuou, calcula a posição dele no ranking
+// daquele modo — reaproveita o mesmo cache de fetchAllScores() que já alimenta
+// os rankings normais, então não gera nenhuma consulta nova ao Firestore
+// (a não ser que o cache de 2min já tenha expirado).
+async function computeModeRanks(uid) {
+  const all = await fetchAllScores();
+  const ranks = {};
+  for (const m of ALL_MODES) {
+    const rows = [];
+    for (const r of all) {
+      const data = rowData(r);
+      if ((data[m] || 0) > 0) rows.push({ uid: r.uid, pts: data[m], at: data[m + 'At'] });
+    }
+    rows.sort(compareRankRows);
+    const idx = rows.findIndex(x => x.uid === uid);
+    if (idx !== -1) ranks[m] = idx + 1;
+  }
+  return ranks;
+}
+
+// perfil de OUTRA pessoa: só a medalha mais atual (mais alta) de cada
+// categoria, com o nome — sem barra de progresso nem os chips de todos os
+// níveis, que só fazem sentido olhando o próprio progresso.
+function renderPublicProfileBadges(stats) {
+  const items = BADGE_ORDER.map(key => {
+    const def = BADGE_DEFS[key];
+    const tier = unlockedTier(def, stats);
+    if (tier < 0) return null;
+    const color = TIER_COLORS[tier];
+    const name = def.names[lang][tier];
+    return `
+      <div class="card" style="flex-direction:row; align-items:center; gap:12px; padding:14px;">
+        <span class="badge-chip big" style="background:${color}">${def.icon}</span>
+        <div>
+          <div class="name" style="font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.95rem;">${def.label[lang]}</div>
+          <div class="muted" style="text-align:left;">${name}</div>
+        </div>
+      </div>`;
+  }).filter(Boolean);
+  return items.length ? items.join('') : `<div class="muted" style="text-align:center;">${T[lang].profile_no_badges_yet}</div>`;
+}
+
+// posição no ranking de cada modo em que a pessoa já pontuou (medalha pro
+// top 3, número pros demais) — vazio se ela ainda não pontuou em nenhum modo
+function renderPublicProfileRanks(stats, ranks) {
+  const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸' };
+  const items = ALL_MODES.map(m => {
+    if (!(stats[m] > 0) || !ranks[m]) return null;
+    const pos = ranks[m];
+    const posLabel = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : `#${pos}`;
+    return `
+      <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px;">
+        <span>${MODE_ICON[m]} ${modeLabel(m)}</span>
+        <span style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-orange); font-size:1.1rem;">${posLabel}</span>
+      </div>`;
+  }).filter(Boolean);
+  return items.join('');
+}
+
+function profileSectionLabel(text) {
+  return `<div class="muted" style="text-align:left; font-family:'Orbitron',sans-serif; font-size:0.75rem; letter-spacing:0.5px; text-transform:uppercase; margin-top:4px;">${text}</div>`;
+}
+
+// sem argumentos: perfil PRÓPRIO (editável, lê de myData ao vivo, badges
+// completos com progresso). Com viewStats/viewNick/viewUid: perfil de OUTRO
+// jogador — somente leitura, medalha atual de cada categoria + posição no
+// ranking em cada modo (ver openProfileFromRanking acima).
+async function renderProfile(viewStats, viewNick, viewUid) {
   const isOther = !!viewStats;
   const stats = isOther ? viewStats : myData;
 
@@ -2283,6 +2352,17 @@ function renderProfile(viewStats, viewNick) {
   }
 
   $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+
+  if (isOther) {
+    $('profile-summary').textContent = '';
+    $('profile-body').innerHTML = profileSectionLabel(T[lang].profile_badges_section) + renderPublicProfileBadges(stats);
+    const ranks = await computeModeRanks(viewUid);
+    const ranksHtml = renderPublicProfileRanks(stats, ranks);
+    if (ranksHtml) {
+      $('profile-body').insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].profile_ranks_section) + ranksHtml);
+    }
+    return;
+  }
 
   // conta cada NÍVEL desbloqueado dentro de cada categoria (não só se a categoria
   // foi iniciada) — cada categoria tem 6 níveis, então o total é 4×6 = 24
