@@ -621,14 +621,15 @@
     background: rgba(6,10,22,0.7);
     border: 2px solid rgba(33,230,161,0.55);
     border-radius: 12px;
-    padding: 16px;
-    font-size: 0.95rem;
-    line-height: 1.55;
+    padding: 14px 16px;
+    font-size: clamp(0.8rem, 3.4vw, 0.95rem);
+    line-height: 1.6;
     color: #dfe6ff;
     min-height: 4.6rem;
     box-sizing: border-box;
     box-shadow: 0 0 14px rgba(33,230,161,0.3);
     animation: tutCaptionPulse 2.4s ease-in-out infinite;
+    overflow-wrap: break-word;
   }
   @keyframes tutCaptionPulse {
     0%, 100% { box-shadow: 0 0 12px rgba(33,230,161,0.28); border-color: rgba(33,230,161,0.5); }
