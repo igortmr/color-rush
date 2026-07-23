@@ -408,14 +408,15 @@
     background-size: 14px 9px;
   }
   .ranking-select option { background: #0a0e1e; color: #fff; }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
-  th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; overflow-wrap: break-word; }
   tbody tr { background: #0e1224; }
   tbody tr:nth-child(odd) { background: #0a0e1e; }
   tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
-  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); width: 44px; text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); }
+  td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
   .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
 
   /* badges */
@@ -948,6 +949,7 @@
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="card" style="padding:10px; gap:4px;">
     <table>
+      <colgroup><col style="width:32px;"><col><col style="width:64px;"></colgroup>
       <thead><tr><th>#</th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="mini-ranking-body"></tbody>
     </table>
@@ -976,6 +978,7 @@
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
     <table>
+      <colgroup><col style="width:32px;"><col><col style="width:64px;"></colgroup>
       <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="ranking-body"><tr><td colspan="3" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
