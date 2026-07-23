@@ -2356,7 +2356,9 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     return;
   }
 
+  // nick sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção
   $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(isOther ? (stats.xp || 0) : myXp()));
 
   if (isOther) {
     $('profile-summary').textContent = '';

@@ -2298,13 +2298,17 @@ function renderPublicProfileBadges(stats) {
     if (tier < 0) return null;
     const color = TIER_COLORS[tier];
     const name = def.names[lang][tier];
+    const val = def.metric(stats).toLocaleString(lang === 'en' ? 'en-US' : 'pt-BR');
     return `
-      <div class="card" style="flex-direction:row; align-items:center; gap:12px; padding:14px;">
-        <span class="badge-chip big" style="background:${color}">${def.icon}</span>
-        <div>
-          <div class="name" style="font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.95rem;">${def.label[lang]}</div>
-          <div class="muted" style="text-align:left;">${name}</div>
+      <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; gap:12px; padding:14px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="badge-chip big" style="background:${color}">${def.icon}</span>
+          <div>
+            <div class="name" style="font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.95rem;">${def.label[lang]}</div>
+            <div class="muted" style="text-align:left;">${name}</div>
+          </div>
         </div>
+        <div style="text-align:right; font-family:'Orbitron',sans-serif; font-weight:800; color:#fff; font-size:1.1rem;">${val}</div>
       </div>`;
   }).filter(Boolean);
   return items.length ? items.join('') : `<div class="muted" style="text-align:center;">${T[lang].profile_no_badges_yet}</div>`;
@@ -2360,7 +2364,9 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     return;
   }
 
+  // nick sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção
   $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(isOther ? (stats.xp || 0) : myXp()));
 
   if (isOther) {
     $('profile-summary').textContent = '';
