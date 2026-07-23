@@ -415,7 +415,7 @@
   tbody tr:nth-child(odd) { background: #0a0e1e; }
   tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
   td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
-  td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); }
+  td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
   .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
 
@@ -949,7 +949,7 @@
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="card" style="padding:10px; gap:4px;">
     <table>
-      <colgroup><col style="width:32px;"><col><col style="width:86px;"></colgroup>
+      <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
       <thead><tr><th>#</th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="mini-ranking-body"></tbody>
     </table>
@@ -978,7 +978,7 @@
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
     <table>
-      <colgroup><col style="width:32px;"><col><col style="width:86px;"></colgroup>
+      <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
       <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="ranking-body"><tr><td colspan="3" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
@@ -1137,6 +1137,7 @@ const T = {
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
     points_header_divulgador: 'Convites',
+    points_header_level: 'XP',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
     levelup_title: '🎉 SUBIU DE NÍVEL!',
 
@@ -1235,6 +1236,7 @@ const T = {
     level_explain: '🆙 Ranked by total experience (XP).',
     divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
     points_header_divulgador: 'Invites',
+    points_header_level: 'XP',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
     levelup_title: '🎉 LEVEL UP!',
 
@@ -2261,7 +2263,7 @@ window.loadRanking = async (m) => {
   rankingTab = m;
   $('ranking-select').value = m;
   $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
-  $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : T[lang].points_header;
+  $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : (m === 'level') ? T[lang].points_header_level : T[lang].points_header;
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
@@ -2301,7 +2303,7 @@ function renderRankingPage() {
   pageRows.forEach((r, i) => {
     const pos = start + i + 1;
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-    const ptsDisplay = (rankingTab === 'level') ? `${r.pts} XP` : r.pts;
+    const ptsDisplay = r.pts;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
