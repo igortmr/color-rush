@@ -891,7 +891,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
-  serverTimestamp, writeBatch, increment
+  serverTimestamp, writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import {
   getFunctions, httpsCallable
@@ -915,6 +915,8 @@ const functions = getFunctions(app);
 const callStartSession = httpsCallable(functions, 'startGameSession');
 const callSubmitResult = httpsCallable(functions, 'submitGameResult');
 const callCreditReferral = httpsCallable(functions, 'creditReferral');
+const callClaimPendingScore = httpsCallable(functions, 'claimPendingScore');
+const callRecomputeTotal = httpsCallable(functions, 'recomputeMyTotal');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -1604,17 +1606,12 @@ async function proceedAfterLogin(user) {
 // corrige (silenciosamente) contas antigas que ainda não têm o campo "total" calculado,
 // sem precisar esperar a pessoa bater um novo recorde — roda sozinho ao abrir o jogo
 async function backfillTotal() {
-  const computedTotal = computeTotal(); // soma dos recordes de todos os modos
-  if (computedTotal === (myData.total || 0)) return; // já está correto
-  // usa o mais recente entre os recordes como o momento do total, pra não bagunçar o desempate
-  const ats = ALL_MODES.map(k => myData[k + 'At']).filter(Boolean);
-  const at = ats.length ? ats.reduce((a, b) => (a.toMillis() >= b.toMillis() ? a : b)) : null;
-  const update = { total: computedTotal };
-  if (at) update.totalAt = at;
+  if (computeTotal() === (myData.total || 0)) return; // já está correto, nem precisa chamar o servidor
+  // o total agora é sempre recalculado no servidor a partir dos recordes que ELE gravou —
+  // o cliente não manda nenhum valor, só pede pra recalcular
   try {
-    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
-    myData.total = computedTotal;
-    if (at) myData.totalAt = at;
+    const res = await callRecomputeTotal();
+    if (res.data && res.data.updated) myData.total = res.data.total;
   } catch {}
 }
 
@@ -1641,8 +1638,6 @@ window.saveNick = async () => {
     batch.set(doc(db, 'scores', currentUser.uid), {
       nick,
       refCode,
-      classic: myData.classic || 0,
-      reverse: myData.reverse || 0,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     await batch.commit();
@@ -2080,26 +2075,16 @@ async function submitPendingScore() {
   if (!pendingScore || !currentUser || !myData.nick) return;
   const { mode: m, score: s, xp: pendingXp = 0 } = pendingScore;
   pendingScore = null;
-  const isRecord = s > (myData[m] || 0);
-  if (!isRecord && pendingXp <= 0) return;
 
-  const update = {
-    nick: myData.nick,
-    updatedAt: serverTimestamp(),
-  };
-  if (pendingXp > 0) update.xp = increment(pendingXp);
-  if (isRecord) {
-    update[m] = s;
-    update[m + 'At'] = serverTimestamp();
-    update.total = computeTotal(m, s); // Geral = soma dos recordes de todos os modos
-    update.totalAt = serverTimestamp();
-  }
+  // pontuação feita antes de ter conta — não existe sessão de servidor pra validar
+  // o tempo (foi jogada offline), mas o servidor ainda valida o valor e só ele grava
   try {
-    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
-    if (pendingXp > 0) myData.xp = (myData.xp || 0) + pendingXp;
-    if (isRecord) {
+    const res = await callClaimPendingScore({ mode: m, score: s, xpGain: pendingXp });
+    const d = res.data || {};
+    if (d.xpEarned) myData.xp = (myData.xp || 0) + d.xpEarned;
+    if (d.isNewRecord) {
       myData[m] = s;
-      if (update.total !== undefined) myData.total = update.total;
+      if (d.total !== undefined) myData.total = d.total;
     }
   } catch {}
 }
