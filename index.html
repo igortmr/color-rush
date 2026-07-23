@@ -1120,6 +1120,7 @@ const T = {
     profile_title: '🎖️ PERFIL',
 
     err_nick_length: 'O nick deve ter entre 3 e 16 caracteres.',
+    err_nick_spaces: 'O nick não pode ter espaços.',
     err_nick_taken: 'Este nick já está em uso. Escolha outro.',
     err_nick_save: msg => `Erro ao salvar: ${msg}`,
     sync_success: '✅ Recorde enviado para o ranking global!',
@@ -1226,6 +1227,7 @@ const T = {
     profile_title: '🎖️ PROFILE',
 
     err_nick_length: 'Nickname must be between 3 and 16 characters.',
+    err_nick_spaces: 'Nickname can\'t contain spaces.',
     err_nick_taken: 'This nickname is already taken. Choose another.',
     err_nick_save: msg => `Error saving: ${msg}`,
     sync_success: '✅ Record submitted to the global leaderboard!',
@@ -1843,6 +1845,10 @@ window.saveNick = async () => {
   $('nick-error').textContent = '';
   if (nick.length < 3 || nick.length > 16) {
     $('nick-error').textContent = T[lang].err_nick_length;
+    return;
+  }
+  if (/\s/.test(nick)) {
+    $('nick-error').textContent = T[lang].err_nick_spaces;
     return;
   }
   const nickKey = nick.toLowerCase(); // "Igor" e "IGOR" contam como o mesmo nick
