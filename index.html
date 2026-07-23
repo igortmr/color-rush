@@ -1074,7 +1074,17 @@ const callRecomputeTotal = httpsCallable(functions, 'recomputeMyTotal');
 
 /* ================== idioma ================== */
 let lang = 'pt';
-try { lang = localStorage.getItem('colorRushLang') || 'pt'; } catch {}
+try {
+  // link de compartilhamento pode vir com ?lang=en — se vier, abre já traduzido
+  // e lembra a escolha (senão cai no idioma salvo, ou português por padrão)
+  const urlLang = new URLSearchParams(location.search).get('lang');
+  if (urlLang === 'en' || urlLang === 'pt') {
+    lang = urlLang;
+    localStorage.setItem('colorRushLang', urlLang);
+  } else {
+    lang = localStorage.getItem('colorRushLang') || 'pt';
+  }
+} catch {}
 auth.languageCode = (lang === 'en') ? 'en' : 'pt'; // e-mails do Firebase (verificação etc.) saem no idioma do jogo
 
 // eventos pro Google Analytics (se o gtag não estiver na página, vira um no-op silencioso)
@@ -1633,16 +1643,26 @@ window.toggleMute = () => {
 };
 
 /* ================== compartilhar ================== */
+// monta o link de compartilhamento — ?ref= só existe pra quem tem conta (conta pro
+// badge Divulgador) e &lang= só é incluído quando o idioma não é o padrão (pt), pra
+// quem clicar já abrir o site traduzido em vez de cair sempre em português
+async function buildShareLink() {
+  let link = `${location.origin}${location.pathname}`;
+  const params = [];
+  if (!offline && currentUser) {
+    const code = await ensureRefCode();
+    if (code) params.push(`ref=${code}`);
+  }
+  if (lang !== 'pt') params.push(`lang=${lang}`);
+  if (params.length) link += `?${params.join('&')}`;
+  return link;
+}
+
 window.shareScore = async () => {
   track('share', { content_type: 'score', mode });
   const modeName = modeLabel(mode);
   const rec = $('new-record').classList.contains('show') ? T[lang].share_new_record_suffix : '';
-  // link com ?ref= só existe pra quem tem conta — é o que faz o indicado contar no badge Divulgador
-  let link = `${location.origin}${location.pathname}`;
-  if (!offline && currentUser) {
-    const code = await ensureRefCode();
-    if (code) link += `?ref=${code}`;
-  }
+  const link = await buildShareLink();
   const text = T[lang].share_text(score, modeName, rec, link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   try {
@@ -1659,11 +1679,7 @@ window.shareScore = async () => {
 /* ================== convidar amigos (sem precisar terminar partida) ================== */
 window.inviteFriends = async (statusElId = 'invite-status') => {
   track('share', { content_type: 'invite' });
-  let link = `${location.origin}${location.pathname}`;
-  if (!offline && currentUser) {
-    const code = await ensureRefCode();
-    if (code) link += `?ref=${code}`;
-  }
+  const link = await buildShareLink();
   const text = T[lang].invite_text(link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const statusEl = $(statusElId);
