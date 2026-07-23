@@ -896,6 +896,9 @@ import {
 import {
   getFunctions, httpsCallable
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+import {
+  initializeAppCheck, ReCaptchaV3Provider
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
@@ -907,6 +910,23 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
+// App Check: prova pro backend que a chamada vem mesmo do site oficial, não
+// de um script externo batendo direto na API. Preencha com a site key
+// gerada em Firebase Console > App Check > reCAPTCHA v3. Enquanto ficar com
+// o valor de exemplo, isso fica desligado (não faz nada, não quebra nada).
+// Só ative "Enforce" nas Cloud Functions DEPOIS de confirmar no Console que
+// as chamadas estão chegando "verified" — senão o jogo para pra todo mundo.
+const APP_CHECK_SITE_KEY = 'COLOQUE_SUA_SITE_KEY_AQUI';
+if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== 'COLOQUE_SUA_SITE_KEY_AQUI') {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch {}
+}
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 const functions = getFunctions(app);
