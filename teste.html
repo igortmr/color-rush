@@ -2427,11 +2427,11 @@ function showTutStep(n) {
     // esquerda até chegar na caixa de texto embaixo (reforça que é ali que se deve ler primeiro)
     round0();
     const sq = tutCorrectSquare(0);
-    sq.classList.add('tut-glow');
     tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
     if (tutMode === 'reverse') {
-      tutPointAtWord(sq, { static: true }); // no reverso, aponta pra palavra (é ela que se procura)
+      tutPointAtWord(sq, { static: true }); // no reverso, destaca só a palavra (é ela que se procura)
     } else {
+      sq.classList.add('tut-glow');
       tutPointAt(sq, { static: true, yr: 0.78 });
     }
     tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
@@ -2447,10 +2447,10 @@ function showTutStep(n) {
     // rodada 2: destaca o quadrado certo + mãozinha (aponta pra palavra no reverso, pro quadrado no clássico)
     round1();
     const sq = tutCorrectSquare(1);
-    sq.classList.add('tut-glow');
     if (tutMode === 'reverse') {
-      tutPointAtWord(sq);
+      tutPointAtWord(sq); // destaca só a palavra, sem piscar o quadrado inteiro
     } else {
+      sq.classList.add('tut-glow');
       tutPointAt(sq, { yr: 0.42 });
     }
   } else if (n === 5) {
