@@ -2296,7 +2296,8 @@ function renderPublicProfileBadges(stats) {
         <span class="badge-chip big" style="background:${color}">${def.icon}</span>
         <div>
           <div class="name" style="font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.95rem;">${def.label[lang]}</div>
-          <div class="muted" style="text-align:left;">${name} · ${val}</div>
+          <div class="muted" style="text-align:left;">${name}</div>
+          <div style="text-align:left; font-family:'Orbitron',sans-serif; font-weight:800; color:#fff; font-size:1.1rem;">${val}</div>
         </div>
       </div>`;
   }).filter(Boolean);
