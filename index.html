@@ -958,6 +958,7 @@
     <option value="shapes" data-i18n="tab_shapes">🔶 Formas</option>
     <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
+    <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
   </select>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
@@ -1115,8 +1116,10 @@ const T = {
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
     badge_rank_current: n => `Sua melhor posição até agora: ${n}º lugar.`,
     tab_level: '🆙 Nível',
+    tab_divulgador: '📣 Divulgador',
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
+    divulgador_explain: '📣 Quem mais convidou amigos que se cadastraram pelo seu link de compartilhamento.',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
     levelup_title: '🎉 SUBIU DE NÍVEL!',
 
@@ -1210,8 +1213,10 @@ const T = {
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
     badge_rank_current: n => `Your best position so far: #${n}.`,
     tab_level: '🆙 Level',
+    tab_divulgador: '📣 Promoter',
     tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
+    divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
     levelup_title: '🎉 LEVEL UP!',
 
@@ -1477,6 +1482,12 @@ function topBadgeIcons(stats, count) {
     if (out.length >= count) break;
   }
   return out.join('');
+}
+// só a medalha de divulgador — usada no ranking de divulgador, onde os outros badges não fazem sentido
+function sharerBadgeIcon(stats) {
+  const def = BADGE_DEFS.sharer;
+  const t = unlockedTier(def, stats);
+  return t >= 0 ? badgeChip(def, t, 'small') : '';
 }
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
 
@@ -2218,7 +2229,7 @@ window.showRanking = (tab) => {
   loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
 };
 
-const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', level: 'xp', geral: 'total' };
+const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', level: 'xp', geral: 'total', divulgador: 'referrals' };
 
 const RANKING_PAGE_SIZE = 20;
 let rankingRows = [];
@@ -2228,7 +2239,7 @@ let rankingTab = 'geral';
 window.loadRanking = async (m) => {
   rankingTab = m;
   $('ranking-select').value = m;
-  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : '';
+  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
@@ -2268,7 +2279,7 @@ function renderRankingPage() {
   pageRows.forEach((r, i) => {
     const pos = start + i + 1;
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-    const ptsDisplay = (rankingTab === 'level') ? `${r.pts} XP` : r.pts;
+    const ptsDisplay = (rankingTab === 'level') ? `${r.pts} XP` : (rankingTab === 'divulgador') ? `${r.pts} 👥` : r.pts;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
@@ -2277,7 +2288,7 @@ function renderRankingPage() {
     nickSpan.textContent = r.nick;
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
-    nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+    nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerBadgeIcon(r.stats) : topBadgeIcons(r.stats, 3));
     body.appendChild(tr);
   });
   if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players}</td></tr>`;
