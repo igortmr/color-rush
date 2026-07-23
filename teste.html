@@ -741,13 +741,16 @@
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
     <div class="mode-card-footer">
       <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
-      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial();" data-i18n="tut_btn">❓ Como jogar</button>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('classic');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
   </div>
   <div class="mode-card" id="card-reverse" onclick="startGame('reverse')">
     <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
     <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
-    <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+    <div class="mode-card-footer">
+      <span class="record-badge">🏆 <span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('reverse');" data-i18n="tut_btn">❓ Como jogar</button>
+    </div>
     <span class="record-badge lock-badge" id="lock-reverse" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
@@ -770,10 +773,10 @@
   <p class="muted" data-i18n="footer_note">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
-<!-- TUTORIAL (passo a passo, modo clássico) -->
+<!-- TUTORIAL (passo a passo, funciona pros modos clássico e reverso) -->
 <div class="screen" id="tutorial-screen">
   <div class="tut-header">
-    <h2 data-i18n="tut_title">📖 TUTORIAL — MODO CLÁSSICO</h2>
+    <h2 id="tut-title-el">📖 TUTORIAL — MODO CLÁSSICO</h2>
     <button class="link tut-skip" onclick="tutBack()" data-i18n="tut_skip">Pular tutorial</button>
   </div>
   <div class="tut-dots" id="tut-dots"></div>
@@ -978,19 +981,26 @@ const T = {
 
     tut_btn: '❓ Como jogar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: '📖 TUTORIAL — MODO CLÁSSICO',
+    tut_title: { classic: '📖 TUTORIAL — MODO CLÁSSICO', reverse: '📖 TUTORIAL — MODO REVERSO' },
     tut_skip: 'Pular tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
-    tut_play_btn: '🎮 JOGAR MODO CLÁSSICO',
+    tut_play_btn: { classic: '🎮 JOGAR MODO CLÁSSICO', reverse: '🎮 JOGAR MODO REVERSO' },
     tut_back_btn: 'VOLTAR AO MENU',
-    tut_caption_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
-    tut_caption_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
-    tut_caption_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
-    tut_caption_4: 'Agora encontre o quadrado com a <b>cor</b> que você acabou de memorizar (<b>VERDE</b>).',
-    tut_caption_5: 'Memorize a <b>palavra</b> escrita nesse quadrado: <b>AMARELO</b>.',
-    tut_caption_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
-    tut_caption_7: 'É isso — o ciclo será sempre: <b>procure a cor pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
+    tut_caption_classic_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
+    tut_caption_classic_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_classic_4: 'Agora encontre o quadrado com a <b>cor</b> que você acabou de memorizar (<b>VERDE</b>).',
+    tut_caption_classic_5: 'Memorize a <b>palavra</b> escrita nesse quadrado: <b>AMARELO</b>.',
+    tut_caption_classic_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_classic_7: 'É isso — o ciclo será sempre: <b>procure a cor pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_reverse_1: 'Repare: a instrução lá em cima pede uma palavra (<b>VERMELHO</b>). Você deve então procurar o quadrado onde essa <b>palavra está escrita</b>.',
+    tut_caption_reverse_2: 'Antes de clicar, memorize a <b>cor de fundo</b> desse quadrado: <b>VERDE</b>.',
+    tut_caption_reverse_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_reverse_4: 'Agora encontre o quadrado onde está escrita a <b>palavra</b> da cor que você acabou de memorizar (<b>VERDE</b>).',
+    tut_caption_reverse_5: 'Memorize a <b>cor de fundo</b> desse quadrado: <b>AMARELO</b>.',
+    tut_caption_reverse_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_reverse_7: 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a cor de fundo → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -1066,19 +1076,26 @@ const T = {
 
     tut_btn: '❓ How to play',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: '📖 TUTORIAL — CLASSIC MODE',
+    tut_title: { classic: '📖 TUTORIAL — CLASSIC MODE', reverse: '📖 TUTORIAL — REVERSE MODE' },
     tut_skip: 'Skip tutorial',
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
-    tut_play_btn: '🎮 PLAY CLASSIC MODE',
+    tut_play_btn: { classic: '🎮 PLAY CLASSIC MODE', reverse: '🎮 PLAY REVERSE MODE' },
     tut_back_btn: 'BACK TO MENU',
-    tut_caption_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
-    tut_caption_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
-    tut_caption_3: 'After memorizing, <b>click</b> that square.',
-    tut_caption_4: 'Now find the square with the <b>color</b> you just memorized (<b>GREEN</b>).',
-    tut_caption_5: 'Memorize the <b>word</b> written on that square: <b>YELLOW</b>.',
-    tut_caption_6: 'After memorizing, <b>click</b> that square.',
-    tut_caption_7: "That's it — the cycle is always: <b>find the requested color → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
+    tut_caption_classic_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
+    tut_caption_classic_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_classic_4: 'Now find the square with the <b>color</b> you just memorized (<b>GREEN</b>).',
+    tut_caption_classic_5: 'Memorize the <b>word</b> written on that square: <b>YELLOW</b>.',
+    tut_caption_classic_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_classic_7: "That's it — the cycle is always: <b>find the requested color → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_reverse_1: 'Notice: the instruction up top asks for a word (<b>RED</b>). You should then look for the square where that <b>word is written</b>.',
+    tut_caption_reverse_2: 'Before clicking, memorize the <b>background color</b> of that square: <b>GREEN</b>.',
+    tut_caption_reverse_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_reverse_4: 'Now find the square where the <b>word</b> for the color you just memorized is written (<b>GREEN</b>).',
+    tut_caption_reverse_5: 'Memorize the <b>background color</b> of that square: <b>YELLOW</b>.',
+    tut_caption_reverse_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_reverse_7: "That's it — the cycle is always: <b>find the requested word → memorize the background color → click</b>, getting faster each time. Ready to play? 🚀",
   },
 };
 
@@ -1104,7 +1121,10 @@ function applyLanguage() {
   if ($('menu-screen').classList.contains('active')) showMenu();
   if ($('profile-screen').classList.contains('active')) renderProfile();
   if ($('ranking-screen').classList.contains('active')) loadRanking(rankingTab || 'geral');
-  if ($('tutorial-screen').classList.contains('active')) showTutStep(tutStep);
+  if ($('tutorial-screen').classList.contains('active')) {
+    $('tut-title-el').textContent = T[lang].tut_title[tutMode];
+    showTutStep(tutStep);
+  }
 }
 
 window.setLang = (l) => {
@@ -2172,43 +2192,77 @@ window.rankingGoPage = (p) => {
 // dados fixos (não aleatórios) pra ensinar o mecanismo com previsibilidade.
 // rodada A: pedem VERMELHO, quadrado certo tem a palavra VERDE (a memorizar).
 // rodada B: pedem VERDE (a cor memorizada), quadrado certo tem a palavra AMARELO.
-const TUT_ROUNDS = [
-  {
-    target: COLORS[1], // vermelho
-    squares: [
-      { bg: COLORS[0], word: COLORS[4] },
-      { bg: COLORS[1], word: COLORS[2], correct: true }, // fundo vermelho / palavra verde
-      { bg: COLORS[3], word: COLORS[6] },
-      { bg: COLORS[4], word: COLORS[7] },
-    ],
-  },
-  {
-    target: COLORS[2], // verde (o que foi memorizado na rodada A)
-    squares: [
-      { bg: COLORS[6], word: COLORS[5] },
-      { bg: COLORS[7], word: COLORS[0] },
-      { bg: COLORS[2], word: COLORS[3], correct: true }, // fundo verde / palavra amarela (posição diferente da rodada A)
-      { bg: COLORS[0], word: COLORS[4] },
-    ],
-  },
-  {
-    target: COLORS[3], // amarelo (o que foi memorizado na rodada B)
-    squares: [
-      { bg: COLORS[5], word: COLORS[6] },
-      { bg: COLORS[0], word: COLORS[4] },
-      { bg: COLORS[2], word: COLORS[5] },
-      { bg: COLORS[3], word: COLORS[7], correct: true }, // fundo amarelo / palavra ciano (posição diferente das anteriores)
-    ],
-  },
-];
+// clássico: o alvo é uma COR (fundo do quadrado certo) — o que se memoriza é a PALAVRA escrita nele.
+// reverso: o alvo é uma PALAVRA (escrita no quadrado certo) — o que se memoriza é a COR DE FUNDO dele.
+const TUT_DATA = {
+  classic: [
+    {
+      target: COLORS[1], // vermelho
+      squares: [
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[1], word: COLORS[2], correct: true }, // fundo vermelho / palavra verde
+        { bg: COLORS[3], word: COLORS[6] },
+        { bg: COLORS[4], word: COLORS[7] },
+      ],
+    },
+    {
+      target: COLORS[2], // verde (o que foi memorizado na rodada A)
+      squares: [
+        { bg: COLORS[6], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[0] },
+        { bg: COLORS[2], word: COLORS[3], correct: true }, // fundo verde / palavra amarela (posição diferente da rodada A)
+        { bg: COLORS[0], word: COLORS[4] },
+      ],
+    },
+    {
+      target: COLORS[3], // amarelo (o que foi memorizado na rodada B)
+      squares: [
+        { bg: COLORS[5], word: COLORS[6] },
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[2], word: COLORS[5] },
+        { bg: COLORS[3], word: COLORS[7], correct: true }, // fundo amarelo / palavra ciano (posição diferente das anteriores)
+      ],
+    },
+  ],
+  reverse: [
+    {
+      target: COLORS[1], // pedem a palavra "vermelho"
+      squares: [
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[2], word: COLORS[1], correct: true }, // palavra vermelho / fundo verde (o que se memoriza)
+        { bg: COLORS[3], word: COLORS[6] },
+        { bg: COLORS[4], word: COLORS[7] },
+      ],
+    },
+    {
+      target: COLORS[2], // pedem a palavra "verde" (cor memorizada na rodada A)
+      squares: [
+        { bg: COLORS[6], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[0] },
+        { bg: COLORS[3], word: COLORS[2], correct: true }, // palavra verde / fundo amarelo (posição diferente da rodada A)
+        { bg: COLORS[0], word: COLORS[4] },
+      ],
+    },
+    {
+      target: COLORS[3], // pedem a palavra "amarelo" (cor memorizada na rodada B)
+      squares: [
+        { bg: COLORS[5], word: COLORS[6] },
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[2], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[3], correct: true }, // palavra amarelo / fundo ciano (posição diferente das anteriores)
+      ],
+    },
+  ],
+};
 const TUT_TOTAL = 7;
+let tutMode = 'classic';
 let tutStep = 1;
 let tutTimers = [];
 function tutClearTimers() { tutTimers.forEach(clearTimeout); tutTimers = []; }
 function tutAfter(ms, fn) { const id = setTimeout(fn, ms); tutTimers.push(id); return id; }
 
 function tutRenderRound(roundIdx, instrText) {
-  const round = TUT_ROUNDS[roundIdx];
+  const round = TUT_DATA[tutMode][roundIdx];
   const grid = $('tut-grid');
   grid.innerHTML = '';
   round.squares.forEach((s, i) => {
@@ -2250,7 +2304,7 @@ function tutPointAt(targetEl, opts = {}) {
 }
 
 function tutCorrectSquare(roundIdx) {
-  const idx = TUT_ROUNDS[roundIdx].squares.findIndex(s => s.correct);
+  const idx = TUT_DATA[tutMode][roundIdx].squares.findIndex(s => s.correct);
   return document.querySelectorAll('#tut-grid .square')[idx];
 }
 
@@ -2268,7 +2322,7 @@ function tutSetNav() {
   $('tut-prev-btn').style.visibility = tutStep === 1 ? 'hidden' : 'visible';
   const nextBtn = $('tut-next-btn');
   if (tutStep === TUT_TOTAL) {
-    nextBtn.textContent = T[lang].tut_play_btn;
+    nextBtn.textContent = T[lang].tut_play_btn[tutMode];
     nextBtn.onclick = tutPlay;
   } else {
     nextBtn.textContent = T[lang].tut_next;
@@ -2282,12 +2336,14 @@ function showTutStep(n) {
   tutStep = n;
   tutSetDots();
   tutSetNav();
-  $('tut-caption').innerHTML = T[lang][`tut_caption_${n}`];
+  $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
 
-  const round0 = () => tutRenderRound(0, T[lang].instr_first_classic(cName(TUT_ROUNDS[0].target)));
-  const round1 = () => tutRenderRound(1, T[lang].instr_next_classic);
-  const round2 = () => tutRenderRound(2, T[lang].instr_next_classic);
-  // destaca (pisca) o nome da cor dentro da instrução no topo
+  const instrFirst = tutMode === 'reverse' ? T[lang].instr_first_reverse : T[lang].instr_first_classic;
+  const instrNext = tutMode === 'reverse' ? T[lang].instr_next_reverse : T[lang].instr_next_classic;
+  const round0 = () => tutRenderRound(0, instrFirst(cName(TUT_DATA[tutMode][0].target)));
+  const round1 = () => tutRenderRound(1, instrNext);
+  const round2 = () => tutRenderRound(2, instrNext);
+  // destaca (pisca) o nome da cor/palavra dentro da instrução no topo
   const tutHighlightInstrWord = (name) => {
     const el = $('tut-instruction');
     const raw = el.textContent;
@@ -2295,11 +2351,16 @@ function showTutStep(n) {
     if (idx === -1) return;
     el.innerHTML = raw.slice(0, idx) + `<span class="tut-instr-color">${name}</span>` + raw.slice(idx + name.length);
   };
-  // mostra o cérebro sobre a palavra do meio + destaca ela (memorizar)
+  // mostra o cérebro sobre o que precisa ser memorizado (a palavra no clássico, a cor no reverso)
   const tutShowMemorize = (sq) => {
     sq.classList.add('tut-glow');
-    sq.querySelector('.word').classList.add('tut-word-glow');
-    tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
+    if (tutMode === 'reverse') {
+      // no reverso memoriza-se a COR DE FUNDO do quadrado, não a palavra escrita nele
+      tutPointAt(sq, { brain: true, yr: 0.5 });
+    } else {
+      sq.querySelector('.word').classList.add('tut-word-glow');
+      tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
+    }
   };
   // mãozinha "chega" deslizando pela esquerda e para bem na borda do alvo, sem entrar no texto
   const tutSlideInFromLeft = (targetEl, opts = {}) => {
@@ -2352,7 +2413,7 @@ function showTutStep(n) {
     round0();
     const sq = tutCorrectSquare(0);
     sq.classList.add('tut-glow');
-    tutHighlightInstrWord(cName(TUT_ROUNDS[0].target));
+    tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
     tutPointAt(sq, { static: true, yr: 0.78 });
     tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
   } else if (n === 2) {
@@ -2396,9 +2457,11 @@ function showTutStep(n) {
   }
 }
 
-window.startTutorial = () => {
-  track('tutorial_start');
+window.startTutorial = (mode = 'classic') => {
+  tutMode = mode;
+  track('tutorial_start', { mode });
   show('tutorial-screen');
+  $('tut-title-el').textContent = T[lang].tut_title[tutMode];
   showTutStep(1);
   $('tut-intro-banner').classList.add('show');
   setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1500);
@@ -2406,7 +2469,7 @@ window.startTutorial = () => {
 window.tutNext = () => { if (tutStep < TUT_TOTAL) showTutStep(tutStep + 1); };
 window.tutPrev = () => { if (tutStep > 1) showTutStep(tutStep - 1); };
 window.tutBack = () => { tutClearTimers(); track('tutorial_skip', { step: tutStep }); showMenu(); };
-window.tutPlay = () => { tutClearTimers(); track('tutorial_complete'); startGame('classic'); };
+window.tutPlay = () => { tutClearTimers(); track('tutorial_complete', { mode: tutMode }); startGame(tutMode); };
 
 applyLanguage();
 </script>
