@@ -893,6 +893,9 @@ import {
   getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
   serverTimestamp, writeBatch, increment
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import {
+  getFunctions, httpsCallable
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
@@ -906,6 +909,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app);
+// chamadas ao servidor: a pontuação final agora é validada lá (anti-cheat),
+// não é mais um simples write direto no Firestore vindo do navegador.
+const callStartSession = httpsCallable(functions, 'startGameSession');
+const callSubmitResult = httpsCallable(functions, 'submitGameResult');
+const callCreditReferral = httpsCallable(functions, 'creditReferral');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -1361,6 +1370,7 @@ let xpGain = 0; // XP acumulada na partida atual
 let currentUser = null;          // usuário do firebase ou null
 let offline = false;             // jogando sem conta
 let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
+let currentSessionId = null;     // sessão validada pelo servidor pra partida atual (anti-cheat)
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
@@ -1625,15 +1635,6 @@ window.saveNick = async () => {
     }
     const refCode = await generateUniqueRefCode();
 
-    // resolve o código da URL (se veio de um link compartilhado) para o uid de quem indicou
-    let referrerUidResolved = null;
-    if (referrerCode) {
-      try {
-        const refSnap = await getDoc(doc(db, 'refcodes', referrerCode));
-        if (refSnap.exists()) referrerUidResolved = refSnap.data().uid;
-      } catch {}
-    }
-
     const batch = writeBatch(db);
     batch.set(doc(db, 'nicks', nickKey), { uid: currentUser.uid });
     batch.set(doc(db, 'refcodes', refCode), { uid: currentUser.uid });
@@ -1649,11 +1650,10 @@ window.saveNick = async () => {
     myData.nick = nick;
     myData.refCode = refCode;
 
-    // credita a indicação para quem trouxe esse jogador
-    if (referrerUidResolved && referrerUidResolved !== currentUser.uid) {
-      try {
-        await setDoc(doc(db, 'scores', referrerUidResolved), { referrals: increment(1), updatedAt: serverTimestamp() }, { merge: true });
-      } catch {}
+    // credita a indicação para quem trouxe esse jogador (feito no servidor,
+    // já que é uma escrita no documento de OUTRO usuário)
+    if (referrerCode) {
+      try { await callCreditReferral({ refCode: referrerCode }); } catch {}
       referrerCode = null;
       try { sessionStorage.removeItem('colorRushRef'); } catch {}
     }
@@ -1712,6 +1712,15 @@ window.startGame = (m) => {
   $('record-hud').textContent = myRecord(mode);
   show('game-screen');
   newRound(true);
+
+  // abre uma sessão no servidor (timestamp confiável) pra poder validar a
+  // pontuação no fim da partida — só quem tem conta precisa disso
+  currentSessionId = null;
+  if (!offline && currentUser && myData.nick) {
+    callStartSession({ mode: m }).then(res => {
+      currentSessionId = res.data.sessionId;
+    }).catch(() => { currentSessionId = null; });
+  }
 };
 
 function newRound(first) {
@@ -1830,7 +1839,7 @@ async function gameOver(reason) {
   if (offline) {
     if (isNewRecord) setLocalRecord(mode, score);
   } else if (currentUser && myData.nick) {
-    await persistGameResult(isNewRecord, xpEarned);
+    await persistGameResult(xpEarned);
   }
 
   // convite para quem joga sem conta
@@ -1878,45 +1887,31 @@ function showLevelUp(newLv) {
 }
 window.dismissLevelUp = () => $('levelup-banner').classList.remove('show');
 
-async function persistGameResult(isNewRecord, xpEarned = 0) {
-  const today = todayStr();
-  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE');
-  let currentStreak = myData.currentStreak || 0;
-  if (myData.lastPlayedDate !== today) {
-    currentStreak = (myData.lastPlayedDate === yesterday) ? currentStreak + 1 : 1;
+async function persistGameResult(xpEarned = 0) {
+  // a pontuação final agora é validada no servidor (Cloud Function), que checa
+  // se o tempo real de jogo é compatível com a pontuação alegada antes de gravar.
+  if (!currentSessionId) {
+    // sem sessão validada (ex.: caiu a internet bem no início da partida) —
+    // não há como confirmar no servidor, então não grava essa partida.
+    $('sync-status').textContent = T[lang].sync_fail;
+    return;
   }
-  const bestStreak = Math.max(myData.bestStreak || 0, currentStreak);
-
-  const update = {
-    nick: myData.nick,
-    gamesPlayed: increment(1),
-    totalPoints: increment(score),
-    xp: increment(xpEarned),
-    lastPlayedDate: today,
-    currentStreak,
-    bestStreak,
-    updatedAt: serverTimestamp(),
-  };
-  update[PLAYED_FIELD[mode]] = true;
-  if (isNewRecord) {
-    update[mode] = score;
-    update[mode + 'At'] = serverTimestamp(); // guarda quando o recorde foi batido, pra desempate no ranking
-    update.total = computeTotal(mode, score); // Geral = soma dos recordes de todos os modos
-    update.totalAt = serverTimestamp();
-  }
+  const sessionId = currentSessionId;
+  currentSessionId = null; // cada sessão só pode ser usada uma vez
 
   try {
-    await setDoc(doc(db, 'scores', currentUser.uid), update, { merge: true });
-    myData.lastPlayedDate = today;
-    myData.currentStreak = currentStreak;
-    myData.bestStreak = bestStreak;
+    const res = await callSubmitResult({ sessionId, mode, score, xpGain: xpEarned });
+    const d = res.data || {};
+    myData.lastPlayedDate = todayStr();
+    myData.currentStreak = d.currentStreak;
+    myData.bestStreak = d.bestStreak;
     myData.gamesPlayed = (myData.gamesPlayed || 0) + 1;
     myData.totalPoints = (myData.totalPoints || 0) + score;
     myData.xp = (myData.xp || 0) + xpEarned;
     myData[PLAYED_FIELD[mode]] = true;
-    if (isNewRecord) {
+    if (d.isNewRecord) {
       myData[mode] = score;
-      if (update.total !== undefined) myData.total = update.total;
+      if (d.total !== undefined) myData.total = d.total;
       $('sync-status').textContent = T[lang].sync_success;
     }
   } catch (e) {
