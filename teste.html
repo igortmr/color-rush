@@ -465,6 +465,7 @@
   .progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); box-shadow: 0 0 8px rgba(33,230,161,0.6); border-radius: 6px; transition: width 0.3s; }
   .profile-header { text-align: center; }
   .profile-header .big-nick { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 800; }
+  .profile-top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; }
   .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; }
 
   .version-tag {
@@ -1000,7 +1001,10 @@
 
 <!-- PERFIL -->
 <div class="screen" id="profile-screen">
-  <h1 style="font-size:2rem;" data-i18n="profile_title">🎖️ PERFIL</h1>
+  <div class="profile-top-row">
+    <h1 style="font-size:2rem;" data-i18n="profile_title">🎖️ PERFIL</h1>
+    <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" style="display:none;" data-i18n="btn_back">VOLTAR</button>
+  </div>
   <div class="profile-header">
     <div class="big-nick" id="profile-nick"></div>
     <div class="muted" id="profile-summary"></div>
@@ -1008,7 +1012,7 @@
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
-  <button class="secondary" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
+  <button class="secondary" id="profile-back-bottom-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <script type="module">
@@ -2258,6 +2262,12 @@ function renderProfile(viewStats, viewNick) {
   const isOther = !!viewStats;
   const stats = isOther ? viewStats : myData;
 
+  // no perfil de outra pessoa, o "voltar" vira um botão pequeno e lateral lá em
+  // cima (como o de sair) em vez do botão grande embaixo — é só um jeito rápido
+  // de fechar essa visualização, não precisa do mesmo peso do perfil próprio
+  $('profile-back-top-btn').style.display = isOther ? '' : 'none';
+  $('profile-back-bottom-btn').style.display = isOther ? 'none' : '';
+
   $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
 
   if (!isOther && offline) {
@@ -2274,8 +2284,14 @@ function renderProfile(viewStats, viewNick) {
 
   $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
 
-  const unlockedCount = BADGE_ORDER.reduce((n, k) => n + (unlockedTier(BADGE_DEFS[k], stats) >= 0 ? 1 : 0), 0);
-  $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, BADGE_ORDER.length);
+  // conta cada NÍVEL desbloqueado dentro de cada categoria (não só se a categoria
+  // foi iniciada) — cada categoria tem 6 níveis, então o total é 4×6 = 24
+  const unlockedCount = BADGE_ORDER.reduce((n, k) => {
+    const t = unlockedTier(BADGE_DEFS[k], stats);
+    return n + (t >= 0 ? t + 1 : 0);
+  }, 0);
+  const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
+  $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
   $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], stats)).join('');
 }
 
