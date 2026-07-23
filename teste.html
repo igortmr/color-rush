@@ -996,9 +996,9 @@ const T = {
     tut_caption_classic_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
     tut_caption_classic_7: 'É isso — o ciclo será sempre: <b>procure a cor pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
     tut_caption_reverse_1: 'Repare: a instrução lá em cima pede uma palavra (<b>VERMELHO</b>). Você deve então procurar o quadrado onde essa <b>palavra está escrita</b>.',
-    tut_caption_reverse_2: 'Antes de clicar, memorize a <b>cor de fundo</b> desse quadrado: <b>VERDE</b>.',
+    tut_caption_reverse_2: 'Antes de clicar, memorize a <b>cor de fundo</b> desse quadrado: <b>ROSA</b>.',
     tut_caption_reverse_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
-    tut_caption_reverse_4: 'Agora encontre o quadrado onde está escrita a <b>palavra</b> da cor que você acabou de memorizar (<b>VERDE</b>).',
+    tut_caption_reverse_4: 'Agora encontre o quadrado onde está escrita a <b>palavra</b> da cor que você acabou de memorizar (<b>ROSA</b>).',
     tut_caption_reverse_5: 'Memorize a <b>cor de fundo</b> desse quadrado: <b>AMARELO</b>.',
     tut_caption_reverse_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
     tut_caption_reverse_7: 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a cor de fundo → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
@@ -1091,9 +1091,9 @@ const T = {
     tut_caption_classic_6: 'After memorizing, <b>click</b> that square.',
     tut_caption_classic_7: "That's it — the cycle is always: <b>find the requested color → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
     tut_caption_reverse_1: 'Notice: the instruction up top asks for a word (<b>RED</b>). You should then look for the square where that <b>word is written</b>.',
-    tut_caption_reverse_2: 'Before clicking, memorize the <b>background color</b> of that square: <b>GREEN</b>.',
+    tut_caption_reverse_2: 'Before clicking, memorize the <b>background color</b> of that square: <b>PINK</b>.',
     tut_caption_reverse_3: 'After memorizing, <b>click</b> that square.',
-    tut_caption_reverse_4: 'Now find the square where the <b>word</b> for the color you just memorized is written (<b>GREEN</b>).',
+    tut_caption_reverse_4: 'Now find the square where the <b>word</b> for the color you just memorized is written (<b>PINK</b>).',
     tut_caption_reverse_5: 'Memorize the <b>background color</b> of that square: <b>YELLOW</b>.',
     tut_caption_reverse_6: 'After memorizing, <b>click</b> that square.',
     tut_caption_reverse_7: "That's it — the cycle is always: <b>find the requested word → memorize the background color → click</b>, getting faster each time. Ready to play? 🚀",
@@ -2230,17 +2230,17 @@ const TUT_DATA = {
       target: COLORS[1], // pedem a palavra "vermelho"
       squares: [
         { bg: COLORS[0], word: COLORS[4] },
-        { bg: COLORS[2], word: COLORS[1], correct: true }, // palavra vermelho / fundo verde (o que se memoriza)
+        { bg: COLORS[6], word: COLORS[1], correct: true }, // palavra vermelho / fundo rosa (o que se memoriza) — evita verde, que brigava com o brilho do destaque
         { bg: COLORS[3], word: COLORS[6] },
         { bg: COLORS[4], word: COLORS[7] },
       ],
     },
     {
-      target: COLORS[2], // pedem a palavra "verde" (cor memorizada na rodada A)
+      target: COLORS[6], // pedem a palavra "rosa" (cor memorizada na rodada A)
       squares: [
         { bg: COLORS[6], word: COLORS[5] },
         { bg: COLORS[7], word: COLORS[0] },
-        { bg: COLORS[3], word: COLORS[2], correct: true }, // palavra verde / fundo amarelo (posição diferente da rodada A)
+        { bg: COLORS[3], word: COLORS[6], correct: true }, // palavra rosa / fundo amarelo (posição diferente da rodada A)
         { bg: COLORS[0], word: COLORS[4] },
       ],
     },
