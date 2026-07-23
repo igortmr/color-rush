@@ -1419,7 +1419,7 @@ function xpInfo(xp) {
   return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
 }
 function myXp() { return offline ? 0 : (myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
-function modeUnlocked(m) { return !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+function modeUnlocked(m) { return myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
 
 // cor do emblema de nível muda a cada faixa de 5 níveis (1-4 verde, 5-9 azul, 10-14 roxo, ...)
 const LV_COLORS = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffe93c', '#ff9f1c', '#ff2d6b', '#ffffff'];
@@ -2093,7 +2093,9 @@ async function fetchAllScores() {
   const rows = [];
   snap.forEach(d => {
     const data = d.data();
-    if (data.nick) rows.push({ uid: d.id, data });
+    // contas admin (campo definido só pelo Firebase Console) ficam de fora de
+    // qualquer ranking, embora tenham acesso liberado a tudo no jogo
+    if (data.nick && data.admin !== true) rows.push({ uid: d.id, data });
   });
   scoresCache = { rows, at: Date.now() };
   return rows;
@@ -2114,10 +2116,10 @@ async function renderRankPreview(field, bodyElId, myPts) {
       if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
     }
 
-    // localiza (ou insere) a linha do jogador
+    // localiza (ou insere) a linha do jogador (admin nunca aparece, nem pra si mesma)
     const youLabel = lang === 'en' ? 'YOU' : 'VOCÊ';
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
-    if (myIndex === -1) {
+    if (myIndex === -1 && myData.admin !== true) {
       rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData });
     }
 
@@ -2290,7 +2292,8 @@ window.loadRanking = async (m) => {
       }
     }
     // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
-    if (!offline && currentUser && myData.nick && !rows.some(r => r.uid === currentUser.uid)) {
+    // (exceto se for admin — essa nunca deve aparecer no ranking, nem pra si mesma)
+    if (!offline && currentUser && myData.nick && myData.admin !== true && !rows.some(r => r.uid === currentUser.uid)) {
       if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
       else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData });
     }
