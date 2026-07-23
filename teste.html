@@ -2,7 +2,17 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script>
+  (function () {
+    function setVh() {
+      document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
+  })();
+</script>
 <title>Color Rush (teste)</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="canonical" href="https://colorrush.com.br/">
@@ -62,11 +72,18 @@
       var(--bg-deep);
     color: #eef1ff;
     min-height: 100vh;
+    min-height: calc(var(--vh, 1vh) * 100);
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
     user-select: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  body::-webkit-scrollbar { display: none; }
   .screen {
     display: none;
     flex-direction: column;
@@ -75,7 +92,15 @@
     padding: 24px;
     width: 100%;
     max-width: 520px;
+    max-height: 100vh;
+    max-height: calc(var(--vh, 1vh) * 100);
+    max-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
 
   h1 {

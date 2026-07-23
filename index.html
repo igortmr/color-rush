@@ -88,7 +88,10 @@
     user-select: none;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  body::-webkit-scrollbar { display: none; }
   .screen {
     display: none;
     flex-direction: column;
@@ -101,7 +104,11 @@
     max-height: calc(var(--vh, 1vh) * 100);
     max-height: 100dvh;
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
 
   h1 {
