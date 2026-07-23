@@ -529,7 +529,7 @@
   .tut-link-btn:hover { background: rgba(45,214,255,0.18); box-shadow: none; transform: none; }
   #tutorial-screen .card { padding: 18px; gap: 14px; }
   .tut-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-  .tut-header h2 { font-family: 'Orbitron', sans-serif; font-size: 1.05rem; letter-spacing: 0.5px; color: #cfd8ff; }
+  .tut-header h2 { font-family: 'Orbitron', sans-serif; font-size: clamp(0.78rem, 3.4vw, 0.92rem); letter-spacing: 0.3px; color: #cfd8ff; white-space: nowrap; }
   .tut-dots { display: flex; gap: 6px; justify-content: center; }
   .tut-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.18); transition: background 0.2s, transform 0.2s; }
   .tut-dot.active { background: var(--neon-green); box-shadow: 0 0 8px rgba(33,230,161,0.8); transform: scale(1.25); }
@@ -1110,7 +1110,7 @@ const T = {
 
     tut_btn: '❓ Como jogar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL — MODO CLÁSSICO', reverse: '📖 TUTORIAL — MODO REVERSO' },
+    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO' },
     tut_skip: 'Pular tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
@@ -1205,7 +1205,7 @@ const T = {
 
     tut_btn: '❓ How to play',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL — CLASSIC MODE', reverse: '📖 TUTORIAL — REVERSE MODE' },
+    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL' },
     tut_skip: 'Skip tutorial',
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
