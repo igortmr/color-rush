@@ -550,22 +550,34 @@
     gap: 6px;
     z-index: 1000;
   }
-  .lang-btn {
+  .lang-select {
     font-family: 'Rajdhani', sans-serif;
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 5px 9px;
+    padding: 5px 22px 5px 9px;
     border-radius: 20px;
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(10,14,30,0.7);
     color: #8fa0d6;
     cursor: pointer;
     box-shadow: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%238fa0d6' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 9px 6px;
   }
-  .lang-btn.active {
+  .lang-select:focus {
     border-color: var(--neon-blue);
     color: #fff;
     box-shadow: 0 0 10px rgba(45,214,255,0.5);
+    outline: none;
+  }
+  .lang-select option {
+    background: #0a0e1e;
+    color: #cfd8f5;
   }
 
   .square.shape-square {
@@ -866,9 +878,11 @@
 </div>
 
 <div class="lang-switch">
-  <button class="lang-btn" id="lang-pt" onclick="setLang('pt')">🇧🇷 PT</button>
-  <button class="lang-btn" id="lang-en" onclick="setLang('en')">🇺🇸 EN</button>
-  <button class="lang-btn" id="lang-es" onclick="setLang('es')">🇪🇸 ES</button>
+  <select id="lang-select" class="lang-select" onchange="setLang(this.value)">
+    <option value="pt">🇧🇷 PT</option>
+    <option value="en">🇺🇸 EN</option>
+    <option value="es">🇪🇸 ES</option>
+  </select>
 </div>
 
 <div class="version-tag" id="version-tag">carregando versão...</div>
@@ -1724,9 +1738,7 @@ function applyLanguage() {
     if (dict[key] != null) el.placeholder = dict[key];
   });
   document.documentElement.lang = (lang === 'en') ? 'en' : (lang === 'es') ? 'es' : 'pt-BR';
-  $('lang-pt').classList.toggle('active', lang === 'pt');
-  $('lang-en').classList.toggle('active', lang === 'en');
-  $('lang-es').classList.toggle('active', lang === 'es');
+  $('lang-select').value = lang;
 
   // re-renderiza a tela dinâmica que já estava aberta, se aplicável
   if ($('menu-screen').classList.contains('active')) showMenu();
