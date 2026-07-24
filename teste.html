@@ -1286,6 +1286,7 @@ const T = {
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Pedidos recebidos',
     friends_outgoing_title: 'Pedidos enviados',
+    friends_list_title: 'Seus amigos',
     friends_empty: 'Você ainda não tem amigos. Adicione-os pelo ranking, ou compartilhando seu link de convite.',
     btn_add_friend: '➕ Adicionar amigo',
     btn_remove_friend: 'Remover amigo',
@@ -1426,6 +1427,7 @@ const T = {
     friends_title: '👥 FRIENDS',
     friends_incoming_title: 'Incoming requests',
     friends_outgoing_title: 'Sent requests',
+    friends_list_title: 'Your friends',
     friends_empty: "You don't have any friends yet. Add them from the leaderboard, or by sharing your invite link.",
     btn_add_friend: '➕ Add friend',
     btn_remove_friend: 'Remove friend',
@@ -2776,6 +2778,7 @@ async function renderFriendsScreen(force) {
     outgoingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', false)));
   }
 
+  body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_list_title));
   const friendEntries = Object.entries(friends);
   if (!friendEntries.length) {
     body.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[lang].friends_empty}</div>`);
@@ -3093,7 +3096,7 @@ let pvpMatchesUnsub = null;   // cancela o listener (chamado no logout)
 let pvpMatchesById = {};      // cache local: matchId -> dados do match
 let pvpCurrentMatchId = null; // qual partida está aberta na tela de duelo agora
 let pvpAnimFrame = null;      // rAF que desenha as barras de tempo
-let pvpClaimedForTurn = null; // turnNumber pro qual já tentamos reivindicar timeout (evita repetir)
+let pvpClaimedForTurn = null; // turnStartedAt (ms) da tentativa pra qual já tentamos reivindicar timeout (evita repetir)
 
 function startPvpListener() {
   stopPvpListener();
@@ -3307,7 +3310,7 @@ function renderPvpResult(m, myUid, oppUid) {
   playersEl.appendChild(pvpPlayerRow(winnerNick, finalBank[m.winnerUid] || 0, true));
   playersEl.appendChild(pvpPlayerRow(loserNick, finalBank[m.loseUid] || 0, false));
 
-  roundsEl.textContent = T[lang].pvp_rounds_played(m.turnNumber || 1);
+  roundsEl.textContent = T[lang].pvp_rounds_played(m.cycleNumber || 1);
 }
 
 // linha do placar final — nick sempre via textContent (nunca innerHTML),
@@ -3363,15 +3366,22 @@ function renderPvpBars(m) {
   const myRemaining = (m.turnUid === myUid) ? Math.max(0, myBank - elapsed) : myBank;
   const oppRemaining = (m.turnUid === oppUid) ? Math.max(0, oppBank - elapsed) : oppBank;
 
-  $('pvp-my-bar').style.width = Math.max(0, Math.min(100, myRemaining / PVP_TURN_BANK_MS * 100)) + '%';
-  $('pvp-opp-bar').style.width = Math.max(0, Math.min(100, oppRemaining / PVP_TURN_BANK_MS * 100)) + '%';
+  // depois de ciclos com bônus de +5s, o banco pode passar de 10s — a barra
+  // usa o maior valor em jogo como referência, senão ficaria sempre "cheia"
+  const maxBank = Math.max(PVP_TURN_BANK_MS, myBank, oppBank);
+
+  $('pvp-my-bar').style.width = Math.max(0, Math.min(100, myRemaining / maxBank * 100)) + '%';
+  $('pvp-opp-bar').style.width = Math.max(0, Math.min(100, oppRemaining / maxBank * 100)) + '%';
   $('pvp-my-time').textContent = (myRemaining / 1000).toFixed(1) + 's';
   $('pvp-opp-time').textContent = (oppRemaining / 1000).toFixed(1) + 's';
 
   // ninguém autodeclara "acabou o tempo" — só pede pro servidor conferir de
-  // novo com o próprio relógio dele (claimTimeout) antes de aceitar
-  if (pvpClaimedForTurn !== m.turnNumber && (myRemaining <= 0 || oppRemaining <= 0)) {
-    pvpClaimedForTurn = m.turnNumber;
+  // novo com o próprio relógio dele (claimTimeout) antes de aceitar. Usa o
+  // instante em que a tentativa atual começou como identidade (cada
+  // tentativa tem um turnStartedAt novo), pra não repetir a reivindicação
+  // várias vezes seguidas pra mesma tentativa.
+  if (pvpClaimedForTurn !== turnStartedMs && (myRemaining <= 0 || oppRemaining <= 0)) {
+    pvpClaimedForTurn = turnStartedMs;
     // se o servidor recusar (relógio dele ainda não concorda que acabou —
     // possível defasagem entre o relógio do navegador e o do servidor),
     // libera pra tentar de novo no próximo tick em vez de travar pra sempre
