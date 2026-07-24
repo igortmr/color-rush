@@ -1214,6 +1214,7 @@
     <div data-i18n="daily_result_score_label">Pontuação desta tentativa:</div>
     <div class="final-score" id="daily-result-score">0</div>
     <div class="record-line"><span data-i18n="daily_result_best_label">🎯 Sua melhor de hoje:</span> <span id="daily-result-best">0</span></div>
+    <div class="record-line" id="daily-result-xp" style="display:none; color:var(--neon-green);"></div>
     <div class="muted" id="daily-result-attempts"></div>
     <div class="btn-row">
       <button id="daily-result-again-btn" onclick="startDailyChallenge()" data-i18n="btn_play_again">JOGAR DE NOVO</button>
@@ -1585,6 +1586,7 @@ const T = {
     daily_result_title: 'FIM DA TENTATIVA',
     daily_result_score_label: 'Pontuação desta tentativa:',
     daily_result_best_label: '🎯 Sua melhor de hoje:',
+    daily_xp_bonus: n => `⭐ +${n} XP por completar a tentativa!`,
     daily_attempts_left_msg: n => `Você ainda tem ${n} tentativa${n > 1 ? 's' : ''} hoje.`,
     daily_attempts_used_msg: 'Você usou suas 3 tentativas de hoje!',
     daily_start_error: 'Não foi possível iniciar. Tente de novo.',
@@ -1773,6 +1775,7 @@ const T = {
     daily_result_title: 'ATTEMPT OVER',
     daily_result_score_label: 'Score this attempt:',
     daily_result_best_label: '🎯 Your best today:',
+    daily_xp_bonus: n => `⭐ +${n} XP for completing the attempt!`,
     daily_attempts_left_msg: n => `You still have ${n} attempt${n > 1 ? 's' : ''} today.`,
     daily_attempts_used_msg: "You've used your 3 attempts today!",
     daily_start_error: 'Could not start. Please try again.',
@@ -1961,6 +1964,7 @@ const T = {
     daily_result_title: 'FIN DEL INTENTO',
     daily_result_score_label: 'Puntuación de este intento:',
     daily_result_best_label: '🎯 Tu mejor de hoy:',
+    daily_xp_bonus: n => `⭐ ¡+${n} XP por completar el intento!`,
     daily_attempts_left_msg: n => `Todavía tienes ${n} intento${n > 1 ? 's' : ''} hoy.`,
     daily_attempts_used_msg: '¡Usaste tus 3 intentos de hoy!',
     daily_start_error: 'No fue posible iniciar. Inténtalo de nuevo.',
@@ -4458,12 +4462,20 @@ async function dailyGameOver(reason) {
   $('daily-result-score').textContent = dailyScore;
   $('daily-play').style.display = 'none';
   $('daily-result').style.display = 'flex';
+  $('daily-result-xp').style.display = 'none';
   resetScroll('daily-screen');
 
   let bestScore = Math.max(dailyScore, dailyBestScore);
+  const lvBefore = levelFromXp(myXp());
   try {
     const res = await callSubmitDailyResult({ sessionId: dailySessionId, score: dailyScore });
     if (res.data && typeof res.data.bestScore === 'number') bestScore = res.data.bestScore;
+    if (res.data && typeof res.data.xpEarned === 'number' && res.data.xpEarned > 0) {
+      myData.xp = (myData.xp || 0) + res.data.xpEarned;
+      $('daily-result-xp').textContent = T[lang].daily_xp_bonus(res.data.xpEarned);
+      $('daily-result-xp').style.display = '';
+      if (levelFromXp(myXp()) > lvBefore) sfx.levelUp();
+    }
   } catch (e) {
     // não foi possível confirmar com o servidor — o placar oficial (ranking)
     // só considera o que o servidor validou; a tela ainda mostra o resultado local
