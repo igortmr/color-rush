@@ -347,6 +347,7 @@
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(255,233,60,0.6);
   }
+  .daily-badge-time { font-size: 1.3em; } /* só os números um pouco maiores que o "Termina em:" */
 
   /* pigmentos — moeda do desafio diário: uma gota com um gradiente das cores
      do jogo, lembrando "pigmento" se misturando */
@@ -1028,9 +1029,9 @@
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
-    <span class="daily-badge-today" id="daily-card-countdown">Termina em: --:--:--</span>
+    <span class="daily-badge-today" id="daily-card-countdown">Termina em: <span class="daily-badge-time">--:--:--</span></span>
     <h2>🗓️ Desafio Diário</h2>
-    <p>O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação no modo Clássico — vale a sua melhor. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>.</p>
+    <p>O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação no modo Clássico — vale a sua melhor. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.</p>
     <div class="mode-card-footer">
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
@@ -1219,8 +1220,8 @@
   </div>
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
-      <colgroup><col style="width:32px;"><col><col style="width:64px;"><col style="width:96px;"></colgroup>
-      <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">🏆 1ºs</th><th style="text-align:right;">💧 Pigmentos</th></tr></thead>
+      <colgroup><col style="width:32px;"><col><col style="width:80px;"><col style="width:118px;"></colgroup>
+      <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">Vitórias</th><th style="text-align:right;">💧 Pigmentos</th></tr></thead>
       <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -3813,9 +3814,14 @@ async function loadDailyTodayRanking() {
     const rows = [];
     snap.forEach(d => {
       const data = d.data();
-      if ((data.attempts || 0) > 0 && data.nick) {
-        rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, stats: statsByUid[data.uid] || {} });
-      }
+      if ((data.attempts || 0) <= 0 || !data.nick) return;
+      const isMe = currentUser && data.uid === currentUser.uid;
+      // só entra quem a gente confirma que não é admin: veio do fetchAllScores
+      // (que já exclui admin) ou, se for a própria pessoa logada, checamos
+      // myData.admin direto — assim nenhum admin aparece nesse ranking
+      const stats = statsByUid[data.uid] || (isMe ? myData : null);
+      if (!stats || stats.admin === true) return;
+      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, stats });
     });
     rows.sort((a, b) => b.pts - a.pts);
     dailyTodayRows = rows;
@@ -3943,7 +3949,8 @@ function startDailyCardTicker() {
 }
 function renderDailyCardCountdown() {
   const el = $('daily-card-countdown');
-  if (!el) return;
+  const timeEl = el && el.querySelector('.daily-badge-time');
+  if (!el || !timeEl) return;
   const closesAtMs = dailyNextMidnightSaoPauloMs();
   let msLeft = closesAtMs - Date.now();
   if (msLeft <= 0) {
@@ -3954,7 +3961,7 @@ function renderDailyCardCountdown() {
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  el.textContent = `Termina em: ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  timeEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 startDailyCardTicker();
 
