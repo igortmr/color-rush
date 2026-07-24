@@ -108,15 +108,16 @@
     overflow-x: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    /* o body centraliza a tela ativa verticalmente por padrão, mas isso faz o
+       cabeçalho (título, abas, botões) flutuar pro meio quando o conteúdo tem
+       poucas linhas (ex.: ranking ou amigos com só 1-2 itens). Fixando toda
+       tela no topo, só o conteúdo de baixo cresce/encolhe — padrão consistente
+       em todas as telas. */
+    align-self: flex-start;
+    margin-top: 24px;
   }
   .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
-
-  /* o body centraliza a tela ativa verticalmente — bom pros modos de jogo,
-     mas no ranking isso faz o cabeçalho (título, combobox, abas) flutuar
-     pro meio quando a lista tem poucas linhas (ex.: aba "amigos" com só
-     1-2 amigos). Fixando essa tela no topo, só a tabela cresce/encolhe. */
-  #ranking-screen { align-self: flex-start; margin-top: 24px; }
 
   h1 {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
@@ -200,54 +201,6 @@
   button.link:hover { box-shadow: none; }
   .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
 
-  /* toggle de som (mute) */
-  button.icon-toggle {
-    display: inline-flex;
-    align-items: center;
-    background: none;
-    border: none;
-    box-shadow: none;
-    padding: 4px 2px;
-    cursor: pointer;
-    vertical-align: middle;
-    line-height: 1;
-  }
-  button.icon-toggle:hover { box-shadow: none; transform: none; }
-  .tgl-track {
-    position: relative;
-    display: inline-block;
-    width: 38px;
-    height: 20px;
-    border-radius: 20px;
-    background: #131834;
-    border: 1px solid rgba(255,255,255,0.18);
-    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-  }
-  .tgl-knob {
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #6b76a8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    line-height: 1;
-    transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
-  }
-  button.icon-toggle.on .tgl-track {
-    background: rgba(33,230,161,0.14);
-    border-color: var(--neon-green);
-    box-shadow: 0 0 10px rgba(33,230,161,0.4);
-  }
-  button.icon-toggle.on .tgl-knob {
-    transform: translateX(20px);
-    background: var(--neon-green);
-    box-shadow: 0 0 8px rgba(33,230,161,0.9);
-  }
 
   /* botão de sair */
   button.pill-btn {
@@ -267,6 +220,87 @@
     box-shadow: 0 0 14px rgba(255,45,107,0.5);
     border-color: var(--neon-red);
     transform: none;
+  }
+
+  /* menu suspenso (amigos / ranking / som / sair) */
+  .menu-dd-wrap { position: relative; }
+  .menu-dd-trigger {
+    position: relative;
+    background: #0a0e1e;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #cfd8ff;
+    font-size: 1.05rem;
+    line-height: 1;
+    padding: 7px 11px;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: none;
+  }
+  .menu-dd-trigger:hover { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(45,214,255,0.35); transform: none; }
+  .dd-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--neon-red);
+    box-shadow: 0 0 8px rgba(255,45,107,0.8);
+  }
+  .menu-dropdown {
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 190px;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 500;
+  }
+  .menu-dropdown.open { display: flex; }
+  .dd-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    box-shadow: none;
+    color: #cfd8ff;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.3px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .dd-item:hover { background: rgba(255,255,255,0.07); box-shadow: none; transform: none; }
+  .dd-item-danger { color: #ff8bab; }
+  .dd-item-danger:hover { background: rgba(255,45,107,0.12); }
+  .dd-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 6px; }
+  .dd-badge-inline {
+    position: static;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 10px;
+    background: var(--neon-red);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0 5px;
+    font-family: 'Orbitron', sans-serif;
+    box-shadow: none;
   }
 
   .mode-card {
@@ -936,12 +970,26 @@
   <h1>COLOR RUSH</h1>
   <div class="user-bar">
     <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
-    <span>
-      <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som">
-        <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">🔊</span></span></span>
+    <div class="menu-dd-wrap" id="menu-dd-wrap">
+      <button class="menu-dd-trigger" id="menu-dd-trigger" onclick="toggleMenuDropdown()" aria-label="Menu" title="Menu">
+        ☰
+        <span class="dd-badge" id="menu-dd-badge" style="display:none;"></span>
       </button>
-      <button class="pill-btn" id="logout-btn" onclick="doLogout()">sair</button>
-    </span>
+      <div class="menu-dropdown" id="menu-dropdown">
+        <button class="dd-item" id="menu-dd-friends-item" onclick="closeMenuDropdown(); showFriends();">
+          <span data-i18n="btn_friends">👥 AMIGOS</span>
+          <span class="dd-badge dd-badge-inline" id="menu-dd-friends-badge" style="display:none;"></span>
+        </button>
+        <button class="dd-item" onclick="closeMenuDropdown(); showRanking('geral');">
+          <span data-i18n="btn_ranking">🏆 RANKING</span>
+        </button>
+        <button class="dd-item" onclick="toggleMute()">
+          <span id="menu-dd-sound-label">🔊 Som: Ligado</span>
+        </button>
+        <div class="dd-divider"></div>
+        <button class="dd-item dd-item-danger" id="menu-dd-logout-item" onclick="closeMenuDropdown(); doLogout();">🚪 sair</button>
+      </div>
+    </div>
   </div>
   <div id="pvp-challenge-banner" style="display:none; width:100%;">
     <div class="card" style="text-align:center;">
@@ -990,10 +1038,6 @@
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes-reverse');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-shapes-reverse" style="display:none;"></span>
-  </div>
-  <div class="btn-row" style="width:100%;">
-    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')" data-i18n="btn_ranking">🏆 RANKING</button>
-    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px; position:relative;" id="menu-friends-btn" onclick="showFriends()"><span id="menu-friends-label">👥 AMIGOS</span><span id="menu-friends-badge" style="display:none; position:absolute; top:-6px; right:-6px; background:#ff2d6b; color:#fff; border-radius:10px; font-size:0.65rem; font-weight:800; padding:2px 6px; font-family:'Orbitron',sans-serif;"></span></button>
   </div>
   <p class="muted" data-i18n="footer_note">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
@@ -1102,7 +1146,7 @@
     <div class="big-nick" id="profile-nick"></div>
     <div class="muted" id="profile-summary"></div>
   </div>
-  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">➕ ADICIONAR</button>
+  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
   <div id="profile-friend-action" style="display:none;"></div>
   <div class="muted" id="profile-friend-status"></div>
@@ -1276,7 +1320,7 @@ const T = {
     mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
-    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR',
+    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR', btn_invite_profile: '➕ ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
     your_score: 'Sua pontuação:', record_mode_label: '🏆 Seu recorde neste modo:',
@@ -1328,6 +1372,7 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
     btn_friends: '👥 AMIGOS',
+    menu_sound_label: (on) => on ? '🔊 Som: Ligado' : '🔇 Som: Desligado',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Pedidos recebidos',
     friends_outgoing_title: 'Pedidos enviados',
@@ -1430,7 +1475,7 @@ const T = {
     mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
-    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD',
+    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD', btn_invite_profile: '➕ ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
     your_score: 'Your score:', record_mode_label: '🏆 Your record in this mode:',
@@ -1482,6 +1527,7 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
     btn_friends: '👥 FRIENDS',
+    menu_sound_label: (on) => on ? '🔊 Sound: On' : '🔇 Sound: Off',
     friends_title: '👥 FRIENDS',
     friends_incoming_title: 'Incoming requests',
     friends_outgoing_title: 'Sent requests',
@@ -1584,7 +1630,7 @@ const T = {
     mode_shapes_desc: 'Haz clic en la <b>forma pedida</b> y memoriza la <b>palabra</b> escrita en ella. En la siguiente ronda, haz clic en la forma cuyo nombre memorizaste.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Haz clic en la <b>palabra pedida</b> y memoriza la <b>forma que la rodea</b>. En la siguiente ronda, haz clic en el nombre de la forma memorizada.',
-    record_label: '🏆 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR',
+    record_label: '🏆 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR', btn_invite_profile: '➕ AGREGAR AMIGOS',
     footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
     hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
     your_score: 'Tu puntuación:', record_mode_label: '🏆 Tu récord en este modo:',
@@ -1636,6 +1682,7 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Esta persona aún no ha desbloqueado ninguna medalla.',
     btn_friends: '👥 AMIGOS',
+    menu_sound_label: (on) => on ? '🔊 Sonido: Activado' : '🔇 Sonido: Desactivado',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Solicitudes recibidas',
     friends_outgoing_title: 'Solicitudes enviadas',
@@ -2081,9 +2128,20 @@ const sfx = {
 window.toggleMute = () => {
   muted = !muted;
   try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
-  $('mute-btn').classList.toggle('on', !muted);
-  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
+  $('menu-dd-sound-label').textContent = T[lang].menu_sound_label(!muted);
 };
+
+/* menu suspenso da tela principal (amigos / ranking / som / sair) */
+window.toggleMenuDropdown = () => {
+  $('menu-dropdown').classList.toggle('open');
+};
+window.closeMenuDropdown = () => {
+  $('menu-dropdown').classList.remove('open');
+};
+document.addEventListener('click', (e) => {
+  const wrap = $('menu-dd-wrap');
+  if (wrap && !wrap.contains(e.target)) closeMenuDropdown();
+});
 
 /* ================== compartilhar ================== */
 // monta o link de compartilhamento — ?ref= só existe pra quem tem conta (conta pro
@@ -2346,12 +2404,12 @@ window.saveNick = async () => {
 
 /* ================== menu ================== */
 window.showMenu = () => {
+  closeMenuDropdown();
   $('record-classic').textContent = myRecord('classic');
   $('record-reverse').textContent = myRecord('reverse');
   $('record-shapes').textContent = myRecord('shapes');
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
-  $('mute-btn').classList.toggle('on', !muted);
-  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
+  $('menu-dd-sound-label').textContent = T[lang].menu_sound_label(!muted);
 
   // nível e barra de XP (só aparece pra quem tem conta)
   $('menu-xp-wrap').style.display = offline ? 'none' : '';
@@ -2365,15 +2423,17 @@ window.showMenu = () => {
   // Texto setado aqui (não via data-i18n) porque o botão tem a bolinha de
   // notificação como filho, e data-i18n troca o textContent inteiro do
   // elemento — apagaria a bolinha a cada troca de idioma.
-  $('menu-friends-btn').style.display = offline ? 'none' : '';
-  $('menu-friends-label').textContent = T[lang].btn_friends;
+  $('menu-dd-friends-item').style.display = offline ? 'none' : '';
   if (!offline && currentUser) {
     fetchMyFriendRequests().then(reqs => {
       const n = Object.keys(reqs.incoming || {}).length;
-      const badge = $('menu-friends-badge');
+      const badge = $('menu-dd-friends-badge');
       badge.textContent = n;
       badge.style.display = n > 0 ? '' : 'none';
+      $('menu-dd-badge').style.display = n > 0 ? '' : 'none';
     }).catch(() => {});
+  } else {
+    $('menu-dd-badge').style.display = 'none';
   }
 
   // bloqueio dos modos por nível
@@ -2386,10 +2446,10 @@ window.showMenu = () => {
   }
   if (offline) {
     $('user-label').textContent = T[lang].offline_label;
-    $('logout-btn').textContent = T[lang].entrar_label;
+    $('menu-dd-logout-item').textContent = '🔑 ' + T[lang].entrar_label;
   } else {
     $('user-label').textContent = T[lang].user_greeting(myData.nick || '');
-    $('logout-btn').textContent = T[lang].sair_label;
+    $('menu-dd-logout-item').textContent = '🚪 ' + T[lang].sair_label;
   }
   show('menu-screen');
 };
