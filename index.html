@@ -1102,8 +1102,8 @@
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <div class="muted" id="friends-invite-status"></div>
   <div class="btn-row" style="width:100%;">
-    <button class="secondary" style="flex:1;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR AMIGOS</button>
-    <button class="secondary" style="flex:1;" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+    <button class="secondary" style="flex:1; padding:4px 8px; font-size:0.7rem;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR AMIGOS</button>
+    <button class="secondary" style="flex:1; padding:4px 8px; font-size:0.7rem;" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
 </div>
 
@@ -2788,26 +2788,26 @@ function friendRequestRow(uid, nick, incoming) {
   row.appendChild(nickSpan);
 
   const actions = document.createElement('span');
-  actions.style.cssText = 'display:flex; gap:8px;';
+  actions.style.cssText = 'display:flex; gap:5px;';
 
   if (incoming) {
     const acceptBtn = document.createElement('button');
     acceptBtn.textContent = T[lang].btn_accept;
-    acceptBtn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+    acceptBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     acceptBtn.onclick = () => uiRespondFriendRequest(uid, true);
     actions.appendChild(acceptBtn);
 
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
     declineBtn.textContent = T[lang].btn_decline;
-    declineBtn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+    declineBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     declineBtn.onclick = () => uiRespondFriendRequest(uid, false);
     actions.appendChild(declineBtn);
   } else {
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'secondary';
     cancelBtn.textContent = T[lang].btn_cancel_request;
-    cancelBtn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+    cancelBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     cancelBtn.onclick = () => uiCancelFriendRequest(uid);
     actions.appendChild(cancelBtn);
   }
