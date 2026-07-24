@@ -997,10 +997,6 @@
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
   <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
-  <div class="scope-tabs">
-    <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">🌍 Geral</button>
-    <button class="scope-tab" id="scope-amigos-btn" onclick="setRankingScope('amigos')" data-i18n="scope_friends">👥 Amigos</button>
-  </div>
   <select class="ranking-select" id="ranking-select" onchange="loadRanking(this.value)">
     <option value="geral" data-i18n="tab_geral">🌍 Geral</option>
     <option value="classic" data-i18n="tab_classic">🎨 Clássico</option>
@@ -1010,6 +1006,10 @@
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
     <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
   </select>
+  <div class="scope-tabs">
+    <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">🌍 Todos</button>
+    <button class="scope-tab" id="scope-amigos-btn" onclick="setRankingScope('amigos')" data-i18n="scope_friends">👥 Amigos</button>
+  </div>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;">
     <table>
@@ -1185,12 +1185,11 @@ const T = {
     ranking_no_players: 'Ninguém pontuou ainda. Seja o primeiro! 🚀',
     ranking_no_players_mini: 'Ninguém no ranking ainda. Seja o primeiro! 🚀',
     ranking_no_friends: 'Nenhum dos seus amigos pontuou neste ranking ainda.',
-    scope_all: '🌍 Geral',
+    scope_all: '🌍 Todos',
     scope_friends: '👥 Amigos',
     ranking_error: 'Erro ao carregar ranking.', ranking_error_mini: 'Não foi possível carregar.',
     pagination_prev: '‹ Anterior', pagination_next: 'Próxima ›',
     pagination_page: (cur, total) => `Página ${cur} de ${total}`,
-    geral_explain: '🌍 Geral = soma dos recordes em todos os modos.',
     profile_offline_msg1: '🔒 Suas conquistas não são salvas jogando sem conta.',
     profile_offline_msg2: 'Crie uma conta para começar a desbloquear badges e acompanhar seu progresso!',
     btn_create_account: 'CRIAR CONTA',
@@ -1204,7 +1203,7 @@ const T = {
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Pedidos recebidos',
     friends_outgoing_title: 'Pedidos enviados',
-    friends_empty: 'Adicione-os pelo ranking, ou compartilhando seu link de convite.',
+    friends_empty: 'Você ainda não tem amigos. Adicione-os pelo ranking, ou compartilhando seu link de convite.',
     btn_add_friend: '➕ Adicionar amigo',
     btn_remove_friend: 'Remover amigo',
     btn_accept: 'Aceitar',
@@ -1310,12 +1309,11 @@ const T = {
     ranking_no_players: 'No one has scored yet. Be the first! 🚀',
     ranking_no_players_mini: 'No one on the leaderboard yet. Be the first! 🚀',
     ranking_no_friends: "None of your friends have scored in this leaderboard yet.",
-    scope_all: '🌍 Overall',
+    scope_all: '🌍 All',
     scope_friends: '👥 Friends',
     ranking_error: 'Error loading leaderboard.', ranking_error_mini: 'Could not load.',
     pagination_prev: '‹ Previous', pagination_next: 'Next ›',
     pagination_page: (cur, total) => `Page ${cur} of ${total}`,
-    geral_explain: '🌍 Overall = sum of your records across all modes.',
     profile_offline_msg1: "🔒 Your achievements aren't saved while playing without an account.",
     profile_offline_msg2: 'Create an account to start unlocking badges and tracking your progress!',
     btn_create_account: 'CREATE ACCOUNT',
@@ -1329,7 +1327,7 @@ const T = {
     friends_title: '👥 FRIENDS',
     friends_incoming_title: 'Incoming requests',
     friends_outgoing_title: 'Sent requests',
-    friends_empty: 'Add them from the leaderboard, or by sharing your invite link.',
+    friends_empty: "You don't have any friends yet. Add them from the leaderboard, or by sharing your invite link.",
     btn_add_friend: '➕ Add friend',
     btn_remove_friend: 'Remove friend',
     btn_accept: 'Accept',
@@ -2861,7 +2859,7 @@ window.loadRanking = async (m) => {
   $('ranking-select').value = m;
   $('scope-geral-btn').classList.toggle('active', rankingScope === 'geral');
   $('scope-amigos-btn').classList.toggle('active', rankingScope === 'amigos');
-  $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
+  $('ranking-explain').textContent = (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
   $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : (m === 'level') ? T[lang].points_header_level : T[lang].points_header;
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
