@@ -1096,9 +1096,9 @@
     <span id="menu-pigmentos-icon"></span> <span id="menu-pigmentos-num">0</span> <span class="muted" style="font-size:0.75rem;">Pigmentos — ver loja</span>
   </button>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
-    <span class="daily-badge-today" id="daily-card-countdown">Termina em: <span class="daily-badge-time">--:--:--</span></span>
-    <h2>🗓️ Desafio Diário</h2>
-    <p id="daily-card-desc">O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.</p>
+    <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
+    <h2 data-i18n="tab_daily">🗓️ Desafio Diário</h2>
+    <p id="daily-card-desc" data-i18n-html="daily_card_desc">O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.</p>
     <div class="mode-card-footer" id="daily-card-footer">
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
@@ -1212,20 +1212,20 @@
 <!-- DESAFIO DIÁRIO -->
 <div class="screen" id="daily-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:1.7rem;">🗓️ DESAFIO DIÁRIO</h1>
-    <button class="pill-btn" onclick="dailyExitScreen()">VOLTAR</button>
+    <h1 style="font-size:1.7rem;" data-i18n="daily_screen_title">🗓️ DESAFIO DIÁRIO</h1>
+    <button class="pill-btn" onclick="dailyExitScreen()" data-i18n="btn_back">VOLTAR</button>
   </div>
 
   <div class="card" id="daily-inbox-card" style="display:none; text-align:left;">
-    <h2 style="font-family:'Orbitron',sans-serif; font-size:0.95rem;">📬 Caixa de Entrada</h2>
+    <h2 style="font-family:'Orbitron',sans-serif; font-size:0.95rem;" data-i18n="daily_inbox_title">📬 Caixa de Entrada</h2>
     <div id="daily-inbox-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-    <button class="secondary" id="daily-claim-all-btn" style="display:none;" onclick="claimAllDailyRewards()">💰 RESGATAR TODAS</button>
+    <button class="secondary" id="daily-claim-all-btn" style="display:none;" onclick="claimAllDailyRewards()" data-i18n="btn_claim_all">💰 RESGATAR TODAS</button>
     <div class="muted" id="daily-inbox-status"></div>
   </div>
 
   <div id="daily-play" style="display:none; width:100%; flex-direction:column; align-items:center; gap:20px;">
     <div class="hud">
-      <span>PONTOS: <span id="daily-score">0</span></span>
+      <span><span data-i18n="hud_points">PONTOS:</span> <span id="daily-score">0</span></span>
       <span id="daily-speed">⏱️ 10.0s</span>
     </div>
     <div class="timer-track"><div class="timer-fill" id="daily-timer-fill"></div></div>
@@ -1235,21 +1235,22 @@
 
   <div id="daily-result" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
     <div class="go-title" id="daily-result-reason">FIM DA TENTATIVA</div>
-    <div>Pontuação desta tentativa:</div>
+    <div data-i18n="daily_result_score_label">Pontuação desta tentativa:</div>
     <div class="final-score" id="daily-result-score">0</div>
-    <div class="record-line">🎯 Sua melhor de hoje: <span id="daily-result-best">0</span></div>
+    <div class="record-line"><span data-i18n="daily_result_best_label">🎯 Sua melhor de hoje:</span> <span id="daily-result-best">0</span></div>
+    <div class="record-line" id="daily-result-xp" style="display:none; color:var(--neon-green);"></div>
     <div class="muted" id="daily-result-attempts"></div>
     <div class="btn-row">
-      <button id="daily-result-again-btn" onclick="startDailyChallenge()">JOGAR DE NOVO</button>
-      <button class="secondary" onclick="showRanking('daily')">🏆 VER RANKING</button>
+      <button id="daily-result-again-btn" onclick="startDailyChallenge()" data-i18n="btn_play_again">JOGAR DE NOVO</button>
+      <button class="secondary" onclick="showRanking('daily')" data-i18n="btn_view_ranking_short">🏆 VER RANKING</button>
     </div>
   </div>
 
   <div id="daily-blocked" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
     <div class="card" style="text-align:center;">
-      <p class="muted" id="daily-blocked-msg">✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!</p>
+      <p class="muted" id="daily-blocked-msg" data-i18n="daily_blocked_msg">✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!</p>
     </div>
-    <button class="secondary" style="width:100%;" onclick="showRanking('daily')">🏆 VER RANKING DO DESAFIO</button>
+    <button class="secondary" style="width:100%;" onclick="showRanking('daily')" data-i18n="btn_view_daily_ranking">🏆 VER RANKING DO DESAFIO</button>
   </div>
 </div>
 
@@ -1282,15 +1283,15 @@
     <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
     <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
-    <option value="daily">🗓️ Desafio Diário</option>
+    <option value="daily" data-i18n="tab_daily">🗓️ Desafio Diário</option>
   </select>
   <div class="scope-tabs" id="scope-tabs-row">
     <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">Todos</button>
     <button class="scope-tab" id="scope-amigos-btn" onclick="setRankingScope('amigos')" data-i18n="scope_friends">👥 Amigos</button>
   </div>
   <div class="scope-tabs" id="daily-subtabs" style="display:none;">
-    <button class="scope-tab active" id="daily-subtab-today-btn" onclick="setDailyRankSubtab('today')">📅 Hoje</button>
-    <button class="scope-tab" id="daily-subtab-alltime-btn" onclick="setDailyRankSubtab('alltime')">🏆 Recorde Geral</button>
+    <button class="scope-tab active" id="daily-subtab-today-btn" onclick="setDailyRankSubtab('today')" data-i18n="daily_subtab_today">📅 Hoje</button>
+    <button class="scope-tab" id="daily-subtab-alltime-btn" onclick="setDailyRankSubtab('alltime')" data-i18n="daily_subtab_alltime">🏆 Recorde Geral</button>
   </div>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;" id="ranking-table-card">
@@ -1303,8 +1304,8 @@
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
       <colgroup><col style="width:32px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
-      <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">Vitórias</th><th style="text-align:right;">💧 Pigmentos</th></tr></thead>
-      <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted">Carregando...</td></tr></tbody>
+      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
+      <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
   <div class="pagination" id="ranking-pagination"></div>
@@ -1603,6 +1604,41 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
+    tab_daily: '🗓️ Desafio Diário',
+    daily_card_desc: 'O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.',
+    daily_ends_in: 'Termina em: ',
+    daily_starts_in: 'Inicia em: ',
+    daily_card_best: n => `🎯 Melhor: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Tentativas restantes: ${left}/${max}`,
+    daily_card_already_played: '✅ Já jogou hoje',
+    daily_inbox_badge: n => `📬 ${n} prêmio${n > 1 ? 's' : ''}`,
+    daily_screen_title: '🗓️ DESAFIO DIÁRIO',
+    daily_inbox_title: '📬 Caixa de Entrada',
+    btn_claim_all: '💰 RESGATAR TODAS',
+    btn_claim: '💰 RESGATAR',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 Parabéns! Você ficou em ${pos} no desafio de ${dateStr} com ${score} pontos.`,
+    daily_pos_1: '🥇 1º lugar',
+    daily_pos_2: '🥈 2º lugar',
+    daily_pos_3: '🥉 3º lugar',
+    daily_pos_n: n => `${n}º lugar`,
+    daily_claim_error: 'Não foi possível resgatar agora.',
+    daily_blocked_msg: '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!',
+    btn_view_daily_ranking: '🏆 VER RANKING DO DESAFIO',
+    btn_view_ranking_short: '🏆 VER RANKING',
+    daily_result_title: 'FIM DA TENTATIVA',
+    daily_result_score_label: 'Pontuação desta tentativa:',
+    daily_result_best_label: '🎯 Sua melhor de hoje:',
+    daily_xp_bonus: n => `⭐ +${n} XP por completar a tentativa!`,
+    daily_attempts_left_msg: n => `Você ainda tem ${n} tentativa${n > 1 ? 's' : ''} hoje.`,
+    daily_attempts_used_msg: 'Você usou suas 3 tentativas de hoje!',
+    daily_start_error: 'Não foi possível iniciar. Tente de novo.',
+    daily_subtab_today: '📅 Hoje',
+    daily_subtab_alltime: '🏆 Recorde Geral',
+    daily_col_wins: 'Vitórias',
+    daily_col_pigmentos: '💧 Pigmentos',
+    daily_rank_explain: 'Ranking do desafio de hoje — sua melhor pontuação entre as até 3 tentativas.',
+    daily_no_today_players: 'Ninguém jogou o desafio de hoje ainda.',
+    daily_no_wins_yet: 'Ninguém venceu um desafio diário ainda.',
     points_header_divulgador: 'Convites',
     points_header_level: 'XP',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
@@ -1757,6 +1793,41 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
     divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
+    tab_daily: '🗓️ Daily Challenge',
+    daily_card_desc: 'The same challenge for everyone, every day! You get <b>3 attempts</b> to get the highest score. Top scorers earn <span class="pigment-word">💧 Pigments</span>, which will be usable in the game shop, coming soon.',
+    daily_ends_in: 'Ends in: ',
+    daily_starts_in: 'Starts in: ',
+    daily_card_best: n => `🎯 Best: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Attempts left: ${left}/${max}`,
+    daily_card_already_played: '✅ Already played today',
+    daily_inbox_badge: n => `📬 ${n} prize${n > 1 ? 's' : ''}`,
+    daily_screen_title: '🗓️ DAILY CHALLENGE',
+    daily_inbox_title: '📬 Inbox',
+    btn_claim_all: '💰 CLAIM ALL',
+    btn_claim: '💰 CLAIM',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 Congrats! You placed ${pos} in the ${dateStr} challenge with ${score} points.`,
+    daily_pos_1: '🥇 1st place',
+    daily_pos_2: '🥈 2nd place',
+    daily_pos_3: '🥉 3rd place',
+    daily_pos_n: n => `#${n} place`,
+    daily_claim_error: 'Could not claim right now.',
+    daily_blocked_msg: "✅ You've already used your 3 attempts today. Come back tomorrow!",
+    btn_view_daily_ranking: '🏆 VIEW CHALLENGE RANKING',
+    btn_view_ranking_short: '🏆 VIEW RANKING',
+    daily_result_title: 'ATTEMPT OVER',
+    daily_result_score_label: 'Score this attempt:',
+    daily_result_best_label: '🎯 Your best today:',
+    daily_xp_bonus: n => `⭐ +${n} XP for completing the attempt!`,
+    daily_attempts_left_msg: n => `You still have ${n} attempt${n > 1 ? 's' : ''} today.`,
+    daily_attempts_used_msg: "You've used your 3 attempts today!",
+    daily_start_error: 'Could not start. Please try again.',
+    daily_subtab_today: '📅 Today',
+    daily_subtab_alltime: '🏆 All-Time Record',
+    daily_col_wins: 'Wins',
+    daily_col_pigmentos: '💧 Pigments',
+    daily_rank_explain: "Today's challenge ranking — your best score across up to 3 attempts.",
+    daily_no_today_players: "No one has played today's challenge yet.",
+    daily_no_wins_yet: 'No one has won a daily challenge yet.',
     points_header_divulgador: 'Invites',
     points_header_level: 'XP',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
@@ -1911,6 +1982,41 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiencia (XP) acumulada.',
     divulgador_explain: '📣 Quién invitó a más amigos mediante tu enlace de invitación.',
+    tab_daily: '🗓️ Desafío Diario',
+    daily_card_desc: '¡El mismo desafío para todos, todos los días! Tienes <b>3 intentos</b> para conseguir la mayor puntuación. Los mejores clasificados ganan <span class="pigment-word">💧 Pigmentos</span>, que podrán usarse en la tienda del juego, próximamente.',
+    daily_ends_in: 'Termina en: ',
+    daily_starts_in: 'Inicia en: ',
+    daily_card_best: n => `🎯 Mejor: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Intentos restantes: ${left}/${max}`,
+    daily_card_already_played: '✅ Ya jugaste hoy',
+    daily_inbox_badge: n => `📬 ${n} premio${n > 1 ? 's' : ''}`,
+    daily_screen_title: '🗓️ DESAFÍO DIARIO',
+    daily_inbox_title: '📬 Bandeja de Entrada',
+    btn_claim_all: '💰 RECLAMAR TODO',
+    btn_claim: '💰 RECLAMAR',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 ¡Felicidades! Quedaste en ${pos} en el desafío del ${dateStr} con ${score} puntos.`,
+    daily_pos_1: '🥇 1er lugar',
+    daily_pos_2: '🥈 2do lugar',
+    daily_pos_3: '🥉 3er lugar',
+    daily_pos_n: n => `${n}º lugar`,
+    daily_claim_error: 'No fue posible reclamar ahora.',
+    daily_blocked_msg: '✅ Ya usaste tus 3 intentos de hoy. ¡Vuelve mañana!',
+    btn_view_daily_ranking: '🏆 VER RANKING DEL DESAFÍO',
+    btn_view_ranking_short: '🏆 VER RANKING',
+    daily_result_title: 'FIN DEL INTENTO',
+    daily_result_score_label: 'Puntuación de este intento:',
+    daily_result_best_label: '🎯 Tu mejor de hoy:',
+    daily_xp_bonus: n => `⭐ ¡+${n} XP por completar el intento!`,
+    daily_attempts_left_msg: n => `Todavía tienes ${n} intento${n > 1 ? 's' : ''} hoy.`,
+    daily_attempts_used_msg: '¡Usaste tus 3 intentos de hoy!',
+    daily_start_error: 'No fue posible iniciar. Inténtalo de nuevo.',
+    daily_subtab_today: '📅 Hoy',
+    daily_subtab_alltime: '🏆 Récord General',
+    daily_col_wins: 'Victorias',
+    daily_col_pigmentos: '💧 Pigmentos',
+    daily_rank_explain: 'Ranking del desafío de hoy — tu mejor puntuación entre los hasta 3 intentos.',
+    daily_no_today_players: 'Nadie ha jugado el desafío de hoy todavía.',
+    daily_no_wins_yet: 'Nadie ha ganado un desafío diario todavía.',
     points_header_divulgador: 'Invitaciones',
     points_header_level: 'XP',
     unlock_at: n => `🔒 Se desbloquea en el nivel ${n}`,
@@ -3892,7 +3998,7 @@ window.loadRanking = async (m) => {
   $('scope-tabs-row').style.display = (m === 'daily') ? 'none' : '';
   if (m === 'daily') {
     $('ranking-pagination').innerHTML = '';
-    $('ranking-explain').textContent = 'Ranking do desafio de hoje — sua melhor pontuação entre as até 3 tentativas.';
+    $('ranking-explain').textContent = T[lang].daily_rank_explain;
     dailyRankSubtab = 'today';
     $('daily-subtab-today-btn').classList.add('active');
     $('daily-subtab-alltime-btn').classList.remove('active');
@@ -4056,7 +4162,7 @@ function renderDailyTodayPage() {
     nickCell.appendChild(nickSpan);
     body.appendChild(tr);
   });
-  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">Ninguém jogou o desafio de hoje ainda.</td></tr>`;
+  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
@@ -4113,7 +4219,7 @@ function renderDailyAlltimePage() {
     nickCell.appendChild(nickSpan);
     body.appendChild(tr);
   });
-  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">Ninguém venceu um desafio diário ainda.</td></tr>`;
+  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].daily_no_wins_yet}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
@@ -4155,8 +4261,9 @@ function startDailyCardTicker() {
 }
 function renderDailyCardCountdown() {
   const el = $('daily-card-countdown');
+  const labelEl = $('daily-card-countdown-label');
   const timeEl = el && el.querySelector('.daily-badge-time');
-  if (!el || !timeEl) return;
+  if (!el || !timeEl || !labelEl) return;
   const live = isDailyChallengeLive();
   const targetMs = live ? dailyNextMidnightSaoPauloMs() : dailyLaunchAtMs();
   let msLeft = targetMs - Date.now();
@@ -4165,7 +4272,7 @@ function renderDailyCardCountdown() {
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  el.firstChild.textContent = live ? 'Termina em: ' : 'Inicia em: ';
+  labelEl.textContent = live ? T[lang].daily_ends_in : T[lang].daily_starts_in;
   timeEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   // virou o dia (fechou o desafio de hoje, ou estreou o desafio) — atualiza o
   // resto do card sozinho, se o menu estiver aberto
@@ -4181,7 +4288,7 @@ window.dailyCardClick = () => {
   if (!isDailyChallengeLive()) return;
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
-    $('daily-blocked-msg').textContent = '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!';
+    $('daily-blocked-msg').textContent = T[lang].daily_blocked_msg;
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
@@ -4216,13 +4323,13 @@ function renderDailyInboxList(msgs) {
   list.innerHTML = '';
   msgs.forEach(msg => {
     const pos = msg.position;
-    const posLabel = pos === 1 ? '🥇 1º lugar' : pos === 2 ? '🥈 2º lugar' : pos === 3 ? '🥉 3º lugar' : `${pos}º lugar`;
+    const posLabel = pos === 1 ? T[lang].daily_pos_1 : pos === 2 ? T[lang].daily_pos_2 : pos === 3 ? T[lang].daily_pos_3 : T[lang].daily_pos_n(pos);
     const box = document.createElement('div');
     box.className = 'daily-inbox-msg';
 
     const posLine = document.createElement('div');
     posLine.className = 'pos-line';
-    posLine.textContent = `🎉 Parabéns! Você ficou em ${posLabel} no desafio de ${msg.dateStr} com ${msg.score} pontos.`;
+    posLine.textContent = T[lang].daily_inbox_congrats(posLabel, msg.dateStr, msg.score);
     box.appendChild(posLine);
 
     const claimRow = document.createElement('div');
@@ -4237,7 +4344,7 @@ function renderDailyInboxList(msgs) {
 
     const claimBtn = document.createElement('button');
     claimBtn.className = 'secondary';
-    claimBtn.textContent = '💰 RESGATAR';
+    claimBtn.textContent = T[lang].btn_claim;
     claimBtn.onclick = () => claimOneDailyReward(msg.dateStr);
     claimRow.appendChild(claimBtn);
 
@@ -4255,7 +4362,7 @@ window.claimOneDailyReward = async (dateStr) => {
     updateDailyMenuCard();
     renderMenuPigmentosBar();
   } catch (e) {
-    $('daily-inbox-status').textContent = e.message || 'Não foi possível resgatar agora.';
+    $('daily-inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
 };
 window.claimAllDailyRewards = async () => {
@@ -4267,7 +4374,7 @@ window.claimAllDailyRewards = async () => {
     updateDailyMenuCard();
     renderMenuPigmentosBar();
   } catch (e) {
-    $('daily-inbox-status').textContent = e.message || 'Não foi possível resgatar agora.';
+    $('daily-inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
 };
 
@@ -4301,14 +4408,14 @@ async function updateDailyMenuCard() {
     dailyAttemptsUsed = 0;
     dailyBestScore = 0;
   }
-  $('daily-card-best').textContent = `🎯 Melhor: ${dailyBestScore}`;
+  $('daily-card-best').textContent = T[lang].daily_card_best(dailyBestScore);
   $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
-    ? '✅ Já jogou hoje'
-    : `🎟️ Tentativas restantes: ${DAILY_MAX_ATTEMPTS - dailyAttemptsUsed}/${DAILY_MAX_ATTEMPTS}`;
+    ? T[lang].daily_card_already_played
+    : T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
   try {
     const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
     const badge = $('daily-card-inbox-badge');
-    if (snap.size > 0) { badge.textContent = `📬 ${snap.size} prêmio${snap.size > 1 ? 's' : ''}`; badge.style.display = ''; }
+    if (snap.size > 0) { badge.textContent = T[lang].daily_inbox_badge(snap.size); badge.style.display = ''; }
     else { badge.style.display = 'none'; }
   } catch {}
 }
@@ -4345,7 +4452,7 @@ window.startDailyChallenge = async () => {
     // sem tentativas hoje (ou outro erro) — não tem uma tela de lobby pra
     // mostrar a mensagem, então manda pra tela de "sem tentativas", que já
     // tem o link pro ranking do desafio
-    $('daily-blocked-msg').textContent = e.message || 'Não foi possível iniciar. Tente de novo.';
+    $('daily-blocked-msg').textContent = e.message || T[lang].daily_start_error;
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
@@ -4421,12 +4528,20 @@ async function dailyGameOver(reason) {
   $('daily-result-score').textContent = dailyScore;
   $('daily-play').style.display = 'none';
   $('daily-result').style.display = 'flex';
+  $('daily-result-xp').style.display = 'none';
   resetScroll('daily-screen');
 
   let bestScore = Math.max(dailyScore, dailyBestScore);
+  const lvBefore = levelFromXp(myXp());
   try {
     const res = await callSubmitDailyResult({ sessionId: dailySessionId, score: dailyScore });
     if (res.data && typeof res.data.bestScore === 'number') bestScore = res.data.bestScore;
+    if (res.data && typeof res.data.xpEarned === 'number' && res.data.xpEarned > 0) {
+      myData.xp = (myData.xp || 0) + res.data.xpEarned;
+      $('daily-result-xp').textContent = T[lang].daily_xp_bonus(res.data.xpEarned);
+      $('daily-result-xp').style.display = '';
+      if (levelFromXp(myXp()) > lvBefore) sfx.levelUp();
+    }
   } catch (e) {
     // não foi possível confirmar com o servidor — o placar oficial (ranking)
     // só considera o que o servidor validou; a tela ainda mostra o resultado local
@@ -4437,8 +4552,8 @@ async function dailyGameOver(reason) {
 
   const left = Math.max(0, DAILY_MAX_ATTEMPTS - dailyAttemptsUsed);
   $('daily-result-attempts').textContent = left > 0
-    ? `Você ainda tem ${left} tentativa${left > 1 ? 's' : ''} hoje.`
-    : 'Você usou suas 3 tentativas de hoje!';
+    ? T[lang].daily_attempts_left_msg(left)
+    : T[lang].daily_attempts_used_msg;
   $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
 
   loadDailyInbox(); // aproveita que a pessoa já está olhando a tela pra mostrar prêmios pendentes
