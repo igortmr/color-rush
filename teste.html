@@ -325,7 +325,7 @@
   }
 
   /* desafio diário — mesmo cartão de modo, com um contorno dourado pra se
-     destacar como um evento (e um selo "HOJE" no canto) */
+     destacar como um evento (e o cronômetro no canto, no lugar de um selo fixo) */
   .mode-card.daily-card {
     border-color: rgba(255,233,60,0.5);
     background: linear-gradient(180deg, rgba(255,233,60,0.06), var(--bg-panel));
@@ -335,6 +335,7 @@
     position: absolute;
     top: 14px;
     right: 16px;
+    font-variant-numeric: tabular-nums;
     background: var(--neon-yellow);
     color: #0a0e1e;
     font-family: 'Orbitron', sans-serif;
@@ -351,16 +352,6 @@
   .pigment-icon { display: inline-block; vertical-align: -4px; }
   .pigment-word { color: var(--neon-yellow); font-weight: 700; }
 
-  /* cronômetro do desafio diário */
-  .daily-countdown-label { color: #8fa0d6; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
-  .daily-countdown-time {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 2.1rem;
-    font-weight: 900;
-    color: var(--neon-yellow);
-    text-shadow: 0 0 10px rgba(255,233,60,0.6), 0 0 26px rgba(255,233,60,0.3);
-  }
-  .daily-stat-row { display: flex; justify-content: space-between; width: 100%; font-size: 0.95rem; }
   .daily-inbox-msg { background: #0a0e1e; border: 1px solid rgba(255,233,60,0.3); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
   .daily-inbox-msg .pos-line { font-weight: 700; color: #fff; }
   .user-bar {
@@ -1035,12 +1026,14 @@
     <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/100</span></div>
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
-  <div class="mode-card daily-card" id="card-daily" onclick="showDailyChallenge()" style="display:none;">
-    <span class="daily-badge-today">HOJE</span>
+  <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
+    <span class="daily-badge-today" id="daily-card-countdown">--:--:--</span>
     <h2>🗓️ Desafio Diário</h2>
-    <p>O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação no modo Clássico — vale a sua melhor. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, a moeda do jogo.</p>
+    <p>O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação no modo Clássico — vale a sua melhor. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>.</p>
     <div class="mode-card-footer">
-      <span class="record-badge" id="daily-card-status">🎟️ Carregando...</span>
+      <span class="record-badge" id="daily-card-best">🎯 Melhor: 0</span>
+      <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
+      <span class="record-badge" id="daily-card-inbox-badge" style="display:none;"></span>
     </div>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
@@ -1161,23 +1154,6 @@
     <div class="muted" id="daily-inbox-status"></div>
   </div>
 
-  <div id="daily-lobby">
-    <div class="card" style="text-align:center;">
-      <div class="daily-countdown-label" id="daily-countdown-label">Termina em</div>
-      <div class="daily-countdown-time" id="daily-countdown-time">--:--:--</div>
-    </div>
-    <div class="card" style="text-align:center;">
-      <p class="muted">Todo dia, o mesmo desafio pra todo mundo: as cores aparecem na <b>mesma ordem</b> pra todos os jogadores. Você tem até <b>3 tentativas</b> — vale a sua melhor pontuação. Os melhores colocados no fim do dia ganham <span class="pigment-word">💧 Pigmentos</span>, a moeda do jogo!</p>
-    </div>
-    <div class="card">
-      <div class="daily-stat-row"><span>🎯 Sua melhor pontuação hoje</span> <b id="daily-best-score">0</b></div>
-      <div class="daily-stat-row"><span>🎟️ Tentativas restantes</span> <b><span id="daily-attempts-left">3</span>/3</b></div>
-    </div>
-    <button id="daily-play-btn" onclick="startDailyChallenge()">🎮 JOGAR</button>
-    <button class="secondary" style="width:100%;" onclick="showRanking('daily')">🏆 VER RANKING DO DESAFIO</button>
-    <div class="muted" id="daily-lobby-status"></div>
-  </div>
-
   <div id="daily-play" style="display:none; width:100%; flex-direction:column; align-items:center; gap:20px;">
     <div class="hud">
       <span>PONTOS: <span id="daily-score">0</span></span>
@@ -1195,8 +1171,16 @@
     <div class="record-line">🎯 Sua melhor de hoje: <span id="daily-result-best">0</span></div>
     <div class="muted" id="daily-result-attempts"></div>
     <div class="btn-row">
-      <button onclick="dailyBackToLobby()">VOLTAR AO DESAFIO</button>
+      <button id="daily-result-again-btn" onclick="startDailyChallenge()">JOGAR DE NOVO</button>
+      <button class="secondary" onclick="showRanking('daily')">🏆 VER RANKING</button>
     </div>
+  </div>
+
+  <div id="daily-blocked" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
+    <div class="card" style="text-align:center;">
+      <p class="muted" id="daily-blocked-msg">✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!</p>
+    </div>
+    <button class="secondary" style="width:100%;" onclick="showRanking('daily')">🏆 VER RANKING DO DESAFIO</button>
   </div>
 </div>
 
@@ -2205,7 +2189,6 @@ let dailyDateStrCache = null;   // dia (AAAA-MM-DD) da tentativa em andamento
 let dailyClosesAtMs = null;     // quando o desafio de hoje fecha (mesmo instante em que o de amanhã abre)
 let dailyAttemptsUsed = 0;
 let dailyBestScore = 0;
-let dailyCountdownInterval = null;
 let dailyRankSubtab = 'today'; // 'today' | 'alltime'
 let dailyTodayRows = [], dailyTodayPage = 0;
 let dailyAlltimeRows = [], dailyAlltimePage = 0;
@@ -3947,62 +3930,49 @@ window.setDailyRankSubtab = (tab) => {
    seededShuffle, semeado pela data do dia — ver hashSeed/mulberry32 lá em
    cima), então todo mundo joga exatamente a mesma sequência no mesmo dia. */
 
-window.showDailyChallenge = () => {
-  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
-  track('daily_open');
-  $('daily-lobby').style.display = '';
-  $('daily-play').style.display = 'none';
-  $('daily-result').style.display = 'none';
-  $('daily-lobby-status').textContent = '';
-  show('daily-screen');
-  refreshDailyStatus();
-  loadDailyInbox();
-};
-
-async function refreshDailyStatus() {
-  dailyClosesAtMs = dailyNextMidnightSaoPauloMs();
-  startDailyCountdown();
-  try {
-    const dateStr = dailyLocalDateStr();
-    const snap = await getDoc(doc(db, 'dailyScores', `${dateStr}_${currentUser.uid}`));
-    const data = snap.exists() ? snap.data() : {};
-    dailyAttemptsUsed = data.attempts || 0;
-    dailyBestScore = data.bestScore || 0;
-  } catch {
-    dailyAttemptsUsed = 0;
-    dailyBestScore = 0;
+// cronômetro do desafio — mora no CARD do menu (não numa tela separada). Roda
+// pra sempre em segundo plano (mesmo padrão do heartbeat de atividade), só
+// atualiza um texto pequeno a cada segundo — não pesa nada ficar rodando
+// mesmo fora do menu.
+let dailyCardTicker = null;
+function startDailyCardTicker() {
+  if (dailyCardTicker) return;
+  renderDailyCardCountdown();
+  dailyCardTicker = setInterval(renderDailyCardCountdown, 1000);
+}
+function renderDailyCardCountdown() {
+  const el = $('daily-card-countdown');
+  if (!el) return;
+  const closesAtMs = dailyNextMidnightSaoPauloMs();
+  let msLeft = closesAtMs - Date.now();
+  if (msLeft <= 0) {
+    // virou o dia — atualiza tentativas/melhor pontuação sozinho, se o menu estiver aberto
+    msLeft = 0;
+    if ($('menu-screen').classList.contains('active')) updateDailyMenuCard();
   }
-  $('daily-best-score').textContent = dailyBestScore;
-  $('daily-attempts-left').textContent = Math.max(0, DAILY_MAX_ATTEMPTS - dailyAttemptsUsed);
-  const noAttemptsLeft = dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS;
-  $('daily-play-btn').style.display = noAttemptsLeft ? 'none' : '';
-  $('daily-lobby-status').textContent = noAttemptsLeft ? '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!' : '';
-}
-
-function startDailyCountdown() {
-  if (dailyCountdownInterval) clearInterval(dailyCountdownInterval);
-  renderDailyCountdown();
-  dailyCountdownInterval = setInterval(renderDailyCountdown, 1000);
-}
-function renderDailyCountdown() {
-  const label = $('daily-countdown-label');
-  const timeEl = $('daily-countdown-time');
-  if (!label || !timeEl) return;
-  const noAttemptsLeft = dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS;
-  label.textContent = noAttemptsLeft ? 'Próximo desafio em' : 'Termina em';
-  let msLeft = dailyClosesAtMs - Date.now();
-  if (msLeft < 0) msLeft = 0;
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  timeEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  // virou o dia com a tela aberta — zera tentativas e recomeça o cronômetro sozinho
-  if (msLeft <= 0 && dailyCountdownInterval) {
-    clearInterval(dailyCountdownInterval);
-    dailyCountdownInterval = null;
-    if ($('daily-screen').classList.contains('active')) refreshDailyStatus();
-  }
+  el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+startDailyCardTicker();
+
+// clique no card do menu: se ainda sobra tentativa, vai direto pro jogo (sem
+// tela intermediária); se já usou as 3, não tem o que jogar — manda pra caixa
+// de entrada/ranking do desafio, que é a informação útil nesse caso
+window.dailyCardClick = () => {
+  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
+    $('daily-blocked-msg').textContent = '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!';
+    $('daily-play').style.display = 'none';
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'flex';
+    show('daily-screen');
+    loadDailyInbox();
+    return;
+  }
+  startDailyChallenge();
+};
 
 /* -------- caixa de entrada (prêmios do dia anterior) -------- */
 async function loadDailyInbox() {
@@ -4081,36 +4051,38 @@ window.claimAllDailyRewards = async () => {
   }
 };
 
-// bolinha/etiqueta no card do menu — tentativas restantes hoje (chamado pelo showMenu())
+// atualiza o card do menu — melhor pontuação, tentativas restantes e aviso de
+// prêmio pendente na caixa de entrada (chamado pelo showMenu())
 async function updateDailyMenuCard() {
   const card = $('card-daily');
   if (!card) return;
   if (offline || !currentUser || !myData.nick) { card.style.display = 'none'; return; }
   card.style.display = '';
-  const statusEl = $('daily-card-status');
   try {
     const dateStr = dailyLocalDateStr();
     const snap = await getDoc(doc(db, 'dailyScores', `${dateStr}_${currentUser.uid}`));
     const data = snap.exists() ? snap.data() : {};
-    const attempts = data.attempts || 0;
-    statusEl.textContent = (attempts >= DAILY_MAX_ATTEMPTS)
-      ? '✅ Você já jogou hoje'
-      : `🎟️ ${DAILY_MAX_ATTEMPTS - attempts}/${DAILY_MAX_ATTEMPTS} tentativas hoje`;
+    dailyAttemptsUsed = data.attempts || 0;
+    dailyBestScore = data.bestScore || 0;
   } catch {
-    statusEl.textContent = '🎟️ Jogue agora!';
+    dailyAttemptsUsed = 0;
+    dailyBestScore = 0;
   }
+  $('daily-card-best').textContent = `🎯 Melhor: ${dailyBestScore}`;
+  $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
+    ? '✅ Já jogou hoje'
+    : `🎟️ Tentativas restantes: ${DAILY_MAX_ATTEMPTS - dailyAttemptsUsed}/${DAILY_MAX_ATTEMPTS}`;
   try {
     const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
-    const badge = card.querySelector('.daily-badge-today');
-    if (badge) badge.textContent = snap.size > 0 ? `📬 ${snap.size}` : 'HOJE';
+    const badge = $('daily-card-inbox-badge');
+    if (snap.size > 0) { badge.textContent = `📬 ${snap.size} prêmio${snap.size > 1 ? 's' : ''}`; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
   } catch {}
 }
 
 /* -------- jogo do desafio (mesmo modo Clássico, RNG determinística) -------- */
 window.startDailyChallenge = async () => {
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
-  $('daily-play-btn').disabled = true;
-  $('daily-lobby-status').textContent = '';
   try {
     const res = await callStartDailyAttempt();
     const d = res.data || {};
@@ -4128,14 +4100,22 @@ window.startDailyChallenge = async () => {
     dailyPlaying = true;
     dailyTarget = seededPick(dailyRng, COLORS);
     $('daily-score').textContent = 0;
-    $('daily-lobby').style.display = 'none';
+    $('daily-inbox-card').style.display = 'none'; // some durante o jogo, volta a aparecer no resultado
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'none';
     $('daily-play').style.display = 'flex';
-    resetScroll('daily-screen');
+    show('daily-screen');
     dailyNewRound(true);
   } catch (e) {
-    $('daily-lobby-status').textContent = e.message || 'Não foi possível iniciar. Tente de novo.';
-  } finally {
-    $('daily-play-btn').disabled = false;
+    // sem tentativas hoje (ou outro erro) — não tem uma tela de lobby pra
+    // mostrar a mensagem, então manda pra tela de "sem tentativas", que já
+    // tem o link pro ranking do desafio
+    $('daily-blocked-msg').textContent = e.message || 'Não foi possível iniciar. Tente de novo.';
+    $('daily-play').style.display = 'none';
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'flex';
+    show('daily-screen');
+    loadDailyInbox();
   }
 };
 
@@ -4222,19 +4202,14 @@ async function dailyGameOver(reason) {
   $('daily-result-attempts').textContent = left > 0
     ? `Você ainda tem ${left} tentativa${left > 1 ? 's' : ''} hoje.`
     : 'Você usou suas 3 tentativas de hoje!';
-}
+  $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
 
-window.dailyBackToLobby = () => {
-  $('daily-result').style.display = 'none';
-  $('daily-lobby').style.display = '';
-  resetScroll('daily-screen');
-  refreshDailyStatus();
-};
+  loadDailyInbox(); // aproveita que a pessoa já está olhando a tela pra mostrar prêmios pendentes
+}
 
 window.dailyExitScreen = () => {
   dailyPlaying = false;
   cancelAnimationFrame(dailyRafId);
-  if (dailyCountdownInterval) { clearInterval(dailyCountdownInterval); dailyCountdownInterval = null; }
   showMenu();
 };
 
