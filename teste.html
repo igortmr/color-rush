@@ -1101,7 +1101,7 @@
 
   <!-- duelo em andamento -->
   <div id="pvp-active" style="display:none; width:100%; flex-direction:column; gap:4px;">
-    <div class="muted" id="pvp-explain" data-i18n="pvp_explain" style="text-align:center; margin-bottom:4px;"></div>
+    <div class="muted" id="pvp-explain" data-i18n-html="pvp_explain" style="text-align:center; margin-bottom:4px;"></div>
     <div class="pvp-bar-row me"><span id="pvp-my-name"></span><span id="pvp-my-time"></span></div>
     <div class="timer-track"><div class="timer-fill" id="pvp-my-bar"></div></div>
     <div class="pvp-bar-row opp"><span id="pvp-opp-name"></span><span id="pvp-opp-time"></span></div>
@@ -1313,7 +1313,7 @@ const T = {
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicou no quadrado errado.` : 'Você clicou no quadrado errado.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} desistiu do duelo.` : 'Você desistiu do duelo.',
     pvp_rounds_played: n => `Rodadas jogadas: ${n}`,
-    pvp_explain: '👉 Clique no quadrado com a cor que a PALAVRA diz — não a cor do retângulo ao redor dela!',
+    pvp_explain: 'Repare na <b>palavra</b> abaixo. Clique no quadrado com a <b>cor de fundo</b> correspondente.',
     pvp_bonus_toast: '✨ Os dois ficam com 5 segundos para o desempate!',
     badge_not_unlocked: 'Ainda não conquistado', badge_maxed: '🌟 Nível máximo alcançado!',
     badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
@@ -1456,7 +1456,7 @@ const T = {
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicked the wrong square.` : 'You clicked the wrong square.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} forfeited the duel.` : 'You forfeited the duel.',
     pvp_rounds_played: n => `Rounds played: ${n}`,
-    pvp_explain: "👉 Click the square whose color matches what the WORD says — not the color of the rectangle around it!",
+    pvp_explain: 'Look at the <b>word</b> below. Click the square with the matching <b>background color</b>.',
     pvp_bonus_toast: '✨ Both players are set to 5 seconds for the tiebreaker!',
     badge_not_unlocked: 'Not unlocked yet', badge_maxed: '🌟 Maximum level reached!',
     badge_next_goal: desc => `🎯 Next goal: ${desc}`,
