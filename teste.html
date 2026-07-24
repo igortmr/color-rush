@@ -1309,6 +1309,8 @@ const T = {
     pvp_lose_title: '💀 VOCÊ PERDEU',
     pvp_declined_title: 'Desafio recusado',
     pvp_cancelled_title: 'Desafio cancelado',
+    pvp_draw_title: '🤝 EMPATE',
+    pvp_draw_sub: '3 rodadas seguidas sem nenhum acerto de ninguém.',
     pvp_reason_timeout: (won, opp) => won ? `${opp} ficou sem tempo.` : 'Você ficou sem tempo.',
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicou no quadrado errado.` : 'Você clicou no quadrado errado.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} desistiu do duelo.` : 'Você desistiu do duelo.',
@@ -1452,6 +1454,8 @@ const T = {
     pvp_lose_title: '💀 YOU LOST',
     pvp_declined_title: 'Challenge declined',
     pvp_cancelled_title: 'Challenge cancelled',
+    pvp_draw_title: '🤝 DRAW',
+    pvp_draw_sub: '3 rounds in a row with no one getting it right.',
     pvp_reason_timeout: (won, opp) => won ? `${opp} ran out of time.` : 'You ran out of time.',
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicked the wrong square.` : 'You clicked the wrong square.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} forfeited the duel.` : 'You forfeited the duel.',
@@ -3359,6 +3363,15 @@ function renderPvpResult(m, myUid, oppUid) {
     subEl.textContent = '';
     return;
   }
+  if (m.status === 'draw') {
+    titleEl.textContent = T[lang].pvp_draw_title;
+    subEl.textContent = T[lang].pvp_draw_sub;
+    const finalBank = m.finalBank || m.bank || {};
+    playersEl.appendChild(pvpPlayerRow(myNick, finalBank[myUid] || 0, null));
+    playersEl.appendChild(pvpPlayerRow(oppNick, finalBank[oppUid] || 0, null));
+    roundsEl.textContent = T[lang].pvp_rounds_played(m.cycleNumber || 1);
+    return;
+  }
 
   const won = m.winnerUid === myUid;
   titleEl.textContent = won ? T[lang].pvp_win_title : T[lang].pvp_lose_title;
@@ -3377,17 +3390,18 @@ function renderPvpResult(m, myUid, oppUid) {
 }
 
 // linha do placar final — nick sempre via textContent (nunca innerHTML),
-// mesmo cuidado de sempre com dado de jogador
+// mesmo cuidado de sempre com dado de jogador. isWinner: true (venceu),
+// false (perdeu) ou null (empate — estilo neutro, sem cor de vitória/derrota)
 function pvpPlayerRow(nick, remainingMs, isWinner) {
   const row = document.createElement('div');
-  const bg = isWinner ? 'rgba(33,230,161,0.12)' : 'rgba(255,45,107,0.10)';
-  const border = isWinner ? 'rgba(33,230,161,0.4)' : 'rgba(255,45,107,0.35)';
+  const bg = isWinner === null ? 'rgba(255,255,255,0.06)' : (isWinner ? 'rgba(33,230,161,0.12)' : 'rgba(255,45,107,0.10)');
+  const border = isWinner === null ? 'rgba(255,255,255,0.18)' : (isWinner ? 'rgba(33,230,161,0.4)' : 'rgba(255,45,107,0.35)');
   row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:${bg}; border:1px solid ${border};`;
 
   const left = document.createElement('span');
   left.style.cssText = "display:flex; align-items:center; gap:8px; font-family:'Orbitron',sans-serif; font-weight:700;";
   const icon = document.createElement('span');
-  icon.textContent = isWinner ? '🏆' : '💀';
+  icon.textContent = isWinner === null ? '🤝' : (isWinner ? '🏆' : '💀');
   left.appendChild(icon);
   const nickSpan = document.createElement('span');
   nickSpan.textContent = nick;
