@@ -3138,6 +3138,37 @@ let pvpClockOffsetMs = 0;     // diferença entre o relógio do navegador e o do
 let pvpCountdownAnimFrame = null; // rAF da contagem "3, 2, 1" antes do duelo começar
 let pvpCountdownLastNum = null;   // último número (3, 2 ou 1) que já tocamos o beep, pra não repetir
 let pvpResultSoundPlayed = false; // evita tocar o som de vitória/derrota/empate mais de uma vez pra mesma partida
+let pvpOppXpCache = {}; // uid do adversário -> xp já buscado (pra mostrar o level dele na tela de duelo)
+
+// busca o XP do adversário em scores/{uid} (público) só uma vez por uid, e
+// reaproveita entre partidas/reaberturas da tela. Enquanto ainda não chegou,
+// devolve undefined (o chip de nível some até a busca terminar).
+function getPvpOppXp(uid) {
+  const cached = pvpOppXpCache[uid];
+  if (cached === undefined) ensurePvpOppXp(uid);
+  return cached === null ? undefined : cached;
+}
+async function ensurePvpOppXp(uid) {
+  if (uid in pvpOppXpCache) return; // já tem (ou já está buscando)
+  pvpOppXpCache[uid] = null; // marca como "buscando" pra não disparar duas buscas
+  let xp = 0;
+  try {
+    const snap = await getDoc(doc(db, 'scores', uid));
+    xp = (snap.exists() && snap.data().xp) || 0;
+  } catch {}
+  pvpOppXpCache[uid] = xp;
+  // agora que já temos o nível, atualiza a tela de duelo se ainda for a
+  // mesma partida aberta
+  const cur = pvpMatchesById[pvpCurrentMatchId];
+  if (cur) renderPvpScreen(cur);
+}
+
+// nick do participante + chip de nível ao lado — nick sempre via textContent
+// (nunca innerHTML, pode ter qualquer caractere), chip é HTML fixo/confiável
+function setPvpNameWithLevel(el, labelText, xp) {
+  el.textContent = labelText;
+  if (xp !== undefined) el.insertAdjacentHTML('beforeend', ' ' + lvChip(xp));
+}
 
 function startPvpListener() {
   stopPvpListener();
@@ -3171,8 +3202,10 @@ function stopPvpListener() {
   pvpCurrentMatchId = null;
   pvpLastBonusAt = null;
   pvpLastAttemptAt = null;
+  pvpOppXpCache = {};
   clearTimeout(pvpBonusToastTimer);
   stopPvpTicker();
+  stopPvpCountdownTicker();
   const banner = $('pvp-challenge-banner');
   if (banner) banner.style.display = 'none';
 }
@@ -3318,8 +3351,8 @@ function renderPvpScreen(m) {
   if (m.status === 'active') {
     stopPvpCountdownTicker();
     $('pvp-active').style.display = 'flex';
-    $('pvp-my-name').textContent = T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || '');
-    $('pvp-opp-name').textContent = (m.nicks && m.nicks[oppUid]) || '';
+    setPvpNameWithLevel($('pvp-my-name'), T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp());
+    setPvpNameWithLevel($('pvp-opp-name'), (m.nicks && m.nicks[oppUid]) || '', getPvpOppXp(oppUid));
     $('pvp-turn-label').textContent = (m.turnUid === myUid) ? T[lang].pvp_your_turn : T[lang].pvp_opp_turn((m.nicks && m.nicks[oppUid]) || '');
     checkPvpBonusToast(m);
     renderPvpBoard(m, myUid);
