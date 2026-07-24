@@ -212,7 +212,56 @@
     transform: none;
   }
 
-  /* fileira horizontal de atalhos (amigos / ranking / som) acima do nome */
+  /* toggle de som (mute) */
+  button.icon-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 4px 2px;
+    cursor: pointer;
+    vertical-align: middle;
+    line-height: 1;
+  }
+  button.icon-toggle:hover { box-shadow: none; transform: none; }
+  .tgl-track {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 20px;
+    border-radius: 20px;
+    background: #131834;
+    border: 1px solid rgba(255,255,255,0.18);
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .tgl-knob {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6b76a8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+  button.icon-toggle.on .tgl-track {
+    background: rgba(33,230,161,0.14);
+    border-color: var(--neon-green);
+    box-shadow: 0 0 10px rgba(33,230,161,0.4);
+  }
+  button.icon-toggle.on .tgl-knob {
+    transform: translateX(20px);
+    background: var(--neon-green);
+    box-shadow: 0 0 8px rgba(33,230,161,0.9);
+  }
+
+  /* fileira horizontal de atalhos (amigos / ranking) acima do nome */
   .menu-quick-row { display: flex; gap: 8px; width: 100%; }
   .menu-quick-btn {
     position: relative;
@@ -923,13 +972,15 @@
     <button class="menu-quick-btn" onclick="showRanking('geral')">
       <span data-i18n="btn_ranking">🏆 RANKING</span>
     </button>
-    <button class="menu-quick-btn" onclick="toggleMute()">
-      <span id="menu-quick-sound-label">🔊 SOM</span>
-    </button>
   </div>
   <div class="user-bar">
     <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
-    <button class="pill-btn" id="menu-logout-btn" onclick="doLogout()">sair</button>
+    <span>
+      <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som">
+        <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">🔊</span></span></span>
+      </button>
+      <button class="pill-btn" id="menu-logout-btn" onclick="doLogout()">sair</button>
+    </span>
   </div>
   <div id="pvp-challenge-banner" style="display:none; width:100%;">
     <div class="card" style="text-align:center;">
@@ -941,7 +992,7 @@
     </div>
   </div>
   <div class="xp-wrap" id="menu-xp-wrap">
-    <div class="xp-labels"><span id="menu-xp-nums">0/100</span></div>
+    <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/100</span></div>
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
@@ -1320,7 +1371,6 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
     btn_friends: '👥 AMIGOS',
-    menu_sound_label: (on) => on ? '🔊 SOM' : '🔇 SOM',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Pedidos recebidos',
     friends_outgoing_title: 'Pedidos enviados',
@@ -1475,7 +1525,6 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
     btn_friends: '👥 FRIENDS',
-    menu_sound_label: (on) => on ? '🔊 SOUND' : '🔇 SOUND',
     friends_title: '👥 FRIENDS',
     friends_incoming_title: 'Incoming requests',
     friends_outgoing_title: 'Sent requests',
@@ -1630,7 +1679,6 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Esta persona aún no ha desbloqueado ninguna medalla.',
     btn_friends: '👥 AMIGOS',
-    menu_sound_label: (on) => on ? '🔊 SONIDO' : '🔇 SONIDO',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Solicitudes recibidas',
     friends_outgoing_title: 'Solicitudes enviadas',
@@ -2089,7 +2137,8 @@ const sfx = {
 window.toggleMute = () => {
   muted = !muted;
   try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
-  $('menu-quick-sound-label').textContent = T[lang].menu_sound_label(!muted);
+  $('mute-btn').classList.toggle('on', !muted);
+  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
 };
 
 /* ================== compartilhar ================== */
@@ -2380,13 +2429,13 @@ window.showMenu = () => {
   $('record-reverse').textContent = myRecord('reverse');
   $('record-shapes').textContent = myRecord('shapes');
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
-  $('menu-quick-sound-label').textContent = T[lang].menu_sound_label(!muted);
+  $('mute-btn').classList.toggle('on', !muted);
+  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
 
-  // nível e barra de XP (só aparece pra quem tem conta) — o "Lv X" agora vai
-  // junto do nick logo abaixo (mesmo chip usado no resto do app), aqui só
-  // fica o número/barra de progresso
+  // nível e barra de XP (só aparece pra quem tem conta)
   $('menu-xp-wrap').style.display = offline ? 'none' : '';
   const xi = xpInfo(myXp());
+  $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
   $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
   $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
 
@@ -2414,10 +2463,7 @@ window.showMenu = () => {
     $('user-label').textContent = T[lang].offline_label;
     $('menu-logout-btn').textContent = T[lang].entrar_label;
   } else {
-    // nick sempre via textContent (nunca innerHTML) — o chip de nível (HTML
-    // confiável, não vem do usuário) é anexado à parte, mesmo padrão do resto do app
     $('user-label').textContent = T[lang].user_greeting(myData.nick || '');
-    $('user-label').insertAdjacentHTML('beforeend', ' ' + lvChip(myXp()));
     $('menu-logout-btn').textContent = T[lang].sair_label;
   }
   show('menu-screen');
