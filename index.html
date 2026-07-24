@@ -1158,14 +1158,14 @@
 
 <!-- AMIGOS -->
 <div class="screen" id="friends-screen">
-  <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
+  <div class="profile-top-row">
+    <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+    <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
+  </div>
   <div class="muted" id="friends-status"></div>
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <div class="muted" id="friends-invite-status"></div>
-  <div class="btn-row" style="width:100%;">
-    <button class="secondary" style="flex:1;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR</button>
-    <button class="secondary" style="flex:1;" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
-  </div>
+  <button class="secondary" style="width:100%;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR AMIGO</button>
 </div>
 
 <!-- PVP (duelo ao vivo) -->
@@ -1322,7 +1322,7 @@ const T = {
     mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
-    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR', btn_invite_profile: '➕ ADICIONAR AMIGOS',
+    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
     your_score: 'Sua pontuação:', record_mode_label: '🏆 Seu recorde neste modo:',
@@ -1369,7 +1369,7 @@ const T = {
     btn_create_account: 'CRIAR CONTA',
     profile_offline_label: '👤 Jogando sem conta',
     profile_nick_label: nick => `👤 ${nick}`,
-    profile_summary: (n, total) => `${n} de ${total} categorias de conquista desbloqueadas`,
+    profile_summary: (n, total) => `${n} de ${total} conquistas desbloqueadas`,
     profile_badges_section: '🏅 Medalhas',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
@@ -1477,7 +1477,7 @@ const T = {
     mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
-    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD', btn_invite_profile: '➕ ADD FRIENDS',
+    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
     your_score: 'Your score:', record_mode_label: '🏆 Your record in this mode:',
@@ -1524,7 +1524,7 @@ const T = {
     btn_create_account: 'CREATE ACCOUNT',
     profile_offline_label: '👤 Playing without an account',
     profile_nick_label: nick => `👤 ${nick}`,
-    profile_summary: (n, total) => `${n} of ${total} achievement categories unlocked`,
+    profile_summary: (n, total) => `${n} of ${total} achievements unlocked`,
     profile_badges_section: '🏅 Medals',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
@@ -1632,7 +1632,7 @@ const T = {
     mode_shapes_desc: 'Haz clic en la <b>forma pedida</b> y memoriza la <b>palabra</b> escrita en ella. En la siguiente ronda, haz clic en la forma cuyo nombre memorizaste.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Haz clic en la <b>palabra pedida</b> y memoriza la <b>forma que la rodea</b>. En la siguiente ronda, haz clic en el nombre de la forma memorizada.',
-    record_label: '🏆 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR', btn_invite_profile: '➕ AGREGAR AMIGOS',
+    record_label: '🏆 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
     footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
     hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
     your_score: 'Tu puntuación:', record_mode_label: '🏆 Tu récord en este modo:',
@@ -1679,7 +1679,7 @@ const T = {
     btn_create_account: 'CREAR CUENTA',
     profile_offline_label: '👤 Jugando sin cuenta',
     profile_nick_label: nick => `👤 ${nick}`,
-    profile_summary: (n, total) => `${n} de ${total} categorías de logros desbloqueadas`,
+    profile_summary: (n, total) => `${n} de ${total} logros desbloqueados`,
     profile_badges_section: '🏅 Medallas',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Esta persona aún no ha desbloqueado ninguna medalla.',
