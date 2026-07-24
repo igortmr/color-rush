@@ -220,85 +220,91 @@
     transform: none;
   }
 
-  /* menu suspenso (amigos / ranking / som / sair) */
-  .menu-dd-wrap { position: relative; }
-  .menu-dd-trigger {
-    position: relative;
-    background: #0a0e1e;
-    border: 1px solid rgba(255,255,255,0.15);
-    color: #cfd8ff;
-    font-size: 1.05rem;
-    line-height: 1;
-    padding: 7px 11px;
-    border-radius: 10px;
-    cursor: pointer;
-    box-shadow: none;
-  }
-  .menu-dd-trigger:hover { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(45,214,255,0.35); transform: none; }
-  .dd-badge {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--neon-red);
-    box-shadow: 0 0 8px rgba(255,45,107,0.8);
-  }
-  .menu-dropdown {
-    display: none;
-    flex-direction: column;
-    gap: 2px;
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    min-width: 190px;
-    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 14px;
-    padding: 6px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    z-index: 500;
-  }
-  .menu-dropdown.open { display: flex; }
-  .dd-item {
-    display: flex;
+  /* toggle de som (mute) */
+  button.icon-toggle {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    text-align: left;
     background: none;
     border: none;
     box-shadow: none;
+    padding: 4px 2px;
+    cursor: pointer;
+    vertical-align: middle;
+    line-height: 1;
+  }
+  button.icon-toggle:hover { box-shadow: none; transform: none; }
+  .tgl-track {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 20px;
+    border-radius: 20px;
+    background: #131834;
+    border: 1px solid rgba(255,255,255,0.18);
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .tgl-knob {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6b76a8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+  button.icon-toggle.on .tgl-track {
+    background: rgba(33,230,161,0.14);
+    border-color: var(--neon-green);
+    box-shadow: 0 0 10px rgba(33,230,161,0.4);
+  }
+  button.icon-toggle.on .tgl-knob {
+    transform: translateX(20px);
+    background: var(--neon-green);
+    box-shadow: 0 0 8px rgba(33,230,161,0.9);
+  }
+
+  /* fileira horizontal de atalhos (amigos / ranking) acima do nome */
+  .menu-quick-row { display: flex; gap: 8px; width: 100%; }
+  .menu-quick-btn {
+    position: relative;
+    flex: 1;
+    background: #0a0e1e;
+    border: 1px solid rgba(255,255,255,0.15);
     color: #cfd8ff;
     font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     letter-spacing: 0.3px;
-    padding: 10px 12px;
-    border-radius: 9px;
+    text-align: center;
+    padding: 10px 4px;
+    border-radius: 12px;
     cursor: pointer;
+    box-shadow: none;
   }
-  .dd-item:hover { background: rgba(255,255,255,0.07); box-shadow: none; transform: none; }
-  .dd-item-danger { color: #ff8bab; }
-  .dd-item-danger:hover { background: rgba(255,45,107,0.12); }
-  .dd-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 6px; }
-  .dd-badge-inline {
-    position: static;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
+  .menu-quick-btn:hover { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(45,214,255,0.3); transform: none; }
+  .menu-quick-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
     border-radius: 10px;
     background: var(--neon-red);
     color: #fff;
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 800;
-    padding: 0 5px;
+    padding: 0 4px;
     font-family: 'Orbitron', sans-serif;
-    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 8px rgba(255,45,107,0.8);
   }
 
   .mode-card {
@@ -966,28 +972,23 @@
 <!-- MENU -->
 <div class="screen" id="menu-screen">
   <h1>COLOR RUSH</h1>
+  <div class="menu-quick-row">
+    <button class="menu-quick-btn" id="menu-quick-friends-btn" onclick="showFriends()">
+      <span data-i18n="btn_friends">👥 AMIGOS</span>
+      <span class="menu-quick-badge" id="menu-quick-friends-badge" style="display:none;"></span>
+    </button>
+    <button class="menu-quick-btn" onclick="showRanking('geral')">
+      <span data-i18n="btn_ranking">🏆 RANKING</span>
+    </button>
+  </div>
   <div class="user-bar">
     <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
-    <div class="menu-dd-wrap" id="menu-dd-wrap">
-      <button class="menu-dd-trigger" id="menu-dd-trigger" onclick="toggleMenuDropdown()" aria-label="Menu" title="Menu">
-        ☰
-        <span class="dd-badge" id="menu-dd-badge" style="display:none;"></span>
+    <span>
+      <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som">
+        <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">🔊</span></span></span>
       </button>
-      <div class="menu-dropdown" id="menu-dropdown">
-        <button class="dd-item" id="menu-dd-friends-item" onclick="closeMenuDropdown(); showFriends();">
-          <span data-i18n="btn_friends">👥 AMIGOS</span>
-          <span class="dd-badge dd-badge-inline" id="menu-dd-friends-badge" style="display:none;"></span>
-        </button>
-        <button class="dd-item" onclick="closeMenuDropdown(); showRanking('geral');">
-          <span data-i18n="btn_ranking">🏆 RANKING</span>
-        </button>
-        <button class="dd-item" onclick="toggleMute()">
-          <span id="menu-dd-sound-label">🔊 Som: Ligado</span>
-        </button>
-        <div class="dd-divider"></div>
-        <button class="dd-item dd-item-danger" id="menu-dd-logout-item" onclick="closeMenuDropdown(); doLogout();">🚪 sair</button>
-      </div>
-    </div>
+      <button class="pill-btn" id="menu-logout-btn" onclick="doLogout()">sair</button>
+    </span>
   </div>
   <div id="pvp-challenge-banner" style="display:none; width:100%;">
     <div class="card" style="text-align:center;">
@@ -1378,7 +1379,6 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
     btn_friends: '👥 AMIGOS',
-    menu_sound_label: (on) => on ? '🔊 Som: Ligado' : '🔇 Som: Desligado',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Pedidos recebidos',
     friends_outgoing_title: 'Pedidos enviados',
@@ -1533,7 +1533,6 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
     btn_friends: '👥 FRIENDS',
-    menu_sound_label: (on) => on ? '🔊 Sound: On' : '🔇 Sound: Off',
     friends_title: '👥 FRIENDS',
     friends_incoming_title: 'Incoming requests',
     friends_outgoing_title: 'Sent requests',
@@ -1688,7 +1687,6 @@ const T = {
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Esta persona aún no ha desbloqueado ninguna medalla.',
     btn_friends: '👥 AMIGOS',
-    menu_sound_label: (on) => on ? '🔊 Sonido: Activado' : '🔇 Sonido: Desactivado',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Solicitudes recibidas',
     friends_outgoing_title: 'Solicitudes enviadas',
@@ -2147,20 +2145,9 @@ const sfx = {
 window.toggleMute = () => {
   muted = !muted;
   try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
-  $('menu-dd-sound-label').textContent = T[lang].menu_sound_label(!muted);
+  $('mute-btn').classList.toggle('on', !muted);
+  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
 };
-
-/* menu suspenso da tela principal (amigos / ranking / som / sair) */
-window.toggleMenuDropdown = () => {
-  $('menu-dropdown').classList.toggle('open');
-};
-window.closeMenuDropdown = () => {
-  $('menu-dropdown').classList.remove('open');
-};
-document.addEventListener('click', (e) => {
-  const wrap = $('menu-dd-wrap');
-  if (wrap && !wrap.contains(e.target)) closeMenuDropdown();
-});
 
 /* ================== compartilhar ================== */
 // monta o link de compartilhamento — ?ref= só existe pra quem tem conta (conta pro
@@ -2446,12 +2433,12 @@ window.saveNick = async () => {
 
 /* ================== menu ================== */
 window.showMenu = () => {
-  closeMenuDropdown();
   $('record-classic').textContent = myRecord('classic');
   $('record-reverse').textContent = myRecord('reverse');
   $('record-shapes').textContent = myRecord('shapes');
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
-  $('menu-dd-sound-label').textContent = T[lang].menu_sound_label(!muted);
+  $('mute-btn').classList.toggle('on', !muted);
+  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
 
   // nível e barra de XP (só aparece pra quem tem conta)
   $('menu-xp-wrap').style.display = offline ? 'none' : '';
@@ -2461,21 +2448,15 @@ window.showMenu = () => {
   $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
 
   // amigos precisam de conta — botão some jogando sem login; a bolinha
-  // vermelha avisa quando tem pedido de amizade esperando resposta.
-  // Texto setado aqui (não via data-i18n) porque o botão tem a bolinha de
-  // notificação como filho, e data-i18n troca o textContent inteiro do
-  // elemento — apagaria a bolinha a cada troca de idioma.
-  $('menu-dd-friends-item').style.display = offline ? 'none' : '';
+  // vermelha avisa quando tem pedido de amizade esperando resposta
+  $('menu-quick-friends-btn').style.display = offline ? 'none' : '';
   if (!offline && currentUser) {
     fetchMyFriendRequests().then(reqs => {
       const n = Object.keys(reqs.incoming || {}).length;
-      const badge = $('menu-dd-friends-badge');
+      const badge = $('menu-quick-friends-badge');
       badge.textContent = n;
       badge.style.display = n > 0 ? '' : 'none';
-      $('menu-dd-badge').style.display = n > 0 ? '' : 'none';
     }).catch(() => {});
-  } else {
-    $('menu-dd-badge').style.display = 'none';
   }
 
   // bloqueio dos modos por nível
@@ -2488,10 +2469,10 @@ window.showMenu = () => {
   }
   if (offline) {
     $('user-label').textContent = T[lang].offline_label;
-    $('menu-dd-logout-item').textContent = '🔑 ' + T[lang].entrar_label;
+    $('menu-logout-btn').textContent = T[lang].entrar_label;
   } else {
     $('user-label').textContent = T[lang].user_greeting(myData.nick || '');
-    $('menu-dd-logout-item').textContent = '🚪 ' + T[lang].sair_label;
+    $('menu-logout-btn').textContent = T[lang].sair_label;
   }
   show('menu-screen');
 };
