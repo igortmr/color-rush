@@ -104,6 +104,12 @@
   .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
 
+  /* o body centraliza a tela ativa verticalmente — bom pros modos de jogo,
+     mas no ranking isso faz o cabeçalho (título, combobox, abas) flutuar
+     pro meio quando a lista tem poucas linhas (ex.: aba "amigos" com só
+     1-2 amigos). Fixando essa tela no topo, só a tabela cresce/encolhe. */
+  #ranking-screen { align-self: flex-start; margin-top: 24px; }
+
   h1 {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-size: 2.5rem;
@@ -1043,11 +1049,13 @@
 <!-- AMIGOS -->
 <div class="screen" id="friends-screen">
   <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
-  <button class="secondary" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
-  <div class="muted" id="friends-invite-status"></div>
   <div class="muted" id="friends-status"></div>
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
-  <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  <div class="muted" id="friends-invite-status"></div>
+  <div class="btn-row" style="width:100%;">
+    <button class="secondary" style="flex:1;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
+    <button class="secondary" style="flex:1;" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  </div>
 </div>
 
 <script type="module">
