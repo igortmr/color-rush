@@ -3036,6 +3036,10 @@ async function renderAdminPanel(uid, currentNick, stats) {
 
   wrap.appendChild(toolsBox);
   box.appendChild(wrap);
+  // o painel carrega depois do resto do perfil (é uma chamada assíncrona à
+  // parte) e deixa a tela mais alta — sem isso, o mesmo bug de rolagem presa
+  // já corrigido no ranking/amigos podia voltar a acontecer aqui
+  resetScroll('profile-screen');
 }
 
 /* ================== amigos ================== */
@@ -3264,6 +3268,7 @@ async function renderFriendsScreen(force) {
         <p>${T[lang].profile_offline_msg1}</p>
         <button onclick="goSignup()">${T[lang].btn_create_account}</button>
       </div>`;
+    resetScroll('friends-screen');
     return;
   }
 
@@ -3372,6 +3377,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
         <p class="muted">${T[lang].profile_offline_msg2}</p>
         <button onclick="goSignup()">${T[lang].btn_create_account}</button>
       </div>`;
+    resetScroll('profile-screen');
     return;
   }
 
@@ -3396,6 +3402,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
       html += profileSectionLabel('🛠️ Admin') + `<div class="card" id="admin-panel-body"><div class="muted" style="text-align:center;">Carregando dados de admin...</div></div>`;
     }
     $('profile-body').innerHTML = html;
+    resetScroll('profile-screen');
     if (myData.admin === true) renderAdminPanel(viewUid, viewNick || '', stats);
     return;
   }
@@ -3413,6 +3420,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
   $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
   $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], stats)).join('');
+  resetScroll('profile-screen');
 }
 
 function renderBadgeCard(def, stats) {
@@ -3516,6 +3524,7 @@ window.loadRanking = async (m) => {
         </div>
       </td></tr>`;
     rankingRows = [];
+    resetScroll('ranking-screen');
     return;
   }
 
