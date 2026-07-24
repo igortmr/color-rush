@@ -432,7 +432,19 @@
   .pvp-bar-row.opp span:first-child { color: var(--neon-orange); }
   #pvp-active .timer-track { margin: 4px 0 10px; }
   #pvp-active .timer-fill { transition: width 0.1s linear; }
-  #pvp-instruction { font-family: 'Orbitron', sans-serif; font-size: 1.6rem; font-weight: 800; margin: 6px 0 4px; }
+  #pvp-instruction { margin: 6px 0 4px; }
+  #pvp-prompt-box {
+    display: inline-block;
+    padding: 10px 26px;
+    border-radius: 12px;
+    border: 3px solid rgba(255,255,255,0.35);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 6px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.9);
+  }
   #pvp-grid .square { opacity: 1; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
@@ -1095,7 +1107,7 @@
     <div class="timer-track"><div class="timer-fill" id="pvp-opp-bar"></div></div>
 
     <div class="muted" id="pvp-turn-label" style="text-align:center; margin:8px 0 2px;"></div>
-    <div class="instruction" id="pvp-instruction" style="text-align:center;"></div>
+    <div class="instruction" id="pvp-instruction" style="justify-content:center;"><span id="pvp-prompt-box"></span></div>
     <div class="grid" id="pvp-grid"></div>
 
     <button class="secondary" style="margin-top:14px;" onclick="uiForfeitMatch()" data-i18n="btn_forfeit">🏳️ Desistir</button>
@@ -1106,6 +1118,8 @@
     <div class="card">
       <div id="pvp-result-title" style="font-family:'Orbitron',sans-serif; font-size:1.3rem; font-weight:800;"></div>
       <p class="muted" id="pvp-result-sub"></p>
+      <div id="pvp-result-players" style="display:flex; flex-direction:column; gap:10px; width:100%;"></div>
+      <p class="muted" id="pvp-result-rounds"></p>
     </div>
     <button onclick="pvpBackToMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
@@ -1295,6 +1309,7 @@ const T = {
     pvp_reason_timeout: (won, opp) => won ? `${opp} ficou sem tempo.` : 'Você ficou sem tempo.',
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicou no quadrado errado.` : 'Você clicou no quadrado errado.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} desistiu do duelo.` : 'Você desistiu do duelo.',
+    pvp_rounds_played: n => `Rodadas jogadas: ${n}`,
     badge_not_unlocked: 'Ainda não conquistado', badge_maxed: '🌟 Nível máximo alcançado!',
     badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
@@ -1434,6 +1449,7 @@ const T = {
     pvp_reason_timeout: (won, opp) => won ? `${opp} ran out of time.` : 'You ran out of time.',
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicked the wrong square.` : 'You clicked the wrong square.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} forfeited the duel.` : 'You forfeited the duel.',
+    pvp_rounds_played: n => `Rounds played: ${n}`,
     badge_not_unlocked: 'Not unlocked yet', badge_maxed: '🌟 Maximum level reached!',
     badge_next_goal: desc => `🎯 Next goal: ${desc}`,
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
@@ -3228,12 +3244,13 @@ function renderPvpScreen(m) {
 function renderPvpBoard(m, myUid) {
   const round = m.round;
   if (!round) return;
-  const promptColor = COLORS[round.promptColorIdx] || COLORS[0];
-  const promptWord = COLORS[round.promptWordIdx] || COLORS[0];
-  const promptEl = $('pvp-instruction');
-  promptEl.textContent = promptWord.name[lang];
-  promptEl.style.color = promptColor.hex;
-  promptEl.style.textShadow = `0 0 10px ${promptColor.hex}80`;
+  // a cor do RETÂNGULO é só distração — o que vale é a cor que a PALAVRA diz
+  const boxColor = COLORS[round.promptColorIdx] || COLORS[0];
+  const targetColor = COLORS[round.promptWordIdx] || COLORS[0];
+  const box = $('pvp-prompt-box');
+  box.textContent = targetColor.name[lang]; // conteúdo fixo (tabela COLORS), sem dado de usuário
+  box.style.background = boxColor.hex;
+  box.style.boxShadow = `0 0 18px ${boxColor.hex}99, 0 0 40px ${boxColor.hex}55, inset 0 0 14px rgba(255,255,255,0.15)`;
 
   const myTurn = m.turnUid === myUid;
   const grid = $('pvp-grid');
@@ -3259,20 +3276,64 @@ function renderPvpBoard(m, myUid) {
 function renderPvpResult(m, myUid, oppUid) {
   const titleEl = $('pvp-result-title');
   const subEl = $('pvp-result-sub');
+  const playersEl = $('pvp-result-players');
+  const roundsEl = $('pvp-result-rounds');
   const oppNick = (m.nicks && m.nicks[oppUid]) || '';
+  const myNick = (m.nicks && m.nicks[myUid]) || '';
+  playersEl.innerHTML = '';
+  roundsEl.textContent = '';
 
   if (m.status === 'declined') {
     titleEl.textContent = T[lang].pvp_declined_title;
     subEl.textContent = '';
-  } else if (m.status === 'cancelled') {
+    return;
+  }
+  if (m.status === 'cancelled') {
     titleEl.textContent = T[lang].pvp_cancelled_title;
     subEl.textContent = '';
-  } else {
-    const won = m.winnerUid === myUid;
-    titleEl.textContent = won ? T[lang].pvp_win_title : T[lang].pvp_lose_title;
-    const reasonFn = { timeout: T[lang].pvp_reason_timeout, wrong_click: T[lang].pvp_reason_wrong, forfeit: T[lang].pvp_reason_forfeit }[m.loseReason];
-    subEl.textContent = reasonFn ? reasonFn(won, oppNick) : '';
+    return;
   }
+
+  const won = m.winnerUid === myUid;
+  titleEl.textContent = won ? T[lang].pvp_win_title : T[lang].pvp_lose_title;
+  const reasonFn = { timeout: T[lang].pvp_reason_timeout, wrong_click: T[lang].pvp_reason_wrong, forfeit: T[lang].pvp_reason_forfeit }[m.loseReason];
+  subEl.textContent = reasonFn ? reasonFn(won, oppNick) : '';
+
+  // placar final: os dois participantes, com quanto tempo sobrou no banco
+  // de cada um no instante em que o duelo acabou (ver finalBank no servidor)
+  const finalBank = m.finalBank || m.bank || {};
+  const winnerNick = (m.winnerUid === myUid) ? myNick : oppNick;
+  const loserNick = (m.loseUid === myUid) ? myNick : oppNick;
+  playersEl.appendChild(pvpPlayerRow(winnerNick, finalBank[m.winnerUid] || 0, true));
+  playersEl.appendChild(pvpPlayerRow(loserNick, finalBank[m.loseUid] || 0, false));
+
+  roundsEl.textContent = T[lang].pvp_rounds_played(m.turnNumber || 1);
+}
+
+// linha do placar final — nick sempre via textContent (nunca innerHTML),
+// mesmo cuidado de sempre com dado de jogador
+function pvpPlayerRow(nick, remainingMs, isWinner) {
+  const row = document.createElement('div');
+  const bg = isWinner ? 'rgba(33,230,161,0.12)' : 'rgba(255,45,107,0.10)';
+  const border = isWinner ? 'rgba(33,230,161,0.4)' : 'rgba(255,45,107,0.35)';
+  row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:${bg}; border:1px solid ${border};`;
+
+  const left = document.createElement('span');
+  left.style.cssText = "display:flex; align-items:center; gap:8px; font-family:'Orbitron',sans-serif; font-weight:700;";
+  const icon = document.createElement('span');
+  icon.textContent = isWinner ? '🏆' : '💀';
+  left.appendChild(icon);
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = nick;
+  left.appendChild(nickSpan);
+  row.appendChild(left);
+
+  const timeSpan = document.createElement('span');
+  timeSpan.style.cssText = "font-family:'Orbitron',sans-serif; font-weight:800; color:#fff;";
+  timeSpan.textContent = (remainingMs / 1000).toFixed(1) + 's';
+  row.appendChild(timeSpan);
+
+  return row;
 }
 
 function startPvpTicker() {
