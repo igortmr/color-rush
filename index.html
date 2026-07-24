@@ -1283,7 +1283,7 @@ const callCancelChallenge = httpsCallable(functions, 'cancelChallenge');
 const callSubmitPvpAnswer = httpsCallable(functions, 'submitPvpAnswer');
 const callClaimTimeout = httpsCallable(functions, 'claimTimeout');
 const callForfeitMatch = httpsCallable(functions, 'forfeitMatch');
-const callTouchLogin = httpsCallable(functions, 'touchLogin');
+const callTouchActivity = httpsCallable(functions, 'touchActivity');
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
@@ -2316,6 +2316,28 @@ window.playOffline = () => {
   showMenu();
 };
 
+// "última vez online" — a sessão do Firebase Auth persiste sozinha, então só
+// registrar o momento do login não conta a história toda (alguém pode abrir o
+// jogo, deixar a aba aberta e nunca mais tocar em nada). Por isso, além do
+// toque na hora do login, isso aqui manda um "sinal de vida" periódico
+// enquanto a aba fica visível/em uso — só usado hoje pela ferramenta de admin.
+const ACTIVITY_HEARTBEAT_MS = 5 * 60 * 1000; // a cada 5 minutos
+let activityHeartbeatStarted = false;
+function touchActivityTick() {
+  if (!offline && currentUser) callTouchActivity().catch(() => {});
+}
+function startActivityHeartbeat() {
+  if (activityHeartbeatStarted) return;
+  activityHeartbeatStarted = true;
+  setInterval(touchActivityTick, ACTIVITY_HEARTBEAT_MS);
+  // se a pessoa deixar a aba em segundo plano por horas e voltar, não espera
+  // o próximo tique do intervalo — atualiza na hora que ela volta a olhar
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') touchActivityTick();
+  });
+}
+startActivityHeartbeat();
+
 onAuthStateChanged(auth, async user => {
   if (user) {
     offline = false;
@@ -2350,7 +2372,7 @@ async function proceedAfterLogin(user) {
     await backfillTotal();
     await submitPendingScore();
     startPvpListener();
-    callTouchLogin().catch(() => {}); // só registra "último login" pra ferramenta de admin — não trava a entrada se falhar
+    touchActivityTick(); // atualiza "última vez online" na hora (o heartbeat cuida do resto enquanto a aba ficar aberta)
     // já tem conta — se chegou (ou já estava logada) com o link de convite de
     // alguém, sugere amizade em segundo plano, sem travar a entrada no menu
     // (mesmo caso de quem acabou de criar a conta, ver saveNick/creditReferral)
@@ -2905,8 +2927,8 @@ async function renderAdminPanel(uid, currentNick, stats) {
 
   // último login
   const loginRow = document.createElement('div');
-  loginRow.innerHTML = '<b>Último login:</b> ';
-  loginRow.appendChild(document.createTextNode(details.lastLoginAt ? fmtDateTime(details.lastLoginAt) : 'nunca registrado'));
+  loginRow.innerHTML = '<b>Última vez online:</b> ';
+  loginRow.appendChild(document.createTextNode(details.lastActiveAt ? fmtDateTime(details.lastActiveAt) : 'nunca registrado'));
   wrap.appendChild(loginRow);
 
   // últimos duelos (PvP) — nick do adversário sempre via textContent (nunca
