@@ -100,15 +100,16 @@
     overflow-x: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    /* o body centraliza a tela ativa verticalmente por padrão, mas isso faz o
+       cabeçalho (título, abas, botões) flutuar pro meio quando o conteúdo tem
+       poucas linhas (ex.: ranking ou amigos com só 1-2 itens). Fixando toda
+       tela no topo, só o conteúdo de baixo cresce/encolhe — padrão consistente
+       em todas as telas. */
+    align-self: flex-start;
+    margin-top: 24px;
   }
   .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
-
-  /* o body centraliza a tela ativa verticalmente — bom pros modos de jogo,
-     mas no ranking isso faz o cabeçalho (título, combobox, abas) flutuar
-     pro meio quando a lista tem poucas linhas (ex.: aba "amigos" com só
-     1-2 amigos). Fixando essa tela no topo, só a tabela cresce/encolhe. */
-  #ranking-screen { align-self: flex-start; margin-top: 24px; }
 
   h1 {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
