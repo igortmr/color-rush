@@ -331,6 +331,10 @@
     background: linear-gradient(180deg, rgba(255,233,60,0.06), var(--bg-panel));
   }
   .mode-card.daily-card:hover { border-color: var(--neon-yellow); box-shadow: 0 0 22px rgba(255,233,60,0.35); }
+  /* antes da estreia — só título + cronômetro, sem clique nem descrição */
+  .mode-card.daily-card.coming-soon { cursor: default; text-align: center; }
+  .mode-card.daily-card.coming-soon:hover { transform: none; border-color: rgba(255,233,60,0.5); box-shadow: none; }
+  .mode-card.daily-card.coming-soon h2 { margin-bottom: 0; }
   .daily-badge-today {
     position: absolute;
     top: 14px;
@@ -1031,8 +1035,8 @@
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
     <span class="daily-badge-today" id="daily-card-countdown">Termina em: <span class="daily-badge-time">--:--:--</span></span>
     <h2>🗓️ Desafio Diário</h2>
-    <p>O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação no modo Clássico — vale a sua melhor. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.</p>
-    <div class="mode-card-footer">
+    <p id="daily-card-desc">O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.</p>
+    <div class="mode-card-footer" id="daily-card-footer">
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
       <span class="record-badge" id="daily-card-inbox-badge" style="display:none;"></span>
@@ -1220,7 +1224,7 @@
   </div>
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
-      <colgroup><col style="width:32px;"><col><col style="width:80px;"><col style="width:118px;"></colgroup>
+      <colgroup><col style="width:32px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
       <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">Vitórias</th><th style="text-align:right;">💧 Pigmentos</th></tr></thead>
       <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted">Carregando...</td></tr></tbody>
     </table>
@@ -2181,6 +2185,14 @@ let xpGain = 0; // XP acumulada na partida atual
 // desafio diário — estado separado do jogo normal (não usa "mode"/"score" etc.
 // acima, pra não arriscar misturar com uma partida solo aberta em paralelo)
 const DAILY_MAX_ATTEMPTS = 3; // tem que bater com DAILY_MAX_ATTEMPTS do servidor
+// dia (fuso de Brasília) em que o desafio diário estreia — até lá o card no
+// menu fica só com título + cronômetro "Inicia em", sem descrição nem dados
+const DAILY_CHALLENGE_LAUNCH_DATE = '2026-07-25';
+function dailyLaunchAtMs() {
+  const [y, m, d] = DAILY_CHALLENGE_LAUNCH_DATE.split('-').map(Number);
+  return Date.UTC(y, m - 1, d, 3, 0, 0, 0); // meia-noite de Brasília desse dia
+}
+function isDailyChallengeLive() { return dailyLocalDateStr() >= DAILY_CHALLENGE_LAUNCH_DATE; }
 let dailyRng = null;          // gerador determinístico da rodada de hoje
 let dailyPlaying = false;
 let dailyScore = 0;
@@ -3951,24 +3963,28 @@ function renderDailyCardCountdown() {
   const el = $('daily-card-countdown');
   const timeEl = el && el.querySelector('.daily-badge-time');
   if (!el || !timeEl) return;
-  const closesAtMs = dailyNextMidnightSaoPauloMs();
-  let msLeft = closesAtMs - Date.now();
-  if (msLeft <= 0) {
-    // virou o dia — atualiza tentativas/melhor pontuação sozinho, se o menu estiver aberto
-    msLeft = 0;
-    if ($('menu-screen').classList.contains('active')) updateDailyMenuCard();
-  }
+  const live = isDailyChallengeLive();
+  const targetMs = live ? dailyNextMidnightSaoPauloMs() : dailyLaunchAtMs();
+  let msLeft = targetMs - Date.now();
+  const rolledOver = msLeft <= 0;
+  if (rolledOver) msLeft = 0;
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
+  el.firstChild.textContent = live ? 'Termina em: ' : 'Inicia em: ';
   timeEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  // virou o dia (fechou o desafio de hoje, ou estreou o desafio) — atualiza o
+  // resto do card sozinho, se o menu estiver aberto
+  if (rolledOver && $('menu-screen').classList.contains('active')) updateDailyMenuCard();
 }
 startDailyCardTicker();
 
-// clique no card do menu: se ainda sobra tentativa, vai direto pro jogo (sem
-// tela intermediária); se já usou as 3, não tem o que jogar — manda pra caixa
-// de entrada/ranking do desafio, que é a informação útil nesse caso
+// clique no card do menu: antes da estreia não faz nada (o card fica só de
+// enfeite/curiosidade); depois, se ainda sobra tentativa vai direto pro jogo
+// (sem tela intermediária); se já usou as 3, manda pra caixa de entrada/
+// ranking do desafio, que é a informação útil nesse caso
 window.dailyCardClick = () => {
+  if (!isDailyChallengeLive()) return;
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
     $('daily-blocked-msg').textContent = '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!';
@@ -4066,6 +4082,19 @@ async function updateDailyMenuCard() {
   if (!card) return;
   if (offline || !currentUser || !myData.nick) { card.style.display = 'none'; return; }
   card.style.display = '';
+  renderDailyCardCountdown(); // atualiza o rótulo (Inicia em/Termina em) na hora, sem esperar o próximo tique
+
+  // antes da estreia: só título + cronômetro, sem descrição nem dados —
+  // deixa a curiosidade no ar em vez de mostrar tudo
+  if (!isDailyChallengeLive()) {
+    card.classList.add('coming-soon');
+    $('daily-card-desc').style.display = 'none';
+    $('daily-card-footer').style.display = 'none';
+    return;
+  }
+  card.classList.remove('coming-soon');
+  $('daily-card-desc').style.display = '';
+  $('daily-card-footer').style.display = '';
   try {
     const dateStr = dailyLocalDateStr();
     const snap = await getDoc(doc(db, 'dailyScores', `${dateStr}_${currentUser.uid}`));
