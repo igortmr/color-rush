@@ -2075,7 +2075,19 @@ const $ = id => document.getElementById(id);
 const show = id => {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
+  resetScroll(id);
 };
+// depois de trocar o conteúdo de uma tela que já estava aberta (ex.: troca de
+// aba do ranking), houve relato de usuário no Chrome desktop onde a tela ficava
+// presa no topo sem rolar — provavelmente o navegador "esquecendo" de recalcular
+// a área rolável depois da troca de innerHTML. Ler offsetHeight força um reflow
+// e resetar o scrollTop evita esse tipo de bug de cache de layout.
+function resetScroll(screenId) {
+  const el = $(screenId);
+  if (!el) return;
+  void el.offsetHeight;
+  el.scrollTop = 0;
+}
 const shuffle = a => a.sort(() => Math.random() - 0.5);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
@@ -3117,6 +3129,7 @@ async function renderFriendsScreen(force) {
     all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
     friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid])));
   }
+  resetScroll('friends-screen');
 }
 
 // depois de qualquer ação de amizade, atualiza a tela de amigos (se estiver
@@ -3403,6 +3416,7 @@ function renderRankingPage() {
       <span class="muted">${T[lang].pagination_page(rankingPage + 1, totalPages)}</span>
       <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
   }
+  resetScroll('ranking-screen');
 }
 
 window.rankingGoPage = (p) => {
