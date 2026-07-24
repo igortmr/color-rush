@@ -1110,7 +1110,10 @@
 
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
-  <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
+  <div class="profile-top-row">
+    <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
+    <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  </div>
   <select class="ranking-select" id="ranking-select" onchange="loadRanking(this.value)">
     <option value="geral" data-i18n="tab_geral">🌍 Geral</option>
     <option value="classic" data-i18n="tab_classic">🎨 Clássico</option>
@@ -1133,7 +1136,6 @@
     </table>
   </div>
   <div class="pagination" id="ranking-pagination"></div>
-  <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <!-- PERFIL -->
