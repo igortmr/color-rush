@@ -336,14 +336,15 @@
     top: 14px;
     right: 16px;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
     background: var(--neon-yellow);
     color: #0a0e1e;
     font-family: 'Orbitron', sans-serif;
-    font-size: 0.65rem;
+    font-size: 0.58rem;
     font-weight: 800;
-    letter-spacing: 0.5px;
-    padding: 3px 10px;
-    border-radius: 20px;
+    letter-spacing: 0.2px;
+    padding: 4px 10px;
+    border-radius: 10px;
     box-shadow: 0 0 10px rgba(255,233,60,0.6);
   }
 
@@ -1027,11 +1028,11 @@
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
-    <span class="daily-badge-today" id="daily-card-countdown">--:--:--</span>
+    <span class="daily-badge-today" id="daily-card-countdown">Termina em: --:--:--</span>
     <h2>🗓️ Desafio Diário</h2>
     <p>O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação no modo Clássico — vale a sua melhor. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>.</p>
     <div class="mode-card-footer">
-      <span class="record-badge" id="daily-card-best">🎯 Melhor: 0</span>
+      <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
       <span class="record-badge" id="daily-card-inbox-badge" style="display:none;"></span>
     </div>
@@ -3953,7 +3954,7 @@ function renderDailyCardCountdown() {
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  el.textContent = `Termina em: ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 startDailyCardTicker();
 
@@ -4092,9 +4093,11 @@ window.startDailyChallenge = async () => {
     dailyAttemptsUsed = d.attemptNumber;
     track('daily_start', { attempt: d.attemptNumber });
 
-    // mesma semente pra todo mundo no mesmo dia — reproduz a MESMA sequência
-    // de cores em todas as até 3 tentativas e para todos os jogadores
-    dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-classic-v1'));
+    // a semente inclui o número da tentativa: a 1ª, 2ª e 3ª tentativas do dia
+    // têm sequências DIFERENTES entre si (senão daria pra decorar/gravar a
+    // sequência numa tentativa e "colar" nas próximas), mas a mesma tentativa
+    // Nº X é idêntica pra todo mundo — o desafio continua justo pra todos
+    dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-classic-v1|attempt' + d.attemptNumber));
     dailyScore = 0;
     dailyDuration = 10000;
     dailyPlaying = true;
