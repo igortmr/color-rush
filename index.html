@@ -1084,7 +1084,7 @@
     <div class="big-nick" id="profile-nick"></div>
     <div class="muted" id="profile-summary"></div>
   </div>
-  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
+  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">📤 ADICIONAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
   <div id="profile-friend-action" style="display:none;"></div>
   <div class="muted" id="profile-friend-status"></div>
@@ -1099,7 +1099,7 @@
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <div class="muted" id="friends-invite-status"></div>
   <div class="btn-row" style="width:100%;">
-    <button class="secondary" style="flex:1;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
+    <button class="secondary" style="flex:1;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">📤 ADICIONAR AMIGOS</button>
     <button class="secondary" style="flex:1;" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
 </div>
@@ -1203,6 +1203,7 @@ const functions = getFunctions(app);
 const callStartSession = httpsCallable(functions, 'startGameSession');
 const callSubmitResult = httpsCallable(functions, 'submitGameResult');
 const callCreditReferral = httpsCallable(functions, 'creditReferral');
+const callSuggestFriendFromRef = httpsCallable(functions, 'suggestFriendFromRef');
 const callClaimPendingScore = httpsCallable(functions, 'claimPendingScore');
 const callRecomputeTotal = httpsCallable(functions, 'recomputeMyTotal');
 // amigos — igual ao resto: nenhuma escrita cruzada (pedido/aceite/remoção)
@@ -1256,7 +1257,7 @@ const T = {
     mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
-    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '📤 CONVIDAR AMIGOS',
+    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '📤 ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
     your_score: 'Sua pontuação:', record_mode_label: '🏆 Seu recorde neste modo:',
@@ -1403,7 +1404,7 @@ const T = {
     mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
-    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '📤 INVITE FRIENDS',
+    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '📤 ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
     your_score: 'Your score:', record_mode_label: '🏆 Your record in this mode:',
@@ -2057,7 +2058,20 @@ async function proceedAfterLogin(user) {
     myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
   } catch { myData = { ...EMPTY_PROFILE }; }
   if (!myData.nick) show('nick-screen');
-  else { await backfillTotal(); await submitPendingScore(); startPvpListener(); showMenu(); }
+  else {
+    await backfillTotal();
+    await submitPendingScore();
+    startPvpListener();
+    // já tem conta — se chegou (ou já estava logada) com o link de convite de
+    // alguém, sugere amizade em segundo plano, sem travar a entrada no menu
+    // (mesmo caso de quem acabou de criar a conta, ver saveNick/creditReferral)
+    if (referrerCode) {
+      callSuggestFriendFromRef({ refCode: referrerCode }).catch(() => {});
+      referrerCode = null;
+      try { sessionStorage.removeItem('colorRushRef'); } catch {}
+    }
+    showMenu();
+  }
 }
 
 // corrige (silenciosamente) contas antigas que ainda não têm o campo "total" calculado,
