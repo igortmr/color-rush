@@ -400,6 +400,26 @@
     background-size: 14px 9px;
   }
   .ranking-select option { background: #0a0e1e; color: #fff; }
+  .scope-tabs { display: flex; width: 100%; gap: 8px; }
+  .scope-tab {
+    flex: 1;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(177,77,255,0.35);
+    background: #0a0e1e;
+    color: #8fa0d6;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    box-shadow: none;
+  }
+  .scope-tab.active {
+    border-color: var(--neon-purple);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(177,77,255,0.35);
+  }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
   th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; overflow-wrap: break-word; }
@@ -904,9 +924,7 @@
   <div class="btn-row" style="width:100%;">
     <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')" data-i18n="btn_ranking">🏆 RANKING</button>
     <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px; position:relative;" id="menu-friends-btn" onclick="showFriends()"><span id="menu-friends-label">👥 AMIGOS</span><span id="menu-friends-badge" style="display:none; position:absolute; top:-6px; right:-6px; background:#ff2d6b; color:#fff; border-radius:10px; font-size:0.65rem; font-weight:800; padding:2px 6px; font-family:'Orbitron',sans-serif;"></span></button>
-    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="inviteFriends()" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
   </div>
-  <div class="muted" id="invite-status"></div>
   <p class="muted" data-i18n="footer_note">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
@@ -979,6 +997,10 @@
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
   <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
+  <div class="scope-tabs">
+    <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">🌍 Geral</button>
+    <button class="scope-tab" id="scope-amigos-btn" onclick="setRankingScope('amigos')" data-i18n="scope_friends">👥 Amigos</button>
+  </div>
   <select class="ranking-select" id="ranking-select" onchange="loadRanking(this.value)">
     <option value="geral" data-i18n="tab_geral">🌍 Geral</option>
     <option value="classic" data-i18n="tab_classic">🎨 Clássico</option>
@@ -1021,6 +1043,8 @@
 <!-- AMIGOS -->
 <div class="screen" id="friends-screen">
   <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
+  <button class="secondary" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
+  <div class="muted" id="friends-invite-status"></div>
   <div class="muted" id="friends-status"></div>
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
@@ -1160,6 +1184,9 @@ const T = {
     mode_name_classic: 'Clássico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso',
     ranking_no_players: 'Ninguém pontuou ainda. Seja o primeiro! 🚀',
     ranking_no_players_mini: 'Ninguém no ranking ainda. Seja o primeiro! 🚀',
+    ranking_no_friends: 'Nenhum dos seus amigos pontuou neste ranking ainda.',
+    scope_all: '🌍 Geral',
+    scope_friends: '👥 Amigos',
     ranking_error: 'Erro ao carregar ranking.', ranking_error_mini: 'Não foi possível carregar.',
     pagination_prev: '‹ Anterior', pagination_next: 'Próxima ›',
     pagination_page: (cur, total) => `Página ${cur} de ${total}`,
@@ -1177,8 +1204,7 @@ const T = {
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Pedidos recebidos',
     friends_outgoing_title: 'Pedidos enviados',
-    friends_list_title: 'Seus amigos',
-    friends_empty: 'Você ainda não tem amigos. Adicione alguém clicando no nick dela no ranking!',
+    friends_empty: 'Adicione-os pelo ranking, ou compartilhando seu link de convite.',
     btn_add_friend: '➕ Adicionar amigo',
     btn_remove_friend: 'Remover amigo',
     btn_accept: 'Aceitar',
@@ -1283,6 +1309,9 @@ const T = {
     mode_name_classic: 'Classic', mode_name_reverse: 'Reverse', mode_name_shapes: 'Shapes', mode_name_shapes_reverse: 'Shapes Reverse',
     ranking_no_players: 'No one has scored yet. Be the first! 🚀',
     ranking_no_players_mini: 'No one on the leaderboard yet. Be the first! 🚀',
+    ranking_no_friends: "None of your friends have scored in this leaderboard yet.",
+    scope_all: '🌍 Overall',
+    scope_friends: '👥 Friends',
     ranking_error: 'Error loading leaderboard.', ranking_error_mini: 'Could not load.',
     pagination_prev: '‹ Previous', pagination_next: 'Next ›',
     pagination_page: (cur, total) => `Page ${cur} of ${total}`,
@@ -1300,8 +1329,7 @@ const T = {
     friends_title: '👥 FRIENDS',
     friends_incoming_title: 'Incoming requests',
     friends_outgoing_title: 'Sent requests',
-    friends_list_title: 'Your friends',
-    friends_empty: "You don't have any friends yet. Add someone by clicking their nick in the leaderboard!",
+    friends_empty: 'Add them from the leaderboard, or by sharing your invite link.',
     btn_add_friend: '➕ Add friend',
     btn_remove_friend: 'Remove friend',
     btn_accept: 'Accept',
@@ -2522,16 +2550,20 @@ function friendActionNode(rel, theirUid) {
 // linha de amigo/pedido montada via DOM (nunca via innerHTML com o nick
 // interpolado — nick é livre em qualquer caractere não-espaço, então precisa
 // ir sempre por textContent, igual já é feito no resto do ranking)
-function friendRow(uid, nick) {
+function friendRow(uid, nick, xp) {
   const row = document.createElement('div');
   row.className = 'card';
   row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
 
+  const left = document.createElement('span');
+  left.style.cssText = 'display:flex; align-items:center; gap:8px;';
+  left.insertAdjacentHTML('beforeend', lvChip(xp || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
   const nickSpan = document.createElement('span');
   nickSpan.textContent = nick;
   nickSpan.className = 'nick-click';
   nickSpan.onclick = () => openProfileByUid(uid, nick);
-  row.appendChild(nickSpan);
+  left.appendChild(nickSpan);
+  row.appendChild(left);
 
   const btn = document.createElement('button');
   btn.className = 'secondary';
@@ -2617,12 +2649,16 @@ async function renderFriendsScreen(force) {
     outgoingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', false)));
   }
 
-  body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_list_title));
   const friendEntries = Object.entries(friends);
   if (!friendEntries.length) {
     body.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[lang].friends_empty}</div>`);
   } else {
-    friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '')));
+    // nível de cada amigo vem do cache geral de pontuações (mesmo já usado
+    // pelo ranking), pra não precisar de uma leitura extra por amigo
+    const all = await fetchAllScores();
+    const xpByUid = {};
+    all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
+    friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid])));
   }
 }
 
@@ -2813,20 +2849,45 @@ const RANKING_PAGE_SIZE = 20;
 let rankingRows = [];
 let rankingPage = 0;
 let rankingTab = 'geral';
+let rankingScope = 'geral'; // 'geral' = todo mundo (como já era), 'amigos' = só quem está na sua lista de amigos (+ você)
+
+window.setRankingScope = (scope) => {
+  rankingScope = scope;
+  loadRanking(rankingTab);
+};
 
 window.loadRanking = async (m) => {
   rankingTab = m;
   $('ranking-select').value = m;
+  $('scope-geral-btn').classList.toggle('active', rankingScope === 'geral');
+  $('scope-amigos-btn').classList.toggle('active', rankingScope === 'amigos');
   $('ranking-explain').textContent = (m === 'geral') ? T[lang].geral_explain : (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
   $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : (m === 'level') ? T[lang].points_header_level : T[lang].points_header;
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
   $('ranking-pagination').innerHTML = '';
+
+  // ranking de amigos exige conta (não dá pra ter amigos jogando sem login)
+  if (rankingScope === 'amigos' && (offline || !currentUser)) {
+    body.innerHTML = `
+      <tr><td colspan="3">
+        <div class="card" style="text-align:center;">
+          <p>${T[lang].profile_offline_msg1}</p>
+          <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+        </div>
+      </td></tr>`;
+    rankingRows = [];
+    return;
+  }
+
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
     const all = await fetchAllScores();
+    // filtro de amigos usa o mesmo cache já lido pra tela de amigos — sem leitura extra
+    const friendUids = (rankingScope === 'amigos') ? new Set(Object.keys(await fetchMyFriends())) : null;
     const rows = [];
     for (const r of all) {
+      if (friendUids && r.uid !== currentUser.uid && !friendUids.has(r.uid)) continue;
       const data = rowData(r);
       // no ranking de nível todo mundo entra (mesmo com 0 XP)
       if (m === 'level') {
@@ -2873,7 +2934,7 @@ function renderRankingPage() {
     nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : topBadgeIcons(r.stats, 3));
     body.appendChild(tr);
   });
-  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players}</td></tr>`;
+  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[lang].ranking_no_friends : T[lang].ranking_no_players}</td></tr>`;
 
   const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
