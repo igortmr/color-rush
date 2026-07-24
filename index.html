@@ -1283,6 +1283,13 @@ const callCancelChallenge = httpsCallable(functions, 'cancelChallenge');
 const callSubmitPvpAnswer = httpsCallable(functions, 'submitPvpAnswer');
 const callClaimTimeout = httpsCallable(functions, 'claimTimeout');
 const callForfeitMatch = httpsCallable(functions, 'forfeitMatch');
+const callTouchLogin = httpsCallable(functions, 'touchLogin');
+// ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
+// ver requireAdmin em functions/index.js; qualquer outra conta que tentar
+// chamar recebe permission-denied do servidor)
+const callAdminGetUserDetails = httpsCallable(functions, 'adminGetUserDetails');
+const callAdminSetBanned = httpsCallable(functions, 'adminSetBanned');
+const callAdminSetNick = httpsCallable(functions, 'adminSetNick');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -2343,6 +2350,7 @@ async function proceedAfterLogin(user) {
     await backfillTotal();
     await submitPendingScore();
     startPvpListener();
+    callTouchLogin().catch(() => {}); // só registra "último login" pra ferramenta de admin — não trava a entrada se falhar
     // já tem conta — se chegou (ou já estava logada) com o link de convite de
     // alguém, sugere amizade em segundo plano, sem travar a entrada no menu
     // (mesmo caso de quem acabou de criar a conta, ver saveNick/creditReferral)
@@ -2871,6 +2879,165 @@ function profileSectionLabel(text) {
   return `<div class="muted" style="text-align:left; font-family:'Orbitron',sans-serif; font-size:0.75rem; letter-spacing:0.5px; text-transform:uppercase; margin-top:4px;">${text}</div>`;
 }
 
+/* ================== painel de admin (perfil de outra pessoa) ================== */
+// texto fixo em português de propósito — essa parte da tela só aparece pra
+// quem tem admin:true (só você), então não precisa dos outros idiomas
+function fmtDateTime(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+async function renderAdminPanel(uid, currentNick, stats) {
+  const box = $('admin-panel-body');
+  if (!box) return;
+
+  let details;
+  try {
+    details = (await callAdminGetUserDetails({ uid })).data;
+  } catch (e) {
+    box.textContent = 'Erro ao carregar dados de admin: ' + (e.message || e);
+    return;
+  }
+
+  box.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'text-align:left; display:flex; flex-direction:column; gap:10px; width:100%;';
+
+  // último login
+  const loginRow = document.createElement('div');
+  loginRow.innerHTML = '<b>Último login:</b> ';
+  loginRow.appendChild(document.createTextNode(details.lastLoginAt ? fmtDateTime(details.lastLoginAt) : 'nunca registrado'));
+  wrap.appendChild(loginRow);
+
+  // últimos duelos (PvP) — nick do adversário sempre via textContent (nunca
+  // interpolado no HTML), mesmo cuidado usado no resto da tela de perfil
+  const matchesTitle = document.createElement('div');
+  matchesTitle.innerHTML = '<b>Últimos duelos (PvP):</b>';
+  wrap.appendChild(matchesTitle);
+  const matchesList = document.createElement('div');
+  matchesList.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+  if (!details.matches.length) {
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = 'Nenhum duelo concluído ainda.';
+    matchesList.appendChild(row);
+  } else {
+    details.matches.forEach(m => {
+      const row = document.createElement('div');
+      row.className = 'muted';
+      const resultLabel = m.result === 'win' ? '🏆 Vitória' : m.result === 'loss' ? '💀 Derrota' : '🤝 Empate';
+      row.appendChild(document.createTextNode(fmtDateTime(m.finishedAt) + ' — vs '));
+      const b = document.createElement('b');
+      b.textContent = m.opponentNick || '?';
+      row.appendChild(b);
+      row.appendChild(document.createTextNode(' — ' + resultLabel));
+      matchesList.appendChild(row);
+    });
+  }
+  wrap.appendChild(matchesList);
+
+  // lista de amigos
+  const friendsTitle = document.createElement('div');
+  friendsTitle.innerHTML = `<b>Amigos (${details.friends.length}):</b>`;
+  wrap.appendChild(friendsTitle);
+  const friendsList = document.createElement('div');
+  friendsList.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+  if (!details.friends.length) {
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = 'Sem amigos ainda.';
+    friendsList.appendChild(row);
+  } else {
+    details.friends.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'muted';
+      row.appendChild(document.createTextNode('👤 '));
+      const b = document.createElement('b');
+      b.textContent = f.nick || '?';
+      row.appendChild(b);
+      if (f.since) row.appendChild(document.createTextNode(' — desde ' + fmtDateTime(f.since)));
+      friendsList.appendChild(row);
+    });
+  }
+  wrap.appendChild(friendsList);
+
+  // editar nick + banir/desbanir — ambos validados de novo no servidor
+  // (adminSetNick / adminSetBanned), isso aqui só monta a UI
+  const toolsBox = document.createElement('div');
+  toolsBox.style.cssText = 'border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; flex-direction:column; gap:8px;';
+
+  const nickRow = document.createElement('div');
+  nickRow.style.cssText = 'display:flex; gap:8px;';
+  const nickInput = document.createElement('input');
+  nickInput.type = 'text';
+  nickInput.value = currentNick || '';
+  nickInput.style.flex = '1';
+  nickRow.appendChild(nickInput);
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'secondary';
+  saveBtn.style.flex = 'none';
+  saveBtn.textContent = 'Salvar nick';
+  nickRow.appendChild(saveBtn);
+  toolsBox.appendChild(nickRow);
+  const nickStatus = document.createElement('div');
+  nickStatus.className = 'muted';
+  toolsBox.appendChild(nickStatus);
+
+  saveBtn.onclick = async () => {
+    const nick = nickInput.value.trim();
+    nickStatus.textContent = '';
+    if (nick.length < 3 || nick.length > 16 || /\s/.test(nick)) {
+      nickStatus.textContent = 'Nick inválido (3 a 16 caracteres, sem espaço).';
+      return;
+    }
+    saveBtn.disabled = true;
+    try {
+      await callAdminSetNick({ uid, nick });
+      nickStatus.textContent = '✅ Nick atualizado.';
+      stats.nick = nick;
+      $('profile-nick').textContent = T[lang].profile_nick_label(nick);
+      $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(stats.xp || 0));
+    } catch (e) {
+      nickStatus.textContent = '❌ ' + (e.message || 'Erro ao salvar.');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  };
+
+  const banBtn = document.createElement('button');
+  const paintBanBtn = banned => {
+    banBtn.textContent = banned ? '✅ Remover banimento' : '🚫 Banir esta conta';
+    banBtn.style.cssText = banned
+      ? 'border-color:var(--neon-green); color:var(--neon-green); background:#0a0e1e;'
+      : 'border-color:var(--neon-red); color:#ff8bab; background:#0a0e1e;';
+  };
+  paintBanBtn(details.banned);
+  toolsBox.appendChild(banBtn);
+  const banStatus = document.createElement('div');
+  banStatus.className = 'muted';
+  toolsBox.appendChild(banStatus);
+
+  banBtn.onclick = async () => {
+    const next = !details.banned;
+    if (next && !confirm('Banir esta conta? A pessoa não vai mais conseguir gravar pontuação nem jogar PvP.')) return;
+    banBtn.disabled = true;
+    banStatus.textContent = '';
+    try {
+      await callAdminSetBanned({ uid, banned: next });
+      details.banned = next;
+      paintBanBtn(next);
+      banStatus.textContent = next ? '🚫 Conta banida.' : '✅ Banimento removido.';
+    } catch (e) {
+      banStatus.textContent = '❌ ' + (e.message || 'Erro.');
+    } finally {
+      banBtn.disabled = false;
+    }
+  };
+
+  wrap.appendChild(toolsBox);
+  box.appendChild(wrap);
+}
+
 /* ================== amigos ================== */
 // Espelhado em dois documentos por conta (ver functions/index.js):
 //   friends/{uid}        -> { list: { [amigoUid]: { nick, since } } }
@@ -3220,7 +3387,16 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     let html = '';
     if (ranksHtml) html += profileSectionLabel(T[lang].profile_ranks_section) + ranksHtml;
     html += profileSectionLabel(T[lang].profile_badges_section) + renderPublicProfileBadges(stats);
+    // painel só pra admin (myData.admin, setado à mão no Firebase Console) —
+    // último login, últimos duelos e amigos de QUALQUER jogador, com opção de
+    // editar o nick e banir a conta, tudo validado de novo no servidor (ver
+    // requireAdmin em functions/index.js — o cliente decidir mostrar isso aqui
+    // é só conveniência de UI, não é o que garante a permissão)
+    if (myData.admin === true) {
+      html += profileSectionLabel('🛠️ Admin') + `<div class="card" id="admin-panel-body"><div class="muted" style="text-align:center;">Carregando dados de admin...</div></div>`;
+    }
     $('profile-body').innerHTML = html;
+    if (myData.admin === true) renderAdminPanel(viewUid, viewNick || '', stats);
     return;
   }
 
