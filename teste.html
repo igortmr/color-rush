@@ -3106,6 +3106,7 @@ let pvpClaimedForTurn = null; // turnStartedAt (ms) da tentativa pra qual já te
 let pvpLastBonusAt = null;    // overtimeBonusAt (ms) do último bônus de +5s que já mostramos na tela
 let pvpBonusToastTimer = null;
 let pvpLastAttemptAt = null;  // lastAttempt.at (ms) da última tentativa pra qual já tocamos som
+let pvpClockOffsetMs = 0;     // diferença entre o relógio do navegador e o do servidor (ver updatePvpClockOffset)
 
 function startPvpListener() {
   stopPvpListener();
@@ -3114,8 +3115,23 @@ function startPvpListener() {
   pvpMatchesUnsub = onSnapshot(q, snapshot => {
     pvpMatchesById = {};
     snapshot.forEach(d => { pvpMatchesById[d.id] = { id: d.id, ...d.data() }; });
+    updatePvpClockOffset();
     handlePvpMatchesUpdate();
   }, () => {}); // erro de rede etc.: o próprio listener tenta de novo sozinho
+}
+
+// o relógio do navegador pode estar um pouco adiantado ou atrasado em relação
+// ao do servidor (comum principalmente em celulares) — sem corrigir isso, a
+// barra de tempo de quem está na vez podia mostrar um valor errado logo no
+// início do turno (ex: 15s em vez de 10s, se o relógio local estiver ~5s
+// atrasado). Estimamos a diferença comparando "agora" no navegador com o
+// carimbo de tempo do servidor (updatedAt) que acabou de chegar numa partida
+// ativa, e usamos essa correção em vez do relógio local puro pra calcular
+// quanto tempo já passou no turno atual.
+function updatePvpClockOffset() {
+  const ref = Object.values(pvpMatchesById).find(m => m.status === 'active' && m.updatedAt);
+  if (!ref) return;
+  pvpClockOffsetMs = Date.now() - ref.updatedAt.toMillis();
 }
 
 function stopPvpListener() {
@@ -3406,7 +3422,7 @@ function renderPvpBars(m) {
   const myUid = currentUser.uid;
   const oppUid = m.players.find(p => p !== myUid);
   const turnStartedMs = m.turnStartedAt ? m.turnStartedAt.toMillis() : Date.now();
-  const elapsed = Date.now() - turnStartedMs;
+  const elapsed = Math.max(0, (Date.now() - pvpClockOffsetMs) - turnStartedMs);
 
   const myBank = (m.bank && m.bank[myUid]) || 0;
   const oppBank = (m.bank && m.bank[oppUid]) || 0;
