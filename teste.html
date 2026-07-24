@@ -432,6 +432,15 @@
   .pvp-bar-row.opp span:first-child { color: var(--neon-orange); }
   #pvp-active .timer-track { margin: 4px 0 10px; }
   #pvp-active .timer-fill { transition: width 0.1s linear; }
+  .pvp-winner-nick {
+    color: #ffd84a;
+    text-shadow: 0 0 6px rgba(255,216,74,0.9), 0 0 14px rgba(255,216,74,0.55);
+    animation: pvpWinnerGlow 1.2s ease-in-out infinite;
+  }
+  @keyframes pvpWinnerGlow {
+    0%, 100% { text-shadow: 0 0 6px rgba(255,216,74,0.9), 0 0 14px rgba(255,216,74,0.55); }
+    50% { text-shadow: 0 0 10px rgba(255,216,74,1), 0 0 22px rgba(255,216,74,0.85); }
+  }
   #pvp-instruction { margin: 6px 0 4px; }
   #pvp-prompt-box {
     display: inline-block;
@@ -1099,6 +1108,12 @@
     <button class="secondary" onclick="uiCancelChallenge()" data-i18n="btn_cancel_request">Cancelar pedido</button>
   </div>
 
+  <!-- contagem regressiva antes do duelo começar de vez (dá tempo de se preparar) -->
+  <div id="pvp-countdown" style="display:none; width:100%; text-align:center;">
+    <p class="muted" data-i18n="pvp_get_ready">Prepare-se!</p>
+    <div id="pvp-countdown-num" style="font-family:'Orbitron',sans-serif; font-size:4rem; font-weight:900; color:var(--neon-yellow); text-shadow:0 0 18px rgba(255,233,60,0.7); margin:10px 0;"></div>
+  </div>
+
   <!-- duelo em andamento -->
   <div id="pvp-active" style="display:none; width:100%; flex-direction:column; gap:4px;">
     <div class="muted" id="pvp-explain" data-i18n-html="pvp_explain" style="text-align:center; margin-bottom:4px;"></div>
@@ -1311,6 +1326,8 @@ const T = {
     pvp_cancelled_title: 'Desafio cancelado',
     pvp_draw_title: '🤝 EMPATE',
     pvp_draw_sub: '3 rodadas seguidas sem nenhum acerto de ninguém.',
+    pvp_get_ready: 'Prepare-se!',
+    pvp_go: 'Vai!',
     pvp_reason_timeout: (won, opp) => won ? `${opp} ficou sem tempo.` : 'Você ficou sem tempo.',
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicou no quadrado errado.` : 'Você clicou no quadrado errado.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} desistiu do duelo.` : 'Você desistiu do duelo.',
@@ -1456,6 +1473,8 @@ const T = {
     pvp_cancelled_title: 'Challenge cancelled',
     pvp_draw_title: '🤝 DRAW',
     pvp_draw_sub: '3 rounds in a row with no one getting it right.',
+    pvp_get_ready: 'Get ready!',
+    pvp_go: 'Go!',
     pvp_reason_timeout: (won, opp) => won ? `${opp} ran out of time.` : 'You ran out of time.',
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicked the wrong square.` : 'You clicked the wrong square.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} forfeited the duel.` : 'You forfeited the duel.',
@@ -1847,6 +1866,10 @@ const sfx = {
   record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
   tick()    { tone(1000, 0.03, 'sine', 0.05); },
   levelUp() { [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'square', 0.12, i * 0.09)); },
+  pvpWin()  { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'square', 0.12, i * 0.1)); }, // fanfarra de vitória do duelo
+  pvpLose() { [300, 240, 190, 140].forEach((f, i) => tone(f, 0.22, 'sawtooth', 0.12, i * 0.14)); }, // tom descendente de derrota
+  pvpDraw() { tone(440, 0.18, 'triangle', 0.12); tone(440, 0.18, 'triangle', 0.12, 0.22); }, // dois bipes iguais = empate
+  countdown(isGo) { isGo ? tone(880, 0.2, 'square', 0.16) : tone(660, 0.12, 'square', 0.14); }, // bipe da contagem 3-2-1 (mais agudo/comprido no "Vai!")
 };
 window.toggleMute = () => {
   muted = !muted;
@@ -3101,6 +3124,7 @@ window.rankingGoPage = (p) => {
 // onSnapshot, ao vivo) pra saber o que realmente aconteceu. Ver
 // functions/index.js pra entender a autoridade do servidor sobre isso.
 const PVP_TURN_BANK_MS = 10000; // tem que bater com o servidor
+const PVP_COUNTDOWN_MS = 3000;  // idem — contagem "3, 2, 1" antes do duelo começar de vez
 
 let pvpMatchesUnsub = null;   // cancela o listener (chamado no logout)
 let pvpMatchesById = {};      // cache local: matchId -> dados do match
@@ -3111,6 +3135,9 @@ let pvpLastBonusAt = null;    // overtimeBonusAt (ms) do último bônus de +5s q
 let pvpBonusToastTimer = null;
 let pvpLastAttemptAt = null;  // lastAttempt.at (ms) da última tentativa pra qual já tocamos som
 let pvpClockOffsetMs = 0;     // diferença entre o relógio do navegador e o do servidor (ver updatePvpClockOffset)
+let pvpCountdownAnimFrame = null; // rAF da contagem "3, 2, 1" antes do duelo começar
+let pvpCountdownLastNum = null;   // último número (3, 2 ou 1) que já tocamos o beep, pra não repetir
+let pvpResultSoundPlayed = false; // evita tocar o som de vitória/derrota/empate mais de uma vez pra mesma partida
 
 function startPvpListener() {
   stopPvpListener();
@@ -3133,7 +3160,7 @@ function startPvpListener() {
 // ativa, e usamos essa correção em vez do relógio local puro pra calcular
 // quanto tempo já passou no turno atual.
 function updatePvpClockOffset() {
-  const ref = Object.values(pvpMatchesById).find(m => m.status === 'active' && m.updatedAt);
+  const ref = Object.values(pvpMatchesById).find(m => (m.status === 'active' || m.status === 'starting') && m.updatedAt);
   if (!ref) return;
   pvpClockOffsetMs = Date.now() - ref.updatedAt.toMillis();
 }
@@ -3162,7 +3189,7 @@ function handlePvpMatchesUpdate() {
   // partida ativa em que eu participo — se eu ainda não estiver vendo ela e
   // não estiver no meio de um jogo solo/tutorial (pra não interromper uma
   // partida em andamento), abre a tela de duelo sozinho
-  const active = all.find(m => m.status === 'active');
+  const active = all.find(m => m.status === 'active' || m.status === 'starting');
   const safeToInterrupt = ['menu-screen', 'friends-screen', 'ranking-screen', 'pvp-screen'].some(id => $(id).classList.contains('active'));
   if (active && safeToInterrupt && pvpCurrentMatchId !== active.id) {
     openPvpScreen(active.id);
@@ -3240,8 +3267,9 @@ window.pvpBackToMenu = () => {
 
 function openPvpScreen(matchId) {
   pvpCurrentMatchId = matchId;
-  pvpLastBonusAt = null;   // partida nova (ou reaberta) — ainda não mostramos nenhum aviso de bônus dela
-  pvpLastAttemptAt = null; // idem pro som — evita tocar som de uma tentativa antiga ao reabrir a tela
+  pvpLastBonusAt = null;      // partida nova (ou reaberta) — ainda não mostramos nenhum aviso de bônus dela
+  pvpLastAttemptAt = null;    // idem pro som — evita tocar som de uma tentativa antiga ao reabrir a tela
+  pvpResultSoundPlayed = false; // idem pro som de vitória/derrota/empate
   show('pvp-screen');
   const m = pvpMatchesById[matchId];
   if (m) renderPvpScreen(m);
@@ -3268,17 +3296,27 @@ function renderPvpScreen(m) {
   const oppUid = m.players.find(p => p !== myUid);
 
   $('pvp-waiting').style.display = 'none';
+  $('pvp-countdown').style.display = 'none';
   $('pvp-active').style.display = 'none';
   $('pvp-result').style.display = 'none';
 
   if (m.status === 'pending') {
     stopPvpTicker();
+    stopPvpCountdownTicker();
     $('pvp-waiting').style.display = '';
     $('pvp-waiting-text').textContent = T[lang].pvp_waiting_text((m.nicks && m.nicks[oppUid]) || '');
     return;
   }
 
+  if (m.status === 'starting') {
+    stopPvpTicker();
+    $('pvp-countdown').style.display = '';
+    if (!pvpCountdownAnimFrame) startPvpCountdownTicker();
+    return;
+  }
+
   if (m.status === 'active') {
+    stopPvpCountdownTicker();
     $('pvp-active').style.display = 'flex';
     $('pvp-my-name').textContent = T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || '');
     $('pvp-opp-name').textContent = (m.nicks && m.nicks[oppUid]) || '';
@@ -3289,8 +3327,9 @@ function renderPvpScreen(m) {
     return;
   }
 
-  // finished / declined / cancelled
+  // finished / declined / cancelled / draw
   stopPvpTicker();
+  stopPvpCountdownTicker();
   $('pvp-result').style.display = '';
   renderPvpResult(m, myUid, oppUid);
 }
@@ -3343,6 +3382,17 @@ function renderPvpBoard(m, myUid) {
   });
 }
 
+// toca o som de vitória/derrota/empate uma única vez por partida (o
+// resultado pode ser renderizado de novo por outros motivos — ex: reabrir a
+// tela — e não queremos repetir o som toda vez)
+function playPvpResultSound(kind) {
+  if (pvpResultSoundPlayed) return;
+  pvpResultSoundPlayed = true;
+  if (kind === 'win') sfx.pvpWin();
+  else if (kind === 'lose') sfx.pvpLose();
+  else sfx.pvpDraw();
+}
+
 function renderPvpResult(m, myUid, oppUid) {
   const titleEl = $('pvp-result-title');
   const subEl = $('pvp-result-sub');
@@ -3364,6 +3414,7 @@ function renderPvpResult(m, myUid, oppUid) {
     return;
   }
   if (m.status === 'draw') {
+    playPvpResultSound('draw');
     titleEl.textContent = T[lang].pvp_draw_title;
     subEl.textContent = T[lang].pvp_draw_sub;
     const finalBank = m.finalBank || m.bank || {};
@@ -3374,6 +3425,7 @@ function renderPvpResult(m, myUid, oppUid) {
   }
 
   const won = m.winnerUid === myUid;
+  playPvpResultSound(won ? 'win' : 'lose');
   titleEl.textContent = won ? T[lang].pvp_win_title : T[lang].pvp_lose_title;
   const reasonFn = { timeout: T[lang].pvp_reason_timeout, wrong_click: T[lang].pvp_reason_wrong, forfeit: T[lang].pvp_reason_forfeit }[m.loseReason];
   subEl.textContent = reasonFn ? reasonFn(won, oppNick) : '';
@@ -3405,6 +3457,7 @@ function pvpPlayerRow(nick, remainingMs, isWinner) {
   left.appendChild(icon);
   const nickSpan = document.createElement('span');
   nickSpan.textContent = nick;
+  if (isWinner === true) nickSpan.classList.add('pvp-winner-nick');
   left.appendChild(nickSpan);
   row.appendChild(left);
 
@@ -3430,6 +3483,39 @@ function startPvpTicker() {
 function stopPvpTicker() {
   if (pvpAnimFrame) cancelAnimationFrame(pvpAnimFrame);
   pvpAnimFrame = null;
+}
+
+// contagem "3, 2, 1" mostrada assim que o desafio é aceito, antes do
+// cronômetro de verdade ligar (o servidor só começa a descontar tempo depois
+// desse período — ver countdownStartedAt/PVP_COUNTDOWN_MS em respondChallenge)
+function startPvpCountdownTicker() {
+  stopPvpCountdownTicker();
+  pvpCountdownLastNum = null;
+  function tick() {
+    const cur = pvpMatchesById[pvpCurrentMatchId];
+    if (!cur || cur.status !== 'starting') { pvpCountdownAnimFrame = null; return; }
+    renderPvpCountdown(cur);
+    pvpCountdownAnimFrame = requestAnimationFrame(tick);
+  }
+  tick();
+}
+function stopPvpCountdownTicker() {
+  if (pvpCountdownAnimFrame) cancelAnimationFrame(pvpCountdownAnimFrame);
+  pvpCountdownAnimFrame = null;
+}
+function renderPvpCountdown(m) {
+  const startedMs = m.countdownStartedAt ? m.countdownStartedAt.toMillis() : Date.now();
+  const elapsed = Math.max(0, (Date.now() - pvpClockOffsetMs) - startedMs);
+  const remaining = PVP_COUNTDOWN_MS - elapsed;
+  const num = Math.max(1, Math.ceil(remaining / 1000));
+
+  if (remaining <= 0) {
+    $('pvp-countdown-num').textContent = T[lang].pvp_go;
+    if (pvpCountdownLastNum !== 'go') { pvpCountdownLastNum = 'go'; sfx.countdown(true); }
+  } else {
+    $('pvp-countdown-num').textContent = String(num);
+    if (pvpCountdownLastNum !== num) { pvpCountdownLastNum = num; sfx.countdown(false); }
+  }
 }
 
 function renderPvpBars(m) {
