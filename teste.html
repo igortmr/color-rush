@@ -1101,12 +1101,14 @@
 
   <!-- duelo em andamento -->
   <div id="pvp-active" style="display:none; width:100%; flex-direction:column; gap:4px;">
+    <div class="muted" id="pvp-explain" data-i18n="pvp_explain" style="text-align:center; margin-bottom:4px;"></div>
     <div class="pvp-bar-row me"><span id="pvp-my-name"></span><span id="pvp-my-time"></span></div>
     <div class="timer-track"><div class="timer-fill" id="pvp-my-bar"></div></div>
     <div class="pvp-bar-row opp"><span id="pvp-opp-name"></span><span id="pvp-opp-time"></span></div>
     <div class="timer-track"><div class="timer-fill" id="pvp-opp-bar"></div></div>
 
     <div class="muted" id="pvp-turn-label" style="text-align:center; margin:8px 0 2px;"></div>
+    <div id="pvp-bonus-toast" data-i18n="pvp_bonus_toast" style="display:none; text-align:center; font-family:'Orbitron',sans-serif; font-weight:800; font-size:0.9rem; color:var(--neon-yellow); text-shadow:0 0 10px rgba(255,233,60,0.6); margin:2px 0;"></div>
     <div class="instruction" id="pvp-instruction" style="justify-content:center;"><span id="pvp-prompt-box"></span></div>
     <div class="grid" id="pvp-grid"></div>
 
@@ -1311,6 +1313,8 @@ const T = {
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicou no quadrado errado.` : 'Você clicou no quadrado errado.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} desistiu do duelo.` : 'Você desistiu do duelo.',
     pvp_rounds_played: n => `Rodadas jogadas: ${n}`,
+    pvp_explain: '👉 Clique no quadrado com a cor que a PALAVRA diz — não a cor do retângulo ao redor dela!',
+    pvp_bonus_toast: '✨ +5 segundos adicionados para desempate!',
     badge_not_unlocked: 'Ainda não conquistado', badge_maxed: '🌟 Nível máximo alcançado!',
     badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
@@ -1452,6 +1456,8 @@ const T = {
     pvp_reason_wrong: (won, opp) => won ? `${opp} clicked the wrong square.` : 'You clicked the wrong square.',
     pvp_reason_forfeit: (won, opp) => won ? `${opp} forfeited the duel.` : 'You forfeited the duel.',
     pvp_rounds_played: n => `Rounds played: ${n}`,
+    pvp_explain: "👉 Click the square whose color matches what the WORD says — not the color of the rectangle around it!",
+    pvp_bonus_toast: '✨ +5 seconds added as a tiebreaker!',
     badge_not_unlocked: 'Not unlocked yet', badge_maxed: '🌟 Maximum level reached!',
     badge_next_goal: desc => `🎯 Next goal: ${desc}`,
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
@@ -3097,6 +3103,9 @@ let pvpMatchesById = {};      // cache local: matchId -> dados do match
 let pvpCurrentMatchId = null; // qual partida está aberta na tela de duelo agora
 let pvpAnimFrame = null;      // rAF que desenha as barras de tempo
 let pvpClaimedForTurn = null; // turnStartedAt (ms) da tentativa pra qual já tentamos reivindicar timeout (evita repetir)
+let pvpLastBonusAt = null;    // overtimeBonusAt (ms) do último bônus de +5s que já mostramos na tela
+let pvpBonusToastTimer = null;
+let pvpLastAttemptAt = null;  // lastAttempt.at (ms) da última tentativa pra qual já tocamos som
 
 function startPvpListener() {
   stopPvpListener();
@@ -3113,6 +3122,9 @@ function stopPvpListener() {
   if (pvpMatchesUnsub) { pvpMatchesUnsub(); pvpMatchesUnsub = null; }
   pvpMatchesById = {};
   pvpCurrentMatchId = null;
+  pvpLastBonusAt = null;
+  pvpLastAttemptAt = null;
+  clearTimeout(pvpBonusToastTimer);
   stopPvpTicker();
   const banner = $('pvp-challenge-banner');
   if (banner) banner.style.display = 'none';
@@ -3208,12 +3220,30 @@ window.pvpBackToMenu = () => {
 
 function openPvpScreen(matchId) {
   pvpCurrentMatchId = matchId;
+  pvpLastBonusAt = null;   // partida nova (ou reaberta) — ainda não mostramos nenhum aviso de bônus dela
+  pvpLastAttemptAt = null; // idem pro som — evita tocar som de uma tentativa antiga ao reabrir a tela
   show('pvp-screen');
   const m = pvpMatchesById[matchId];
   if (m) renderPvpScreen(m);
 }
 
+// toca o som de acerto/erro/tempo esgotado assim que uma tentativa nova é
+// resolvida no servidor (ver lastAttempt) — os dois jogadores ouvem o mesmo
+// som no mesmo instante, sincronizados pelo próprio documento da partida,
+// não por cada cliente decidindo sozinho o que aconteceu
+function checkPvpAttemptSound(m) {
+  const la = m.lastAttempt;
+  if (!la || !la.at) return;
+  const at = la.at.toMillis();
+  if (at === pvpLastAttemptAt) return;
+  pvpLastAttemptAt = at;
+  if (la.success) sfx.correct(0);
+  else if (la.reason === 'timeout') sfx.timeout();
+  else sfx.wrong();
+}
+
 function renderPvpScreen(m) {
+  checkPvpAttemptSound(m);
   const myUid = currentUser.uid;
   const oppUid = m.players.find(p => p !== myUid);
 
@@ -3233,6 +3263,7 @@ function renderPvpScreen(m) {
     $('pvp-my-name').textContent = T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || '');
     $('pvp-opp-name').textContent = (m.nicks && m.nicks[oppUid]) || '';
     $('pvp-turn-label').textContent = (m.turnUid === myUid) ? T[lang].pvp_your_turn : T[lang].pvp_opp_turn((m.nicks && m.nicks[oppUid]) || '');
+    checkPvpBonusToast(m);
     renderPvpBoard(m, myUid);
     if (!pvpAnimFrame) startPvpTicker();
     return;
@@ -3242,6 +3273,22 @@ function renderPvpScreen(m) {
   stopPvpTicker();
   $('pvp-result').style.display = '';
   renderPvpResult(m, myUid, oppUid);
+}
+
+// mostra rapidamente "+5 segundos adicionados" quando o servidor concede o
+// bônus de desempate (os dois falharam no mesmo ciclo) — overtimeBonusAt só
+// muda de valor quando isso realmente acontece de novo, então comparar com
+// o último valor já visto evita mostrar o aviso repetido à toa
+function checkPvpBonusToast(m) {
+  if (!m.overtimeBonusAt) return;
+  const at = m.overtimeBonusAt.toMillis();
+  if (at === pvpLastBonusAt) return;
+  pvpLastBonusAt = at;
+  const el = $('pvp-bonus-toast');
+  if (!el) return;
+  el.style.display = '';
+  clearTimeout(pvpBonusToastTimer);
+  pvpBonusToastTimer = setTimeout(() => { el.style.display = 'none'; }, 2800);
 }
 
 function renderPvpBoard(m, myUid) {
