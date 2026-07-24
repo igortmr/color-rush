@@ -903,6 +903,7 @@
   </div>
   <div class="btn-row" style="width:100%;">
     <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="showRanking('geral')" data-i18n="btn_ranking">🏆 RANKING</button>
+    <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px; position:relative;" id="menu-friends-btn" onclick="showFriends()"><span id="menu-friends-label">👥 AMIGOS</span><span id="menu-friends-badge" style="display:none; position:absolute; top:-6px; right:-6px; background:#ff2d6b; color:#fff; border-radius:10px; font-size:0.65rem; font-weight:800; padding:2px 6px; font-family:'Orbitron',sans-serif;"></span></button>
     <button class="secondary" style="flex:1; font-size:0.95rem; padding:12px 10px;" onclick="inviteFriends()" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
   </div>
   <div class="muted" id="invite-status"></div>
@@ -1011,8 +1012,18 @@
   </div>
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">📤 CONVIDAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
+  <div id="profile-friend-action" style="display:none;"></div>
+  <div class="muted" id="profile-friend-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <button class="secondary" id="profile-back-bottom-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
+</div>
+
+<!-- AMIGOS -->
+<div class="screen" id="friends-screen">
+  <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
+  <div class="muted" id="friends-status"></div>
+  <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
+  <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <script type="module">
@@ -1070,6 +1081,12 @@ const callSubmitResult = httpsCallable(functions, 'submitGameResult');
 const callCreditReferral = httpsCallable(functions, 'creditReferral');
 const callClaimPendingScore = httpsCallable(functions, 'claimPendingScore');
 const callRecomputeTotal = httpsCallable(functions, 'recomputeMyTotal');
+// amigos — igual ao resto: nenhuma escrita cruzada (pedido/aceite/remoção)
+// acontece direto do navegador, sempre via function (ver functions/index.js)
+const callSendFriendRequest = httpsCallable(functions, 'sendFriendRequest');
+const callRespondFriendRequest = httpsCallable(functions, 'respondFriendRequest');
+const callCancelFriendRequest = httpsCallable(functions, 'cancelFriendRequest');
+const callRemoveFriend = httpsCallable(functions, 'removeFriend');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -1156,6 +1173,19 @@ const T = {
     profile_badges_section: '🏅 Medalhas',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
+    btn_friends: '👥 AMIGOS',
+    friends_title: '👥 AMIGOS',
+    friends_incoming_title: 'Pedidos recebidos',
+    friends_outgoing_title: 'Pedidos enviados',
+    friends_list_title: 'Seus amigos',
+    friends_empty: 'Você ainda não tem amigos. Adicione alguém clicando no nick dela no ranking!',
+    btn_add_friend: '➕ Adicionar amigo',
+    btn_remove_friend: 'Remover amigo',
+    btn_accept: 'Aceitar',
+    btn_decline: 'Recusar',
+    btn_cancel_request: 'Cancelar pedido',
+    friend_request_sent_label: 'Pedido de amizade enviado',
+    friend_action_error: 'Não foi possível concluir a ação. Tente novamente.',
     badge_not_unlocked: 'Ainda não conquistado', badge_maxed: '🌟 Nível máximo alcançado!',
     badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
     badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
@@ -1266,6 +1296,19 @@ const T = {
     profile_badges_section: '🏅 Medals',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
+    btn_friends: '👥 FRIENDS',
+    friends_title: '👥 FRIENDS',
+    friends_incoming_title: 'Incoming requests',
+    friends_outgoing_title: 'Sent requests',
+    friends_list_title: 'Your friends',
+    friends_empty: "You don't have any friends yet. Add someone by clicking their nick in the leaderboard!",
+    btn_add_friend: '➕ Add friend',
+    btn_remove_friend: 'Remove friend',
+    btn_accept: 'Accept',
+    btn_decline: 'Decline',
+    btn_cancel_request: 'Cancel request',
+    friend_request_sent_label: 'Friend request sent',
+    friend_action_error: 'Could not complete the action. Please try again.',
     badge_not_unlocked: 'Not unlocked yet', badge_maxed: '🌟 Maximum level reached!',
     badge_next_goal: desc => `🎯 Next goal: ${desc}`,
     badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
@@ -1906,6 +1949,22 @@ window.showMenu = () => {
   $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
   $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
 
+  // amigos precisam de conta — botão some jogando sem login; a bolinha
+  // vermelha avisa quando tem pedido de amizade esperando resposta.
+  // Texto setado aqui (não via data-i18n) porque o botão tem a bolinha de
+  // notificação como filho, e data-i18n troca o textContent inteiro do
+  // elemento — apagaria a bolinha a cada troca de idioma.
+  $('menu-friends-btn').style.display = offline ? 'none' : '';
+  $('menu-friends-label').textContent = T[lang].btn_friends;
+  if (!offline && currentUser) {
+    fetchMyFriendRequests().then(reqs => {
+      const n = Object.keys(reqs.incoming || {}).length;
+      const badge = $('menu-friends-badge');
+      badge.textContent = n;
+      badge.style.display = n > 0 ? '' : 'none';
+    }).catch(() => {});
+  }
+
   // bloqueio dos modos por nível
   for (const [m, minLv] of Object.entries(MODE_UNLOCK)) {
     const locked = !modeUnlocked(m);
@@ -2328,6 +2387,297 @@ function profileSectionLabel(text) {
   return `<div class="muted" style="text-align:left; font-family:'Orbitron',sans-serif; font-size:0.75rem; letter-spacing:0.5px; text-transform:uppercase; margin-top:4px;">${text}</div>`;
 }
 
+/* ================== amigos ================== */
+// Espelhado em dois documentos por conta (ver functions/index.js):
+//   friends/{uid}        -> { list: { [amigoUid]: { nick, since } } }
+//   friendRequests/{uid} -> { incoming: {...}, outgoing: {...} }
+// Cache local curto só pra não reler o mesmo documento várias vezes seguidas
+// (abrir vários perfis, checar o menu etc.) — qualquer ação de amizade
+// invalida o cache na hora, então nunca fica visivelmente desatualizado.
+let myFriendsCache = null, myFriendsCacheAt = 0;
+let myFriendReqCache = null, myFriendReqCacheAt = 0;
+const FRIENDS_CACHE_MS = 20 * 1000;
+
+async function fetchMyFriends(force) {
+  if (offline || !currentUser) return {};
+  if (!force && myFriendsCache && (Date.now() - myFriendsCacheAt) < FRIENDS_CACHE_MS) return myFriendsCache;
+  const snap = await getDoc(doc(db, 'friends', currentUser.uid));
+  myFriendsCache = (snap.exists() && snap.data().list) || {};
+  myFriendsCacheAt = Date.now();
+  return myFriendsCache;
+}
+
+async function fetchMyFriendRequests(force) {
+  if (offline || !currentUser) return { incoming: {}, outgoing: {} };
+  if (!force && myFriendReqCache && (Date.now() - myFriendReqCacheAt) < FRIENDS_CACHE_MS) return myFriendReqCache;
+  const snap = await getDoc(doc(db, 'friendRequests', currentUser.uid));
+  const data = snap.exists() ? snap.data() : {};
+  myFriendReqCache = { incoming: data.incoming || {}, outgoing: data.outgoing || {} };
+  myFriendReqCacheAt = Date.now();
+  return myFriendReqCache;
+}
+
+function invalidateFriendsCache() {
+  myFriendsCache = null;
+  myFriendReqCache = null;
+}
+
+async function getFriendRelation(theirUid) {
+  const [friends, reqs] = await Promise.all([fetchMyFriends(), fetchMyFriendRequests()]);
+  if (friends[theirUid]) return 'friends';
+  if (reqs.outgoing[theirUid]) return 'sent';
+  if (reqs.incoming[theirUid]) return 'received';
+  return 'none';
+}
+
+// abre o perfil de alguém a partir só do uid (usado na tela de amigos, onde
+// não temos as stats completas em mãos) — reaproveita o cache do ranking
+// geral quando dá, senão busca o documento avulso
+async function openProfileByUid(uid, fallbackNick) {
+  const all = await fetchAllScores();
+  const found = all.find(r => r.uid === uid);
+  if (found) {
+    const data = rowData(found);
+    openProfileFromRanking({ uid, nick: data.nick, stats: data }, 'friends-screen');
+    return;
+  }
+  try {
+    const snap = await getDoc(doc(db, 'scores', uid));
+    const data = snap.exists() ? snap.data() : {};
+    openProfileFromRanking({ uid, nick: data.nick || fallbackNick, stats: data }, 'friends-screen');
+  } catch {
+    openProfileFromRanking({ uid, nick: fallbackNick, stats: {} }, 'friends-screen');
+  }
+}
+
+function showFriendActionError() {
+  [$('profile-friend-status'), $('friends-status')].forEach(el => {
+    if (!el) return;
+    el.textContent = T[lang].friend_action_error;
+    setTimeout(() => { if (el.textContent === T[lang].friend_action_error) el.textContent = ''; }, 3000);
+  });
+}
+
+// botão de ação no perfil de outra pessoa (adicionar / já é amigo / pedido
+// enviado / pedido recebido) — atualizado sempre que o perfil abre e depois
+// de qualquer ação de amizade feita nessa tela
+async function renderProfileFriendAction(theirUid) {
+  const box = $('profile-friend-action');
+  if (!box) return;
+  box.dataset.uid = theirUid;
+  if (offline || !currentUser) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  box.innerHTML = `<span class="muted">${T[lang].loading_text}</span>`;
+  const rel = await getFriendRelation(theirUid);
+  if (box.dataset.uid !== theirUid) return; // perfil trocou enquanto isso carregava
+  box.innerHTML = '';
+  box.appendChild(friendActionNode(rel, theirUid));
+}
+
+function friendActionNode(rel, theirUid) {
+  if (rel === 'friends') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.textContent = T[lang].btn_remove_friend;
+    btn.onclick = () => uiRemoveFriend(theirUid);
+    return btn;
+  }
+  if (rel === 'sent') {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:6px;';
+    const label = document.createElement('div');
+    label.className = 'muted';
+    label.textContent = T[lang].friend_request_sent_label;
+    wrap.appendChild(label);
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.textContent = T[lang].btn_cancel_request;
+    btn.onclick = () => uiCancelFriendRequest(theirUid);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+  if (rel === 'received') {
+    const wrap = document.createElement('div');
+    wrap.className = 'btn-row';
+    wrap.style.width = '100%';
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = T[lang].btn_accept;
+    acceptBtn.style.cssText = 'flex:1;';
+    acceptBtn.onclick = () => uiRespondFriendRequest(theirUid, true);
+    wrap.appendChild(acceptBtn);
+    const declineBtn = document.createElement('button');
+    declineBtn.className = 'secondary';
+    declineBtn.textContent = T[lang].btn_decline;
+    declineBtn.style.cssText = 'flex:1;';
+    declineBtn.onclick = () => uiRespondFriendRequest(theirUid, false);
+    wrap.appendChild(declineBtn);
+    return wrap;
+  }
+  const btn = document.createElement('button');
+  btn.textContent = T[lang].btn_add_friend;
+  btn.onclick = () => uiSendFriendRequest(theirUid);
+  return btn;
+}
+
+// linha de amigo/pedido montada via DOM (nunca via innerHTML com o nick
+// interpolado — nick é livre em qualquer caractere não-espaço, então precisa
+// ir sempre por textContent, igual já é feito no resto do ranking)
+function friendRow(uid, nick) {
+  const row = document.createElement('div');
+  row.className = 'card';
+  row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
+
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = nick;
+  nickSpan.className = 'nick-click';
+  nickSpan.onclick = () => openProfileByUid(uid, nick);
+  row.appendChild(nickSpan);
+
+  const btn = document.createElement('button');
+  btn.className = 'secondary';
+  btn.textContent = T[lang].btn_remove_friend;
+  btn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+  btn.onclick = () => uiRemoveFriend(uid);
+  row.appendChild(btn);
+
+  return row;
+}
+
+function friendRequestRow(uid, nick, incoming) {
+  const row = document.createElement('div');
+  row.className = 'card';
+  row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
+
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = nick;
+  nickSpan.className = 'nick-click';
+  nickSpan.onclick = () => openProfileByUid(uid, nick);
+  row.appendChild(nickSpan);
+
+  const actions = document.createElement('span');
+  actions.style.cssText = 'display:flex; gap:8px;';
+
+  if (incoming) {
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = T[lang].btn_accept;
+    acceptBtn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+    acceptBtn.onclick = () => uiRespondFriendRequest(uid, true);
+    actions.appendChild(acceptBtn);
+
+    const declineBtn = document.createElement('button');
+    declineBtn.className = 'secondary';
+    declineBtn.textContent = T[lang].btn_decline;
+    declineBtn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+    declineBtn.onclick = () => uiRespondFriendRequest(uid, false);
+    actions.appendChild(declineBtn);
+  } else {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'secondary';
+    cancelBtn.textContent = T[lang].btn_cancel_request;
+    cancelBtn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+    cancelBtn.onclick = () => uiCancelFriendRequest(uid);
+    actions.appendChild(cancelBtn);
+  }
+
+  row.appendChild(actions);
+  return row;
+}
+
+window.showFriends = () => {
+  show('friends-screen');
+  renderFriendsScreen();
+};
+
+async function renderFriendsScreen(force) {
+  const body = $('friends-body');
+  $('friends-status').textContent = '';
+
+  if (offline || !currentUser) {
+    body.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <p>${T[lang].profile_offline_msg1}</p>
+        <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+      </div>`;
+    return;
+  }
+
+  body.innerHTML = `<div class="muted" style="text-align:center;">${T[lang].loading_text}</div>`;
+  const [friends, reqs] = await Promise.all([fetchMyFriends(force), fetchMyFriendRequests(force)]);
+  body.innerHTML = '';
+
+  const incomingEntries = Object.entries(reqs.incoming || {});
+  if (incomingEntries.length) {
+    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_incoming_title));
+    incomingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', true)));
+  }
+
+  const outgoingEntries = Object.entries(reqs.outgoing || {});
+  if (outgoingEntries.length) {
+    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_outgoing_title));
+    outgoingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', false)));
+  }
+
+  body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_list_title));
+  const friendEntries = Object.entries(friends);
+  if (!friendEntries.length) {
+    body.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[lang].friends_empty}</div>`);
+  } else {
+    friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '')));
+  }
+}
+
+// depois de qualquer ação de amizade, atualiza a tela de amigos (se estiver
+// aberta) e o botão de ação no perfil da pessoa envolvida (se estiver aberto)
+async function refreshFriendUiFor(uid) {
+  if ($('friends-screen').classList.contains('active')) {
+    await renderFriendsScreen(true);
+  }
+  const box = $('profile-friend-action');
+  if ($('profile-screen').classList.contains('active') && box && box.dataset.uid === uid) {
+    await renderProfileFriendAction(uid);
+  }
+}
+
+window.uiSendFriendRequest = async (toUid) => {
+  try {
+    await callSendFriendRequest({ toUid });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(toUid);
+};
+
+window.uiCancelFriendRequest = async (toUid) => {
+  try {
+    await callCancelFriendRequest({ toUid });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(toUid);
+};
+
+window.uiRespondFriendRequest = async (fromUid, accept) => {
+  try {
+    await callRespondFriendRequest({ fromUid, accept });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(fromUid);
+};
+
+window.uiRemoveFriend = async (friendUid) => {
+  try {
+    await callRemoveFriend({ friendUid });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(friendUid);
+};
+
 // sem argumentos: perfil PRÓPRIO (editável, lê de myData ao vivo, badges
 // completos com progresso). Com viewStats/viewNick/viewUid: perfil de OUTRO
 // jogador — somente leitura, medalha atual de cada categoria + posição no
@@ -2347,6 +2697,9 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   if (!isOther && offline) {
     $('profile-nick').textContent = T[lang].profile_offline_label;
     $('profile-summary').textContent = '';
+    $('profile-friend-action').style.display = 'none';
+    $('profile-friend-action').innerHTML = '';
+    $('profile-friend-status').textContent = '';
     $('profile-body').innerHTML = `
       <div class="card" style="text-align:center;">
         <p>${T[lang].profile_offline_msg1}</p>
@@ -2362,6 +2715,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
 
   if (isOther) {
     $('profile-summary').textContent = '';
+    renderProfileFriendAction(viewUid);
     const ranks = await computeModeRanks(viewUid);
     const ranksHtml = renderPublicProfileRanks(stats, ranks);
     let html = '';
@@ -2370,6 +2724,10 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     $('profile-body').innerHTML = html;
     return;
   }
+
+  $('profile-friend-action').style.display = 'none';
+  $('profile-friend-action').innerHTML = '';
+  $('profile-friend-status').textContent = '';
 
   // conta cada NÍVEL desbloqueado dentro de cada categoria (não só se a categoria
   // foi iniciada) — cada categoria tem 6 níveis, então o total é 4×6 = 24
