@@ -595,6 +595,19 @@
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
   .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
+  /* moldura da loja — usa borda/glow em vez de gradiente de fundo, pra ficar
+     bonita em qualquer fundo (linha listrada do ranking, perfil, etc.) */
+  .nick-frame-gold, .nick-frame-rainbow { display: inline-block; padding: 2px 10px; border-radius: 14px; border: 1.5px solid; }
+  .nick-frame-gold { border-color: #ffd700; box-shadow: 0 0 8px rgba(255,215,0,0.55); }
+  .nick-frame-rainbow { animation: nickFrameRainbow 3s linear infinite; }
+  @keyframes nickFrameRainbow {
+    0%   { border-color: #ff2d6b; box-shadow: 0 0 8px rgba(255,45,107,0.6); }
+    20%  { border-color: #ff9f1c; box-shadow: 0 0 8px rgba(255,159,28,0.6); }
+    40%  { border-color: #ffe93c; box-shadow: 0 0 8px rgba(255,233,60,0.6); }
+    60%  { border-color: #21e6a1; box-shadow: 0 0 8px rgba(33,230,161,0.6); }
+    80%  { border-color: #2dd6ff; box-shadow: 0 0 8px rgba(45,214,255,0.6); }
+    100% { border-color: #b14dff; box-shadow: 0 0 8px rgba(177,77,255,0.6); }
+  }
   .badge-card { text-align: left; gap: 10px; }
   .badge-card-head { display: flex; align-items: center; gap: 12px; }
   .badge-card-head .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.95rem; }
@@ -605,6 +618,24 @@
   .profile-header .big-nick { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 800; }
   .profile-top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; }
   .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; }
+
+  /* confete cosmético (loja) ao bater recorde — camada fixa cobrindo a tela toda */
+  .confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 3000; }
+  .confetti-bit {
+    position: absolute;
+    top: -10px;
+    width: 8px;
+    height: 14px;
+    border-radius: 2px;
+    opacity: 0.95;
+    animation-name: confettiFall;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--drift), 100vh) rotate(540deg); opacity: 0.2; }
+  }
 
   .version-tag {
     position: fixed;
@@ -1041,9 +1072,9 @@
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
-    <span class="daily-badge-today" id="daily-card-countdown">Termina em: <span class="daily-badge-time">--:--:--</span></span>
-    <h2>🗓️ Desafio Diário</h2>
-    <p id="daily-card-desc">O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.</p>
+    <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
+    <h2 data-i18n="tab_daily">🗓️ Desafio Diário</h2>
+    <p id="daily-card-desc" data-i18n-html="daily_card_desc">O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.</p>
     <div class="mode-card-footer" id="daily-card-footer">
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
@@ -1157,20 +1188,20 @@
 <!-- DESAFIO DIÁRIO -->
 <div class="screen" id="daily-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:1.7rem;">🗓️ DESAFIO DIÁRIO</h1>
-    <button class="pill-btn" onclick="dailyExitScreen()">VOLTAR</button>
+    <h1 style="font-size:1.7rem;" data-i18n="daily_screen_title">🗓️ DESAFIO DIÁRIO</h1>
+    <button class="pill-btn" onclick="dailyExitScreen()" data-i18n="btn_back">VOLTAR</button>
   </div>
 
   <div class="card" id="daily-inbox-card" style="display:none; text-align:left;">
-    <h2 style="font-family:'Orbitron',sans-serif; font-size:0.95rem;">📬 Caixa de Entrada</h2>
+    <h2 style="font-family:'Orbitron',sans-serif; font-size:0.95rem;" data-i18n="daily_inbox_title">📬 Caixa de Entrada</h2>
     <div id="daily-inbox-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-    <button class="secondary" id="daily-claim-all-btn" style="display:none;" onclick="claimAllDailyRewards()">💰 RESGATAR TODAS</button>
+    <button class="secondary" id="daily-claim-all-btn" style="display:none;" onclick="claimAllDailyRewards()" data-i18n="btn_claim_all">💰 RESGATAR TODAS</button>
     <div class="muted" id="daily-inbox-status"></div>
   </div>
 
   <div id="daily-play" style="display:none; width:100%; flex-direction:column; align-items:center; gap:20px;">
     <div class="hud">
-      <span>PONTOS: <span id="daily-score">0</span></span>
+      <span><span data-i18n="hud_points">PONTOS:</span> <span id="daily-score">0</span></span>
       <span id="daily-speed">⏱️ 10.0s</span>
     </div>
     <div class="timer-track"><div class="timer-fill" id="daily-timer-fill"></div></div>
@@ -1180,21 +1211,21 @@
 
   <div id="daily-result" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
     <div class="go-title" id="daily-result-reason">FIM DA TENTATIVA</div>
-    <div>Pontuação desta tentativa:</div>
+    <div data-i18n="daily_result_score_label">Pontuação desta tentativa:</div>
     <div class="final-score" id="daily-result-score">0</div>
-    <div class="record-line">🎯 Sua melhor de hoje: <span id="daily-result-best">0</span></div>
+    <div class="record-line"><span data-i18n="daily_result_best_label">🎯 Sua melhor de hoje:</span> <span id="daily-result-best">0</span></div>
     <div class="muted" id="daily-result-attempts"></div>
     <div class="btn-row">
-      <button id="daily-result-again-btn" onclick="startDailyChallenge()">JOGAR DE NOVO</button>
-      <button class="secondary" onclick="showRanking('daily')">🏆 VER RANKING</button>
+      <button id="daily-result-again-btn" onclick="startDailyChallenge()" data-i18n="btn_play_again">JOGAR DE NOVO</button>
+      <button class="secondary" onclick="showRanking('daily')" data-i18n="btn_view_ranking_short">🏆 VER RANKING</button>
     </div>
   </div>
 
   <div id="daily-blocked" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
     <div class="card" style="text-align:center;">
-      <p class="muted" id="daily-blocked-msg">✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!</p>
+      <p class="muted" id="daily-blocked-msg" data-i18n="daily_blocked_msg">✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!</p>
     </div>
-    <button class="secondary" style="width:100%;" onclick="showRanking('daily')">🏆 VER RANKING DO DESAFIO</button>
+    <button class="secondary" style="width:100%;" onclick="showRanking('daily')" data-i18n="btn_view_daily_ranking">🏆 VER RANKING DO DESAFIO</button>
   </div>
 </div>
 
@@ -1212,15 +1243,15 @@
     <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
     <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
-    <option value="daily">🗓️ Desafio Diário</option>
+    <option value="daily" data-i18n="tab_daily">🗓️ Desafio Diário</option>
   </select>
   <div class="scope-tabs" id="scope-tabs-row">
     <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">Todos</button>
     <button class="scope-tab" id="scope-amigos-btn" onclick="setRankingScope('amigos')" data-i18n="scope_friends">👥 Amigos</button>
   </div>
   <div class="scope-tabs" id="daily-subtabs" style="display:none;">
-    <button class="scope-tab active" id="daily-subtab-today-btn" onclick="setDailyRankSubtab('today')">📅 Hoje</button>
-    <button class="scope-tab" id="daily-subtab-alltime-btn" onclick="setDailyRankSubtab('alltime')">🏆 Recorde Geral</button>
+    <button class="scope-tab active" id="daily-subtab-today-btn" onclick="setDailyRankSubtab('today')" data-i18n="daily_subtab_today">📅 Hoje</button>
+    <button class="scope-tab" id="daily-subtab-alltime-btn" onclick="setDailyRankSubtab('alltime')" data-i18n="daily_subtab_alltime">🏆 Recorde Geral</button>
   </div>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;" id="ranking-table-card">
@@ -1233,8 +1264,8 @@
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
       <colgroup><col style="width:32px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
-      <thead><tr><th>#</th><th>Nick</th><th style="text-align:right;">Vitórias</th><th style="text-align:right;">💧 Pigmentos</th></tr></thead>
-      <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted">Carregando...</td></tr></tbody>
+      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
+      <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
   <div class="pagination" id="ranking-pagination"></div>
@@ -1530,6 +1561,40 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
+    tab_daily: '🗓️ Desafio Diário',
+    daily_card_desc: 'O mesmo desafio pra todo mundo, todo dia! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo, em breve.',
+    daily_ends_in: 'Termina em: ',
+    daily_starts_in: 'Inicia em: ',
+    daily_card_best: n => `🎯 Melhor: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Tentativas restantes: ${left}/${max}`,
+    daily_card_already_played: '✅ Já jogou hoje',
+    daily_inbox_badge: n => `📬 ${n} prêmio${n > 1 ? 's' : ''}`,
+    daily_screen_title: '🗓️ DESAFIO DIÁRIO',
+    daily_inbox_title: '📬 Caixa de Entrada',
+    btn_claim_all: '💰 RESGATAR TODAS',
+    btn_claim: '💰 RESGATAR',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 Parabéns! Você ficou em ${pos} no desafio de ${dateStr} com ${score} pontos.`,
+    daily_pos_1: '🥇 1º lugar',
+    daily_pos_2: '🥈 2º lugar',
+    daily_pos_3: '🥉 3º lugar',
+    daily_pos_n: n => `${n}º lugar`,
+    daily_claim_error: 'Não foi possível resgatar agora.',
+    daily_blocked_msg: '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!',
+    btn_view_daily_ranking: '🏆 VER RANKING DO DESAFIO',
+    btn_view_ranking_short: '🏆 VER RANKING',
+    daily_result_title: 'FIM DA TENTATIVA',
+    daily_result_score_label: 'Pontuação desta tentativa:',
+    daily_result_best_label: '🎯 Sua melhor de hoje:',
+    daily_attempts_left_msg: n => `Você ainda tem ${n} tentativa${n > 1 ? 's' : ''} hoje.`,
+    daily_attempts_used_msg: 'Você usou suas 3 tentativas de hoje!',
+    daily_start_error: 'Não foi possível iniciar. Tente de novo.',
+    daily_subtab_today: '📅 Hoje',
+    daily_subtab_alltime: '🏆 Recorde Geral',
+    daily_col_wins: 'Vitórias',
+    daily_col_pigmentos: '💧 Pigmentos',
+    daily_rank_explain: 'Ranking do desafio de hoje — sua melhor pontuação entre as até 3 tentativas.',
+    daily_no_today_players: 'Ninguém jogou o desafio de hoje ainda.',
+    daily_no_wins_yet: 'Ninguém venceu um desafio diário ainda.',
     points_header_divulgador: 'Convites',
     points_header_level: 'XP',
     unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
@@ -1684,6 +1749,40 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
     divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
+    tab_daily: '🗓️ Daily Challenge',
+    daily_card_desc: 'The same challenge for everyone, every day! You get <b>3 attempts</b> to get the highest score. Top scorers earn <span class="pigment-word">💧 Pigments</span>, which will be usable in the game shop, coming soon.',
+    daily_ends_in: 'Ends in: ',
+    daily_starts_in: 'Starts in: ',
+    daily_card_best: n => `🎯 Best: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Attempts left: ${left}/${max}`,
+    daily_card_already_played: '✅ Already played today',
+    daily_inbox_badge: n => `📬 ${n} prize${n > 1 ? 's' : ''}`,
+    daily_screen_title: '🗓️ DAILY CHALLENGE',
+    daily_inbox_title: '📬 Inbox',
+    btn_claim_all: '💰 CLAIM ALL',
+    btn_claim: '💰 CLAIM',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 Congrats! You placed ${pos} in the ${dateStr} challenge with ${score} points.`,
+    daily_pos_1: '🥇 1st place',
+    daily_pos_2: '🥈 2nd place',
+    daily_pos_3: '🥉 3rd place',
+    daily_pos_n: n => `#${n} place`,
+    daily_claim_error: 'Could not claim right now.',
+    daily_blocked_msg: "✅ You've already used your 3 attempts today. Come back tomorrow!",
+    btn_view_daily_ranking: '🏆 VIEW CHALLENGE RANKING',
+    btn_view_ranking_short: '🏆 VIEW RANKING',
+    daily_result_title: 'ATTEMPT OVER',
+    daily_result_score_label: 'Score this attempt:',
+    daily_result_best_label: '🎯 Your best today:',
+    daily_attempts_left_msg: n => `You still have ${n} attempt${n > 1 ? 's' : ''} today.`,
+    daily_attempts_used_msg: "You've used your 3 attempts today!",
+    daily_start_error: 'Could not start. Please try again.',
+    daily_subtab_today: '📅 Today',
+    daily_subtab_alltime: '🏆 All-Time Record',
+    daily_col_wins: 'Wins',
+    daily_col_pigmentos: '💧 Pigments',
+    daily_rank_explain: "Today's challenge ranking — your best score across up to 3 attempts.",
+    daily_no_today_players: "No one has played today's challenge yet.",
+    daily_no_wins_yet: 'No one has won a daily challenge yet.',
     points_header_divulgador: 'Invites',
     points_header_level: 'XP',
     unlock_at: n => `🔒 Unlocks at level ${n}`,
@@ -1838,6 +1937,40 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiencia (XP) acumulada.',
     divulgador_explain: '📣 Quién invitó a más amigos mediante tu enlace de invitación.',
+    tab_daily: '🗓️ Desafío Diario',
+    daily_card_desc: '¡El mismo desafío para todos, todos los días! Tienes <b>3 intentos</b> para conseguir la mayor puntuación. Los mejores clasificados ganan <span class="pigment-word">💧 Pigmentos</span>, que podrán usarse en la tienda del juego, próximamente.',
+    daily_ends_in: 'Termina en: ',
+    daily_starts_in: 'Inicia en: ',
+    daily_card_best: n => `🎯 Mejor: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Intentos restantes: ${left}/${max}`,
+    daily_card_already_played: '✅ Ya jugaste hoy',
+    daily_inbox_badge: n => `📬 ${n} premio${n > 1 ? 's' : ''}`,
+    daily_screen_title: '🗓️ DESAFÍO DIARIO',
+    daily_inbox_title: '📬 Bandeja de Entrada',
+    btn_claim_all: '💰 RECLAMAR TODO',
+    btn_claim: '💰 RECLAMAR',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 ¡Felicidades! Quedaste en ${pos} en el desafío del ${dateStr} con ${score} puntos.`,
+    daily_pos_1: '🥇 1er lugar',
+    daily_pos_2: '🥈 2do lugar',
+    daily_pos_3: '🥉 3er lugar',
+    daily_pos_n: n => `${n}º lugar`,
+    daily_claim_error: 'No fue posible reclamar ahora.',
+    daily_blocked_msg: '✅ Ya usaste tus 3 intentos de hoy. ¡Vuelve mañana!',
+    btn_view_daily_ranking: '🏆 VER RANKING DEL DESAFÍO',
+    btn_view_ranking_short: '🏆 VER RANKING',
+    daily_result_title: 'FIN DEL INTENTO',
+    daily_result_score_label: 'Puntuación de este intento:',
+    daily_result_best_label: '🎯 Tu mejor de hoy:',
+    daily_attempts_left_msg: n => `Todavía tienes ${n} intento${n > 1 ? 's' : ''} hoy.`,
+    daily_attempts_used_msg: '¡Usaste tus 3 intentos de hoy!',
+    daily_start_error: 'No fue posible iniciar. Inténtalo de nuevo.',
+    daily_subtab_today: '📅 Hoy',
+    daily_subtab_alltime: '🏆 Récord General',
+    daily_col_wins: 'Victorias',
+    daily_col_pigmentos: '💧 Pigmentos',
+    daily_rank_explain: 'Ranking del desafío de hoy — tu mejor puntuación entre los hasta 3 intentos.',
+    daily_no_today_players: 'Nadie ha jugado el desafío de hoy todavía.',
+    daily_no_wins_yet: 'Nadie ha ganado un desafío diario todavía.',
     points_header_divulgador: 'Invitaciones',
     points_header_level: 'XP',
     unlock_at: n => `🔒 Se desbloquea en el nivel ${n}`,
@@ -1993,15 +2126,59 @@ async function ensureRefCode() {
 
 /* ================== state ================== */
 const COLORS = [
-  { name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'      }, hex: '#1e90ff' },
-  { name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'      }, hex: '#ff4757' },
-  { name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'     }, hex: '#2ed573' },
-  { name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO'  }, hex: '#ffd32a' },
-  { name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'    }, hex: '#a55eea' },
-  { name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'   }, hex: '#ff7f24' },
-  { name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'      }, hex: '#ff6b9d' },
-  { name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'      }, hex: '#00d2d3' },
+  { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'      }, hex: '#1e90ff' },
+  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'      }, hex: '#ff4757' },
+  { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'     }, hex: '#2ed573' },
+  { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO'  }, hex: '#ffd32a' },
+  { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'    }, hex: '#a55eea' },
+  { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'   }, hex: '#ff7f24' },
+  { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'      }, hex: '#ff6b9d' },
+  { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'      }, hex: '#00d2d3' },
 ];
+// paletas alternativas da loja — recolorem os mesmos 8 azulejos (mantendo a
+// identidade/nome de cada um) com outra paleta de cores. "themeHex(c)" decide
+// qual hex usar de acordo com o tema equipado.
+const THEME_PALETTES = {
+  sunset: { blue: '#ff6b6b', red: '#ff4757', green: '#ffa94d', yellow: '#ffd43b', purple: '#e64980', orange: '#ff922b', pink: '#f783ac', cyan: '#ff8787' },
+  pastel: { blue: '#a5d8ff', red: '#ffc9c9', green: '#b2f2bb', yellow: '#ffec99', purple: '#d0bfff', orange: '#ffd8a8', pink: '#fcc2d7', cyan: '#99e9f2' },
+  mono:   { blue: '#e9ecef', red: '#ced4da', green: '#adb5bd', yellow: '#f8f9fa', purple: '#868e96', orange: '#dee2e6', pink: '#f1f3f5', cyan: '#c1c9d0' },
+};
+function themeHex(colorObj) {
+  const t = THEME_PALETTES[equippedTheme];
+  return (t && t[colorObj.key]) || colorObj.hex;
+}
+const GLOW_COLORS = { glow_gold: '#ffd700', glow_silver: '#d9d9e3', glow_rainbow: null };
+const GLOW_RAINBOW_HEXES = ['#ff2d6b', '#ff9f1c', '#ffe93c', '#21e6a1', '#2dd6ff', '#b14dff'];
+let glowRainbowTick = 0;
+// brilho da loja substitui o brilho "na própria cor" do azulejo — o arco-íris
+// gira pelas cores neon do jogo a cada azulejo pintado, pra não ficar um
+// brilho parado/uniforme
+function glowHexFor(colorObj) {
+  if (!equippedGlow) return colorObj.hex;
+  if (equippedGlow === 'glow_rainbow') return GLOW_RAINBOW_HEXES[(glowRainbowTick++) % GLOW_RAINBOW_HEXES.length];
+  return GLOW_COLORS[equippedGlow] || colorObj.hex;
+}
+const CONFETTI_COLORS = { confetti_gold: ['#ffd700', '#ffe93c', '#fff2a8'] };
+// confete cosmético da loja ao bater um novo recorde — camada leve (sem
+// biblioteca), some sozinha depois da animação
+function spawnConfetti() {
+  if (!equippedConfetti) return;
+  const colors = CONFETTI_COLORS[equippedConfetti] || ['#ffd700'];
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  for (let i = 0; i < 28; i++) {
+    const bit = document.createElement('span');
+    bit.className = 'confetti-bit';
+    bit.style.left = Math.random() * 100 + '%';
+    bit.style.background = colors[i % colors.length];
+    bit.style.animationDelay = (Math.random() * 0.5) + 's';
+    bit.style.animationDuration = (1.6 + Math.random() * 0.9) + 's';
+    bit.style.setProperty('--drift', Math.round(Math.random() * 70 - 35) + 'px');
+    layer.appendChild(bit);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 2800);
+}
 const cName = c => c.name[lang];
 const SQUARES = 4;
 
@@ -2053,6 +2230,15 @@ function lvChip(xp) {
   const lv = levelFromXp(xp || 0);
   const c = LV_COLORS[Math.min(Math.floor(lv / 5), LV_COLORS.length - 1)];
   return `<span class="lv-chip" style="color:${c}; border-color:${c}88; text-shadow:0 0 6px ${c}80">Lv ${lv}</span>`;
+}
+// moldura da loja ao redor do nick — "equipped" é público (mesmo doc de
+// scores/{uid} que já alimenta o ranking), então aparece pra QUALQUER um que
+// tiver comprado e equipado, não só pra você mesmo
+function applyNickFrame(el, stats) {
+  const frame = stats && stats.equipped && stats.equipped.frame;
+  el.classList.remove('nick-frame-gold', 'nick-frame-rainbow');
+  if (frame === 'frame_gold') el.classList.add('nick-frame-gold');
+  else if (frame === 'frame_rainbow') el.classList.add('nick-frame-rainbow');
 }
 // ícone dos Pigmentos (moeda do desafio diário) — uma gota com as cores do
 // jogo se misturando, pra remeter ao tema sem precisar de nenhum arquivo de
@@ -2214,6 +2400,22 @@ let dailyBestScore = 0;
 let dailyRankSubtab = 'today'; // 'today' | 'alltime'
 let dailyTodayRows = [], dailyTodayPage = 0;
 let dailyAlltimeRows = [], dailyAlltimePage = 0;
+
+/* ================== cosméticos equipados ==================
+   "equipped*" abaixo refletem myData.equipped (só pode ser preenchido pela
+   loja/servidor) — carregados depois do login em applyEquippedCosmetics().
+   Sem loja no ar, ficam sempre null/vazios, e os pontos onde são usados
+   (tema/brilho do tabuleiro, moldura do nick, som, confete) caem no padrão. */
+let equippedSfx = null, equippedGlow = null, equippedTheme = null, equippedFrame = null, equippedConfetti = null;
+function applyEquippedCosmetics() {
+  const eq = (myData && myData.equipped) || {};
+  equippedSfx = eq.sfxCorrect || null;
+  equippedGlow = eq.glow || null;
+  equippedTheme = eq.theme || null;
+  equippedFrame = eq.frame || null;
+  equippedConfetti = eq.confetti || null;
+}
+
 let currentUser = null;          // usuário do firebase ou null
 let offline = false;             // jogando sem conta
 let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
@@ -2221,7 +2423,7 @@ let currentSessionId = null;     // sessão validada pelo servidor pra partida a
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {},
 };
 
 const $ = id => document.getElementById(id);
@@ -2324,7 +2526,21 @@ function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
   } catch {}
 }
 const sfx = {
-  correct(n) { tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1); }, // sobe o tom a cada acerto
+  // cosmético da loja (equippedSfx) troca o som do acerto — a lógica de "sobe
+  // o tom a cada acerto" continua igual, só muda o timbre
+  correct(n) {
+    if (equippedSfx === 'sfx_8bit') {
+      const f = 220 + Math.min(n, 24) * 55;
+      tone(f, 0.06, 'square', 0.13);
+      tone(f * 1.5, 0.04, 'square', 0.07, 0.02);
+    } else if (equippedSfx === 'sfx_splash') {
+      const f = 500 + Math.min(n, 24) * 20;
+      tone(f, 0.07, 'sine', 0.13);
+      tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
+    } else {
+      tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
+    }
+  },
   wrong()   { tone(160, 0.3, 'sawtooth', 0.15); tone(110, 0.4, 'sawtooth', 0.15, 0.08); },
   timeout() { tone(300, 0.2, 'triangle', 0.15); tone(200, 0.3, 'triangle', 0.15, 0.15); tone(120, 0.5, 'triangle', 0.15, 0.3); },
   record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
@@ -2490,7 +2706,7 @@ window.playOffline = () => {
   myData = {
     nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0,
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {},
   };
   showMenu();
 };
@@ -2538,7 +2754,7 @@ onAuthStateChanged(auth, async user => {
 const EMPTY_PROFILE = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {},
 };
 
 async function proceedAfterLogin(user) {
@@ -2546,6 +2762,7 @@ async function proceedAfterLogin(user) {
     const snap = await getDoc(doc(db, 'scores', user.uid));
     myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
   } catch { myData = { ...EMPTY_PROFILE }; }
+  applyEquippedCosmetics();
   if (!myData.nick) show('nick-screen');
   else {
     await backfillTotal();
@@ -2721,8 +2938,10 @@ function newRound(first) {
     } else {
       const bg   = (mode === 'classic') ? item : paired;
       const word = (mode === 'classic') ? paired : item;
-      el.style.background = bg.hex;
-      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`; // brilho neon na própria cor
+      const bgHex = themeHex(bg); // tema da loja recolore o azulejo, se equipado
+      const glowHex = glowHexFor(bg); // brilho da loja substitui o brilho na própria cor, se equipado
+      el.style.background = bgHex;
+      el.style.boxShadow = `0 0 18px ${glowHex}99, 0 0 40px ${glowHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
     el.onclick = () => handleClick(item);
@@ -2798,7 +3017,7 @@ async function gameOver(reason) {
   $('new-record').classList.toggle('show', isNewRecord);
   $('sync-status').textContent = '';
   $('share-status').textContent = '';
-  if (isNewRecord) sfx.record();
+  if (isNewRecord) { sfx.record(); spawnConfetti(); }
   show('over-screen');
 
   // XP ganho + animação da barra subindo
@@ -2961,6 +3180,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
       const nickSpan = document.createElement('span');
       nickSpan.textContent = r.nick;
       nickSpan.className = 'nick-click';
+      applyNickFrame(nickSpan, r.stats);
       nickSpan.onclick = () => openProfileFromRanking(r, 'over-screen');
       nickCell.appendChild(nickSpan);
       if (r.stats) {
@@ -3580,6 +3800,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   // nick sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção
   $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
   $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(isOther ? (stats.xp || 0) : myXp()));
+  applyNickFrame($('profile-nick'), stats);
 
   if (isOther) {
     $('profile-summary').textContent = '';
@@ -3709,7 +3930,7 @@ window.loadRanking = async (m) => {
   $('scope-tabs-row').style.display = (m === 'daily') ? 'none' : '';
   if (m === 'daily') {
     $('ranking-pagination').innerHTML = '';
-    $('ranking-explain').textContent = 'Ranking do desafio de hoje — sua melhor pontuação entre as até 3 tentativas.';
+    $('ranking-explain').textContent = T[lang].daily_rank_explain;
     dailyRankSubtab = 'today';
     $('daily-subtab-today-btn').classList.add('active');
     $('daily-subtab-alltime-btn').classList.remove('active');
@@ -3790,6 +4011,7 @@ function renderRankingPage() {
     const nickSpan = document.createElement('span'); // inserção segura do nick
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
+    applyNickFrame(nickSpan, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : topBadgeIcons(r.stats, 3));
@@ -3867,11 +4089,12 @@ function renderDailyTodayPage() {
     const nickSpan = document.createElement('span'); // nick sempre via textContent
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
+    applyNickFrame(nickSpan, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     body.appendChild(tr);
   });
-  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">Ninguém jogou o desafio de hoje ainda.</td></tr>`;
+  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
@@ -3923,11 +4146,12 @@ function renderDailyAlltimePage() {
     const nickSpan = document.createElement('span');
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
+    applyNickFrame(nickSpan, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     body.appendChild(tr);
   });
-  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">Ninguém venceu um desafio diário ainda.</td></tr>`;
+  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].daily_no_wins_yet}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
@@ -3969,8 +4193,9 @@ function startDailyCardTicker() {
 }
 function renderDailyCardCountdown() {
   const el = $('daily-card-countdown');
+  const labelEl = $('daily-card-countdown-label');
   const timeEl = el && el.querySelector('.daily-badge-time');
-  if (!el || !timeEl) return;
+  if (!el || !timeEl || !labelEl) return;
   const live = isDailyChallengeLive();
   const targetMs = live ? dailyNextMidnightSaoPauloMs() : dailyLaunchAtMs();
   let msLeft = targetMs - Date.now();
@@ -3979,7 +4204,7 @@ function renderDailyCardCountdown() {
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  el.firstChild.textContent = live ? 'Termina em: ' : 'Inicia em: ';
+  labelEl.textContent = live ? T[lang].daily_ends_in : T[lang].daily_starts_in;
   timeEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   // virou o dia (fechou o desafio de hoje, ou estreou o desafio) — atualiza o
   // resto do card sozinho, se o menu estiver aberto
@@ -3995,7 +4220,7 @@ window.dailyCardClick = () => {
   if (!isDailyChallengeLive()) return;
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
-    $('daily-blocked-msg').textContent = '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!';
+    $('daily-blocked-msg').textContent = T[lang].daily_blocked_msg;
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
@@ -4030,13 +4255,13 @@ function renderDailyInboxList(msgs) {
   list.innerHTML = '';
   msgs.forEach(msg => {
     const pos = msg.position;
-    const posLabel = pos === 1 ? '🥇 1º lugar' : pos === 2 ? '🥈 2º lugar' : pos === 3 ? '🥉 3º lugar' : `${pos}º lugar`;
+    const posLabel = pos === 1 ? T[lang].daily_pos_1 : pos === 2 ? T[lang].daily_pos_2 : pos === 3 ? T[lang].daily_pos_3 : T[lang].daily_pos_n(pos);
     const box = document.createElement('div');
     box.className = 'daily-inbox-msg';
 
     const posLine = document.createElement('div');
     posLine.className = 'pos-line';
-    posLine.textContent = `🎉 Parabéns! Você ficou em ${posLabel} no desafio de ${msg.dateStr} com ${msg.score} pontos.`;
+    posLine.textContent = T[lang].daily_inbox_congrats(posLabel, msg.dateStr, msg.score);
     box.appendChild(posLine);
 
     const claimRow = document.createElement('div');
@@ -4051,7 +4276,7 @@ function renderDailyInboxList(msgs) {
 
     const claimBtn = document.createElement('button');
     claimBtn.className = 'secondary';
-    claimBtn.textContent = '💰 RESGATAR';
+    claimBtn.textContent = T[lang].btn_claim;
     claimBtn.onclick = () => claimOneDailyReward(msg.dateStr);
     claimRow.appendChild(claimBtn);
 
@@ -4068,7 +4293,7 @@ window.claimOneDailyReward = async (dateStr) => {
     await loadDailyInbox();
     updateDailyMenuCard();
   } catch (e) {
-    $('daily-inbox-status').textContent = e.message || 'Não foi possível resgatar agora.';
+    $('daily-inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
 };
 window.claimAllDailyRewards = async () => {
@@ -4079,7 +4304,7 @@ window.claimAllDailyRewards = async () => {
     await loadDailyInbox();
     updateDailyMenuCard();
   } catch (e) {
-    $('daily-inbox-status').textContent = e.message || 'Não foi possível resgatar agora.';
+    $('daily-inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
 };
 
@@ -4113,14 +4338,14 @@ async function updateDailyMenuCard() {
     dailyAttemptsUsed = 0;
     dailyBestScore = 0;
   }
-  $('daily-card-best').textContent = `🎯 Melhor: ${dailyBestScore}`;
+  $('daily-card-best').textContent = T[lang].daily_card_best(dailyBestScore);
   $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
-    ? '✅ Já jogou hoje'
-    : `🎟️ Tentativas restantes: ${DAILY_MAX_ATTEMPTS - dailyAttemptsUsed}/${DAILY_MAX_ATTEMPTS}`;
+    ? T[lang].daily_card_already_played
+    : T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
   try {
     const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
     const badge = $('daily-card-inbox-badge');
-    if (snap.size > 0) { badge.textContent = `📬 ${snap.size} prêmio${snap.size > 1 ? 's' : ''}`; badge.style.display = ''; }
+    if (snap.size > 0) { badge.textContent = T[lang].daily_inbox_badge(snap.size); badge.style.display = ''; }
     else { badge.style.display = 'none'; }
   } catch {}
 }
@@ -4157,7 +4382,7 @@ window.startDailyChallenge = async () => {
     // sem tentativas hoje (ou outro erro) — não tem uma tela de lobby pra
     // mostrar a mensagem, então manda pra tela de "sem tentativas", que já
     // tem o link pro ranking do desafio
-    $('daily-blocked-msg').textContent = e.message || 'Não foi possível iniciar. Tente de novo.';
+    $('daily-blocked-msg').textContent = e.message || T[lang].daily_start_error;
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
@@ -4180,8 +4405,10 @@ function dailyNewRound(first) {
     const paired = (item === dailyTarget) ? dailyNextTarget : distractors[d++];
     const el = document.createElement('div');
     el.className = 'square';
-    el.style.background = item.hex;
-    el.style.boxShadow = `0 0 18px ${item.hex}99, 0 0 40px ${item.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+    const bgHex = themeHex(item);
+    const glowHex = glowHexFor(item);
+    el.style.background = bgHex;
+    el.style.boxShadow = `0 0 18px ${glowHex}99, 0 0 40px ${glowHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
     el.innerHTML = `<span class="word">${cName(paired)}</span>`;
     el.onclick = () => dailyHandleClick(item);
     grid.appendChild(el);
@@ -4241,14 +4468,14 @@ async function dailyGameOver(reason) {
     // não foi possível confirmar com o servidor — o placar oficial (ranking)
     // só considera o que o servidor validou; a tela ainda mostra o resultado local
   }
-  if (dailyScore >= bestScore && dailyScore > 0 && dailyScore > dailyBestScore) sfx.record();
+  if (dailyScore >= bestScore && dailyScore > 0 && dailyScore > dailyBestScore) { sfx.record(); spawnConfetti(); }
   dailyBestScore = bestScore;
   $('daily-result-best').textContent = dailyBestScore;
 
   const left = Math.max(0, DAILY_MAX_ATTEMPTS - dailyAttemptsUsed);
   $('daily-result-attempts').textContent = left > 0
-    ? `Você ainda tem ${left} tentativa${left > 1 ? 's' : ''} hoje.`
-    : 'Você usou suas 3 tentativas de hoje!';
+    ? T[lang].daily_attempts_left_msg(left)
+    : T[lang].daily_attempts_used_msg;
   $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
 
   loadDailyInbox(); // aproveita que a pessoa já está olhando a tela pra mostrar prêmios pendentes
