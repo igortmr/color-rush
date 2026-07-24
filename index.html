@@ -1318,7 +1318,7 @@ const T = {
     friends_list_title: 'Seus amigos',
     friends_empty: 'Você ainda não tem amigos. Adicione-os pelo ranking, ou compartilhando seu link de convite.',
     btn_add_friend: '➕ Adicionar amigo',
-    btn_remove_friend: 'Remover amigo',
+    btn_remove_friend: 'Remover',
     btn_accept: 'Aceitar',
     btn_decline: 'Recusar',
     btn_cancel_request: 'Cancelar pedido',
@@ -1472,7 +1472,7 @@ const T = {
     friends_list_title: 'Your friends',
     friends_empty: "You don't have any friends yet. Add them from the leaderboard, or by sharing your invite link.",
     btn_add_friend: '➕ Add friend',
-    btn_remove_friend: 'Remove friend',
+    btn_remove_friend: 'Remove',
     btn_accept: 'Accept',
     btn_decline: 'Decline',
     btn_cancel_request: 'Cancel request',
@@ -2756,18 +2756,18 @@ function friendRow(uid, nick, xp) {
   row.appendChild(left);
 
   const actions = document.createElement('span');
-  actions.style.cssText = 'display:flex; gap:8px;';
+  actions.style.cssText = 'display:flex; gap:5px;';
 
   const challengeBtn = document.createElement('button');
   challengeBtn.textContent = T[lang].btn_challenge;
-  challengeBtn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+  challengeBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
   challengeBtn.onclick = () => uiChallengeFriend(uid);
   actions.appendChild(challengeBtn);
 
   const btn = document.createElement('button');
   btn.className = 'secondary';
   btn.textContent = T[lang].btn_remove_friend;
-  btn.style.cssText = 'padding:8px 12px; font-size:0.85rem;';
+  btn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
   btn.onclick = () => uiRemoveFriend(uid);
   actions.appendChild(btn);
 
