@@ -1142,7 +1142,7 @@
 <div class="screen" id="profile-screen">
   <div class="profile-top-row">
     <h1 style="font-size:2rem;" data-i18n="profile_title">🎖️ PERFIL</h1>
-    <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" style="display:none;" data-i18n="btn_back">VOLTAR</button>
+    <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="profile-header">
     <div class="big-nick" id="profile-nick"></div>
@@ -1153,7 +1153,6 @@
   <div id="profile-friend-action" style="display:none;"></div>
   <div class="muted" id="profile-friend-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
-  <button class="secondary" id="profile-back-bottom-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <!-- AMIGOS -->
@@ -3191,12 +3190,6 @@ window.uiRemoveFriend = async (friendUid) => {
 async function renderProfile(viewStats, viewNick, viewUid) {
   const isOther = !!viewStats;
   const stats = isOther ? viewStats : myData;
-
-  // no perfil de outra pessoa, o "voltar" vira um botão pequeno e lateral lá em
-  // cima (como o de sair) em vez do botão grande embaixo — é só um jeito rápido
-  // de fechar essa visualização, não precisa do mesmo peso do perfil próprio
-  $('profile-back-top-btn').style.display = isOther ? '' : 'none';
-  $('profile-back-bottom-btn').style.display = isOther ? 'none' : '';
 
   $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
 
