@@ -83,7 +83,7 @@
     min-height: calc(var(--vh, 1vh) * 100);
     min-height: 100dvh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     user-select: none;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -92,6 +92,16 @@
     -ms-overflow-style: none;
   }
   body::-webkit-scrollbar { display: none; }
+  /* Cada tela tinha seu próprio "overflow-y: auto" aninhado dentro de um
+     flexbox centralizado — em alguns Chrome desktop (relato de mais de um
+     usuário), isso travava: o navegador "esquecia" de reconhecer que dava
+     pra rolar depois de trocar o conteúdo, e a tela ficava presa no topo. Em
+     vez de cada .screen rolar por dentro de si mesma, agora é a PÁGINA
+     inteira (body) que rola de verdade — um mecanismo nativo do navegador,
+     sem esse tipo de bug de cache de layout. .screen só fica ancorada perto
+     do topo (margin-top) e cresce o quanto precisar; se passar da altura da
+     tela, o próprio navegador rola a página.
+  */
   .screen {
     display: none;
     flex-direction: column;
@@ -99,24 +109,12 @@
     gap: 20px;
     padding: 24px;
     padding-top: 52px;
+    padding-bottom: 48px;
     width: 100%;
     max-width: 520px;
-    max-height: 100vh;
-    max-height: calc(var(--vh, 1vh) * 100);
-    max-height: 100dvh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    /* o body centraliza a tela ativa verticalmente por padrão, mas isso faz o
-       cabeçalho (título, abas, botões) flutuar pro meio quando o conteúdo tem
-       poucas linhas (ex.: ranking ou amigos com só 1-2 itens). Fixando toda
-       tela no topo, só o conteúdo de baixo cresce/encolhe — padrão consistente
-       em todas as telas. */
-    align-self: flex-start;
     margin-top: 24px;
+    overflow-x: hidden;
   }
-  .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
 
   h1 {
@@ -2084,15 +2082,16 @@ const show = id => {
   resetScroll(id);
 };
 // depois de trocar o conteúdo de uma tela que já estava aberta (ex.: troca de
-// aba do ranking), houve relato de usuário no Chrome desktop onde a tela ficava
-// presa no topo sem rolar — provavelmente o navegador "esquecendo" de recalcular
-// a área rolável depois da troca de innerHTML. Ler offsetHeight força um reflow
-// e resetar o scrollTop evita esse tipo de bug de cache de layout.
+// aba do ranking), houve mais de um relato de tela ficando presa no topo sem
+// rolar. Além de a página inteira ter passado a rolar de verdade (nada mais
+// de overflow-y aninhado dentro de flexbox centralizado — ver comentário
+// junto de .screen no <style>), isso aqui força um reflow e volta pro topo
+// sempre que o conteúdo muda, como reforço extra.
 function resetScroll(screenId) {
   const el = $(screenId);
   if (!el) return;
-  void el.offsetHeight;
-  el.scrollTop = 0;
+  void el.offsetHeight; // força o navegador recalcular o layout
+  window.scrollTo(0, 0); // quem rola agora é a página inteira, não mais cada .screen por dentro
 }
 const shuffle = a => a.sort(() => Math.random() - 0.5);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
