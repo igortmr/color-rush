@@ -75,7 +75,7 @@
     min-height: calc(var(--vh, 1vh) * 100);
     min-height: 100dvh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     user-select: none;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -84,6 +84,16 @@
     -ms-overflow-style: none;
   }
   body::-webkit-scrollbar { display: none; }
+  /* Cada tela tinha seu próprio "overflow-y: auto" aninhado dentro de um
+     flexbox centralizado — em alguns Chrome desktop (relato de mais de um
+     usuário), isso travava: o navegador "esquecia" de reconhecer que dava
+     pra rolar depois de trocar o conteúdo, e a tela ficava presa no topo. Em
+     vez de cada .screen rolar por dentro de si mesma, agora é a PÁGINA
+     inteira (body) que rola de verdade — um mecanismo nativo do navegador,
+     sem esse tipo de bug de cache de layout. .screen só fica ancorada perto
+     do topo (margin-top) e cresce o quanto precisar; se passar da altura da
+     tela, o próprio navegador rola a página.
+  */
   .screen {
     display: none;
     flex-direction: column;
@@ -91,24 +101,12 @@
     gap: 20px;
     padding: 24px;
     padding-top: 52px;
+    padding-bottom: 48px;
     width: 100%;
     max-width: 520px;
-    max-height: 100vh;
-    max-height: calc(var(--vh, 1vh) * 100);
-    max-height: 100dvh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    /* o body centraliza a tela ativa verticalmente por padrão, mas isso faz o
-       cabeçalho (título, abas, botões) flutuar pro meio quando o conteúdo tem
-       poucas linhas (ex.: ranking ou amigos com só 1-2 itens). Fixando toda
-       tela no topo, só o conteúdo de baixo cresce/encolhe — padrão consistente
-       em todas as telas. */
-    align-self: flex-start;
     margin-top: 24px;
+    overflow-x: hidden;
   }
-  .screen::-webkit-scrollbar { display: none; }
   .screen.active { display: flex; }
 
   h1 {
@@ -214,85 +212,42 @@
     transform: none;
   }
 
-  /* menu suspenso (amigos / ranking / som / sair) */
-  .menu-dd-wrap { position: relative; }
-  .menu-dd-trigger {
+  /* fileira horizontal de atalhos (amigos / ranking / som) acima do nome */
+  .menu-quick-row { display: flex; gap: 8px; width: 100%; }
+  .menu-quick-btn {
     position: relative;
+    flex: 1;
     background: #0a0e1e;
     border: 1px solid rgba(255,255,255,0.15);
     color: #cfd8ff;
-    font-size: 1.05rem;
-    line-height: 1;
-    padding: 7px 11px;
-    border-radius: 10px;
-    cursor: pointer;
-    box-shadow: none;
-  }
-  .menu-dd-trigger:hover { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(45,214,255,0.35); transform: none; }
-  .dd-badge {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--neon-red);
-    box-shadow: 0 0 8px rgba(255,45,107,0.8);
-  }
-  .menu-dropdown {
-    display: none;
-    flex-direction: column;
-    gap: 2px;
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    min-width: 190px;
-    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 14px;
-    padding: 6px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    z-index: 500;
-  }
-  .menu-dropdown.open { display: flex; }
-  .dd-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    box-shadow: none;
-    color: #cfd8ff;
     font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     letter-spacing: 0.3px;
-    padding: 10px 12px;
-    border-radius: 9px;
+    text-align: center;
+    padding: 10px 4px;
+    border-radius: 12px;
     cursor: pointer;
+    box-shadow: none;
   }
-  .dd-item:hover { background: rgba(255,255,255,0.07); box-shadow: none; transform: none; }
-  .dd-item-danger { color: #ff8bab; }
-  .dd-item-danger:hover { background: rgba(255,45,107,0.12); }
-  .dd-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 6px; }
-  .dd-badge-inline {
-    position: static;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
+  .menu-quick-btn:hover { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(45,214,255,0.3); transform: none; }
+  .menu-quick-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
     border-radius: 10px;
     background: var(--neon-red);
     color: #fff;
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 800;
-    padding: 0 5px;
+    padding: 0 4px;
     font-family: 'Orbitron', sans-serif;
-    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 8px rgba(255,45,107,0.8);
   }
 
   .mode-card {
@@ -960,28 +915,21 @@
 <!-- MENU -->
 <div class="screen" id="menu-screen">
   <h1>COLOR RUSH</h1>
+  <div class="menu-quick-row">
+    <button class="menu-quick-btn" id="menu-quick-friends-btn" onclick="showFriends()">
+      <span data-i18n="btn_friends">👥 AMIGOS</span>
+      <span class="menu-quick-badge" id="menu-quick-friends-badge" style="display:none;"></span>
+    </button>
+    <button class="menu-quick-btn" onclick="showRanking('geral')">
+      <span data-i18n="btn_ranking">🏆 RANKING</span>
+    </button>
+    <button class="menu-quick-btn" onclick="toggleMute()">
+      <span id="menu-quick-sound-label">🔊 SOM</span>
+    </button>
+  </div>
   <div class="user-bar">
     <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
-    <div class="menu-dd-wrap" id="menu-dd-wrap">
-      <button class="menu-dd-trigger" id="menu-dd-trigger" onclick="toggleMenuDropdown()" aria-label="Menu" title="Menu">
-        ☰
-        <span class="dd-badge" id="menu-dd-badge" style="display:none;"></span>
-      </button>
-      <div class="menu-dropdown" id="menu-dropdown">
-        <button class="dd-item" id="menu-dd-friends-item" onclick="closeMenuDropdown(); showFriends();">
-          <span data-i18n="btn_friends">👥 AMIGOS</span>
-          <span class="dd-badge dd-badge-inline" id="menu-dd-friends-badge" style="display:none;"></span>
-        </button>
-        <button class="dd-item" onclick="closeMenuDropdown(); showRanking('geral');">
-          <span data-i18n="btn_ranking">🏆 RANKING</span>
-        </button>
-        <button class="dd-item" onclick="toggleMute()">
-          <span id="menu-dd-sound-label">🔊 Som: Ligado</span>
-        </button>
-        <div class="dd-divider"></div>
-        <button class="dd-item dd-item-danger" id="menu-dd-logout-item" onclick="closeMenuDropdown(); doLogout();">🚪 sair</button>
-      </div>
-    </div>
+    <button class="pill-btn" id="menu-logout-btn" onclick="doLogout()">sair</button>
   </div>
   <div id="pvp-challenge-banner" style="display:none; width:100%;">
     <div class="card" style="text-align:center;">
@@ -993,7 +941,7 @@
     </div>
   </div>
   <div class="xp-wrap" id="menu-xp-wrap">
-    <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/100</span></div>
+    <div class="xp-labels"><span id="menu-xp-nums">0/100</span></div>
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
@@ -1102,7 +1050,10 @@
 
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
-  <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
+  <div class="profile-top-row">
+    <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
+    <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  </div>
   <select class="ranking-select" id="ranking-select" onchange="loadRanking(this.value)">
     <option value="geral" data-i18n="tab_geral">🌍 Geral</option>
     <option value="classic" data-i18n="tab_classic">🎨 Clássico</option>
@@ -1125,37 +1076,35 @@
     </table>
   </div>
   <div class="pagination" id="ranking-pagination"></div>
-  <button class="secondary" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <!-- PERFIL -->
 <div class="screen" id="profile-screen">
   <div class="profile-top-row">
     <h1 style="font-size:2rem;" data-i18n="profile_title">🎖️ PERFIL</h1>
-    <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" style="display:none;" data-i18n="btn_back">VOLTAR</button>
+    <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="profile-header">
     <div class="big-nick" id="profile-nick"></div>
     <div class="muted" id="profile-summary"></div>
   </div>
-  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite">➕ ADICIONAR</button>
+  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
   <div id="profile-friend-action" style="display:none;"></div>
   <div class="muted" id="profile-friend-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
-  <button class="secondary" id="profile-back-bottom-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
 </div>
 
 <!-- AMIGOS -->
 <div class="screen" id="friends-screen">
-  <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
+  <div class="profile-top-row">
+    <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
+    <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  </div>
   <div class="muted" id="friends-status"></div>
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <div class="muted" id="friends-invite-status"></div>
-  <div class="btn-row" style="width:100%;">
-    <button class="secondary" style="flex:1;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR</button>
-    <button class="secondary" style="flex:1;" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
-  </div>
+  <button class="secondary" style="width:100%;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR AMIGO</button>
 </div>
 
 <!-- PVP (duelo ao vivo) -->
@@ -1274,6 +1223,13 @@ const callCancelChallenge = httpsCallable(functions, 'cancelChallenge');
 const callSubmitPvpAnswer = httpsCallable(functions, 'submitPvpAnswer');
 const callClaimTimeout = httpsCallable(functions, 'claimTimeout');
 const callForfeitMatch = httpsCallable(functions, 'forfeitMatch');
+const callTouchActivity = httpsCallable(functions, 'touchActivity');
+// ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
+// ver requireAdmin em functions/index.js; qualquer outra conta que tentar
+// chamar recebe permission-denied do servidor)
+const callAdminGetUserDetails = httpsCallable(functions, 'adminGetUserDetails');
+const callAdminSetBanned = httpsCallable(functions, 'adminSetBanned');
+const callAdminSetNick = httpsCallable(functions, 'adminSetNick');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -1312,7 +1268,7 @@ const T = {
     mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
-    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR',
+    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
     your_score: 'Sua pontuação:', record_mode_label: '🏆 Seu recorde neste modo:',
@@ -1359,12 +1315,12 @@ const T = {
     btn_create_account: 'CRIAR CONTA',
     profile_offline_label: '👤 Jogando sem conta',
     profile_nick_label: nick => `👤 ${nick}`,
-    profile_summary: (n, total) => `${n} de ${total} categorias de conquista desbloqueadas`,
+    profile_summary: (n, total) => `${n} de ${total} conquistas desbloqueadas`,
     profile_badges_section: '🏅 Medalhas',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
     btn_friends: '👥 AMIGOS',
-    menu_sound_label: (on) => on ? '🔊 Som: Ligado' : '🔇 Som: Desligado',
+    menu_sound_label: (on) => on ? '🔊 SOM' : '🔇 SOM',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Pedidos recebidos',
     friends_outgoing_title: 'Pedidos enviados',
@@ -1467,7 +1423,7 @@ const T = {
     mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
-    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD',
+    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
     your_score: 'Your score:', record_mode_label: '🏆 Your record in this mode:',
@@ -1514,12 +1470,12 @@ const T = {
     btn_create_account: 'CREATE ACCOUNT',
     profile_offline_label: '👤 Playing without an account',
     profile_nick_label: nick => `👤 ${nick}`,
-    profile_summary: (n, total) => `${n} of ${total} achievement categories unlocked`,
+    profile_summary: (n, total) => `${n} of ${total} achievements unlocked`,
     profile_badges_section: '🏅 Medals',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
     btn_friends: '👥 FRIENDS',
-    menu_sound_label: (on) => on ? '🔊 Sound: On' : '🔇 Sound: Off',
+    menu_sound_label: (on) => on ? '🔊 SOUND' : '🔇 SOUND',
     friends_title: '👥 FRIENDS',
     friends_incoming_title: 'Incoming requests',
     friends_outgoing_title: 'Sent requests',
@@ -1622,7 +1578,7 @@ const T = {
     mode_shapes_desc: 'Haz clic en la <b>forma pedida</b> y memoriza la <b>palabra</b> escrita en ella. En la siguiente ronda, haz clic en la forma cuyo nombre memorizaste.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Haz clic en la <b>palabra pedida</b> y memoriza la <b>forma que la rodea</b>. En la siguiente ronda, haz clic en el nombre de la forma memorizada.',
-    record_label: '🏆 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR',
+    record_label: '🏆 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
     footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
     hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
     your_score: 'Tu puntuación:', record_mode_label: '🏆 Tu récord en este modo:',
@@ -1669,12 +1625,12 @@ const T = {
     btn_create_account: 'CREAR CUENTA',
     profile_offline_label: '👤 Jugando sin cuenta',
     profile_nick_label: nick => `👤 ${nick}`,
-    profile_summary: (n, total) => `${n} de ${total} categorías de logros desbloqueadas`,
+    profile_summary: (n, total) => `${n} de ${total} logros desbloqueados`,
     profile_badges_section: '🏅 Medallas',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Esta persona aún no ha desbloqueado ninguna medalla.',
     btn_friends: '👥 AMIGOS',
-    menu_sound_label: (on) => on ? '🔊 Sonido: Activado' : '🔇 Sonido: Desactivado',
+    menu_sound_label: (on) => on ? '🔊 SONIDO' : '🔇 SONIDO',
     friends_title: '👥 AMIGOS',
     friends_incoming_title: 'Solicitudes recibidas',
     friends_outgoing_title: 'Solicitudes enviadas',
@@ -2065,7 +2021,20 @@ const $ = id => document.getElementById(id);
 const show = id => {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
+  resetScroll(id);
 };
+// depois de trocar o conteúdo de uma tela que já estava aberta (ex.: troca de
+// aba do ranking), houve mais de um relato de tela ficando presa no topo sem
+// rolar. Além de a página inteira ter passado a rolar de verdade (nada mais
+// de overflow-y aninhado dentro de flexbox centralizado — ver comentário
+// junto de .screen no <style>), isso aqui força um reflow e volta pro topo
+// sempre que o conteúdo muda, como reforço extra.
+function resetScroll(screenId) {
+  const el = $(screenId);
+  if (!el) return;
+  void el.offsetHeight; // força o navegador recalcular o layout
+  window.scrollTo(0, 0); // quem rola agora é a página inteira, não mais cada .screen por dentro
+}
 const shuffle = a => a.sort(() => Math.random() - 0.5);
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
@@ -2120,20 +2089,8 @@ const sfx = {
 window.toggleMute = () => {
   muted = !muted;
   try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
-  $('menu-dd-sound-label').textContent = T[lang].menu_sound_label(!muted);
+  $('menu-quick-sound-label').textContent = T[lang].menu_sound_label(!muted);
 };
-
-/* menu suspenso da tela principal (amigos / ranking / som / sair) */
-window.toggleMenuDropdown = () => {
-  $('menu-dropdown').classList.toggle('open');
-};
-window.closeMenuDropdown = () => {
-  $('menu-dropdown').classList.remove('open');
-};
-document.addEventListener('click', (e) => {
-  const wrap = $('menu-dd-wrap');
-  if (wrap && !wrap.contains(e.target)) closeMenuDropdown();
-});
 
 /* ================== compartilhar ================== */
 // monta o link de compartilhamento — ?ref= só existe pra quem tem conta (conta pro
@@ -2288,6 +2245,28 @@ window.playOffline = () => {
   showMenu();
 };
 
+// "última vez online" — a sessão do Firebase Auth persiste sozinha, então só
+// registrar o momento do login não conta a história toda (alguém pode abrir o
+// jogo, deixar a aba aberta e nunca mais tocar em nada). Por isso, além do
+// toque na hora do login, isso aqui manda um "sinal de vida" periódico
+// enquanto a aba fica visível/em uso — só usado hoje pela ferramenta de admin.
+const ACTIVITY_HEARTBEAT_MS = 5 * 60 * 1000; // a cada 5 minutos
+let activityHeartbeatStarted = false;
+function touchActivityTick() {
+  if (!offline && currentUser) callTouchActivity().catch(() => {});
+}
+function startActivityHeartbeat() {
+  if (activityHeartbeatStarted) return;
+  activityHeartbeatStarted = true;
+  setInterval(touchActivityTick, ACTIVITY_HEARTBEAT_MS);
+  // se a pessoa deixar a aba em segundo plano por horas e voltar, não espera
+  // o próximo tique do intervalo — atualiza na hora que ela volta a olhar
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') touchActivityTick();
+  });
+}
+startActivityHeartbeat();
+
 onAuthStateChanged(auth, async user => {
   if (user) {
     offline = false;
@@ -2322,6 +2301,7 @@ async function proceedAfterLogin(user) {
     await backfillTotal();
     await submitPendingScore();
     startPvpListener();
+    touchActivityTick(); // atualiza "última vez online" na hora (o heartbeat cuida do resto enquanto a aba ficar aberta)
     // já tem conta — se chegou (ou já estava logada) com o link de convite de
     // alguém, sugere amizade em segundo plano, sem travar a entrada no menu
     // (mesmo caso de quem acabou de criar a conta, ver saveNick/creditReferral)
@@ -2396,36 +2376,30 @@ window.saveNick = async () => {
 
 /* ================== menu ================== */
 window.showMenu = () => {
-  closeMenuDropdown();
   $('record-classic').textContent = myRecord('classic');
   $('record-reverse').textContent = myRecord('reverse');
   $('record-shapes').textContent = myRecord('shapes');
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
-  $('menu-dd-sound-label').textContent = T[lang].menu_sound_label(!muted);
+  $('menu-quick-sound-label').textContent = T[lang].menu_sound_label(!muted);
 
-  // nível e barra de XP (só aparece pra quem tem conta)
+  // nível e barra de XP (só aparece pra quem tem conta) — o "Lv X" agora vai
+  // junto do nick logo abaixo (mesmo chip usado no resto do app), aqui só
+  // fica o número/barra de progresso
   $('menu-xp-wrap').style.display = offline ? 'none' : '';
   const xi = xpInfo(myXp());
-  $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
   $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
   $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
 
   // amigos precisam de conta — botão some jogando sem login; a bolinha
-  // vermelha avisa quando tem pedido de amizade esperando resposta.
-  // Texto setado aqui (não via data-i18n) porque o botão tem a bolinha de
-  // notificação como filho, e data-i18n troca o textContent inteiro do
-  // elemento — apagaria a bolinha a cada troca de idioma.
-  $('menu-dd-friends-item').style.display = offline ? 'none' : '';
+  // vermelha avisa quando tem pedido de amizade esperando resposta
+  $('menu-quick-friends-btn').style.display = offline ? 'none' : '';
   if (!offline && currentUser) {
     fetchMyFriendRequests().then(reqs => {
       const n = Object.keys(reqs.incoming || {}).length;
-      const badge = $('menu-dd-friends-badge');
+      const badge = $('menu-quick-friends-badge');
       badge.textContent = n;
       badge.style.display = n > 0 ? '' : 'none';
-      $('menu-dd-badge').style.display = n > 0 ? '' : 'none';
     }).catch(() => {});
-  } else {
-    $('menu-dd-badge').style.display = 'none';
   }
 
   // bloqueio dos modos por nível
@@ -2438,10 +2412,13 @@ window.showMenu = () => {
   }
   if (offline) {
     $('user-label').textContent = T[lang].offline_label;
-    $('menu-dd-logout-item').textContent = '🔑 ' + T[lang].entrar_label;
+    $('menu-logout-btn').textContent = T[lang].entrar_label;
   } else {
+    // nick sempre via textContent (nunca innerHTML) — o chip de nível (HTML
+    // confiável, não vem do usuário) é anexado à parte, mesmo padrão do resto do app
     $('user-label').textContent = T[lang].user_greeting(myData.nick || '');
-    $('menu-dd-logout-item').textContent = '🚪 ' + T[lang].sair_label;
+    $('user-label').insertAdjacentHTML('beforeend', ' ' + lvChip(myXp()));
+    $('menu-logout-btn').textContent = T[lang].sair_label;
   }
   show('menu-screen');
 };
@@ -2850,6 +2827,169 @@ function profileSectionLabel(text) {
   return `<div class="muted" style="text-align:left; font-family:'Orbitron',sans-serif; font-size:0.75rem; letter-spacing:0.5px; text-transform:uppercase; margin-top:4px;">${text}</div>`;
 }
 
+/* ================== painel de admin (perfil de outra pessoa) ================== */
+// texto fixo em português de propósito — essa parte da tela só aparece pra
+// quem tem admin:true (só você), então não precisa dos outros idiomas
+function fmtDateTime(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+async function renderAdminPanel(uid, currentNick, stats) {
+  const box = $('admin-panel-body');
+  if (!box) return;
+
+  let details;
+  try {
+    details = (await callAdminGetUserDetails({ uid })).data;
+  } catch (e) {
+    box.textContent = 'Erro ao carregar dados de admin: ' + (e.message || e);
+    return;
+  }
+
+  box.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'text-align:left; display:flex; flex-direction:column; gap:10px; width:100%;';
+
+  // último login
+  const loginRow = document.createElement('div');
+  loginRow.innerHTML = '<b>Última vez online:</b> ';
+  loginRow.appendChild(document.createTextNode(details.lastActiveAt ? fmtDateTime(details.lastActiveAt) : 'nunca registrado'));
+  wrap.appendChild(loginRow);
+
+  // últimos duelos (PvP) — nick do adversário sempre via textContent (nunca
+  // interpolado no HTML), mesmo cuidado usado no resto da tela de perfil
+  const matchesTitle = document.createElement('div');
+  matchesTitle.innerHTML = '<b>Últimos duelos (PvP):</b>';
+  wrap.appendChild(matchesTitle);
+  const matchesList = document.createElement('div');
+  matchesList.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+  if (!details.matches.length) {
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = 'Nenhum duelo concluído ainda.';
+    matchesList.appendChild(row);
+  } else {
+    details.matches.forEach(m => {
+      const row = document.createElement('div');
+      row.className = 'muted';
+      const resultLabel = m.result === 'win' ? '🏆 Vitória' : m.result === 'loss' ? '💀 Derrota' : '🤝 Empate';
+      row.appendChild(document.createTextNode(fmtDateTime(m.finishedAt) + ' — vs '));
+      const b = document.createElement('b');
+      b.textContent = m.opponentNick || '?';
+      row.appendChild(b);
+      row.appendChild(document.createTextNode(' — ' + resultLabel));
+      matchesList.appendChild(row);
+    });
+  }
+  wrap.appendChild(matchesList);
+
+  // lista de amigos
+  const friendsTitle = document.createElement('div');
+  friendsTitle.innerHTML = `<b>Amigos (${details.friends.length}):</b>`;
+  wrap.appendChild(friendsTitle);
+  const friendsList = document.createElement('div');
+  friendsList.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+  if (!details.friends.length) {
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = 'Sem amigos ainda.';
+    friendsList.appendChild(row);
+  } else {
+    details.friends.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'muted';
+      row.appendChild(document.createTextNode('👤 '));
+      const b = document.createElement('b');
+      b.textContent = f.nick || '?';
+      row.appendChild(b);
+      if (f.since) row.appendChild(document.createTextNode(' — desde ' + fmtDateTime(f.since)));
+      friendsList.appendChild(row);
+    });
+  }
+  wrap.appendChild(friendsList);
+
+  // editar nick + banir/desbanir — ambos validados de novo no servidor
+  // (adminSetNick / adminSetBanned), isso aqui só monta a UI
+  const toolsBox = document.createElement('div');
+  toolsBox.style.cssText = 'border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; flex-direction:column; gap:8px;';
+
+  const nickRow = document.createElement('div');
+  nickRow.style.cssText = 'display:flex; gap:8px;';
+  const nickInput = document.createElement('input');
+  nickInput.type = 'text';
+  nickInput.value = currentNick || '';
+  nickInput.style.flex = '1';
+  nickRow.appendChild(nickInput);
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'secondary';
+  saveBtn.style.flex = 'none';
+  saveBtn.textContent = 'Salvar nick';
+  nickRow.appendChild(saveBtn);
+  toolsBox.appendChild(nickRow);
+  const nickStatus = document.createElement('div');
+  nickStatus.className = 'muted';
+  toolsBox.appendChild(nickStatus);
+
+  saveBtn.onclick = async () => {
+    const nick = nickInput.value.trim();
+    nickStatus.textContent = '';
+    if (nick.length < 3 || nick.length > 16 || /\s/.test(nick)) {
+      nickStatus.textContent = 'Nick inválido (3 a 16 caracteres, sem espaço).';
+      return;
+    }
+    saveBtn.disabled = true;
+    try {
+      await callAdminSetNick({ uid, nick });
+      nickStatus.textContent = '✅ Nick atualizado.';
+      stats.nick = nick;
+      $('profile-nick').textContent = T[lang].profile_nick_label(nick);
+      $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(stats.xp || 0));
+    } catch (e) {
+      nickStatus.textContent = '❌ ' + (e.message || 'Erro ao salvar.');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  };
+
+  const banBtn = document.createElement('button');
+  const paintBanBtn = banned => {
+    banBtn.textContent = banned ? '✅ Remover banimento' : '🚫 Banir esta conta';
+    banBtn.style.cssText = banned
+      ? 'border-color:var(--neon-green); color:var(--neon-green); background:#0a0e1e;'
+      : 'border-color:var(--neon-red); color:#ff8bab; background:#0a0e1e;';
+  };
+  paintBanBtn(details.banned);
+  toolsBox.appendChild(banBtn);
+  const banStatus = document.createElement('div');
+  banStatus.className = 'muted';
+  toolsBox.appendChild(banStatus);
+
+  banBtn.onclick = async () => {
+    const next = !details.banned;
+    if (next && !confirm('Banir esta conta? A pessoa não vai mais conseguir gravar pontuação nem jogar PvP.')) return;
+    banBtn.disabled = true;
+    banStatus.textContent = '';
+    try {
+      await callAdminSetBanned({ uid, banned: next });
+      details.banned = next;
+      paintBanBtn(next);
+      banStatus.textContent = next ? '🚫 Conta banida.' : '✅ Banimento removido.';
+    } catch (e) {
+      banStatus.textContent = '❌ ' + (e.message || 'Erro.');
+    } finally {
+      banBtn.disabled = false;
+    }
+  };
+
+  wrap.appendChild(toolsBox);
+  box.appendChild(wrap);
+  // o painel carrega depois do resto do perfil (é uma chamada assíncrona à
+  // parte) e deixa a tela mais alta — sem isso, o mesmo bug de rolagem presa
+  // já corrigido no ranking/amigos podia voltar a acontecer aqui
+  resetScroll('profile-screen');
+}
+
 /* ================== amigos ================== */
 // Espelhado em dois documentos por conta (ver functions/index.js):
 //   friends/{uid}        -> { list: { [amigoUid]: { nick, since } } }
@@ -3076,6 +3216,7 @@ async function renderFriendsScreen(force) {
         <p>${T[lang].profile_offline_msg1}</p>
         <button onclick="goSignup()">${T[lang].btn_create_account}</button>
       </div>`;
+    resetScroll('friends-screen');
     return;
   }
 
@@ -3107,6 +3248,7 @@ async function renderFriendsScreen(force) {
     all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
     friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid])));
   }
+  resetScroll('friends-screen');
 }
 
 // depois de qualquer ação de amizade, atualiza a tela de amigos (se estiver
@@ -3169,12 +3311,6 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   const isOther = !!viewStats;
   const stats = isOther ? viewStats : myData;
 
-  // no perfil de outra pessoa, o "voltar" vira um botão pequeno e lateral lá em
-  // cima (como o de sair) em vez do botão grande embaixo — é só um jeito rápido
-  // de fechar essa visualização, não precisa do mesmo peso do perfil próprio
-  $('profile-back-top-btn').style.display = isOther ? '' : 'none';
-  $('profile-back-bottom-btn').style.display = isOther ? 'none' : '';
-
   $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
 
   if (!isOther && offline) {
@@ -3189,6 +3325,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
         <p class="muted">${T[lang].profile_offline_msg2}</p>
         <button onclick="goSignup()">${T[lang].btn_create_account}</button>
       </div>`;
+    resetScroll('profile-screen');
     return;
   }
 
@@ -3204,7 +3341,17 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     let html = '';
     if (ranksHtml) html += profileSectionLabel(T[lang].profile_ranks_section) + ranksHtml;
     html += profileSectionLabel(T[lang].profile_badges_section) + renderPublicProfileBadges(stats);
+    // painel só pra admin (myData.admin, setado à mão no Firebase Console) —
+    // último login, últimos duelos e amigos de QUALQUER jogador, com opção de
+    // editar o nick e banir a conta, tudo validado de novo no servidor (ver
+    // requireAdmin em functions/index.js — o cliente decidir mostrar isso aqui
+    // é só conveniência de UI, não é o que garante a permissão)
+    if (myData.admin === true) {
+      html += profileSectionLabel('🛠️ Admin') + `<div class="card" id="admin-panel-body"><div class="muted" style="text-align:center;">Carregando dados de admin...</div></div>`;
+    }
     $('profile-body').innerHTML = html;
+    resetScroll('profile-screen');
+    if (myData.admin === true) renderAdminPanel(viewUid, viewNick || '', stats);
     return;
   }
 
@@ -3221,6 +3368,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
   $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
   $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], stats)).join('');
+  resetScroll('profile-screen');
 }
 
 function renderBadgeCard(def, stats) {
@@ -3324,6 +3472,7 @@ window.loadRanking = async (m) => {
         </div>
       </td></tr>`;
     rankingRows = [];
+    resetScroll('ranking-screen');
     return;
   }
 
@@ -3393,6 +3542,7 @@ function renderRankingPage() {
       <span class="muted">${T[lang].pagination_page(rankingPage + 1, totalPages)}</span>
       <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
   }
+  resetScroll('ranking-screen');
 }
 
 window.rankingGoPage = (p) => {
