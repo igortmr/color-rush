@@ -1,0 +1,59 @@
+workflows:
+  ios-workflow:
+    name: Color Rush — iOS (App Store)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      # PREENCHER DEPOIS no site do Codemagic (Team settings > Code signing
+      # identities / Integrations), não aqui no arquivo:
+      # 1. Crie uma API Key em App Store Connect (Users and Access > Keys)
+      #    e adicione em Codemagic > Team integrations > App Store Connect.
+      # 2. Isso libera as variáveis usadas abaixo (APP_STORE_CONNECT_*) e o
+      #    bloco "integrations" logo mais abaixo, sem precisar editar este
+      #    arquivo de novo.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: br.com.colorrush.app
+      vars:
+        BUNDLE_ID: "br.com.colorrush.app"
+        XCODE_WORKSPACE: "app/ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: latest
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Instalar dependências (npm)
+        script: |
+          cd app
+          npm install
+      - name: Adicionar/atualizar a plataforma iOS (Capacitor)
+        script: |
+          cd app
+          test -d ios || npx cap add ios
+          npx cap sync ios
+      - name: Instalar dependências nativas (CocoaPods)
+        script: |
+          cd app/ios/App
+          pod install
+      - name: Configurar assinatura de código
+        script: |
+          xcode-project use-profiles
+      - name: Build do .ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      # descomente depois de ter a integração da App Store Connect configurada
+      # app_store_connect:
+      #   auth: integration
+      #   submit_to_testflight: true
+      email:
+        recipients:
+          - igortmr@gmail.com
+        notify:
+          success: true
+          failure: true
