@@ -609,6 +609,11 @@
   tbody tr { background: #0e1224; }
   tbody tr:nth-child(odd) { background: #0a0e1e; }
   tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
+  /* linha temática da loja — sobrepõe o fundo padrão/listrado da tabela;
+     combina normalmente com .me (que só usa outline, não background) */
+  tbody tr.row-theme-fire   { background: linear-gradient(90deg, rgba(255,45,107,0.35), rgba(255,159,28,0.15)); }
+  tbody tr.row-theme-ocean  { background: linear-gradient(90deg, rgba(30,144,255,0.35), rgba(0,210,211,0.15)); }
+  tbody tr.row-theme-galaxy { background: linear-gradient(90deg, rgba(177,77,255,0.35), rgba(255,107,157,0.15)); }
   td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
@@ -2381,6 +2386,16 @@ function applyNickFrame(el, stats) {
   if (frame === 'frame_gold') el.classList.add('nick-frame-gold');
   else if (frame === 'frame_rainbow') el.classList.add('nick-frame-rainbow');
 }
+// linha temática da loja — fundo diferenciado na <tr> do jogador nas tabelas
+// de ranking, pra se destacar na lista. Mesmo raciocínio da moldura: campo
+// público (stats.equipped), então funciona pra QUALQUER linha (não só a sua)
+function applyRowTheme(el, stats) {
+  const theme = stats && stats.equipped && stats.equipped.rowTheme;
+  el.classList.remove('row-theme-fire', 'row-theme-ocean', 'row-theme-galaxy');
+  if (theme === 'row_fire') el.classList.add('row-theme-fire');
+  else if (theme === 'row_ocean') el.classList.add('row-theme-ocean');
+  else if (theme === 'row_galaxy') el.classList.add('row-theme-galaxy');
+}
 // ícone dos Pigmentos (moeda do desafio diário) — uma gota com as cores do
 // jogo se misturando, pra remeter ao tema sem precisar de nenhum arquivo de
 // imagem externo. Markup fixo/confiável (sem dado de usuário), inserido só
@@ -2611,15 +2626,23 @@ let dailyAlltimeRows = [], dailyAlltimePage = 0;
 const SHOP_ITEMS = [
   { id: 'sfx_splash',    slot: 'sfxCorrect', price: 30,  icon: '🎨', name: 'Som de Acerto: Splash de Tinta', desc: 'Troca o bipe de acerto por um "splash" de tinta.' },
   { id: 'sfx_8bit',      slot: 'sfxCorrect', price: 30,  icon: '👾', name: 'Som de Acerto: Retrô 8-bit',     desc: 'Um bipe estilo fliperama clássico.' },
+  { id: 'sfx_bell',      slot: 'sfxCorrect', price: 30,  icon: '🔔', name: 'Som de Acerto: Sininho',         desc: 'Um "ding" de sino cristalino a cada acerto.' },
+  { id: 'sfx_laser',     slot: 'sfxCorrect', price: 30,  icon: '🔫', name: 'Som de Acerto: Laser',           desc: 'Um tiro de laser sci-fi a cada acerto.' },
+  { id: 'sfx_bubble',    slot: 'sfxCorrect', price: 30,  icon: '🫧', name: 'Som de Acerto: Bolha',           desc: 'Um "blip" de bolha estourando a cada acerto.' },
+  { id: 'sfx_synth',     slot: 'sfxCorrect', price: 30,  icon: '🎹', name: 'Som de Acerto: Sintetizador',    desc: 'Um acorde curto de sintetizador retrô a cada acerto.' },
   { id: 'frame_gold',    slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Dourada',                desc: 'Uma moldura dourada ao redor do seu nick no ranking e perfil.' },
   { id: 'frame_rainbow', slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Arco-íris',              desc: 'Uma moldura multicolorida ao redor do seu nick.' },
   { id: 'confetti_gold', slot: 'confetti',   price: 120, icon: '🎊', name: 'Confete Dourado',                desc: 'Um confete dourado quando você bate um novo recorde.' },
+  { id: 'row_fire',      slot: 'rowTheme',   price: 130, icon: '🔥', name: 'Linha: Fogo',                    desc: 'Fundo temático de fogo na sua linha do ranking.' },
+  { id: 'row_ocean',     slot: 'rowTheme',   price: 130, icon: '🌊', name: 'Linha: Oceano',                  desc: 'Fundo temático de oceano na sua linha do ranking.' },
+  { id: 'row_galaxy',    slot: 'rowTheme',   price: 130, icon: '🌌', name: 'Linha: Galáxia',                 desc: 'Fundo temático de galáxia na sua linha do ranking.' },
 ];
 const SHOP_ITEMS_BY_ID = Object.fromEntries(SHOP_ITEMS.map(it => [it.id, it]));
 const SHOP_SLOTS = [
   { slot: 'sfxCorrect', label: '🔊 Som de Acerto' },
   { slot: 'frame',      label: '🖼️ Moldura do Nick' },
   { slot: 'confetti',   label: '🎊 Confete de Recorde' },
+  { slot: 'rowTheme',   label: '📊 Linha do Ranking' },
 ];
 let equippedSfx = null, equippedFrame = null, equippedConfetti = null;
 function applyEquippedCosmetics() {
@@ -2750,6 +2773,23 @@ function playCorrectSfxVariant(variant, n) {
     const f = 500 + Math.min(n, 24) * 20;
     tone(f, 0.07, 'sine', 0.13);
     tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
+  } else if (variant === 'sfx_bell') {
+    const f = 600 + Math.min(n, 24) * 25;
+    tone(f, 0.15, 'sine', 0.12);
+    tone(f * 1.5, 0.12, 'sine', 0.07, 0.03);
+  } else if (variant === 'sfx_laser') {
+    const f = 900 + Math.min(n, 24) * 30;
+    tone(f, 0.05, 'sawtooth', 0.11);
+    tone(f * 0.6, 0.08, 'sawtooth', 0.08, 0.03);
+  } else if (variant === 'sfx_bubble') {
+    const f = 350 + Math.min(n, 24) * 25;
+    tone(f, 0.05, 'triangle', 0.12);
+    tone(f * 1.8, 0.06, 'triangle', 0.09, 0.05);
+  } else if (variant === 'sfx_synth') {
+    const f = 300 + Math.min(n, 24) * 35;
+    tone(f, 0.08, 'square', 0.1);
+    tone(f * 1.25, 0.08, 'square', 0.08, 0.04);
+    tone(f * 1.5, 0.1, 'square', 0.06, 0.08);
   } else {
     tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
   }
@@ -3398,6 +3438,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
       nickSpan.textContent = r.nick;
       nickSpan.className = 'nick-click';
       applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
       nickSpan.onclick = () => openProfileFromRanking(r, 'over-screen');
       nickCell.appendChild(nickSpan);
       if (r.stats) {
@@ -4267,6 +4308,7 @@ function renderRankingPage() {
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
     applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats));
@@ -4345,6 +4387,7 @@ function renderDailyTodayPage() {
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
     applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     body.appendChild(tr);
@@ -4402,6 +4445,7 @@ function renderDailyAlltimePage() {
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
     applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     body.appendChild(tr);
@@ -4906,6 +4950,18 @@ function shopItemPreview(item) {
     btn.textContent = '🎉 Testar';
     btn.onclick = (e) => { e.stopPropagation(); spawnConfettiVariant(item.id); };
     wrap.appendChild(btn);
+  } else if (item.slot === 'rowTheme') {
+    // mini tabela real (não só uma div) pra reaproveitar exatamente o mesmo
+    // seletor CSS "tbody tr.row-theme-x" usado na tabela de ranking de verdade
+    const mini = document.createElement('table');
+    mini.style.cssText = 'width:100%; border-collapse:collapse; margin-top:2px;';
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    applyRowTheme(tr, { equipped: { rowTheme: item.id } });
+    tr.innerHTML = '<td class="pos" style="padding:6px 8px;">1</td><td style="padding:6px 8px; font-weight:700;">SeuNick</td><td class="pts" style="padding:6px 8px;">1234</td>';
+    tbody.appendChild(tr);
+    mini.appendChild(tbody);
+    wrap.appendChild(mini);
   }
   return wrap;
 }
