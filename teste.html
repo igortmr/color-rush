@@ -2339,17 +2339,24 @@ function applyNickFrame(el, stats) {
 // jogo se misturando, pra remeter ao tema sem precisar de nenhum arquivo de
 // imagem externo. Markup fixo/confiável (sem dado de usuário), inserido só
 // via insertAdjacentHTML/template literal mesmo mais abaixo.
+// contador só pra dar um id único de gradiente a cada ícone renderizado —
+// com o mesmo id "pigGrad" repetido em vários <svg> na mesma página (menu,
+// loja, legenda de prêmio, botão de compra...), o navegador às vezes usa a
+// cor errada (ou vira sólida) por causa do id duplicado. Cada ícone agora
+// tem seu próprio gradiente, sempre com as mesmas cores.
+let pigmentIconSeq = 0;
 function pigmentIconSvg(size = 18) {
+  const gradId = `pigGrad${pigmentIconSeq++}`;
   return `<svg class="pigment-icon" width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="pigGrad" x1="0" y1="0" x2="0" y2="1">
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#a55eea"/>
         <stop offset="35%" stop-color="#1e90ff"/>
         <stop offset="65%" stop-color="#2ed573"/>
         <stop offset="100%" stop-color="#ffd32a"/>
       </linearGradient>
     </defs>
-    <path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGrad)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+    <path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#${gradId})" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
     <ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/>
   </svg>`;
 }
