@@ -1119,6 +1119,9 @@
   </div>
   <div class="user-bar">
     <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
+    <span class="user-pigmentos" id="user-pigmentos-bar" style="display:none; align-items:center; gap:3px; font-weight:700;">
+      <span id="user-pigmentos-num">0</span><span id="user-pigmentos-icon"></span>
+    </span>
     <span>
       <button class="inbox-icon-btn" id="inbox-btn" onclick="showInbox()" aria-label="Caixa de entrada" title="Caixa de entrada" style="display:none;">
         📬
@@ -3027,6 +3030,7 @@ window.showMenu = () => {
   refreshInboxBadge();
   updateDailyMenuCard();
   renderMenuPigmentosBar();
+  renderUserPigmentos();
 
   // bloqueio dos modos por nível
   for (const [m, minLv] of Object.entries(MODE_UNLOCK)) {
@@ -4508,6 +4512,7 @@ window.claimOneDailyReward = async (dateStr) => {
     refreshInboxBadge();
     updateDailyMenuCard();
     renderMenuPigmentosBar();
+    renderUserPigmentos();
   } catch (e) {
     $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
@@ -4521,6 +4526,7 @@ window.claimAllDailyRewards = async () => {
     refreshInboxBadge();
     updateDailyMenuCard();
     renderMenuPigmentosBar();
+    renderUserPigmentos();
   } catch (e) {
     $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
@@ -4725,6 +4731,20 @@ function renderMenuPigmentosBar() {
   $('menu-pigmentos-icon').innerHTML = pigmentIconSvg(18);
   $('menu-pigmentos-num').textContent = myData.pigmentos || 0;
 }
+// saldo de Pigmentos no topo da tela, entre o nick e a caixa de entrada — só
+// o número + ícone colorido, sem texto/link (o acesso à loja continua sendo
+// só pela barra do menu, acima)
+function renderUserPigmentos() {
+  const el = $('user-pigmentos-bar');
+  if (!el) return;
+  if (offline || !currentUser || !myData.nick) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'inline-flex';
+  $('user-pigmentos-num').textContent = myData.pigmentos || 0;
+  $('user-pigmentos-icon').innerHTML = pigmentIconSvg(16);
+}
 
 window.showShop = () => {
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
@@ -4877,6 +4897,7 @@ window.buyShopItemUi = async (itemId) => {
     myData.ownedItems = [...(myData.ownedItems || []), itemId];
     renderShop();
     renderMenuPigmentosBar();
+    renderUserPigmentos();
   } catch (e) {
     $('shop-status').textContent = e.message || 'Não foi possível comprar agora.';
   }
