@@ -120,6 +120,14 @@
   }
   .screen.active { display: flex; }
 
+  /* tela de jogo (grade de cores/formas): o conteúdo dela é mais curto que a
+     tela em boa parte dos aparelhos, então em vez de ficar ancorada perto do
+     topo como as outras telas (de propósito, por causa do bug de scroll
+     comentado acima), centraliza só ela verticalmente. Não mexe no
+     align-items do body (que continua flex-start) pra não reintroduzir
+     aquele bug nas telas mais compridas. */
+  #game-screen { align-self: center; }
+
   h1 {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-size: 2.5rem;
@@ -1546,6 +1554,10 @@ const callClaimDailyReward = httpsCallable(functions, 'claimDailyReward');
 // loja de cosméticos (paga com Pigmentos)
 const callBuyShopItem = httpsCallable(functions, 'buyShopItem');
 const callSetEquippedItem = httpsCallable(functions, 'setEquippedItem');
+// notificações push — só usada dentro do app nativo (iOS/Android via
+// Capacitor); no navegador normal isso nunca chega a ser chamado (ver
+// initNativePush() mais abaixo)
+const callRegisterPushToken = httpsCallable(functions, 'registerPushToken');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -3050,6 +3062,38 @@ const EMPTY_PROFILE = {
   playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, badgesSeenTiers: {},
 };
 
+// true só quando a página está rodando dentro do app nativo (Capacitor,
+// iOS/Android); no navegador comum (mesmo mobile) window.Capacitor não
+// existe, então isso nunca chega a ser true fora do app publicado nas lojas.
+function isNativeApp() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+// pede permissão e registra o dispositivo pra notificação push, só dentro do
+// app nativo. Melhor esforço: qualquer falha aqui fica só no console, nunca
+// atrapalha o login/uso normal do jogo (mesmo padrão do sendPushToUser no
+// servidor, ver functions/index.js).
+let nativePushInitDone = false;
+async function initNativePush() {
+  if (nativePushInitDone || !isNativeApp()) return;
+  nativePushInitDone = true;
+  try {
+    const PushNotifications = window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
+    if (!PushNotifications) return;
+    const perm = await PushNotifications.requestPermissions();
+    if (perm.receive !== 'granted') return;
+    PushNotifications.addListener('registration', (token) => {
+      callRegisterPushToken({ token: token.value }).catch(() => {});
+    });
+    PushNotifications.addListener('registrationError', (err) => {
+      console.warn('[push] erro de registro', err);
+    });
+    await PushNotifications.register();
+  } catch (e) {
+    console.warn('[push] indisponível', e);
+  }
+}
+
 async function proceedAfterLogin(user) {
   try {
     const snap = await getDoc(doc(db, 'scores', user.uid));
@@ -3062,6 +3106,7 @@ async function proceedAfterLogin(user) {
     await submitPendingScore();
     startPvpListener();
     touchActivityTick(); // atualiza "última vez online" na hora (o heartbeat cuida do resto enquanto a aba ficar aberta)
+    initNativePush(); // sem await de propósito: nunca deve atrasar a entrada no menu
     // já tem conta — se chegou (ou já estava logada) com o link de convite de
     // alguém, sugere amizade em segundo plano, sem travar a entrada no menu
     // (mesmo caso de quem acabou de criar a conta, ver saveNick/creditReferral)
