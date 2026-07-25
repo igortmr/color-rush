@@ -120,13 +120,15 @@
   }
   .screen.active { display: flex; }
 
-  /* tela de jogo (grade de cores/formas): o conteúdo dela é mais curto que a
-     tela em boa parte dos aparelhos, então em vez de ficar ancorada perto do
-     topo como as outras telas (de propósito, por causa do bug de scroll
-     comentado acima), centraliza só ela verticalmente. Não mexe no
-     align-items do body (que continua flex-start) pra não reintroduzir
-     aquele bug nas telas mais compridas. */
-  #game-screen { align-self: center; }
+  /* tela de jogo: HUD, barra de tempo e instrução continuam ancoradas perto
+     do topo, igual às outras telas (de propósito, por causa do bug de scroll
+     comentado acima) — só a grade de quadrados (#grid) fica centralizada no
+     espaço vertical que sobra. #game-screen precisa "esticar" (align-self:
+     stretch) até a altura da tela toda pra sobrar espaço livre; a margem
+     automática dos dois lados de #grid é o que distribui esse espaço de
+     forma igual acima/abaixo dela. */
+  #game-screen { align-self: stretch; }
+  #grid { margin-top: auto; margin-bottom: auto; }
 
   h1 {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
