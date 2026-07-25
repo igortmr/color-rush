@@ -1657,6 +1657,7 @@ const T = {
     friends_empty: 'Você ainda não tem amigos. Adicione-os pelo ranking, ou compartilhando seu link de convite.',
     btn_add_friend: '➕ Adicionar amigo',
     btn_remove_friend: 'Remover',
+    btn_remove_friend_profile: 'Remover amigo',
     btn_accept: 'Aceitar',
     btn_decline: 'Recusar',
     btn_cancel_request: 'Cancelar pedido',
@@ -1859,6 +1860,7 @@ const T = {
     friends_empty: "You don't have any friends yet. Add them from the leaderboard, or by sharing your invite link.",
     btn_add_friend: '➕ Add friend',
     btn_remove_friend: 'Remove',
+    btn_remove_friend_profile: 'Remove friend',
     btn_accept: 'Accept',
     btn_decline: 'Decline',
     btn_cancel_request: 'Cancel request',
@@ -2061,6 +2063,7 @@ const T = {
     friends_empty: 'Todavía no tienes amigos. Agrégalos desde el ranking, o compartiendo tu enlace de invitación.',
     btn_add_friend: '➕ Agregar amigo',
     btn_remove_friend: 'Quitar',
+    btn_remove_friend_profile: 'Quitar amigo',
     btn_accept: 'Aceptar',
     btn_decline: 'Rechazar',
     btn_cancel_request: 'Cancelar solicitud',
@@ -3866,7 +3869,8 @@ function friendActionNode(rel, theirUid) {
   if (rel === 'friends') {
     const btn = document.createElement('button');
     btn.className = 'secondary';
-    btn.textContent = T[lang].btn_remove_friend;
+    btn.textContent = T[lang].btn_remove_friend_profile;
+    btn.style.cssText = 'padding:9px 18px; font-size:0.85rem;';
     btn.onclick = () => uiRemoveFriend(theirUid);
     return btn;
   }
