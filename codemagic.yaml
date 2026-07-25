@@ -6,9 +6,10 @@ workflows:
     integrations:
       # nome exatamente igual ao que foi dado à API key ao salvar a
       # integração em Codemagic > Settings > Integrations > Apple Developer
-      # Portal. Isso é o que permite assinatura automática (busca/gera o
-      # provisioning profile sozinho, sem precisar subir certificado manual).
-      app_store_connect: Codemagic
+      # Portal (a chave está salva lá como "Color Rush", não "Codemagic" —
+      # tem que bater letra por letra, é o que permite a assinatura
+      # automática buscar/gerar o provisioning profile sozinha).
+      app_store_connect: Color Rush
     environment:
       ios_signing:
         distribution_type: app_store
