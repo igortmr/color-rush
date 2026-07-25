@@ -3,14 +3,13 @@ workflows:
     name: Color Rush — iOS (App Store)
     max_build_duration: 60
     instance_type: mac_mini_m2
+    integrations:
+      # nome exatamente igual ao que foi dado à API key ao salvar a
+      # integração em Codemagic > Settings > Integrations > Apple Developer
+      # Portal. Isso é o que permite assinatura automática (busca/gera o
+      # provisioning profile sozinho, sem precisar subir certificado manual).
+      app_store_connect: Codemagic
     environment:
-      # PREENCHER DEPOIS no site do Codemagic (Team settings > Code signing
-      # identities / Integrations), não aqui no arquivo:
-      # 1. Crie uma API Key em App Store Connect (Users and Access > Keys)
-      #    e adicione em Codemagic > Team integrations > App Store Connect.
-      # 2. Isso libera as variáveis usadas abaixo (APP_STORE_CONNECT_*) e o
-      #    bloco "integrations" logo mais abaixo, sem precisar editar este
-      #    arquivo de novo.
       ios_signing:
         distribution_type: app_store
         bundle_identifier: br.com.colorrush.app
@@ -57,10 +56,9 @@ workflows:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
-      # descomente depois de ter a integração da App Store Connect configurada
-      # app_store_connect:
-      #   auth: integration
-      #   submit_to_testflight: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
       email:
         recipients:
           - igortmr@gmail.com
