@@ -2397,18 +2397,16 @@ function unlockedTier(def, stats) {
 }
 // pill com ícone + nome da ÚNICA medalha escolhida pra aparecer ao lado do
 // nick no ranking (ver toggleEquippedBadge, no perfil próprio). Sem escolha
-// feita ainda, cai na primeira desbloqueada na ordem fixa de BADGE_ORDER —
-// mesmo comportamento visto antes de existir a escolha. Sempre reconfere
-// unlockedTier() contra as stats REAIS, então forjar equippedBadge não
-// mostra nada que a pessoa não tenha de verdade.
+// feita ainda, não mostra nada — só passa a exibir depois que a própria
+// pessoa vai no perfil e equipa uma. Sempre reconfere unlockedTier() contra
+// as stats REAIS, então forjar equippedBadge não mostra nada que a pessoa
+// não tenha de verdade.
 function equippedBadgeLabel(stats) {
-  let key = stats.equippedBadge;
-  if (!key || !BADGE_DEFS[key] || unlockedTier(BADGE_DEFS[key], stats) < 0) {
-    key = BADGE_ORDER.find(k => unlockedTier(BADGE_DEFS[k], stats) >= 0);
-  }
-  if (!key) return '';
+  const key = stats.equippedBadge;
+  if (!key || !BADGE_DEFS[key]) return ''; // ninguém escolheu ainda — não mostra nada até a pessoa ir no perfil e equipar uma
   const def = BADGE_DEFS[key];
   const t = unlockedTier(def, stats);
+  if (t < 0) return ''; // reconfere contra as stats reais — se não desbloqueou de verdade, não mostra
   const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
   const name = def.names[lang][t];
   return `<span class="class-pill" style="background:${color}" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
