@@ -1290,6 +1290,12 @@
     <button class="pill-btn" onclick="dailyExitScreen()" data-i18n="btn_back">VOLTAR</button>
   </div>
 
+  <!-- contagem regressiva antes da tentativa começar de vez (mesma ideia do duelo PvP) -->
+  <div id="daily-countdown" style="display:none; width:100%; text-align:center;">
+    <p class="muted" data-i18n="pvp_get_ready">Prepare-se!</p>
+    <div id="daily-countdown-num" style="font-family:'Orbitron',sans-serif; font-size:4rem; font-weight:900; color:var(--neon-yellow); text-shadow:0 0 18px rgba(255,233,60,0.7); margin:10px 0;"></div>
+  </div>
+
   <div id="daily-play" style="display:none; width:100%; flex-direction:column; align-items:center; gap:20px;">
     <div class="hud">
       <span><span data-i18n="hud_points">PONTOS:</span> <span id="daily-score">0</span></span>
@@ -2634,6 +2640,7 @@ let dailyPlaying = false;
 let dailyScore = 0;
 let dailyTarget = null, dailyNextTarget = null;
 let dailyDuration = 10000, dailyTimerStart = 0, dailyRafId = null;
+let dailyCountdownTimerId = null; // contagem "3, 2, 1" antes da tentativa começar de vez
 let dailySessionId = null;
 let dailyDateStrCache = null;   // dia (AAAA-MM-DD) da tentativa em andamento
 let dailyClosesAtMs = null;     // quando o desafio de hoje fecha (mesmo instante em que o de amanhã abre)
@@ -4746,9 +4753,12 @@ window.startDailyChallenge = async () => {
     $('daily-score').textContent = 0;
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'none';
-    $('daily-play').style.display = 'flex';
+    $('daily-play').style.display = 'none';
     show('daily-screen');
-    dailyNewRound(true);
+    startDailyCountdown(() => {
+      $('daily-play').style.display = 'flex';
+      dailyNewRound(true);
+    });
   } catch (e) {
     // sem tentativas hoje (ou outro erro) — não tem uma tela de lobby pra
     // mostrar a mensagem, então manda pra tela de "sem tentativas", que já
@@ -4760,6 +4770,45 @@ window.startDailyChallenge = async () => {
     show('daily-screen');
   }
 };
+
+// mostra "3, 2, 1, Vai!" antes de liberar o tabuleiro pra pessoa se preparar
+// (mesma ideia visual/sonora do duelo PvP). Diferente do PvP, aqui não tem
+// servidor pra sincronizar dois jogadores — é uma pessoa só, então um
+// cronômetro local (performance.now/requestAnimationFrame) já é suficiente
+// e justo, sem precisar de nenhuma chamada extra ao backend.
+const DAILY_COUNTDOWN_MS = 3000;
+function startDailyCountdown(onDone) {
+  stopDailyCountdown();
+  const startedMs = performance.now();
+  let lastNum = null;
+  $('daily-countdown').style.display = '';
+  function tick() {
+    const remaining = DAILY_COUNTDOWN_MS - (performance.now() - startedMs);
+    if (remaining <= 0) {
+      $('daily-countdown-num').textContent = T[lang].pvp_go;
+      if (lastNum !== 'go') { lastNum = 'go'; sfx.countdown(true); }
+      dailyCountdownTimerId = setTimeout(() => {
+        $('daily-countdown').style.display = 'none';
+        dailyCountdownTimerId = null;
+        onDone();
+      }, 400);
+      return;
+    }
+    const num = Math.max(1, Math.ceil(remaining / 1000));
+    $('daily-countdown-num').textContent = String(num);
+    if (lastNum !== num) { lastNum = num; sfx.countdown(false); }
+    dailyCountdownTimerId = requestAnimationFrame(tick);
+  }
+  dailyCountdownTimerId = requestAnimationFrame(tick);
+}
+function stopDailyCountdown() {
+  if (dailyCountdownTimerId) {
+    cancelAnimationFrame(dailyCountdownTimerId);
+    clearTimeout(dailyCountdownTimerId);
+    dailyCountdownTimerId = null;
+  }
+  $('daily-countdown').style.display = 'none';
+}
 
 function dailyNewRound(first) {
   const pool = COLORS;
@@ -4860,6 +4909,7 @@ async function dailyGameOver(reason) {
 window.dailyExitScreen = () => {
   dailyPlaying = false;
   cancelAnimationFrame(dailyRafId);
+  stopDailyCountdown();
   showMenu();
 };
 
