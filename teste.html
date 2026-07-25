@@ -2250,35 +2250,14 @@ const COLORS = [
   { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'      }, hex: '#ff6b9d' },
   { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'      }, hex: '#00d2d3' },
 ];
-// paletas alternativas da loja — recolorem os mesmos 8 azulejos (mantendo a
-// identidade/nome de cada um) com outra paleta de cores. "themeHex(c)" decide
-// qual hex usar de acordo com o tema equipado.
-const THEME_PALETTES = {
-  sunset: { blue: '#ff6b6b', red: '#ff4757', green: '#ffa94d', yellow: '#ffd43b', purple: '#e64980', orange: '#ff922b', pink: '#f783ac', cyan: '#ff8787' },
-  pastel: { blue: '#a5d8ff', red: '#ffc9c9', green: '#b2f2bb', yellow: '#ffec99', purple: '#d0bfff', orange: '#ffd8a8', pink: '#fcc2d7', cyan: '#99e9f2' },
-  mono:   { blue: '#e9ecef', red: '#ced4da', green: '#adb5bd', yellow: '#f8f9fa', purple: '#868e96', orange: '#dee2e6', pink: '#f1f3f5', cyan: '#c1c9d0' },
-};
-function themeHex(colorObj) {
-  const t = THEME_PALETTES[equippedTheme];
-  return (t && t[colorObj.key]) || colorObj.hex;
-}
-const GLOW_COLORS = { glow_gold: '#ffd700', glow_silver: '#d9d9e3', glow_rainbow: null };
-const GLOW_RAINBOW_HEXES = ['#ff2d6b', '#ff9f1c', '#ffe93c', '#21e6a1', '#2dd6ff', '#b14dff'];
-let glowRainbowTick = 0;
-// brilho da loja substitui o brilho "na própria cor" do azulejo — o arco-íris
-// gira pelas cores neon do jogo a cada azulejo pintado, pra não ficar um
-// brilho parado/uniforme
-function glowHexFor(colorObj) {
-  if (!equippedGlow) return colorObj.hex;
-  if (equippedGlow === 'glow_rainbow') return GLOW_RAINBOW_HEXES[(glowRainbowTick++) % GLOW_RAINBOW_HEXES.length];
-  return GLOW_COLORS[equippedGlow] || colorObj.hex;
-}
 const CONFETTI_COLORS = { confetti_gold: ['#ffd700', '#ffe93c', '#fff2a8'] };
 // confete cosmético da loja ao bater um novo recorde — camada leve (sem
-// biblioteca), some sozinha depois da animação
-function spawnConfetti() {
-  if (!equippedConfetti) return;
-  const colors = CONFETTI_COLORS[equippedConfetti] || ['#ffd700'];
+// biblioteca), some sozinha depois da animação. "confettiId" explícito permite
+// reusar a mesma função tanto pro confete realmente equipado quanto pra prévia
+// da loja (que precisa funcionar mesmo sem nada equipado ainda).
+function spawnConfettiVariant(confettiId) {
+  if (!confettiId) return;
+  const colors = CONFETTI_COLORS[confettiId] || ['#ffd700'];
   const layer = document.createElement('div');
   layer.className = 'confetti-layer';
   for (let i = 0; i < 28; i++) {
@@ -2294,6 +2273,7 @@ function spawnConfetti() {
   document.body.appendChild(layer);
   setTimeout(() => layer.remove(), 2800);
 }
+function spawnConfetti() { spawnConfettiVariant(equippedConfetti); }
 const cName = c => c.name[lang];
 const SQUARES = 4;
 
@@ -2525,12 +2505,6 @@ let dailyAlltimeRows = [], dailyAlltimePage = 0;
 const SHOP_ITEMS = [
   { id: 'sfx_splash',    slot: 'sfxCorrect', price: 30,  icon: '🎨', name: 'Som de Acerto: Splash de Tinta', desc: 'Troca o bipe de acerto por um "splash" de tinta.' },
   { id: 'sfx_8bit',      slot: 'sfxCorrect', price: 30,  icon: '👾', name: 'Som de Acerto: Retrô 8-bit',     desc: 'Um bipe estilo fliperama clássico.' },
-  { id: 'glow_gold',     slot: 'glow',       price: 40,  icon: '✨', name: 'Brilho Dourado',                 desc: 'Os azulejos brilham em dourado ao acertar.' },
-  { id: 'glow_silver',   slot: 'glow',       price: 40,  icon: '⚪', name: 'Brilho Prateado',                desc: 'Os azulejos brilham em prateado.' },
-  { id: 'glow_rainbow',  slot: 'glow',       price: 50,  icon: '🌈', name: 'Brilho Arco-íris',               desc: 'Um brilho multicolorido nos azulejos.' },
-  { id: 'theme_sunset',  slot: 'theme',      price: 150, icon: '🌅', name: 'Tema: Pôr do Sol Neon',          desc: 'Recolore o tabuleiro com tons de pôr do sol.' },
-  { id: 'theme_pastel',  slot: 'theme',      price: 150, icon: '🍬', name: 'Tema: Pastel',                   desc: 'Recolore o tabuleiro com tons pastel suaves.' },
-  { id: 'theme_mono',    slot: 'theme',      price: 150, icon: '⚫', name: 'Tema: Monocromático',            desc: 'Recolore o tabuleiro em tons de cinza.' },
   { id: 'frame_gold',    slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Dourada',                desc: 'Uma moldura dourada ao redor do seu nick no ranking e perfil.' },
   { id: 'frame_rainbow', slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Arco-íris',              desc: 'Uma moldura multicolorida ao redor do seu nick.' },
   { id: 'confetti_gold', slot: 'confetti',   price: 120, icon: '🎊', name: 'Confete Dourado',                desc: 'Um confete dourado quando você bate um novo recorde.' },
@@ -2538,17 +2512,13 @@ const SHOP_ITEMS = [
 const SHOP_ITEMS_BY_ID = Object.fromEntries(SHOP_ITEMS.map(it => [it.id, it]));
 const SHOP_SLOTS = [
   { slot: 'sfxCorrect', label: '🔊 Som de Acerto' },
-  { slot: 'glow',       label: '✨ Brilho do Azulejo' },
-  { slot: 'theme',      label: '🎨 Tema de Cores' },
   { slot: 'frame',      label: '🖼️ Moldura do Nick' },
   { slot: 'confetti',   label: '🎊 Confete de Recorde' },
 ];
-let equippedSfx = null, equippedGlow = null, equippedTheme = null, equippedFrame = null, equippedConfetti = null;
+let equippedSfx = null, equippedFrame = null, equippedConfetti = null;
 function applyEquippedCosmetics() {
   const eq = (myData && myData.equipped) || {};
   equippedSfx = eq.sfxCorrect || null;
-  equippedGlow = eq.glow || null;
-  equippedTheme = eq.theme || null;
   equippedFrame = eq.frame || null;
   equippedConfetti = eq.confetti || null;
 }
@@ -2662,22 +2632,24 @@ function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
     o.start(t); o.stop(t + dur);
   } catch {}
 }
+// cosmético da loja (equippedSfx) troca o som do acerto — a lógica de "sobe o
+// tom a cada acerto" continua igual, só muda o timbre. "variant" explícito
+// permite reusar pra prévia da loja, tocando um som mesmo sem estar equipado.
+function playCorrectSfxVariant(variant, n) {
+  if (variant === 'sfx_8bit') {
+    const f = 220 + Math.min(n, 24) * 55;
+    tone(f, 0.06, 'square', 0.13);
+    tone(f * 1.5, 0.04, 'square', 0.07, 0.02);
+  } else if (variant === 'sfx_splash') {
+    const f = 500 + Math.min(n, 24) * 20;
+    tone(f, 0.07, 'sine', 0.13);
+    tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
+  } else {
+    tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
+  }
+}
 const sfx = {
-  // cosmético da loja (equippedSfx) troca o som do acerto — a lógica de "sobe
-  // o tom a cada acerto" continua igual, só muda o timbre
-  correct(n) {
-    if (equippedSfx === 'sfx_8bit') {
-      const f = 220 + Math.min(n, 24) * 55;
-      tone(f, 0.06, 'square', 0.13);
-      tone(f * 1.5, 0.04, 'square', 0.07, 0.02);
-    } else if (equippedSfx === 'sfx_splash') {
-      const f = 500 + Math.min(n, 24) * 20;
-      tone(f, 0.07, 'sine', 0.13);
-      tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
-    } else {
-      tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
-    }
-  },
+  correct(n) { playCorrectSfxVariant(equippedSfx, n); },
   wrong()   { tone(160, 0.3, 'sawtooth', 0.15); tone(110, 0.4, 'sawtooth', 0.15, 0.08); },
   timeout() { tone(300, 0.2, 'triangle', 0.15); tone(200, 0.3, 'triangle', 0.15, 0.15); tone(120, 0.5, 'triangle', 0.15, 0.3); },
   record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
@@ -3077,10 +3049,8 @@ function newRound(first) {
     } else {
       const bg   = (mode === 'classic') ? item : paired;
       const word = (mode === 'classic') ? paired : item;
-      const bgHex = themeHex(bg); // tema da loja recolore o azulejo, se equipado
-      const glowHex = glowHexFor(bg); // brilho da loja substitui o brilho na própria cor, se equipado
-      el.style.background = bgHex;
-      el.style.boxShadow = `0 0 18px ${glowHex}99, 0 0 40px ${glowHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.style.background = bg.hex;
+      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
     el.onclick = () => handleClick(item);
@@ -4597,10 +4567,8 @@ function dailyNewRound(first) {
     const paired = (item === dailyTarget) ? dailyNextTarget : distractors[d++];
     const el = document.createElement('div');
     el.className = 'square';
-    const bgHex = themeHex(item);
-    const glowHex = glowHexFor(item);
-    el.style.background = bgHex;
-    el.style.boxShadow = `0 0 18px ${glowHex}99, 0 0 40px ${glowHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+    el.style.background = item.hex;
+    el.style.boxShadow = `0 0 18px ${item.hex}99, 0 0 40px ${item.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
     el.innerHTML = `<span class="word">${cName(paired)}</span>`;
     el.onclick = () => dailyHandleClick(item);
     grid.appendChild(el);
@@ -4780,6 +4748,38 @@ function shopDefaultRow(slot, currentEquipped) {
   return row;
 }
 
+// prévia de cada item, direto na linha da loja — funciona mesmo sem
+// comprar/equipar nada, pra pessoa decidir se vale a pena antes de gastar
+// Pigmentos. Som chama a variante direto (bypassa o que estiver equipado
+// agora); moldura monta um nick de exemplo com a moldura aplicada; confete
+// dispara a mesma explosão que aparece ao bater recorde.
+function shopItemPreview(item) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:6px;';
+  if (item.slot === 'sfxCorrect') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.style.cssText = 'padding:4px 12px; font-size:0.72rem;';
+    btn.textContent = '🔊 Ouvir';
+    btn.onclick = (e) => { e.stopPropagation(); playCorrectSfxVariant(item.id, 5); };
+    wrap.appendChild(btn);
+  } else if (item.slot === 'frame') {
+    const sample = document.createElement('span');
+    sample.textContent = 'SeuNick';
+    sample.style.cssText = 'font-weight:700; font-size:0.85rem;';
+    applyNickFrame(sample, { equipped: { frame: item.id } });
+    wrap.appendChild(sample);
+  } else if (item.slot === 'confetti') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.style.cssText = 'padding:4px 12px; font-size:0.72rem;';
+    btn.textContent = '🎉 Testar';
+    btn.onclick = (e) => { e.stopPropagation(); spawnConfettiVariant(item.id); };
+    wrap.appendChild(btn);
+  }
+  return wrap;
+}
+
 function shopItemRow(item, isOwned, isEquipped) {
   const row = document.createElement('div');
   row.className = 'shop-item-row';
@@ -4795,6 +4795,7 @@ function shopItemRow(item, isOwned, isEquipped) {
   desc.textContent = item.desc;
   info.appendChild(name);
   info.appendChild(desc);
+  info.appendChild(shopItemPreview(item));
   row.appendChild(info);
 
   const btn = document.createElement('button');
