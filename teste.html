@@ -4432,9 +4432,14 @@ async function loadDailyTodayRanking() {
       // myData.admin direto — assim nenhum admin aparece nesse ranking
       const stats = statsByUid[data.uid] || (isMe ? myData : null);
       if (!stats || stats.admin === true) return;
-      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, stats });
+      // bestScoreAt só avança no servidor quando a tentativa bate um recorde
+      // novo do dia (ver submitDailyResult em functions/index.js) — não é só
+      // "última tentativa enviada", então dá pra usar de verdade pra
+      // desempatar por "quem pontuou primeiro", igual já é feito nos outros
+      // rankings (compareRankRows)
+      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, stats });
     });
-    rows.sort((a, b) => b.pts - a.pts);
+    rows.sort(compareRankRows);
     dailyTodayRows = rows;
     dailyTodayPage = 0;
     renderDailyTodayPage();
