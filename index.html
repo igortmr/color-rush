@@ -403,6 +403,14 @@
   .mode-card.daily-card.coming-soon { cursor: default; }
   .mode-card.daily-card.coming-soon:hover { transform: none; border-color: rgba(255,233,60,0.5); box-shadow: none; }
   .mode-card.daily-card.coming-soon h2 { margin-bottom: 0; }
+  /* quando o motivo do "coming-soon" é nível baixo (não a estreia ainda não
+     ter chegado), mostra o aviso de bloqueio — precisa do mesmo respiro
+     abaixo do título que os outros modos bloqueados (Reverso/Formas/Formas
+     Reverso) têm, e o texto tem que ficar preto e branco igual aos deles
+     (que ficam assim por causa do filter:grayscale do card inteiro; aqui
+     aplicamos só no badge, já que o resto do daily-card continua colorido). */
+  .mode-card.daily-card.coming-soon.level-locked h2 { margin-bottom: 10px; }
+  .mode-card.daily-card .lock-badge { filter: grayscale(1); }
   .daily-badge-today {
     position: absolute;
     top: 14px;
@@ -1404,7 +1412,7 @@
     <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="profile-header">
-    <div class="big-nick" id="profile-nick"></div>
+    <div class="big-nick" id="profile-nick"><span id="profile-nick-avatar"></span><span id="profile-nick-text"></span><span id="profile-nick-lv"></span></div>
     <div class="muted" id="profile-summary"></div>
   </div>
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
@@ -3767,8 +3775,8 @@ async function renderAdminPanel(uid, currentNick, stats) {
       await callAdminSetNick({ uid, nick });
       nickStatus.textContent = '✅ Nick atualizado.';
       stats.nick = nick;
-      $('profile-nick').textContent = T[lang].profile_nick_label(nick);
-      $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(stats.xp || 0));
+      $('profile-nick-text').textContent = T[lang].profile_nick_label(nick);
+      $('profile-nick-lv').innerHTML = ' ' + lvChip(stats.xp || 0);
     } catch (e) {
       nickStatus.textContent = '❌ ' + (e.message || 'Erro ao salvar.');
     } finally {
@@ -4139,7 +4147,9 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
 
   if (!isOther && offline) {
-    $('profile-nick').textContent = T[lang].profile_offline_label;
+    $('profile-nick-avatar').innerHTML = '';
+    $('profile-nick-text').textContent = T[lang].profile_offline_label;
+    $('profile-nick-lv').innerHTML = '';
     $('profile-summary').textContent = '';
     $('profile-friend-action').style.display = 'none';
     $('profile-friend-action').innerHTML = '';
@@ -4154,10 +4164,15 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     return;
   }
 
-  // nick sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção
-  $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
-  $('profile-nick').insertAdjacentHTML('afterbegin', avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 24) + ' ');
-  $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(isOther ? (stats.xp || 0) : myXp()));
+  // avatar e nível são markup fixo/confiável (innerHTML tudo bem); o nick
+  // sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção.
+  // Cada pedaço tem seu próprio <span> dedicado (profile-nick-avatar/-text/-lv)
+  // e é sempre SUBSTITUÍDO (nunca acrescentado) — antes usava insertAdjacentHTML
+  // direto no #profile-nick, o que podia deixar ícone duplicado se essa função
+  // rodasse mais de uma vez em sequência (ex.: ao trocar a medalha equipada).
+  $('profile-nick-avatar').innerHTML = avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 24) + ' ';
+  $('profile-nick-text').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
 
   if (isOther) {
@@ -4779,13 +4794,14 @@ async function updateDailyMenuCard() {
     $('daily-card-desc').style.display = 'none';
     $('daily-card-footer').style.display = 'none';
     const showLock = !dailyLevelUnlocked();
+    card.classList.toggle('level-locked', showLock);
     if (lockEl) {
       lockEl.style.display = showLock ? '' : 'none';
       if (showLock) lockEl.textContent = T[lang].unlock_at(DAILY_MIN_LEVEL);
     }
     return;
   }
-  card.classList.remove('coming-soon');
+  card.classList.remove('coming-soon', 'level-locked');
   if (lockEl) lockEl.style.display = 'none';
   $('daily-card-desc').style.display = '';
   $('daily-card-footer').style.display = '';
