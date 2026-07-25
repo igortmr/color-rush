@@ -1,0 +1,12 @@
+{
+  "appId": "br.com.colorrush.app",
+  "appName": "Color Rush",
+  "webDir": "www",
+  "server": {
+    "url": "https://colorrush.com.br",
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
