@@ -1176,6 +1176,7 @@
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
     </div>
+    <span class="record-badge lock-badge" id="lock-daily" style="display:none;"></span>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
@@ -4762,14 +4763,24 @@ async function updateDailyMenuCard() {
   renderDailyCardCountdown(); // atualiza o rótulo (Inicia em/Termina em) na hora, sem esperar o próximo tique
 
   // antes da estreia (ou pra quem ainda tá no nível 1): só título + cronômetro,
-  // sem descrição nem dados — deixa a curiosidade no ar em vez de mostrar tudo
+  // sem descrição nem dados — deixa a curiosidade no ar em vez de mostrar tudo.
+  // Quando o motivo for nível baixo (não a estreia ainda não ter chegado),
+  // mostra o mesmo aviso de "🔒 Desbloqueia no nível N" que os modos
+  // Reverso/Formas/Formas Reverso já usam (ver lock-reverse/lock-shapes).
+  const lockEl = $('lock-daily');
   if (!isDailyChallengeLive() || !dailyLevelUnlocked()) {
     card.classList.add('coming-soon');
     $('daily-card-desc').style.display = 'none';
     $('daily-card-footer').style.display = 'none';
+    const showLock = !dailyLevelUnlocked();
+    if (lockEl) {
+      lockEl.style.display = showLock ? '' : 'none';
+      if (showLock) lockEl.textContent = T[lang].unlock_at(DAILY_MIN_LEVEL);
+    }
     return;
   }
   card.classList.remove('coming-soon');
+  if (lockEl) lockEl.style.display = 'none';
   $('daily-card-desc').style.display = '';
   $('daily-card-footer').style.display = '';
   try {

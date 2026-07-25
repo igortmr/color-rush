@@ -69,6 +69,100 @@ workflows:
           echo "--- conteúdo de ios/App (conferência) ---"
           ls -la ios/App
           test -d ios/App/App.xcodeproj || (echo "ERRO: App.xcodeproj não foi gerado pelo cap add ios" && exit 1)
+      - name: Gerar e aplicar o ícone real do app (substitui o placeholder do Capacitor)
+        script: |
+          # o cap add ios sempre recria o ícone padrão do Capacitor (o "X"
+          # genérico) do zero. Em vez de depender de um PNG ter subido certo
+          # pro GitHub (já tomamos um susto com isso no capacitor.config.json),
+          # o ícone de verdade (mesmo desenho "tabuleiro" 2x2 já usado no
+          # PWA/Android: fundo escuro + quadrados vermelho/azul/verde/amarelo)
+          # é gerado aqui na hora, só com a biblioteca padrão do Python (zlib),
+          # sem precisar de Pillow nem de nenhum arquivo externo.
+          set -e
+          cd app
+          ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          test -d "$ICONSET" || (echo "ERRO: AppIcon.appiconset não encontrado em $ICONSET" && exit 1)
+
+          python3 << 'PYEOF'
+          import zlib, struct
+
+          SIZE = 1024
+          BG = (14, 18, 36)
+          RED = (255, 45, 107)
+          BLUE = (45, 214, 255)
+          GREEN = (33, 230, 161)
+          YELLOW = (255, 233, 60)
+
+          safe = int(SIZE * 0.52)
+          x0 = (SIZE - safe) // 2
+          y0 = (SIZE - safe) // 2
+          gap = int(safe * 0.09)
+          sq = (safe - gap) // 2
+          radius = int(sq * 0.22)
+
+          quads = [
+              (x0, y0, RED),
+              (x0 + sq + gap, y0, BLUE),
+              (x0, y0 + sq + gap, GREEN),
+              (x0 + sq + gap, y0 + sq + gap, YELLOW),
+          ]
+
+          def inside_rounded(lx, ly, w, h, r):
+              if lx < r and ly < r:
+                  return (lx - r) ** 2 + (ly - r) ** 2 <= r * r
+              if lx >= w - r and ly < r:
+                  return (lx - (w - r)) ** 2 + (ly - r) ** 2 <= r * r
+              if lx < r and ly >= h - r:
+                  return (lx - r) ** 2 + (ly - (h - r)) ** 2 <= r * r
+              if lx >= w - r and ly >= h - r:
+                  return (lx - (w - r)) ** 2 + (ly - (h - r)) ** 2 <= r * r
+              return 0 <= lx < w and 0 <= ly < h
+
+          def pixel_color(px, py):
+              for qx, qy, color in quads:
+                  lx, ly = px - qx, py - qy
+                  if 0 <= lx < sq and 0 <= ly < sq and inside_rounded(lx, ly, sq, sq, radius):
+                      return color
+              return BG
+
+          raw = bytearray()
+          for y in range(SIZE):
+              raw.append(0)
+              for x in range(SIZE):
+                  raw += bytes(pixel_color(x, y))
+
+          compressed = zlib.compress(bytes(raw), 9)
+
+          def chunk(tag, data):
+              return (struct.pack('>I', len(data)) + tag + data +
+                      struct.pack('>I', zlib.crc32(tag + data) & 0xffffffff))
+
+          sig = b'\x89PNG\r\n\x1a\n'
+          ihdr = struct.pack('>IIBBBBB', SIZE, SIZE, 8, 2, 0, 0, 0)
+          png = sig + chunk(b'IHDR', ihdr) + chunk(b'IDAT', compressed) + chunk(b'IEND', b'')
+
+          with open('appicon-1024.png', 'wb') as f:
+              f.write(png)
+          print('appicon-1024.png gerado:', len(png), 'bytes')
+          PYEOF
+
+          # aplica no(s) slot(s) de 1024x1024 do Contents.json gerado pelo cap
+          # add ios (formato "single size" do Xcode 14+, que é o que o
+          # Capacitor 8 usa); se não achar nenhum slot de 1024, aplica em
+          # todos como último recurso.
+          python3 - << 'PYEOF'
+          import json, shutil, os
+          iconset = "ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          with open(os.path.join(iconset, "Contents.json")) as f:
+              data = json.load(f)
+          images = data.get("images", [])
+          targets = [img for img in images if img.get("size") == "1024x1024"] or images
+          for img in targets:
+              fn = img.get("filename")
+              if fn:
+                  shutil.copyfile("appicon-1024.png", os.path.join(iconset, fn))
+                  print("ícone aplicado em", fn)
+          PYEOF
       - name: Declarar isenção de criptografia (evita a pergunta manual a cada envio)
         script: |
           # o app só usa HTTPS/TLS padrão do sistema (Firebase) — isso é
