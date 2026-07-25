@@ -1308,7 +1308,7 @@
   </div>
   <div class="scope-tabs" id="daily-subtabs" style="display:none;">
     <button class="scope-tab active" id="daily-subtab-today-btn" onclick="setDailyRankSubtab('today')" data-i18n="daily_subtab_today">📅 Hoje</button>
-    <button class="scope-tab" id="daily-subtab-alltime-btn" onclick="setDailyRankSubtab('alltime')" data-i18n="daily_subtab_alltime">🏆 Recorde Geral</button>
+    <button class="scope-tab" id="daily-subtab-alltime-btn" onclick="setDailyRankSubtab('alltime')" data-i18n="daily_subtab_alltime">🏆 Salão da Fama</button>
   </div>
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;" id="ranking-table-card">
@@ -1651,7 +1651,7 @@ const T = {
     daily_attempts_used_msg: 'Você usou suas 3 tentativas de hoje!',
     daily_start_error: 'Não foi possível iniciar. Tente de novo.',
     daily_subtab_today: '📅 Hoje',
-    daily_subtab_alltime: '🏆 Recorde Geral',
+    daily_subtab_alltime: '🏆 Salão da Fama',
     daily_col_wins: 'Vitórias',
     daily_col_pigmentos: '💧 Pigmentos',
     daily_rank_explain: 'Ranking do desafio de hoje — sua melhor pontuação entre as até 3 tentativas.',
@@ -1844,7 +1844,7 @@ const T = {
     daily_attempts_used_msg: "You've used your 3 attempts today!",
     daily_start_error: 'Could not start. Please try again.',
     daily_subtab_today: '📅 Today',
-    daily_subtab_alltime: '🏆 All-Time Record',
+    daily_subtab_alltime: '🏆 Hall of Fame',
     daily_col_wins: 'Wins',
     daily_col_pigmentos: '💧 Pigments',
     daily_rank_explain: "Today's challenge ranking — your best score across up to 3 attempts.",
@@ -2037,7 +2037,7 @@ const T = {
     daily_attempts_used_msg: '¡Usaste tus 3 intentos de hoy!',
     daily_start_error: 'No fue posible iniciar. Inténtalo de nuevo.',
     daily_subtab_today: '📅 Hoy',
-    daily_subtab_alltime: '🏆 Récord General',
+    daily_subtab_alltime: '🏆 Salón de la Fama',
     daily_col_wins: 'Victorias',
     daily_col_pigmentos: '💧 Pigmentos',
     daily_rank_explain: 'Ranking del desafío de hoy — tu mejor puntuación entre los hasta 3 intentos.',
@@ -4148,7 +4148,7 @@ window.rankingGoPage = (p) => {
 /* ================== ranking do desafio diário ==================
    "Hoje": lê dailyScores filtrando por dateStr==hoje (índice simples, sem
    precisar de índice composto) e ordena no JS pela melhor pontuação.
-   "Recorde Geral": reaproveita o mesmo fetchAllScores() (coleção scores) que
+   "Salão da Fama": reaproveita o mesmo fetchAllScores() (coleção scores) que
    já alimenta os outros rankings — dailyWins/pigmentos são só mais dois
    campos daquele mesmo documento. */
 async function loadDailyTodayRanking() {
