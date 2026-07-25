@@ -1308,6 +1308,7 @@
       <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
+  <div class="muted" id="daily-prizes-legend" data-i18n="daily_prizes_legend" style="display:none; font-size:0.8rem; text-align:center; margin-top:6px;"></div>
   <div class="pagination" id="ranking-pagination"></div>
 </div>
 
@@ -1558,6 +1559,8 @@ const T = {
     profile_nick_label: nick => `👤 ${nick}`,
     profile_summary: (n, total) => `${n} de ${total} conquistas desbloqueadas`,
     profile_badges_section: '🏅 Medalhas',
+    profile_badge_equip_btn: '👁️ Exibir no ranking',
+    profile_badge_equipped_btn: '✅ Exibindo no ranking',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
     btn_friends: '👥 AMIGOS',
@@ -1637,6 +1640,7 @@ const T = {
     daily_col_wins: 'Vitórias',
     daily_col_pigmentos: '💧 Pigmentos',
     daily_rank_explain: 'Ranking do desafio de hoje — sua melhor pontuação entre as até 3 tentativas.',
+    daily_prizes_legend: '🏆 Premiação (creditada em Pigmentos no dia seguinte): 1º lugar → 500 · 2º-3º → 300 · 4º-10º → 150 · 11º-50º → 60 · demais participantes → 10',
     daily_no_today_players: 'Ninguém jogou o desafio de hoje ainda.',
     daily_no_wins_yet: 'Ninguém venceu um desafio diário ainda.',
     points_header_divulgador: 'Convites',
@@ -1747,6 +1751,8 @@ const T = {
     profile_nick_label: nick => `👤 ${nick}`,
     profile_summary: (n, total) => `${n} of ${total} achievements unlocked`,
     profile_badges_section: '🏅 Medals',
+    profile_badge_equip_btn: '👁️ Show on ranking',
+    profile_badge_equipped_btn: '✅ Showing on ranking',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
     btn_friends: '👥 FRIENDS',
@@ -1826,6 +1832,7 @@ const T = {
     daily_col_wins: 'Wins',
     daily_col_pigmentos: '💧 Pigments',
     daily_rank_explain: "Today's challenge ranking — your best score across up to 3 attempts.",
+    daily_prizes_legend: '🏆 Prizes (credited as Pigments the next day): 1st place → 500 · 2nd-3rd → 300 · 4th-10th → 150 · 11th-50th → 60 · other participants → 10',
     daily_no_today_players: "No one has played today's challenge yet.",
     daily_no_wins_yet: 'No one has won a daily challenge yet.',
     points_header_divulgador: 'Invites',
@@ -1936,6 +1943,8 @@ const T = {
     profile_nick_label: nick => `👤 ${nick}`,
     profile_summary: (n, total) => `${n} de ${total} logros desbloqueados`,
     profile_badges_section: '🏅 Medallas',
+    profile_badge_equip_btn: '👁️ Mostrar en el ranking',
+    profile_badge_equipped_btn: '✅ Mostrando en el ranking',
     profile_ranks_section: '🏆 Rankings',
     profile_no_badges_yet: 'Esta persona aún no ha desbloqueado ninguna medalla.',
     btn_friends: '👥 AMIGOS',
@@ -2015,6 +2024,7 @@ const T = {
     daily_col_wins: 'Victorias',
     daily_col_pigmentos: '💧 Pigmentos',
     daily_rank_explain: 'Ranking del desafío de hoy — tu mejor puntuación entre los hasta 3 intentos.',
+    daily_prizes_legend: '🏆 Premios (acreditados en Pigmentos al día siguiente): 1º lugar → 500 · 2º-3º → 300 · 4º-10º → 150 · 11º-50º → 60 · demás participantes → 10',
     daily_no_today_players: 'Nadie ha jugado el desafío de hoy todavía.',
     daily_no_wins_yet: 'Nadie ha ganado un desafío diario todavía.',
     points_header_divulgador: 'Invitaciones',
@@ -2385,20 +2395,23 @@ function unlockedTier(def, stats) {
   }
   return tier;
 }
-function badgeChip(def, tierIdx, size) {
-  const color = TIER_COLORS[tierIdx] || TIER_COLORS[TIER_COLORS.length - 1];
-  const cls = size ? ` ${size}` : '';
-  return `<span class="badge-chip${cls}" style="background:${color}" title="${def.label[lang]}: ${def.names[lang][tierIdx]}">${def.icon}</span>`;
-}
-function topBadgeIcons(stats, count) {
-  let out = [];
-  for (const key of BADGE_ORDER) {
-    const def = BADGE_DEFS[key];
-    const t = unlockedTier(def, stats);
-    if (t >= 0) out.push(badgeChip(def, t, 'small')); // no ranking os ícones ficam menores
-    if (out.length >= count) break;
+// pill com ícone + nome da ÚNICA medalha escolhida pra aparecer ao lado do
+// nick no ranking (ver toggleEquippedBadge, no perfil próprio). Sem escolha
+// feita ainda, cai na primeira desbloqueada na ordem fixa de BADGE_ORDER —
+// mesmo comportamento visto antes de existir a escolha. Sempre reconfere
+// unlockedTier() contra as stats REAIS, então forjar equippedBadge não
+// mostra nada que a pessoa não tenha de verdade.
+function equippedBadgeLabel(stats) {
+  let key = stats.equippedBadge;
+  if (!key || !BADGE_DEFS[key] || unlockedTier(BADGE_DEFS[key], stats) < 0) {
+    key = BADGE_ORDER.find(k => unlockedTier(BADGE_DEFS[k], stats) >= 0);
   }
-  return out.join('');
+  if (!key) return '';
+  const def = BADGE_DEFS[key];
+  const t = unlockedTier(def, stats);
+  const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
+  const name = def.names[lang][t];
+  return `<span class="class-pill" style="background:${color}" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
 }
 // nome da classe de divulgador (ex.: "Viral") com a cor da medalha — usado só no ranking de divulgador
 function sharerTierLabel(stats) {
@@ -2490,7 +2503,7 @@ let currentSessionId = null;     // sessão validada pelo servidor pra partida a
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {},
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null,
 };
 
 const $ = id => document.getElementById(id);
@@ -2773,7 +2786,7 @@ window.playOffline = () => {
   myData = {
     nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {},
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null,
   };
   showMenu();
 };
@@ -2821,7 +2834,7 @@ onAuthStateChanged(auth, async user => {
 const EMPTY_PROFILE = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {},
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null,
 };
 
 async function proceedAfterLogin(user) {
@@ -3252,7 +3265,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
       nickSpan.onclick = () => openProfileFromRanking(r, 'over-screen');
       nickCell.appendChild(nickSpan);
       if (r.stats) {
-        nickCell.insertAdjacentHTML('beforeend', topBadgeIcons(r.stats, 3));
+        nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
       }
       body.appendChild(tr);
     }
@@ -3904,11 +3917,11 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   }, 0);
   const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
   $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
-  $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(BADGE_DEFS[key], stats)).join('');
+  $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(key, BADGE_DEFS[key], stats)).join('');
   resetScroll('profile-screen');
 }
 
-function renderBadgeCard(def, stats) {
+function renderBadgeCard(key, def, stats) {
   const tier = unlockedTier(def, stats);
   const val = def.metric(stats);
   const maxed = tier === def.tiers.length - 1;
@@ -3937,6 +3950,17 @@ function renderBadgeCard(def, stats) {
     return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[lang][i]}">${def.icon}</span>${lockOverlay}</span>`;
   }).join('');
 
+  // botão de "equipar no ranking" — só faz sentido pra medalha já desbloqueada
+  // (tier >= 0); limita a 3 escolhidas por vez (mesmo limite de ícones que
+  // sempre coube nas colunas do ranking)
+  let equipHtml = '';
+  if (tier >= 0) {
+    const isEquipped = myData.equippedBadge === key;
+    const btnLabel = isEquipped ? T[lang].profile_badge_equipped_btn : T[lang].profile_badge_equip_btn;
+    equipHtml = `
+      <button class="secondary" style="padding:7px 14px; font-size:0.8rem; ${isEquipped ? 'border-color:var(--neon-green); color:var(--neon-green);' : ''}" onclick="toggleEquippedBadge('${key}')">${btnLabel}</button>`;
+  }
+
   return `
     <div class="card badge-card">
       <div class="badge-card-head">
@@ -3948,8 +3972,28 @@ function renderBadgeCard(def, stats) {
       </div>
       ${progressHtml}
       <div class="chip-row">${chips}</div>
+      ${equipHtml}
     </div>`;
 }
+
+// alterna qual medalha (já desbloqueada) aparece ao lado do próprio nick no
+// ranking — grava direto em scores/{uid} (permitido pelas regras, ver
+// isValidEquippedBadge no firestore.rules); é seguro sem Cloud Function
+// porque equippedBadgeLabel() sempre reconfere unlockedTier() contra as
+// stats reais antes de mostrar qualquer coisa
+window.toggleEquippedBadge = async (key) => {
+  if (offline || !currentUser || !myData.nick) return;
+  // só uma medalha por vez: clicar na já equipada desequipa (volta pro padrão
+  // automático); clicar em outra troca na hora, sem precisar desmarcar antes
+  const next = (myData.equippedBadge === key) ? null : key;
+  myData.equippedBadge = next;
+  renderProfile(); // atualiza o botão na hora, antes mesmo do Firestore confirmar
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), { equippedBadge: next, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) {
+    // não foi possível salvar agora — a escolha fica só localmente até a próxima tentativa
+  }
+};
 
 async function submitPendingScore() {
   if (!pendingScore || !currentUser || !myData.nick) return;
@@ -3996,6 +4040,7 @@ window.loadRanking = async (m) => {
   // — ver loadDailyTodayRanking/loadDailyAlltimeRanking mais abaixo)
   $('daily-subtabs').style.display = (m === 'daily') ? '' : 'none';
   $('scope-tabs-row').style.display = (m === 'daily') ? 'none' : '';
+  $('daily-prizes-legend').style.display = (m === 'daily') ? '' : 'none';
   if (m === 'daily') {
     $('ranking-pagination').innerHTML = '';
     $('ranking-explain').textContent = T[lang].daily_rank_explain;
@@ -4082,7 +4127,7 @@ function renderRankingPage() {
     applyNickFrame(nickSpan, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
-    nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : topBadgeIcons(r.stats, 3));
+    nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats));
     body.appendChild(tr);
   });
   if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[lang].ranking_no_friends : T[lang].ranking_no_players}</td></tr>`;
