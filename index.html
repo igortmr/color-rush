@@ -2481,18 +2481,18 @@ function unlockedTier(def, stats) {
 // aviso de "medalha nova, ainda não vista" — como as medalhas não aparecem
 // mais sozinhas no ranking (a pessoa precisa ir no perfil e equipar se
 // quiser), essa bolinha avisa que tem uma categoria com nível desbloqueado
-// que ainda não foi conferido. Guardado só no navegador (localStorage), sem
-// precisar de servidor — é puramente uma marcação de "já olhei". Como o
+// que ainda não foi conferido. Guardado em scores/{uid}.badgesSeenTiers (ver
+// firestore.rules), não no navegador — assim funciona certo mesmo trocando
+// de dispositivo/navegador pra entrar na mesma conta. Sem valor de jogo: é
+// puramente uma marcação de "já olhei", então o cliente pode escrever direto
+// sem precisar de Cloud Function (mesmo raciocínio do equippedBadge). Como o
 // registro começa vazio pra todo mundo, quem já tinha medalha desbloqueada
 // antes dessa funcionalidade existir também recebe o aviso na primeira vez.
-function getBadgesSeen() {
-  try { return JSON.parse(localStorage.getItem('colorRushBadgesSeen') || '{}'); } catch { return {}; }
-}
 function hasNewBadgeFor(key) {
   if (offline || !currentUser || !myData.nick) return false;
   const tier = unlockedTier(BADGE_DEFS[key], myData);
   if (tier < 0) return false;
-  const seen = getBadgesSeen();
+  const seen = myData.badgesSeenTiers || {};
   return tier > (seen[key] != null ? seen[key] : -1);
 }
 function hasAnyNewBadge() {
@@ -2501,10 +2501,17 @@ function hasAnyNewBadge() {
 // chamada depois que a pessoa vê o próprio perfil (onde todas as categorias
 // aparecem) — marca o nível atual de cada uma como "visto", até a próxima
 // vez que desbloquear algo novo
-function markAllBadgesSeen() {
-  const seen = getBadgesSeen();
+async function markAllBadgesSeen() {
+  if (offline || !currentUser || !myData.nick) return;
+  const seen = {};
   BADGE_ORDER.forEach(key => { seen[key] = unlockedTier(BADGE_DEFS[key], myData); });
-  try { localStorage.setItem('colorRushBadgesSeen', JSON.stringify(seen)); } catch {}
+  myData.badgesSeenTiers = seen; // atualiza local na hora, antes mesmo do Firestore confirmar
+  refreshBadgeNotifDot();
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), { badgesSeenTiers: seen, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) {
+    // não foi possível salvar agora — a marcação fica só localmente até a próxima tentativa
+  }
 }
 function refreshBadgeNotifDot() {
   const dot = $('user-label-badge');
@@ -2596,7 +2603,7 @@ let currentSessionId = null;     // sessão validada pelo servidor pra partida a
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, badgesSeenTiers: {},
 };
 
 const $ = id => document.getElementById(id);
@@ -2879,7 +2886,7 @@ window.playOffline = () => {
   myData = {
     nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null,
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, badgesSeenTiers: {},
   };
   showMenu();
 };
@@ -2927,7 +2934,7 @@ onAuthStateChanged(auth, async user => {
 const EMPTY_PROFILE = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, badgesSeenTiers: {},
 };
 
 async function proceedAfterLogin(user) {
@@ -4018,7 +4025,6 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   // bolinha mostrando qual tinha novidade), marca tudo como visto — some a
   // bolinha do nick até desbloquear algo novo de novo
   markAllBadgesSeen();
-  refreshBadgeNotifDot();
 }
 
 function renderBadgeCard(key, def, stats) {
