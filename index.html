@@ -408,6 +408,12 @@
   }
   .daily-badge-time { font-size: 1.3em; } /* só os números um pouco maiores que o "Termina em:" */
 
+  /* linhas de item da loja */
+  .shop-item-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+  .shop-item-row:first-child { border-top: none; }
+  .shop-item-name { font-weight: 700; font-size: 0.92rem; }
+  .shop-item-info { flex: 1; min-width: 0; }
+
   /* pigmentos — moeda do desafio diário: uma gota com um gradiente das cores
      do jogo, lembrando "pigmento" se misturando */
   .pigment-icon { display: inline-block; vertical-align: -4px; }
@@ -591,6 +597,11 @@
   tbody tr { background: #0e1224; }
   tbody tr:nth-child(odd) { background: #0a0e1e; }
   tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
+  /* linha temática da loja — sobrepõe o fundo padrão/listrado da tabela;
+     combina normalmente com .me (que só usa outline, não background) */
+  tbody tr.row-theme-fire   { background: linear-gradient(90deg, rgba(255,45,107,0.35), rgba(255,159,28,0.15)); }
+  tbody tr.row-theme-ocean  { background: linear-gradient(90deg, rgba(30,144,255,0.35), rgba(0,210,211,0.15)); }
+  tbody tr.row-theme-galaxy { background: linear-gradient(90deg, rgba(177,77,255,0.35), rgba(255,107,157,0.15)); }
   td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
@@ -1108,6 +1119,9 @@
     <button class="menu-quick-btn" onclick="showRanking('geral')">
       <span data-i18n="btn_ranking">🏆 RANKING</span>
     </button>
+    <button class="menu-quick-btn" id="menu-quick-shop-btn" onclick="showShop()" style="display:none;">
+      <span>🛍️ LOJA</span>
+    </button>
   </div>
   <div class="user-bar">
     <span style="position:relative; display:inline-block;">
@@ -1311,6 +1325,21 @@
   </div>
 </div>
 
+<!-- LOJA -->
+<div class="screen" id="shop-screen">
+  <div class="profile-top-row">
+    <h1 style="font-size:1.7rem;">🛍️ LOJA</h1>
+    <button class="pill-btn" onclick="showMenu()">VOLTAR</button>
+  </div>
+  <div class="card" style="flex-direction:row; align-items:center; justify-content:center; gap:8px;">
+    <span id="shop-balance-icon"></span>
+    <span id="shop-balance-num" style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-yellow); font-size:1.3rem;">0</span>
+    <span class="muted">Pigmentos</span>
+  </div>
+  <div class="muted" id="shop-status"></div>
+  <div id="shop-body" style="width:100%; display:flex; flex-direction:column; gap:18px;"></div>
+</div>
+
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
   <div class="profile-top-row">
@@ -1511,6 +1540,9 @@ const callAdminSetNick = httpsCallable(functions, 'adminSetNick');
 const callStartDailyAttempt = httpsCallable(functions, 'startDailyAttempt');
 const callSubmitDailyResult = httpsCallable(functions, 'submitDailyResult');
 const callClaimDailyReward = httpsCallable(functions, 'claimDailyReward');
+// loja de cosméticos (paga com Pigmentos)
+const callBuyShopItem = httpsCallable(functions, 'buyShopItem');
+const callSetEquippedItem = httpsCallable(functions, 'setEquippedItem');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -1572,7 +1604,7 @@ const T = {
     verify_resent: '📧 E-mail reenviado!',
     verify_not_confirmed: 'Ainda não confirmado. Confira sua caixa de entrada e o spam.',
     offline_label: '👤 Jogando sem conta ›', entrar_label: 'entrar', sair_label: 'sair',
-    user_greeting: nick => `👤 ${nick} ›`,
+    user_greeting: nick => `${nick} ›`,
     instr_first_classic: name => `👉 Clique no quadrado ${name} (e memorize a palavra dentro dele!)`,
     instr_first_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a COR do quadrado!)`,
     instr_first_shapes: name => `👉 Clique na forma ${name} (e memorize a palavra escrita nela!)`,
@@ -1775,7 +1807,7 @@ const T = {
     verify_resent: '📧 Email resent!',
     verify_not_confirmed: 'Not confirmed yet. Check your inbox and spam folder.',
     offline_label: '👤 Playing without an account ›', entrar_label: 'log in', sair_label: 'log out',
-    user_greeting: nick => `👤 ${nick} ›`,
+    user_greeting: nick => `${nick} ›`,
     instr_first_classic: name => `👉 Click the ${name} square (and memorize the word inside it!)`,
     instr_first_reverse: name => `👉 Click where it says ${name} (and memorize the square's COLOR!)`,
     instr_first_shapes: name => `👉 Click the ${name} shape (and memorize the word written on it!)`,
@@ -1978,7 +2010,7 @@ const T = {
     verify_resent: '📧 ¡Correo reenviado!',
     verify_not_confirmed: 'Aún no confirmado. Revisa tu bandeja de entrada y el spam.',
     offline_label: '👤 Jugando sin cuenta ›', entrar_label: 'entrar', sair_label: 'salir',
-    user_greeting: nick => `👤 ${nick} ›`,
+    user_greeting: nick => `${nick} ›`,
     instr_first_classic: name => `👉 Haz clic en el cuadrado ${name} (¡y memoriza la palabra dentro de él!)`,
     instr_first_reverse: name => `👉 Haz clic donde está escrito ${name} (¡y memoriza el COLOR del cuadrado!)`,
     instr_first_shapes: name => `👉 Haz clic en la forma ${name} (¡y memoriza la palabra escrita en ella!)`,
@@ -2263,35 +2295,14 @@ const COLORS = [
   { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'      }, hex: '#ff6b9d' },
   { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'      }, hex: '#00d2d3' },
 ];
-// paletas alternativas da loja — recolorem os mesmos 8 azulejos (mantendo a
-// identidade/nome de cada um) com outra paleta de cores. "themeHex(c)" decide
-// qual hex usar de acordo com o tema equipado.
-const THEME_PALETTES = {
-  sunset: { blue: '#ff6b6b', red: '#ff4757', green: '#ffa94d', yellow: '#ffd43b', purple: '#e64980', orange: '#ff922b', pink: '#f783ac', cyan: '#ff8787' },
-  pastel: { blue: '#a5d8ff', red: '#ffc9c9', green: '#b2f2bb', yellow: '#ffec99', purple: '#d0bfff', orange: '#ffd8a8', pink: '#fcc2d7', cyan: '#99e9f2' },
-  mono:   { blue: '#e9ecef', red: '#ced4da', green: '#adb5bd', yellow: '#f8f9fa', purple: '#868e96', orange: '#dee2e6', pink: '#f1f3f5', cyan: '#c1c9d0' },
-};
-function themeHex(colorObj) {
-  const t = THEME_PALETTES[equippedTheme];
-  return (t && t[colorObj.key]) || colorObj.hex;
-}
-const GLOW_COLORS = { glow_gold: '#ffd700', glow_silver: '#d9d9e3', glow_rainbow: null };
-const GLOW_RAINBOW_HEXES = ['#ff2d6b', '#ff9f1c', '#ffe93c', '#21e6a1', '#2dd6ff', '#b14dff'];
-let glowRainbowTick = 0;
-// brilho da loja substitui o brilho "na própria cor" do azulejo — o arco-íris
-// gira pelas cores neon do jogo a cada azulejo pintado, pra não ficar um
-// brilho parado/uniforme
-function glowHexFor(colorObj) {
-  if (!equippedGlow) return colorObj.hex;
-  if (equippedGlow === 'glow_rainbow') return GLOW_RAINBOW_HEXES[(glowRainbowTick++) % GLOW_RAINBOW_HEXES.length];
-  return GLOW_COLORS[equippedGlow] || colorObj.hex;
-}
 const CONFETTI_COLORS = { confetti_gold: ['#ffd700', '#ffe93c', '#fff2a8'] };
 // confete cosmético da loja ao bater um novo recorde — camada leve (sem
-// biblioteca), some sozinha depois da animação
-function spawnConfetti() {
-  if (!equippedConfetti) return;
-  const colors = CONFETTI_COLORS[equippedConfetti] || ['#ffd700'];
+// biblioteca), some sozinha depois da animação. "confettiId" explícito permite
+// reusar a mesma função tanto pro confete realmente equipado quanto pra prévia
+// da loja (que precisa funcionar mesmo sem nada equipado ainda).
+function spawnConfettiVariant(confettiId) {
+  if (!confettiId) return;
+  const colors = CONFETTI_COLORS[confettiId] || ['#ffd700'];
   const layer = document.createElement('div');
   layer.className = 'confetti-layer';
   for (let i = 0; i < 28; i++) {
@@ -2307,6 +2318,7 @@ function spawnConfetti() {
   document.body.appendChild(layer);
   setTimeout(() => layer.remove(), 2800);
 }
+function spawnConfetti() { spawnConfettiVariant(equippedConfetti); }
 const cName = c => c.name[lang];
 const SQUARES = 4;
 
@@ -2368,15 +2380,50 @@ function applyNickFrame(el, stats) {
   if (frame === 'frame_gold') el.classList.add('nick-frame-gold');
   else if (frame === 'frame_rainbow') el.classList.add('nick-frame-rainbow');
 }
+// linha temática da loja — fundo diferenciado na <tr> do jogador nas tabelas
+// de ranking, pra se destacar na lista. Mesmo raciocínio da moldura: campo
+// público (stats.equipped), então funciona pra QUALQUER linha (não só a sua)
+function applyRowTheme(el, stats) {
+  const theme = stats && stats.equipped && stats.equipped.rowTheme;
+  el.classList.remove('row-theme-fire', 'row-theme-ocean', 'row-theme-galaxy');
+  if (theme === 'row_fire') el.classList.add('row-theme-fire');
+  else if (theme === 'row_ocean') el.classList.add('row-theme-ocean');
+  else if (theme === 'row_galaxy') el.classList.add('row-theme-galaxy');
+}
+// avatares da loja — desenhados em SVG (sem imagem externa), um ícone
+// circular por personagem. "glyph" é só o miolo do desenho, sempre
+// centralizado em (0,0); avatarSvg() monta o círculo + halo em volta.
+const AVATAR_SHAPES = {
+  avatar_robot: { color: '#2dd6ff', glyph: '<rect x="-26" y="-26" width="52" height="52" rx="10" fill="#2dd6ff"/><line x1="0" y1="-26" x2="0" y2="-38" stroke="#2dd6ff" stroke-width="3"/><circle cx="0" cy="-40" r="4" fill="#2dd6ff"/><rect x="-18" y="-8" width="36" height="16" rx="4" fill="#0a0e1e"/><circle cx="-9" cy="0" r="4" fill="#e8ecfa"/><circle cx="9" cy="0" r="4" fill="#e8ecfa"/>' },
+  avatar_ninja: { color: '#b14dff', glyph: '<circle r="30" fill="#b14dff"/><rect x="-30" y="-6" width="60" height="12" fill="#0a0e1e"/><ellipse cx="-11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><ellipse cx="11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><circle cx="-11" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="11" cy="0" r="2.5" fill="#0a0e1e"/>' },
+  avatar_ghost: { color: '#e8ecfa', glyph: '<path d="M -26 6 C -26 -22 26 -22 26 6 L 26 20 L 17 12 L 8 20 L 0 12 L -8 20 L -17 12 L -26 20 Z" fill="#e8ecfa"/><ellipse cx="-10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/><ellipse cx="10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/>' },
+  avatar_cat: { color: '#ff9f1c', glyph: '<polygon points="-26,-14 -14,-32 -4,-12" fill="#ff9f1c"/><polygon points="26,-14 14,-32 4,-12" fill="#ff9f1c"/><circle r="28" fill="#ff9f1c"/><ellipse cx="-9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><ellipse cx="9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><circle cx="-9" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="9" cy="0" r="2.5" fill="#0a0e1e"/><polygon points="-4,10 4,10 0,15" fill="#ff6b9d"/>' },
+  avatar_alien: { color: '#21e6a1', glyph: '<ellipse rx="26" ry="32" fill="#21e6a1"/><line x1="-10" y1="-30" x2="-16" y2="-42" stroke="#21e6a1" stroke-width="3"/><line x1="10" y1="-30" x2="16" y2="-42" stroke="#21e6a1" stroke-width="3"/><circle cx="-16" cy="-42" r="3.5" fill="#21e6a1"/><circle cx="16" cy="-42" r="3.5" fill="#21e6a1"/><ellipse cx="-10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/><ellipse cx="10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/>' },
+  avatar_flame: { color: '#ff2d6b', glyph: '<path d="M 0 -34 C 14 -18 24 0 14 18 C 20 8 16 -2 8 -6 C 12 6 4 20 -6 24 C -22 18 -22 0 -12 -12 C -16 -4 -12 6 -6 8 C -10 -6 -8 -22 0 -34 Z" fill="#ff2d6b"/><path d="M -8 -8 L -2 -14 L 4 -8" fill="none" stroke="#0a0e1e" stroke-width="2.5" stroke-linecap="round"/><circle cx="-6" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="0" r="2.5" fill="#0a0e1e"/>' },
+  avatar_crystal: { color: '#00d2d3', glyph: '<polygon points="-16,-28 16,-28 26,-4 0,30 -26,-4" fill="#00d2d3"/><line x1="-16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="-26" y1="-4" x2="26" y2="-4" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><circle cx="14" cy="-18" r="2.5" fill="#e8ecfa"/>' },
+  avatar_star: { color: '#ffe93c', glyph: '<polygon points="0,-30 7.5,-10.3 28.5,-9.3 12.1,3.9 17.7,24.3 0,12.7 -17.7,24.3 -12.1,3.9 -28.5,-9.3 -7.5,-10.3" fill="#ffe93c"/><circle cx="-6" cy="-2" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="-2" r="2.5" fill="#0a0e1e"/><path d="M -6 6 Q 0 11 6 6" fill="none" stroke="#0a0e1e" stroke-width="2" stroke-linecap="round"/>' },
+};
+function avatarSvg(id, size = 32) {
+  const a = AVATAR_SHAPES[id];
+  if (!a) return '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><circle cx="60" cy="60" r="56" fill="${a.color}" opacity="0.22"/><circle cx="60" cy="60" r="48" fill="#131a33" stroke="${a.color}" stroke-width="4"/><g transform="translate(60,60)">${a.glyph}</g></svg>`;
+}
+// devolve o avatar equipado (SVG, markup fixo/confiável) ou o emoji padrão de
+// "pessoa" se nada foi comprado/equipado ainda — mesmo raciocínio de
+// fallback gracioso dos outros cosméticos da loja (glow/tema já removidos,
+// frame/confetti seguem esse mesmo padrão)
+function avatarOrDefaultIcon(avatarId, size = 20) {
+  return avatarId && AVATAR_SHAPES[avatarId] ? avatarSvg(avatarId, size) : '👤';
+}
 // ícone dos Pigmentos (moeda do desafio diário) — uma gota com as cores do
 // jogo se misturando, pra remeter ao tema sem precisar de nenhum arquivo de
 // imagem externo. Markup fixo/confiável (sem dado de usuário), inserido só
 // via insertAdjacentHTML/template literal mesmo mais abaixo.
 // contador só pra dar um id único de gradiente a cada ícone renderizado —
 // com o mesmo id "pigGrad" repetido em vários <svg> na mesma página (menu,
-// ranking, legenda de prêmio...), o navegador às vezes usa a cor errada (ou
-// vira sólida) por causa do id duplicado. Cada ícone agora tem seu próprio
-// gradiente, sempre com as mesmas cores.
+// loja, legenda de prêmio, botão de compra...), o navegador às vezes usa a
+// cor errada (ou vira sólida) por causa do id duplicado. Cada ícone agora
+// tem seu próprio gradiente, sempre com as mesmas cores.
 let pigmentIconSeq = 0;
 function pigmentIconSvg(size = 18) {
   const gradId = `pigGrad${pigmentIconSeq++}`;
@@ -2596,19 +2643,48 @@ let dailyRankSubtab = 'today'; // 'today' | 'alltime'
 let dailyTodayRows = [], dailyTodayPage = 0;
 let dailyAlltimeRows = [], dailyAlltimePage = 0;
 
-/* ================== cosméticos equipados ==================
-   "equipped*" abaixo refletem myData.equipped (só pode ser preenchido pela
-   loja/servidor) — carregados depois do login em applyEquippedCosmetics().
-   Sem loja no ar, ficam sempre null/vazios, e os pontos onde são usados
-   (tema/brilho do tabuleiro, moldura do nick, som, confete) caem no padrão. */
-let equippedSfx = null, equippedGlow = null, equippedTheme = null, equippedFrame = null, equippedConfetti = null;
+/* ================== loja (cosméticos comprados com Pigmentos) ==================
+   Catálogo espelha o de functions/index.js (preço/slot são conferidos de novo
+   no servidor — o catálogo aqui é só pra desenhar a tela). "equipped*" abaixo
+   são os cosméticos ativos AGORA nesta sessão — carregados de myData.equipped
+   depois do login e aplicados em applyEquippedCosmetics(). */
+const SHOP_ITEMS = [
+  { id: 'sfx_splash',    slot: 'sfxCorrect', price: 30,  icon: '🎨', name: 'Som de Acerto: Splash de Tinta', desc: 'Troca o bipe de acerto por um "splash" de tinta.' },
+  { id: 'sfx_8bit',      slot: 'sfxCorrect', price: 30,  icon: '👾', name: 'Som de Acerto: Retrô 8-bit',     desc: 'Um bipe estilo fliperama clássico.' },
+  { id: 'sfx_bell',      slot: 'sfxCorrect', price: 30,  icon: '🔔', name: 'Som de Acerto: Sininho',         desc: 'Um "ding" de sino cristalino a cada acerto.' },
+  { id: 'sfx_laser',     slot: 'sfxCorrect', price: 30,  icon: '🔫', name: 'Som de Acerto: Laser',           desc: 'Um tiro de laser sci-fi a cada acerto.' },
+  { id: 'sfx_bubble',    slot: 'sfxCorrect', price: 30,  icon: '🫧', name: 'Som de Acerto: Bolha',           desc: 'Um "blip" de bolha estourando a cada acerto.' },
+  { id: 'sfx_synth',     slot: 'sfxCorrect', price: 30,  icon: '🎹', name: 'Som de Acerto: Sintetizador',    desc: 'Um acorde curto de sintetizador retrô a cada acerto.' },
+  { id: 'frame_gold',    slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Dourada',                desc: 'Uma moldura dourada ao redor do seu nick no ranking e perfil.' },
+  { id: 'frame_rainbow', slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Arco-íris',              desc: 'Uma moldura multicolorida ao redor do seu nick.' },
+  { id: 'confetti_gold', slot: 'confetti',   price: 120, icon: '🎊', name: 'Confete Dourado',                desc: 'Um confete dourado quando você bate um novo recorde.' },
+  { id: 'row_fire',      slot: 'rowTheme',   price: 130, icon: '🔥', name: 'Linha: Fogo',                    desc: 'Fundo temático de fogo na sua linha do ranking.' },
+  { id: 'row_ocean',     slot: 'rowTheme',   price: 130, icon: '🌊', name: 'Linha: Oceano',                  desc: 'Fundo temático de oceano na sua linha do ranking.' },
+  { id: 'row_galaxy',    slot: 'rowTheme',   price: 130, icon: '🌌', name: 'Linha: Galáxia',                 desc: 'Fundo temático de galáxia na sua linha do ranking.' },
+  { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
+  { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
+  { id: 'avatar_ghost',   slot: 'avatar', price: 110, icon: '👻', name: 'Avatar: Fantasma', desc: 'Um fantasma pra representar você no perfil e no duelo.' },
+  { id: 'avatar_cat',     slot: 'avatar', price: 110, icon: '🐱', name: 'Avatar: Gato',     desc: 'Um gato pra representar você no perfil e no duelo.' },
+  { id: 'avatar_alien',   slot: 'avatar', price: 110, icon: '👽', name: 'Avatar: Alien',    desc: 'Um alien pra representar você no perfil e no duelo.' },
+  { id: 'avatar_flame',   slot: 'avatar', price: 110, icon: '🔥', name: 'Avatar: Chama',    desc: 'Uma chama pra representar você no perfil e no duelo.' },
+  { id: 'avatar_crystal', slot: 'avatar', price: 110, icon: '💎', name: 'Avatar: Cristal',  desc: 'Um cristal pra representar você no perfil e no duelo.' },
+  { id: 'avatar_star',    slot: 'avatar', price: 110, icon: '⭐', name: 'Avatar: Estrela',  desc: 'Uma estrela pra representar você no perfil e no duelo.' },
+];
+const SHOP_ITEMS_BY_ID = Object.fromEntries(SHOP_ITEMS.map(it => [it.id, it]));
+const SHOP_SLOTS = [
+  { slot: 'sfxCorrect', label: '🔊 Som de Acerto' },
+  { slot: 'frame',      label: '🖼️ Moldura do Nick' },
+  { slot: 'confetti',   label: '🎊 Confete de Recorde' },
+  { slot: 'rowTheme',   label: '📊 Linha do Ranking' },
+  { slot: 'avatar',     label: '🧑 Avatar' },
+];
+let equippedSfx = null, equippedFrame = null, equippedConfetti = null, equippedAvatar = null;
 function applyEquippedCosmetics() {
   const eq = (myData && myData.equipped) || {};
   equippedSfx = eq.sfxCorrect || null;
-  equippedGlow = eq.glow || null;
-  equippedTheme = eq.theme || null;
   equippedFrame = eq.frame || null;
   equippedConfetti = eq.confetti || null;
+  equippedAvatar = eq.avatar || null;
 }
 
 let currentUser = null;          // usuário do firebase ou null
@@ -2720,22 +2796,41 @@ function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
     o.start(t); o.stop(t + dur);
   } catch {}
 }
+// cosmético da loja (equippedSfx) troca o som do acerto — a lógica de "sobe o
+// tom a cada acerto" continua igual, só muda o timbre. "variant" explícito
+// permite reusar pra prévia da loja, tocando um som mesmo sem estar equipado.
+function playCorrectSfxVariant(variant, n) {
+  if (variant === 'sfx_8bit') {
+    const f = 220 + Math.min(n, 24) * 55;
+    tone(f, 0.06, 'square', 0.13);
+    tone(f * 1.5, 0.04, 'square', 0.07, 0.02);
+  } else if (variant === 'sfx_splash') {
+    const f = 500 + Math.min(n, 24) * 20;
+    tone(f, 0.07, 'sine', 0.13);
+    tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
+  } else if (variant === 'sfx_bell') {
+    const f = 600 + Math.min(n, 24) * 25;
+    tone(f, 0.15, 'sine', 0.12);
+    tone(f * 1.5, 0.12, 'sine', 0.07, 0.03);
+  } else if (variant === 'sfx_laser') {
+    const f = 900 + Math.min(n, 24) * 30;
+    tone(f, 0.05, 'sawtooth', 0.11);
+    tone(f * 0.6, 0.08, 'sawtooth', 0.08, 0.03);
+  } else if (variant === 'sfx_bubble') {
+    const f = 350 + Math.min(n, 24) * 25;
+    tone(f, 0.05, 'triangle', 0.12);
+    tone(f * 1.8, 0.06, 'triangle', 0.09, 0.05);
+  } else if (variant === 'sfx_synth') {
+    const f = 300 + Math.min(n, 24) * 35;
+    tone(f, 0.08, 'square', 0.1);
+    tone(f * 1.25, 0.08, 'square', 0.08, 0.04);
+    tone(f * 1.5, 0.1, 'square', 0.06, 0.08);
+  } else {
+    tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
+  }
+}
 const sfx = {
-  // cosmético da loja (equippedSfx) troca o som do acerto — a lógica de "sobe
-  // o tom a cada acerto" continua igual, só muda o timbre
-  correct(n) {
-    if (equippedSfx === 'sfx_8bit') {
-      const f = 220 + Math.min(n, 24) * 55;
-      tone(f, 0.06, 'square', 0.13);
-      tone(f * 1.5, 0.04, 'square', 0.07, 0.02);
-    } else if (equippedSfx === 'sfx_splash') {
-      const f = 500 + Math.min(n, 24) * 20;
-      tone(f, 0.07, 'sine', 0.13);
-      tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
-    } else {
-      tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
-    }
-  },
+  correct(n) { playCorrectSfxVariant(equippedSfx, n); },
   wrong()   { tone(160, 0.3, 'sawtooth', 0.15); tone(110, 0.4, 'sawtooth', 0.15, 0.08); },
   timeout() { tone(300, 0.2, 'triangle', 0.15); tone(200, 0.3, 'triangle', 0.15, 0.15); tone(120, 0.5, 'triangle', 0.15, 0.3); },
   record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
@@ -3065,6 +3160,7 @@ window.showMenu = () => {
   }
   refreshInboxBadge();
   updateDailyMenuCard();
+  renderMenuPigmentosBar();
   renderUserPigmentos();
   refreshBadgeNotifDot();
 
@@ -3080,7 +3176,12 @@ window.showMenu = () => {
     $('user-label').textContent = T[lang].offline_label;
     $('menu-logout-btn').textContent = T[lang].entrar_label;
   } else {
-    $('user-label').textContent = T[lang].user_greeting(myData.nick || '');
+    // avatar (markup fixo/confiável) vai por innerHTML; o nick sempre por
+    // textContent/createTextNode (pode ter qualquer caractere não-espaço)
+    const labelEl = $('user-label');
+    labelEl.innerHTML = '';
+    labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 18) + ' ');
+    labelEl.appendChild(document.createTextNode(T[lang].user_greeting(myData.nick || '')));
     $('menu-logout-btn').textContent = T[lang].sair_label;
   }
   show('menu-screen');
@@ -3136,10 +3237,8 @@ function newRound(first) {
     } else {
       const bg   = (mode === 'classic') ? item : paired;
       const word = (mode === 'classic') ? paired : item;
-      const bgHex = themeHex(bg); // tema da loja recolore o azulejo, se equipado
-      const glowHex = glowHexFor(bg); // brilho da loja substitui o brilho na própria cor, se equipado
-      el.style.background = bgHex;
-      el.style.boxShadow = `0 0 18px ${glowHex}99, 0 0 40px ${glowHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.style.background = bg.hex;
+      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
     el.onclick = () => handleClick(item);
@@ -3386,6 +3485,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
       nickSpan.textContent = r.nick;
       nickSpan.className = 'nick-click';
       applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
       nickSpan.onclick = () => openProfileFromRanking(r, 'over-screen');
       nickCell.appendChild(nickSpan);
       if (r.stats) {
@@ -4005,6 +4105,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
 
   // nick sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção
   $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick').insertAdjacentHTML('afterbegin', avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 24) + ' ');
   $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(isOther ? (stats.xp || 0) : myXp()));
   applyNickFrame($('profile-nick'), stats);
 
@@ -4264,6 +4365,7 @@ function renderRankingPage() {
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
     applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats));
@@ -4347,6 +4449,7 @@ function renderDailyTodayPage() {
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
     applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
@@ -4405,6 +4508,7 @@ function renderDailyAlltimePage() {
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
     applyNickFrame(nickSpan, r.stats);
+    applyRowTheme(tr, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
@@ -4569,20 +4673,6 @@ async function refreshInboxBadge() {
     badge.style.display = snap.size > 0 ? '' : 'none';
   } catch {}
 }
-// saldo de Pigmentos no topo da tela, entre o nick e a caixa de entrada — só
-// o número + ícone colorido, sem texto/link. A loja ainda não existe aqui no
-// index, mas o saldo (ganho no desafio diário) já é real e vale mostrar.
-function renderUserPigmentos() {
-  const el = $('user-pigmentos-bar');
-  if (!el) return;
-  if (offline || !currentUser || !myData.nick) {
-    el.style.display = 'none';
-    return;
-  }
-  el.style.display = 'inline-flex';
-  $('user-pigmentos-num').textContent = myData.pigmentos || 0;
-  $('user-pigmentos-icon').innerHTML = pigmentIconSvg(16);
-}
 window.claimOneDailyReward = async (dateStr) => {
   try {
     const res = await callClaimDailyReward({ dateStr });
@@ -4591,6 +4681,7 @@ window.claimOneDailyReward = async (dateStr) => {
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();
+    renderMenuPigmentosBar();
     renderUserPigmentos();
   } catch (e) {
     $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
@@ -4604,6 +4695,7 @@ window.claimAllDailyRewards = async () => {
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();
+    renderMenuPigmentosBar();
     renderUserPigmentos();
   } catch (e) {
     $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
@@ -4741,10 +4833,8 @@ function dailyNewRound(first) {
     const paired = (item === dailyTarget) ? dailyNextTarget : distractors[d++];
     const el = document.createElement('div');
     el.className = 'square';
-    const bgHex = themeHex(item);
-    const glowHex = glowHexFor(item);
-    el.style.background = bgHex;
-    el.style.boxShadow = `0 0 18px ${glowHex}99, 0 0 40px ${glowHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+    el.style.background = item.hex;
+    el.style.boxShadow = `0 0 18px ${item.hex}99, 0 0 40px ${item.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
     el.innerHTML = `<span class="word">${cName(paired)}</span>`;
     el.onclick = () => dailyHandleClick(item);
     grid.appendChild(el);
@@ -4832,6 +4922,220 @@ window.dailyExitScreen = () => {
   showMenu();
 };
 
+/* ================== loja (cosméticos comprados com Pigmentos) ==================
+   Catálogo/preço são só pra desenhar a tela — quem manda de verdade é o
+   servidor (buyShopItem/setEquippedItem em functions/index.js), que confere
+   saldo e posse de novo antes de gravar. O cliente só reflete o que já sabe
+   (myData.pigmentos/ownedItems/equipped) e atualiza otimisticamente depois
+   de cada resposta bem-sucedida. */
+
+// botão "🛍️ LOJA" do menu — a loja ainda tá em teste, então o botão fica
+// oculto pra todo mundo, menos pra quem loga como admin
+function renderMenuPigmentosBar() {
+  const shopBtn = $('menu-quick-shop-btn');
+  if (!shopBtn) return;
+  shopBtn.style.display = (!offline && currentUser && myData.nick && myData.admin === true) ? '' : 'none';
+}
+// saldo de Pigmentos no topo da tela, entre o nick e a caixa de entrada — só
+// o número + ícone colorido, sem texto/link (o acesso à loja continua sendo
+// só pela barra do menu, acima)
+function renderUserPigmentos() {
+  const el = $('user-pigmentos-bar');
+  if (!el) return;
+  if (offline || !currentUser || !myData.nick) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'inline-flex';
+  $('user-pigmentos-num').textContent = myData.pigmentos || 0;
+  $('user-pigmentos-icon').innerHTML = pigmentIconSvg(16);
+}
+
+window.showShop = () => {
+  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  track('shop_open');
+  $('shop-status').textContent = '';
+  show('shop-screen');
+  renderShop();
+};
+
+function renderShop() {
+  $('shop-balance-icon').innerHTML = pigmentIconSvg(20);
+  $('shop-balance-num').textContent = myData.pigmentos || 0;
+  const owned = new Set(myData.ownedItems || []);
+  const equipped = myData.equipped || {};
+
+  const body = $('shop-body');
+  body.innerHTML = '';
+  SHOP_SLOTS.forEach(({ slot, label }) => {
+    const section = document.createElement('div');
+    section.className = 'card';
+    section.style.textAlign = 'left';
+
+    const title = document.createElement('h2');
+    title.style.cssText = "font-family:'Orbitron',sans-serif; font-size:0.95rem; margin-bottom:2px;";
+    title.textContent = label;
+    section.appendChild(title);
+
+    section.appendChild(shopDefaultRow(slot, equipped[slot]));
+    SHOP_ITEMS.filter(it => it.slot === slot).forEach(item => {
+      section.appendChild(shopItemRow(item, owned.has(item.id), equipped[slot] === item.id));
+    });
+
+    body.appendChild(section);
+  });
+  resetScroll('shop-screen');
+}
+
+// opção "padrão" de cada slot — sempre disponível, sem custo, volta o visual original
+function shopDefaultRow(slot, currentEquipped) {
+  const row = document.createElement('div');
+  row.className = 'shop-item-row';
+
+  const info = document.createElement('div');
+  info.className = 'shop-item-info';
+  const name = document.createElement('div');
+  name.className = 'shop-item-name';
+  name.textContent = '— Padrão —';
+  const desc = document.createElement('div');
+  desc.className = 'muted';
+  desc.style.textAlign = 'left';
+  desc.textContent = 'Visual original, sem cosmético.';
+  info.appendChild(name);
+  info.appendChild(desc);
+  row.appendChild(info);
+
+  const isActive = !currentEquipped;
+  const btn = document.createElement('button');
+  btn.style.cssText = 'padding:8px 16px; font-size:0.8rem; white-space:nowrap;';
+  if (isActive) {
+    btn.textContent = 'EQUIPADO';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+  } else {
+    btn.className = 'secondary';
+    btn.textContent = 'USAR';
+    btn.onclick = () => equipShopItem(slot, null);
+  }
+  row.appendChild(btn);
+  return row;
+}
+
+// prévia de cada item, direto na linha da loja — funciona mesmo sem
+// comprar/equipar nada, pra pessoa decidir se vale a pena antes de gastar
+// Pigmentos. Som chama a variante direto (bypassa o que estiver equipado
+// agora); moldura monta um nick de exemplo com a moldura aplicada; confete
+// dispara a mesma explosão que aparece ao bater recorde.
+function shopItemPreview(item) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:6px;';
+  if (item.slot === 'sfxCorrect') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.style.cssText = 'padding:4px 12px; font-size:0.72rem;';
+    btn.textContent = '🔊 Ouvir';
+    btn.onclick = (e) => { e.stopPropagation(); playCorrectSfxVariant(item.id, 5); };
+    wrap.appendChild(btn);
+  } else if (item.slot === 'frame') {
+    const sample = document.createElement('span');
+    sample.textContent = 'SeuNick';
+    sample.style.cssText = 'font-weight:700; font-size:0.85rem;';
+    applyNickFrame(sample, { equipped: { frame: item.id } });
+    wrap.appendChild(sample);
+  } else if (item.slot === 'confetti') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.style.cssText = 'padding:4px 12px; font-size:0.72rem;';
+    btn.textContent = '🎉 Testar';
+    btn.onclick = (e) => { e.stopPropagation(); spawnConfettiVariant(item.id); };
+    wrap.appendChild(btn);
+  } else if (item.slot === 'rowTheme') {
+    // mini tabela real (não só uma div) pra reaproveitar exatamente o mesmo
+    // seletor CSS "tbody tr.row-theme-x" usado na tabela de ranking de verdade
+    const mini = document.createElement('table');
+    mini.style.cssText = 'width:100%; border-collapse:collapse; margin-top:2px;';
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    applyRowTheme(tr, { equipped: { rowTheme: item.id } });
+    tr.innerHTML = '<td class="pos" style="padding:6px 8px;">1</td><td style="padding:6px 8px; font-weight:700;">SeuNick</td><td class="pts" style="padding:6px 8px;">1234</td>';
+    tbody.appendChild(tr);
+    mini.appendChild(tbody);
+    wrap.appendChild(mini);
+  } else if (item.slot === 'avatar') {
+    // sempre visível (não precisa clicar em nada pra "testar" um desenho fixo)
+    wrap.innerHTML = avatarSvg(item.id, 40);
+  }
+  return wrap;
+}
+
+function shopItemRow(item, isOwned, isEquipped) {
+  const row = document.createElement('div');
+  row.className = 'shop-item-row';
+
+  const info = document.createElement('div');
+  info.className = 'shop-item-info';
+  const name = document.createElement('div');
+  name.className = 'shop-item-name';
+  name.textContent = `${item.icon} ${item.name}`;
+  const desc = document.createElement('div');
+  desc.className = 'muted';
+  desc.style.textAlign = 'left';
+  desc.textContent = item.desc;
+  info.appendChild(name);
+  info.appendChild(desc);
+  info.appendChild(shopItemPreview(item));
+  row.appendChild(info);
+
+  const btn = document.createElement('button');
+  btn.style.cssText = 'padding:8px 16px; font-size:0.8rem; white-space:nowrap;';
+  if (isEquipped) {
+    btn.textContent = 'EQUIPADO';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+  } else if (isOwned) {
+    btn.className = 'secondary';
+    btn.textContent = 'USAR';
+    btn.onclick = () => equipShopItem(item.slot, item.id);
+  } else {
+    btn.className = 'secondary';
+    btn.insertAdjacentHTML('beforeend', pigmentIconSvg(14));
+    const priceSpan = document.createElement('span');
+    priceSpan.textContent = ' ' + item.price;
+    btn.appendChild(priceSpan);
+    if ((myData.pigmentos || 0) < item.price) btn.style.opacity = '0.55';
+    btn.onclick = () => buyShopItemUi(item.id);
+  }
+  row.appendChild(btn);
+  return row;
+}
+
+window.buyShopItemUi = async (itemId) => {
+  $('shop-status').textContent = '';
+  try {
+    const res = await callBuyShopItem({ itemId });
+    if (res.data && typeof res.data.pigmentos === 'number') myData.pigmentos = res.data.pigmentos;
+    myData.ownedItems = [...(myData.ownedItems || []), itemId];
+    renderShop();
+    renderMenuPigmentosBar();
+    renderUserPigmentos();
+  } catch (e) {
+    $('shop-status').textContent = e.message || 'Não foi possível comprar agora.';
+  }
+};
+
+window.equipShopItem = async (slot, itemId) => {
+  $('shop-status').textContent = '';
+  try {
+    await callSetEquippedItem({ slot, itemId: itemId || null });
+    if (!myData.equipped) myData.equipped = {};
+    if (itemId) myData.equipped[slot] = itemId; else delete myData.equipped[slot];
+    applyEquippedCosmetics();
+    renderShop();
+  } catch (e) {
+    $('shop-status').textContent = e.message || 'Não foi possível trocar agora.';
+  }
+};
+
 /* ================== PvP (duelo ao vivo) ================== */
 // Diferente do resto do jogo: aqui quem manda é sempre o servidor. O cliente
 // nunca decide sozinho "eu acertei" ou "o tempo acabou" — ele só chama a
@@ -4853,35 +5157,46 @@ let pvpClockOffsetMs = 0;     // diferença entre o relógio do navegador e o do
 let pvpCountdownAnimFrame = null; // rAF da contagem "3, 2, 1" antes do duelo começar
 let pvpCountdownLastNum = null;   // último número (3, 2 ou 1) que já tocamos o beep, pra não repetir
 let pvpResultSoundPlayed = false; // evita tocar o som de vitória/derrota/empate mais de uma vez pra mesma partida
-let pvpOppXpCache = {}; // uid do adversário -> xp já buscado (pra mostrar o level dele na tela de duelo)
+let pvpOppXpCache = {};       // uid do adversário -> xp já buscado (pra mostrar o level dele na tela de duelo)
+let pvpOppEquippedCache = {}; // uid do adversário -> equipped já buscado (pra mostrar o avatar dele na tela de duelo) — vem do MESMO getDoc de cima, sem leitura extra
 
-// busca o XP do adversário em scores/{uid} (público) só uma vez por uid, e
-// reaproveita entre partidas/reaberturas da tela. Enquanto ainda não chegou,
-// devolve undefined (o chip de nível some até a busca terminar).
+// busca o XP (e o equipped, pro avatar) do adversário em scores/{uid}
+// (público) só uma vez por uid, e reaproveita entre partidas/reaberturas da
+// tela. Enquanto ainda não chegou, devolve undefined (o chip de nível some
+// até a busca terminar).
 function getPvpOppXp(uid) {
   const cached = pvpOppXpCache[uid];
   if (cached === undefined) ensurePvpOppXp(uid);
   return cached === null ? undefined : cached;
 }
+function getPvpOppEquipped(uid) {
+  return pvpOppEquippedCache[uid] || {};
+}
 async function ensurePvpOppXp(uid) {
   if (uid in pvpOppXpCache) return; // já tem (ou já está buscando)
   pvpOppXpCache[uid] = null; // marca como "buscando" pra não disparar duas buscas
   let xp = 0;
+  let equipped = {};
   try {
     const snap = await getDoc(doc(db, 'scores', uid));
     xp = (snap.exists() && snap.data().xp) || 0;
+    equipped = (snap.exists() && snap.data().equipped) || {};
   } catch {}
   pvpOppXpCache[uid] = xp;
+  pvpOppEquippedCache[uid] = equipped;
   // agora que já temos o nível, atualiza a tela de duelo se ainda for a
   // mesma partida aberta
   const cur = pvpMatchesById[pvpCurrentMatchId];
   if (cur) renderPvpScreen(cur);
 }
 
-// nick do participante + chip de nível ao lado — nick sempre via textContent
-// (nunca innerHTML, pode ter qualquer caractere), chip é HTML fixo/confiável
-function setPvpNameWithLevel(el, labelText, xp) {
-  el.textContent = labelText;
+// nick do participante + avatar e chip de nível ao lado — nick sempre via
+// textContent/createTextNode (nunca interpolado em innerHTML, pode ter
+// qualquer caractere), avatar e chip são HTML fixo/confiável
+function setPvpNameWithLevel(el, labelText, xp, avatarId) {
+  el.innerHTML = '';
+  el.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(avatarId, 18) + ' ');
+  el.appendChild(document.createTextNode(labelText));
   if (xp !== undefined) el.insertAdjacentHTML('beforeend', ' ' + lvChip(xp));
 }
 
@@ -5066,8 +5381,8 @@ function renderPvpScreen(m) {
   if (m.status === 'active') {
     stopPvpCountdownTicker();
     $('pvp-active').style.display = 'flex';
-    setPvpNameWithLevel($('pvp-my-name'), T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp());
-    setPvpNameWithLevel($('pvp-opp-name'), (m.nicks && m.nicks[oppUid]) || '', getPvpOppXp(oppUid));
+    setPvpNameWithLevel($('pvp-my-name'), T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp(), equippedAvatar);
+    setPvpNameWithLevel($('pvp-opp-name'), (m.nicks && m.nicks[oppUid]) || '', getPvpOppXp(oppUid), getPvpOppEquipped(oppUid).avatar);
     $('pvp-turn-label').textContent = (m.turnUid === myUid) ? T[lang].pvp_your_turn : T[lang].pvp_opp_turn((m.nicks && m.nicks[oppUid]) || '');
     checkPvpBonusToast(m);
     renderPvpBoard(m, myUid);
