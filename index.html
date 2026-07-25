@@ -994,8 +994,6 @@
     font-family: 'Orbitron', sans-serif;
     font-size: 0.62rem;
     font-weight: 700;
-    border: 1px solid;
-    border-radius: 10px;
     padding: 1px 6px;
     flex-shrink: 0;
   }
@@ -2348,7 +2346,10 @@ const LV_COLORS = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffe93c', '#ff9f1c', '#ff2d
 function lvChip(xp) {
   const lv = levelFromXp(xp || 0);
   const c = LV_COLORS[Math.min(Math.floor(lv / 5), LV_COLORS.length - 1)];
-  return `<span class="lv-chip" style="color:${c}; border-color:${c}88; text-shadow:0 0 6px ${c}80">Lv ${lv}</span>`;
+  return `<span class="lv-chip" style="color:${c}; text-shadow:0 0 6px ${c}80">Lv ${lv}</span>`;
+}
+function lvColorFor(lv) {
+  return LV_COLORS[Math.min(Math.floor(lv / 5), LV_COLORS.length - 1)];
 }
 // moldura da loja ao redor do nick — "equipped" é público (mesmo doc de
 // scores/{uid} que já alimenta o ranking), então aparece pra QUALQUER um que
@@ -3033,7 +3034,10 @@ window.showMenu = () => {
   // nível e barra de XP (só aparece pra quem tem conta)
   $('menu-xp-wrap').style.display = offline ? 'none' : '';
   const xi = xpInfo(myXp());
+  const lvColor = lvColorFor(xi.lv); // mesma cor por faixa de nível do ranking (ex.: lv5-9 azul)
   $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
+  $('menu-xp-lv').style.color = lvColor;
+  $('menu-xp-lv').style.textShadow = `0 0 6px ${lvColor}80`;
   $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
   $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
 
