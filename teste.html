@@ -299,6 +299,53 @@
     box-shadow: 0 0 8px rgba(255,45,107,0.8);
   }
 
+  /* ícone da caixa de entrada (comunicados do jogo) — fica do lado do botão
+     de som, com a mesma bolinha vermelha de notificação usada em amigos */
+  .inbox-icon-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 4px 6px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    vertical-align: middle;
+    line-height: 1;
+  }
+  .inbox-icon-btn:hover { box-shadow: none; transform: none; }
+  .inbox-icon-btn .menu-quick-badge { top: -4px; right: -2px; }
+
+  /* popup genérico (usado pela caixa de entrada, pode servir pra outros
+     avisos no futuro) */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6,8,18,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    padding: 20px;
+  }
+  .modal-card {
+    width: 100%;
+    max-width: 420px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .modal-card-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+
   .mode-card {
     width: 100%;
     background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
@@ -1073,6 +1120,10 @@
   <div class="user-bar">
     <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
     <span>
+      <button class="inbox-icon-btn" id="inbox-btn" onclick="showInbox()" aria-label="Caixa de entrada" title="Caixa de entrada" style="display:none;">
+        📬
+        <span class="menu-quick-badge" id="inbox-badge" style="display:none;"></span>
+      </button>
       <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som">
         <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">🔊</span></span></span>
       </button>
@@ -1102,7 +1153,6 @@
     <div class="mode-card-footer" id="daily-card-footer">
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
-      <span class="record-badge" id="daily-card-inbox-badge" style="display:none;"></span>
     </div>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
@@ -1216,13 +1266,6 @@
     <button class="pill-btn" onclick="dailyExitScreen()" data-i18n="btn_back">VOLTAR</button>
   </div>
 
-  <div class="card" id="daily-inbox-card" style="display:none; text-align:left;">
-    <h2 style="font-family:'Orbitron',sans-serif; font-size:0.95rem;" data-i18n="daily_inbox_title">📬 Caixa de Entrada</h2>
-    <div id="daily-inbox-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-    <button class="secondary" id="daily-claim-all-btn" style="display:none;" onclick="claimAllDailyRewards()" data-i18n="btn_claim_all">💰 RESGATAR TODAS</button>
-    <div class="muted" id="daily-inbox-status"></div>
-  </div>
-
   <div id="daily-play" style="display:none; width:100%; flex-direction:column; align-items:center; gap:20px;">
     <div class="hud">
       <span><span data-i18n="hud_points">PONTOS:</span> <span id="daily-score">0</span></span>
@@ -1251,6 +1294,19 @@
       <p class="muted" id="daily-blocked-msg" data-i18n="daily_blocked_msg">✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!</p>
     </div>
     <button class="secondary" style="width:100%;" onclick="showRanking('daily')" data-i18n="btn_view_daily_ranking">🏆 VER RANKING DO DESAFIO</button>
+  </div>
+</div>
+
+<!-- CAIXA DE ENTRADA (comunicados do jogo — prêmios do desafio diário, e futuros avisos) -->
+<div class="modal-overlay" id="inbox-modal" style="display:none;" onclick="if(event.target===this) closeInbox();">
+  <div class="modal-card">
+    <div class="profile-top-row" style="margin-bottom:0;">
+      <h1 style="font-size:1.3rem;" data-i18n="daily_inbox_title">📬 Caixa de Entrada</h1>
+      <button class="pill-btn" onclick="closeInbox()" data-i18n="btn_close">FECHAR</button>
+    </div>
+    <div class="modal-card-body" id="inbox-list"></div>
+    <button class="secondary" id="inbox-claim-all-btn" style="display:none;" onclick="claimAllDailyRewards()" data-i18n="btn_claim_all">💰 RESGATAR TODAS</button>
+    <div class="muted" id="inbox-status"></div>
   </div>
 </div>
 
@@ -1614,9 +1670,10 @@ const T = {
     daily_card_best: n => `🎯 Melhor: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Tentativas restantes: ${left}/${max}`,
     daily_card_already_played: '✅ Já jogou hoje',
-    daily_inbox_badge: n => `📬 ${n} prêmio${n > 1 ? 's' : ''}`,
     daily_screen_title: '🗓️ DESAFIO DIÁRIO',
     daily_inbox_title: '📬 Caixa de Entrada',
+    btn_close: 'FECHAR',
+    inbox_empty: 'Nenhuma mensagem por aqui ainda.',
     btn_claim_all: '💰 RESGATAR TODAS',
     btn_claim: '💰 RESGATAR',
     daily_inbox_congrats: (pos, dateStr, score) => `🎉 Parabéns! Você ficou em ${pos} no desafio de ${dateStr} com ${score} pontos.`,
@@ -1806,9 +1863,10 @@ const T = {
     daily_card_best: n => `🎯 Best: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Attempts left: ${left}/${max}`,
     daily_card_already_played: '✅ Already played today',
-    daily_inbox_badge: n => `📬 ${n} prize${n > 1 ? 's' : ''}`,
     daily_screen_title: '🗓️ DAILY CHALLENGE',
     daily_inbox_title: '📬 Inbox',
+    btn_close: 'CLOSE',
+    inbox_empty: 'No messages here yet.',
     btn_claim_all: '💰 CLAIM ALL',
     btn_claim: '💰 CLAIM',
     daily_inbox_congrats: (pos, dateStr, score) => `🎉 Congrats! You placed ${pos} in the ${dateStr} challenge with ${score} points.`,
@@ -1998,9 +2056,10 @@ const T = {
     daily_card_best: n => `🎯 Mejor: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Intentos restantes: ${left}/${max}`,
     daily_card_already_played: '✅ Ya jugaste hoy',
-    daily_inbox_badge: n => `📬 ${n} premio${n > 1 ? 's' : ''}`,
     daily_screen_title: '🗓️ DESAFÍO DIARIO',
     daily_inbox_title: '📬 Bandeja de Entrada',
+    btn_close: 'CERRAR',
+    inbox_empty: 'Todavía no hay mensajes aquí.',
     btn_claim_all: '💰 RECLAMAR TODO',
     btn_claim: '💰 RECLAMAR',
     daily_inbox_congrats: (pos, dateStr, score) => `🎉 ¡Felicidades! Quedaste en ${pos} en el desafío del ${dateStr} con ${score} puntos.`,
@@ -2946,6 +3005,7 @@ window.showMenu = () => {
       badge.style.display = n > 0 ? '' : 'none';
     }).catch(() => {});
   }
+  refreshInboxBadge();
   updateDailyMenuCard();
   renderMenuPigmentosBar();
 
@@ -4336,32 +4396,44 @@ window.dailyCardClick = () => {
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
     show('daily-screen');
-    loadDailyInbox();
     return;
   }
   startDailyChallenge();
 };
 
-/* -------- caixa de entrada (prêmios do dia anterior) -------- */
-async function loadDailyInbox() {
+/* -------- caixa de entrada (comunicados do jogo) --------
+   Por enquanto só existe um tipo de mensagem (prêmio do desafio diário, salvo
+   em dailyInbox/{uid}/messages), mas o ícone/popup já são genéricos pra caber
+   qualquer aviso futuro do jogo, não só do desafio diário. */
+window.showInbox = async () => {
+  if (offline || !currentUser) return;
+  $('inbox-modal').style.display = 'flex';
+  await loadInbox();
+};
+window.closeInbox = () => {
+  $('inbox-modal').style.display = 'none';
+};
+async function loadInbox() {
   if (offline || !currentUser) return;
   try {
     const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
     const msgs = [];
     snap.forEach(d => msgs.push({ id: d.id, ...d.data() }));
     msgs.sort((a, b) => (b.dateStr || '').localeCompare(a.dateStr || ''));
-    renderDailyInboxList(msgs);
+    renderInboxList(msgs);
   } catch {
-    $('daily-inbox-card').style.display = 'none';
+    renderInboxList([]);
   }
 }
-function renderDailyInboxList(msgs) {
-  const card = $('daily-inbox-card');
-  const list = $('daily-inbox-list');
-  const allBtn = $('daily-claim-all-btn');
-  $('daily-inbox-status').textContent = '';
-  if (msgs.length === 0) { card.style.display = 'none'; list.innerHTML = ''; resetScroll('daily-screen'); return; }
-  card.style.display = '';
+function renderInboxList(msgs) {
+  const list = $('inbox-list');
+  const allBtn = $('inbox-claim-all-btn');
+  $('inbox-status').textContent = '';
+  if (msgs.length === 0) {
+    list.innerHTML = `<div class="muted" style="text-align:center;">${T[lang].inbox_empty}</div>`;
+    allBtn.style.display = 'none';
+    return;
+  }
   allBtn.style.display = msgs.length > 1 ? '' : 'none';
   list.innerHTML = '';
   msgs.forEach(msg => {
@@ -4394,18 +4466,32 @@ function renderDailyInboxList(msgs) {
     box.appendChild(claimRow);
     list.appendChild(box);
   });
-  resetScroll('daily-screen');
+}
+// bolinha de notificação no ícone 📬 do menu — mesma ideia da de pedido de
+// amizade pendente (menu-quick-friends-badge); conta quantas mensagens ainda
+// não foram resgatadas
+async function refreshInboxBadge() {
+  const btn = $('inbox-btn');
+  if (offline || !currentUser || !myData.nick) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  try {
+    const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
+    const badge = $('inbox-badge');
+    badge.textContent = snap.size;
+    badge.style.display = snap.size > 0 ? '' : 'none';
+  } catch {}
 }
 window.claimOneDailyReward = async (dateStr) => {
   try {
     const res = await callClaimDailyReward({ dateStr });
     const coins = (res.data && res.data.coins) || 0;
     if (coins > 0) myData.pigmentos = (myData.pigmentos || 0) + coins;
-    await loadDailyInbox();
+    await loadInbox();
+    refreshInboxBadge();
     updateDailyMenuCard();
     renderMenuPigmentosBar();
   } catch (e) {
-    $('daily-inbox-status').textContent = e.message || T[lang].daily_claim_error;
+    $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
 };
 window.claimAllDailyRewards = async () => {
@@ -4413,11 +4499,12 @@ window.claimAllDailyRewards = async () => {
     const res = await callClaimDailyReward({});
     const coins = (res.data && res.data.coins) || 0;
     if (coins > 0) myData.pigmentos = (myData.pigmentos || 0) + coins;
-    await loadDailyInbox();
+    await loadInbox();
+    refreshInboxBadge();
     updateDailyMenuCard();
     renderMenuPigmentosBar();
   } catch (e) {
-    $('daily-inbox-status').textContent = e.message || T[lang].daily_claim_error;
+    $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
   }
 };
 
@@ -4455,12 +4542,6 @@ async function updateDailyMenuCard() {
   $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
     ? T[lang].daily_card_already_played
     : T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
-  try {
-    const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
-    const badge = $('daily-card-inbox-badge');
-    if (snap.size > 0) { badge.textContent = T[lang].daily_inbox_badge(snap.size); badge.style.display = ''; }
-    else { badge.style.display = 'none'; }
-  } catch {}
 }
 
 /* -------- jogo do desafio (mesmo modo Clássico, RNG determinística) -------- */
@@ -4485,7 +4566,6 @@ window.startDailyChallenge = async () => {
     dailyPlaying = true;
     dailyTarget = seededPick(dailyRng, COLORS);
     $('daily-score').textContent = 0;
-    $('daily-inbox-card').style.display = 'none'; // some durante o jogo, volta a aparecer no resultado
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'none';
     $('daily-play').style.display = 'flex';
@@ -4500,7 +4580,6 @@ window.startDailyChallenge = async () => {
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
     show('daily-screen');
-    loadDailyInbox();
   }
 };
 
@@ -4599,7 +4678,7 @@ async function dailyGameOver(reason) {
     : T[lang].daily_attempts_used_msg;
   $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
 
-  loadDailyInbox(); // aproveita que a pessoa já está olhando a tela pra mostrar prêmios pendentes
+  refreshInboxBadge(); // atualiza a bolinha do 📬 caso esse resultado tenha desbloqueado algo pendente
 }
 
 window.dailyExitScreen = () => {
