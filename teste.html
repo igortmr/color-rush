@@ -1613,7 +1613,7 @@ const T = {
     verify_resent: '📧 E-mail reenviado!',
     verify_not_confirmed: 'Ainda não confirmado. Confira sua caixa de entrada e o spam.',
     offline_label: '👤 Jogando sem conta ›', entrar_label: 'entrar', sair_label: 'sair',
-    user_greeting: nick => `👤 ${nick} ›`,
+    user_greeting: nick => `${nick} ›`,
     instr_first_classic: name => `👉 Clique no quadrado ${name} (e memorize a palavra dentro dele!)`,
     instr_first_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a COR do quadrado!)`,
     instr_first_shapes: name => `👉 Clique na forma ${name} (e memorize a palavra escrita nela!)`,
@@ -1815,7 +1815,7 @@ const T = {
     verify_resent: '📧 Email resent!',
     verify_not_confirmed: 'Not confirmed yet. Check your inbox and spam folder.',
     offline_label: '👤 Playing without an account ›', entrar_label: 'log in', sair_label: 'log out',
-    user_greeting: nick => `👤 ${nick} ›`,
+    user_greeting: nick => `${nick} ›`,
     instr_first_classic: name => `👉 Click the ${name} square (and memorize the word inside it!)`,
     instr_first_reverse: name => `👉 Click where it says ${name} (and memorize the square's COLOR!)`,
     instr_first_shapes: name => `👉 Click the ${name} shape (and memorize the word written on it!)`,
@@ -2017,7 +2017,7 @@ const T = {
     verify_resent: '📧 ¡Correo reenviado!',
     verify_not_confirmed: 'Aún no confirmado. Revisa tu bandeja de entrada y el spam.',
     offline_label: '👤 Jugando sin cuenta ›', entrar_label: 'entrar', sair_label: 'salir',
-    user_greeting: nick => `👤 ${nick} ›`,
+    user_greeting: nick => `${nick} ›`,
     instr_first_classic: name => `👉 Haz clic en el cuadrado ${name} (¡y memoriza la palabra dentro de él!)`,
     instr_first_reverse: name => `👉 Haz clic donde está escrito ${name} (¡y memoriza el COLOR del cuadrado!)`,
     instr_first_shapes: name => `👉 Haz clic en la forma ${name} (¡y memoriza la palabra escrita en ella!)`,
@@ -2396,6 +2396,31 @@ function applyRowTheme(el, stats) {
   else if (theme === 'row_ocean') el.classList.add('row-theme-ocean');
   else if (theme === 'row_galaxy') el.classList.add('row-theme-galaxy');
 }
+// avatares da loja — desenhados em SVG (sem imagem externa), um ícone
+// circular por personagem. "glyph" é só o miolo do desenho, sempre
+// centralizado em (0,0); avatarSvg() monta o círculo + halo em volta.
+const AVATAR_SHAPES = {
+  avatar_robot: { color: '#2dd6ff', glyph: '<rect x="-26" y="-26" width="52" height="52" rx="10" fill="#2dd6ff"/><line x1="0" y1="-26" x2="0" y2="-38" stroke="#2dd6ff" stroke-width="3"/><circle cx="0" cy="-40" r="4" fill="#2dd6ff"/><rect x="-18" y="-8" width="36" height="16" rx="4" fill="#0a0e1e"/><circle cx="-9" cy="0" r="4" fill="#e8ecfa"/><circle cx="9" cy="0" r="4" fill="#e8ecfa"/>' },
+  avatar_ninja: { color: '#b14dff', glyph: '<circle r="30" fill="#b14dff"/><rect x="-30" y="-6" width="60" height="12" fill="#0a0e1e"/><ellipse cx="-11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><ellipse cx="11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><circle cx="-11" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="11" cy="0" r="2.5" fill="#0a0e1e"/>' },
+  avatar_ghost: { color: '#e8ecfa', glyph: '<path d="M -26 6 C -26 -22 26 -22 26 6 L 26 20 L 17 12 L 8 20 L 0 12 L -8 20 L -17 12 L -26 20 Z" fill="#e8ecfa"/><ellipse cx="-10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/><ellipse cx="10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/>' },
+  avatar_cat: { color: '#ff9f1c', glyph: '<polygon points="-26,-14 -14,-32 -4,-12" fill="#ff9f1c"/><polygon points="26,-14 14,-32 4,-12" fill="#ff9f1c"/><circle r="28" fill="#ff9f1c"/><ellipse cx="-9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><ellipse cx="9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><circle cx="-9" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="9" cy="0" r="2.5" fill="#0a0e1e"/><polygon points="-4,10 4,10 0,15" fill="#ff6b9d"/>' },
+  avatar_alien: { color: '#21e6a1', glyph: '<ellipse rx="26" ry="32" fill="#21e6a1"/><line x1="-10" y1="-30" x2="-16" y2="-42" stroke="#21e6a1" stroke-width="3"/><line x1="10" y1="-30" x2="16" y2="-42" stroke="#21e6a1" stroke-width="3"/><circle cx="-16" cy="-42" r="3.5" fill="#21e6a1"/><circle cx="16" cy="-42" r="3.5" fill="#21e6a1"/><ellipse cx="-10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/><ellipse cx="10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/>' },
+  avatar_flame: { color: '#ff2d6b', glyph: '<path d="M 0 -34 C 14 -18 24 0 14 18 C 20 8 16 -2 8 -6 C 12 6 4 20 -6 24 C -22 18 -22 0 -12 -12 C -16 -4 -12 6 -6 8 C -10 -6 -8 -22 0 -34 Z" fill="#ff2d6b"/><path d="M -8 -8 L -2 -14 L 4 -8" fill="none" stroke="#0a0e1e" stroke-width="2.5" stroke-linecap="round"/><circle cx="-6" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="0" r="2.5" fill="#0a0e1e"/>' },
+  avatar_crystal: { color: '#00d2d3', glyph: '<polygon points="-16,-28 16,-28 26,-4 0,30 -26,-4" fill="#00d2d3"/><line x1="-16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="-26" y1="-4" x2="26" y2="-4" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><circle cx="14" cy="-18" r="2.5" fill="#e8ecfa"/>' },
+  avatar_star: { color: '#ffe93c', glyph: '<polygon points="0,-30 7.5,-10.3 28.5,-9.3 12.1,3.9 17.7,24.3 0,12.7 -17.7,24.3 -12.1,3.9 -28.5,-9.3 -7.5,-10.3" fill="#ffe93c"/><circle cx="-6" cy="-2" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="-2" r="2.5" fill="#0a0e1e"/><path d="M -6 6 Q 0 11 6 6" fill="none" stroke="#0a0e1e" stroke-width="2" stroke-linecap="round"/>' },
+};
+function avatarSvg(id, size = 32) {
+  const a = AVATAR_SHAPES[id];
+  if (!a) return '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><circle cx="60" cy="60" r="56" fill="${a.color}" opacity="0.22"/><circle cx="60" cy="60" r="48" fill="#131a33" stroke="${a.color}" stroke-width="4"/><g transform="translate(60,60)">${a.glyph}</g></svg>`;
+}
+// devolve o avatar equipado (SVG, markup fixo/confiável) ou o emoji padrão de
+// "pessoa" se nada foi comprado/equipado ainda — mesmo raciocínio de
+// fallback gracioso dos outros cosméticos da loja (glow/tema já removidos,
+// frame/confetti seguem esse mesmo padrão)
+function avatarOrDefaultIcon(avatarId, size = 20) {
+  return avatarId && AVATAR_SHAPES[avatarId] ? avatarSvg(avatarId, size) : '👤';
+}
 // ícone dos Pigmentos (moeda do desafio diário) — uma gota com as cores do
 // jogo se misturando, pra remeter ao tema sem precisar de nenhum arquivo de
 // imagem externo. Markup fixo/confiável (sem dado de usuário), inserido só
@@ -2636,6 +2661,14 @@ const SHOP_ITEMS = [
   { id: 'row_fire',      slot: 'rowTheme',   price: 130, icon: '🔥', name: 'Linha: Fogo',                    desc: 'Fundo temático de fogo na sua linha do ranking.' },
   { id: 'row_ocean',     slot: 'rowTheme',   price: 130, icon: '🌊', name: 'Linha: Oceano',                  desc: 'Fundo temático de oceano na sua linha do ranking.' },
   { id: 'row_galaxy',    slot: 'rowTheme',   price: 130, icon: '🌌', name: 'Linha: Galáxia',                 desc: 'Fundo temático de galáxia na sua linha do ranking.' },
+  { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
+  { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
+  { id: 'avatar_ghost',   slot: 'avatar', price: 110, icon: '👻', name: 'Avatar: Fantasma', desc: 'Um fantasma pra representar você no perfil e no duelo.' },
+  { id: 'avatar_cat',     slot: 'avatar', price: 110, icon: '🐱', name: 'Avatar: Gato',     desc: 'Um gato pra representar você no perfil e no duelo.' },
+  { id: 'avatar_alien',   slot: 'avatar', price: 110, icon: '👽', name: 'Avatar: Alien',    desc: 'Um alien pra representar você no perfil e no duelo.' },
+  { id: 'avatar_flame',   slot: 'avatar', price: 110, icon: '🔥', name: 'Avatar: Chama',    desc: 'Uma chama pra representar você no perfil e no duelo.' },
+  { id: 'avatar_crystal', slot: 'avatar', price: 110, icon: '💎', name: 'Avatar: Cristal',  desc: 'Um cristal pra representar você no perfil e no duelo.' },
+  { id: 'avatar_star',    slot: 'avatar', price: 110, icon: '⭐', name: 'Avatar: Estrela',  desc: 'Uma estrela pra representar você no perfil e no duelo.' },
 ];
 const SHOP_ITEMS_BY_ID = Object.fromEntries(SHOP_ITEMS.map(it => [it.id, it]));
 const SHOP_SLOTS = [
@@ -2643,13 +2676,15 @@ const SHOP_SLOTS = [
   { slot: 'frame',      label: '🖼️ Moldura do Nick' },
   { slot: 'confetti',   label: '🎊 Confete de Recorde' },
   { slot: 'rowTheme',   label: '📊 Linha do Ranking' },
+  { slot: 'avatar',     label: '🧑 Avatar' },
 ];
-let equippedSfx = null, equippedFrame = null, equippedConfetti = null;
+let equippedSfx = null, equippedFrame = null, equippedConfetti = null, equippedAvatar = null;
 function applyEquippedCosmetics() {
   const eq = (myData && myData.equipped) || {};
   equippedSfx = eq.sfxCorrect || null;
   equippedFrame = eq.frame || null;
   equippedConfetti = eq.confetti || null;
+  equippedAvatar = eq.avatar || null;
 }
 
 let currentUser = null;          // usuário do firebase ou null
@@ -3141,7 +3176,12 @@ window.showMenu = () => {
     $('user-label').textContent = T[lang].offline_label;
     $('menu-logout-btn').textContent = T[lang].entrar_label;
   } else {
-    $('user-label').textContent = T[lang].user_greeting(myData.nick || '');
+    // avatar (markup fixo/confiável) vai por innerHTML; o nick sempre por
+    // textContent/createTextNode (pode ter qualquer caractere não-espaço)
+    const labelEl = $('user-label');
+    labelEl.innerHTML = '';
+    labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 18) + ' ');
+    labelEl.appendChild(document.createTextNode(T[lang].user_greeting(myData.nick || '')));
     $('menu-logout-btn').textContent = T[lang].sair_label;
   }
   show('menu-screen');
@@ -4057,6 +4097,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
 
   // nick sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção
   $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick').insertAdjacentHTML('afterbegin', avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 24) + ' ');
   $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(isOther ? (stats.xp || 0) : myXp()));
   applyNickFrame($('profile-nick'), stats);
 
@@ -4962,6 +5003,9 @@ function shopItemPreview(item) {
     tbody.appendChild(tr);
     mini.appendChild(tbody);
     wrap.appendChild(mini);
+  } else if (item.slot === 'avatar') {
+    // sempre visível (não precisa clicar em nada pra "testar" um desenho fixo)
+    wrap.innerHTML = avatarSvg(item.id, 40);
   }
   return wrap;
 }
@@ -5055,35 +5099,46 @@ let pvpClockOffsetMs = 0;     // diferença entre o relógio do navegador e o do
 let pvpCountdownAnimFrame = null; // rAF da contagem "3, 2, 1" antes do duelo começar
 let pvpCountdownLastNum = null;   // último número (3, 2 ou 1) que já tocamos o beep, pra não repetir
 let pvpResultSoundPlayed = false; // evita tocar o som de vitória/derrota/empate mais de uma vez pra mesma partida
-let pvpOppXpCache = {}; // uid do adversário -> xp já buscado (pra mostrar o level dele na tela de duelo)
+let pvpOppXpCache = {};       // uid do adversário -> xp já buscado (pra mostrar o level dele na tela de duelo)
+let pvpOppEquippedCache = {}; // uid do adversário -> equipped já buscado (pra mostrar o avatar dele na tela de duelo) — vem do MESMO getDoc de cima, sem leitura extra
 
-// busca o XP do adversário em scores/{uid} (público) só uma vez por uid, e
-// reaproveita entre partidas/reaberturas da tela. Enquanto ainda não chegou,
-// devolve undefined (o chip de nível some até a busca terminar).
+// busca o XP (e o equipped, pro avatar) do adversário em scores/{uid}
+// (público) só uma vez por uid, e reaproveita entre partidas/reaberturas da
+// tela. Enquanto ainda não chegou, devolve undefined (o chip de nível some
+// até a busca terminar).
 function getPvpOppXp(uid) {
   const cached = pvpOppXpCache[uid];
   if (cached === undefined) ensurePvpOppXp(uid);
   return cached === null ? undefined : cached;
 }
+function getPvpOppEquipped(uid) {
+  return pvpOppEquippedCache[uid] || {};
+}
 async function ensurePvpOppXp(uid) {
   if (uid in pvpOppXpCache) return; // já tem (ou já está buscando)
   pvpOppXpCache[uid] = null; // marca como "buscando" pra não disparar duas buscas
   let xp = 0;
+  let equipped = {};
   try {
     const snap = await getDoc(doc(db, 'scores', uid));
     xp = (snap.exists() && snap.data().xp) || 0;
+    equipped = (snap.exists() && snap.data().equipped) || {};
   } catch {}
   pvpOppXpCache[uid] = xp;
+  pvpOppEquippedCache[uid] = equipped;
   // agora que já temos o nível, atualiza a tela de duelo se ainda for a
   // mesma partida aberta
   const cur = pvpMatchesById[pvpCurrentMatchId];
   if (cur) renderPvpScreen(cur);
 }
 
-// nick do participante + chip de nível ao lado — nick sempre via textContent
-// (nunca innerHTML, pode ter qualquer caractere), chip é HTML fixo/confiável
-function setPvpNameWithLevel(el, labelText, xp) {
-  el.textContent = labelText;
+// nick do participante + avatar e chip de nível ao lado — nick sempre via
+// textContent/createTextNode (nunca interpolado em innerHTML, pode ter
+// qualquer caractere), avatar e chip são HTML fixo/confiável
+function setPvpNameWithLevel(el, labelText, xp, avatarId) {
+  el.innerHTML = '';
+  el.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(avatarId, 18) + ' ');
+  el.appendChild(document.createTextNode(labelText));
   if (xp !== undefined) el.insertAdjacentHTML('beforeend', ' ' + lvChip(xp));
 }
 
@@ -5268,8 +5323,8 @@ function renderPvpScreen(m) {
   if (m.status === 'active') {
     stopPvpCountdownTicker();
     $('pvp-active').style.display = 'flex';
-    setPvpNameWithLevel($('pvp-my-name'), T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp());
-    setPvpNameWithLevel($('pvp-opp-name'), (m.nicks && m.nicks[oppUid]) || '', getPvpOppXp(oppUid));
+    setPvpNameWithLevel($('pvp-my-name'), T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp(), equippedAvatar);
+    setPvpNameWithLevel($('pvp-opp-name'), (m.nicks && m.nicks[oppUid]) || '', getPvpOppXp(oppUid), getPvpOppEquipped(oppUid).avatar);
     $('pvp-turn-label').textContent = (m.turnUid === myUid) ? T[lang].pvp_your_turn : T[lang].pvp_opp_turn((m.nicks && m.nicks[oppUid]) || '');
     checkPvpBonusToast(m);
     renderPvpBoard(m, myUid);
