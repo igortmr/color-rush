@@ -400,26 +400,6 @@
   }
   .daily-badge-time { font-size: 1.3em; } /* só os números um pouco maiores que o "Termina em:" */
 
-  /* saldo de Pigmentos no menu — clicável, abre a loja */
-  .pigmentos-bar {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 9px 14px;
-    background: #0a0e1e;
-    border: 1px solid rgba(255,233,60,0.35);
-    border-radius: 12px;
-    color: var(--neon-yellow);
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 800;
-    font-size: 0.95rem;
-    cursor: pointer;
-    box-shadow: none;
-  }
-  .pigmentos-bar:hover { border-color: var(--neon-yellow); box-shadow: 0 0 10px rgba(255,233,60,0.35); transform: none; }
-
   /* linhas de item da loja */
   .shop-item-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
   .shop-item-row:first-child { border-top: none; }
@@ -1167,9 +1147,6 @@
     <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/100</span></div>
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
-  <button class="pigmentos-bar" id="menu-pigmentos-bar" onclick="showShop()" style="display:none;">
-    <span id="menu-pigmentos-icon"></span> <span id="menu-pigmentos-num">0</span> <span class="muted" style="font-size:0.75rem;">Pigmentos — ver loja</span>
-  </button>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
     <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
     <h2 data-i18n="tab_daily">🗓️ Desafio Diário</h2>
@@ -4944,20 +4921,12 @@ window.dailyExitScreen = () => {
    (myData.pigmentos/ownedItems/equipped) e atualiza otimisticamente depois
    de cada resposta bem-sucedida. */
 
-// saldo de Pigmentos + botão da loja no menu — só aparece pra quem tem conta
+// botão "🛍️ LOJA" do menu — a loja ainda tá em teste, então o botão fica
+// oculto pra todo mundo, menos pra quem loga como admin
 function renderMenuPigmentosBar() {
-  const bar = $('menu-pigmentos-bar');
   const shopBtn = $('menu-quick-shop-btn');
-  if (!bar || !shopBtn) return;
-  if (offline || !currentUser || !myData.nick) {
-    bar.style.display = 'none';
-    shopBtn.style.display = 'none';
-    return;
-  }
-  bar.style.display = '';
-  shopBtn.style.display = '';
-  $('menu-pigmentos-icon').innerHTML = pigmentIconSvg(18);
-  $('menu-pigmentos-num').textContent = myData.pigmentos || 0;
+  if (!shopBtn) return;
+  shopBtn.style.display = (!offline && currentUser && myData.nick && myData.admin === true) ? '' : 'none';
 }
 // saldo de Pigmentos no topo da tela, entre o nick e a caixa de entrada — só
 // o número + ícone colorido, sem texto/link (o acesso à loja continua sendo
