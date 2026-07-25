@@ -4161,6 +4161,13 @@ window.loadRanking = async (m) => {
     return;
   }
 
+  // saindo do desafio diário — "ranking-table-card" é compartilhado com o
+  // daily-today, e "daily-alltime-card" (Salão da Fama) só é escondido no
+  // ramo acima; sem isso, sair do Salão da Fama pra outro ranking deixa a
+  // lista escondida mesmo com os dados carregados certinho
+  $('ranking-table-card').style.display = '';
+  $('daily-alltime-card').style.display = 'none';
+
   $('scope-geral-btn').classList.toggle('active', rankingScope === 'geral');
   $('scope-amigos-btn').classList.toggle('active', rankingScope === 'amigos');
   $('ranking-explain').textContent = (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
