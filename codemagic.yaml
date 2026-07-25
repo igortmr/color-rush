@@ -176,6 +176,14 @@ workflows:
       - name: Configurar assinatura de código
         script: |
           xcode-project use-profiles
+      - name: Incrementar número da build (evita duplicidade no App Store Connect)
+        script: |
+          # o projeto iOS nasce do zero a cada build (rm -rf ios), sempre com
+          # o número "1" — e a Apple recusa reenviar um número já usado pra
+          # mesma versão. $BUILD_NUMBER é uma variável própria do Codemagic
+          # que já vem incrementando sozinha a cada build deste app.
+          cd app/ios/App
+          agvtool new-version -all $BUILD_NUMBER
       - name: Build do .ipa
         script: |
           xcode-project build-ipa \
