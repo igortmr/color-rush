@@ -50,9 +50,20 @@ workflows:
           EOF
       - name: Adicionar/atualizar a plataforma iOS (Capacitor)
         script: |
+          # "set -e" pra qualquer falha aqui parar o build na hora, em vez de
+          # deixar passar batido e só quebrar de forma confusa lá na frente
+          # (foi o que aconteceu: o Podfile não existia porque essa etapa
+          # tinha "passado" rápido demais sem realmente ter dado certo).
+          # Também apaga qualquer pasta ios/ velha antes, pra nunca reusar
+          # restos de uma tentativa anterior.
+          set -e
           cd app
-          test -d ios || npx cap add ios
+          rm -rf ios
+          npx cap add ios
           npx cap sync ios
+          echo "--- conteúdo de ios/App (conferência) ---"
+          ls -la ios/App
+          test -f ios/App/Podfile || (echo "ERRO: Podfile não foi gerado pelo cap add ios" && exit 1)
       - name: Declarar isenção de criptografia (evita a pergunta manual a cada envio)
         script: |
           # o app só usa HTTPS/TLS padrão do sistema (Firebase) — isso é
