@@ -2573,6 +2573,11 @@ function dailyLaunchAtMs() {
   return Date.UTC(y, m - 1, d, 3, 0, 0, 0); // meia-noite de Brasília desse dia
 }
 function isDailyChallengeLive() { return dailyLocalDateStr() >= DAILY_CHALLENGE_LAUNCH_DATE; }
+// nível mínimo pra jogar o desafio — quem está no nível 1 vê o mesmo
+// tratamento de "ainda bloqueado" (só título + cronômetro) usado antes da
+// estreia, até subir pro nível 2
+const DAILY_MIN_LEVEL = 2;
+function dailyLevelUnlocked() { return myData.admin === true || levelFromXp(myXp()) >= DAILY_MIN_LEVEL; }
 let dailyRng = null;          // gerador determinístico da rodada de hoje
 let dailyPlaying = false;
 let dailyScore = 0;
@@ -4462,7 +4467,7 @@ startDailyCardTicker();
 // (sem tela intermediária); se já usou as 3, manda pra caixa de entrada/
 // ranking do desafio, que é a informação útil nesse caso
 window.dailyCardClick = () => {
-  if (!isDailyChallengeLive()) return;
+  if (!isDailyChallengeLive() || !dailyLevelUnlocked()) return;
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
     $('daily-blocked-msg').textContent = T[lang].daily_blocked_msg;
@@ -4605,9 +4610,9 @@ async function updateDailyMenuCard() {
   card.style.display = '';
   renderDailyCardCountdown(); // atualiza o rótulo (Inicia em/Termina em) na hora, sem esperar o próximo tique
 
-  // antes da estreia: só título + cronômetro, sem descrição nem dados —
-  // deixa a curiosidade no ar em vez de mostrar tudo
-  if (!isDailyChallengeLive()) {
+  // antes da estreia (ou pra quem ainda tá no nível 1): só título + cronômetro,
+  // sem descrição nem dados — deixa a curiosidade no ar em vez de mostrar tudo
+  if (!isDailyChallengeLive() || !dailyLevelUnlocked()) {
     card.classList.add('coming-soon');
     $('daily-card-desc').style.display = 'none';
     $('daily-card-footer').style.display = 'none';
