@@ -611,6 +611,19 @@
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
   .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
   .badge-chip.locked { opacity: 0.45; filter: grayscale(0.6); box-shadow: none; }
+  /* bolinha de "medalha nova, ainda não vista" — usada no nick da tela
+     principal (aviso de que tem algo novo pra conferir) e no ícone grande do
+     card da medalha no perfil (qual categoria tem a novidade) */
+  .notif-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--neon-red);
+    box-shadow: 0 0 6px var(--neon-red), 0 0 0 2px #0a0e1e;
+  }
   .class-pill {
     display: inline-flex;
     align-items: center;
@@ -1097,7 +1110,10 @@
     </button>
   </div>
   <div class="user-bar">
-    <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
+    <span style="position:relative; display:inline-block;">
+      <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
+      <span class="notif-dot" id="user-label-badge" style="display:none;"></span>
+    </span>
     <span class="user-pigmentos" id="user-pigmentos-bar" style="display:none; align-items:center; gap:3px; font-weight:700;">
       <span id="user-pigmentos-num">0</span><span id="user-pigmentos-icon"></span>
     </span>
@@ -2462,6 +2478,39 @@ function unlockedTier(def, stats) {
   }
   return tier;
 }
+// aviso de "medalha nova, ainda não vista" — como as medalhas não aparecem
+// mais sozinhas no ranking (a pessoa precisa ir no perfil e equipar se
+// quiser), essa bolinha avisa que tem uma categoria com nível desbloqueado
+// que ainda não foi conferido. Guardado só no navegador (localStorage), sem
+// precisar de servidor — é puramente uma marcação de "já olhei". Como o
+// registro começa vazio pra todo mundo, quem já tinha medalha desbloqueada
+// antes dessa funcionalidade existir também recebe o aviso na primeira vez.
+function getBadgesSeen() {
+  try { return JSON.parse(localStorage.getItem('colorRushBadgesSeen') || '{}'); } catch { return {}; }
+}
+function hasNewBadgeFor(key) {
+  if (offline || !currentUser || !myData.nick) return false;
+  const tier = unlockedTier(BADGE_DEFS[key], myData);
+  if (tier < 0) return false;
+  const seen = getBadgesSeen();
+  return tier > (seen[key] != null ? seen[key] : -1);
+}
+function hasAnyNewBadge() {
+  return BADGE_ORDER.some(hasNewBadgeFor);
+}
+// chamada depois que a pessoa vê o próprio perfil (onde todas as categorias
+// aparecem) — marca o nível atual de cada uma como "visto", até a próxima
+// vez que desbloquear algo novo
+function markAllBadgesSeen() {
+  const seen = getBadgesSeen();
+  BADGE_ORDER.forEach(key => { seen[key] = unlockedTier(BADGE_DEFS[key], myData); });
+  try { localStorage.setItem('colorRushBadgesSeen', JSON.stringify(seen)); } catch {}
+}
+function refreshBadgeNotifDot() {
+  const dot = $('user-label-badge');
+  if (!dot) return;
+  dot.style.display = hasAnyNewBadge() ? '' : 'none';
+}
 // pill com ícone + nome da ÚNICA medalha escolhida pra aparecer ao lado do
 // nick no ranking (ver toggleEquippedBadge, no perfil próprio). Sem escolha
 // feita ainda, não mostra nada — só passa a exibir depois que a própria
@@ -2995,6 +3044,7 @@ window.showMenu = () => {
   refreshInboxBadge();
   updateDailyMenuCard();
   renderUserPigmentos();
+  refreshBadgeNotifDot();
 
   // bloqueio dos modos por nível
   for (const [m, minLv] of Object.entries(MODE_UNLOCK)) {
@@ -3964,6 +4014,11 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
   $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(key, BADGE_DEFS[key], stats)).join('');
   resetScroll('profile-screen');
+  // agora que a pessoa viu o próprio perfil (com todas as categorias e a
+  // bolinha mostrando qual tinha novidade), marca tudo como visto — some a
+  // bolinha do nick até desbloquear algo novo de novo
+  markAllBadgesSeen();
+  refreshBadgeNotifDot();
 }
 
 function renderBadgeCard(key, def, stats) {
@@ -3972,6 +4027,7 @@ function renderBadgeCard(key, def, stats) {
   const maxed = tier === def.tiers.length - 1;
   const color = tier >= 0 ? TIER_COLORS[tier] : '#0f3460';
   const currentName = tier >= 0 ? def.names[lang][tier] : T[lang].badge_not_unlocked;
+  const isNew = hasNewBadgeFor(key); // categoria com nível desbloqueado ainda não visto
 
   let progressHtml;
   if (maxed) {
@@ -4009,7 +4065,7 @@ function renderBadgeCard(key, def, stats) {
   return `
     <div class="card badge-card">
       <div class="badge-card-head">
-        <span class="badge-chip big" style="background:${color}">${def.icon}</span>
+        <span class="badge-chip big" style="background:${color}; position:relative;">${def.icon}${isNew ? '<span class="notif-dot"></span>' : ''}</span>
         <div>
           <div class="name">${def.label[lang]}</div>
           <div class="muted" style="text-align:left;">${currentName}</div>
