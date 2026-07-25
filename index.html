@@ -4269,7 +4269,13 @@ window.toggleEquippedBadge = async (key) => {
   // automático); clicar em outra troca na hora, sem precisar desmarcar antes
   const next = (myData.equippedBadge === key) ? null : key;
   myData.equippedBadge = next;
+  // renderProfile() sempre chama resetScroll('profile-screen') no final, que
+  // joga a página pro topo — é o certo ao ENTRAR na tela, mas aqui a pessoa já
+  // está nela só trocando a medalha, então guarda a posição e restaura logo
+  // depois, pra não pular a tela pra cima.
+  const scrollY = window.scrollY;
   renderProfile(); // atualiza o botão na hora, antes mesmo do Firestore confirmar
+  window.scrollTo(0, scrollY);
   try {
     await setDoc(doc(db, 'scores', currentUser.uid), { equippedBadge: next, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {
