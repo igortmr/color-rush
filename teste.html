@@ -1360,11 +1360,11 @@
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
       <colgroup><col style="width:32px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
-      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
+      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n-html="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
       <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
-  <div class="muted" id="daily-prizes-legend" data-i18n="daily_prizes_legend" style="display:none; font-size:0.8rem; text-align:center; margin-top:6px;"></div>
+  <div class="muted" id="daily-prizes-legend" style="display:none; font-size:0.8rem; text-align:center; margin-top:6px;"></div>
   <div class="pagination" id="ranking-pagination"></div>
 </div>
 
@@ -1589,7 +1589,7 @@ const T = {
     verify_resent: '📧 E-mail reenviado!',
     verify_not_confirmed: 'Ainda não confirmado. Confira sua caixa de entrada e o spam.',
     offline_label: '👤 Jogando sem conta ›', entrar_label: 'entrar', sair_label: 'sair',
-    user_greeting: nick => `👤 ${nick} 🎖️ ›`,
+    user_greeting: nick => `👤 ${nick} ›`,
     instr_first_classic: name => `👉 Clique no quadrado ${name} (e memorize a palavra dentro dele!)`,
     instr_first_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a COR do quadrado!)`,
     instr_first_shapes: name => `👉 Clique na forma ${name} (e memorize a palavra escrita nela!)`,
@@ -1664,7 +1664,7 @@ const T = {
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
     tab_daily: '🗓️ Desafio Diário',
-    daily_card_desc: 'O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo em breve.',
+    daily_card_desc: 'O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDesc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDesc)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que poderão ser usados na loja do jogo em breve.',
     daily_ends_in: 'Termina em: ',
     daily_starts_in: 'Inicia em: ',
     daily_card_best: n => `🎯 Melhor: ${n}`,
@@ -1695,9 +1695,18 @@ const T = {
     daily_subtab_today: '📅 Hoje',
     daily_subtab_alltime: '🏆 Salão da Fama',
     daily_col_wins: 'Vitórias',
-    daily_col_pigmentos: '💧 Pigmentos',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeader" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeader)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos',
     daily_rank_explain: 'Ranking do desafio de hoje — sua melhor pontuação entre as até 3 tentativas.',
-    daily_prizes_legend: '🏆 Premiação (creditada em Pigmentos no dia seguinte): 1º lugar → 500 · 2º-3º → 300 · 4º-10º → 150 · 11º-50º → 60 · demais participantes → 10',
+    daily_prizes_legend: {
+      title: '🏆 Premiação (creditada em Pigmentos no dia seguinte)',
+      rows: [
+        { label: '🥇 1º lugar', amount: 500 },
+        { label: '🥈🥉 2º–3º lugar', amount: 300 },
+        { label: '4º–10º lugar', amount: 150 },
+        { label: '11º–50º lugar', amount: 60 },
+        { label: 'Demais participantes', amount: 10 },
+      ],
+    },
     daily_no_today_players: 'Ninguém jogou o desafio de hoje ainda.',
     daily_no_wins_yet: 'Ninguém venceu um desafio diário ainda.',
     points_header_divulgador: 'Convites',
@@ -1782,7 +1791,7 @@ const T = {
     verify_resent: '📧 Email resent!',
     verify_not_confirmed: 'Not confirmed yet. Check your inbox and spam folder.',
     offline_label: '👤 Playing without an account ›', entrar_label: 'log in', sair_label: 'log out',
-    user_greeting: nick => `👤 ${nick} 🎖️ ›`,
+    user_greeting: nick => `👤 ${nick} ›`,
     instr_first_classic: name => `👉 Click the ${name} square (and memorize the word inside it!)`,
     instr_first_reverse: name => `👉 Click where it says ${name} (and memorize the square's COLOR!)`,
     instr_first_shapes: name => `👉 Click the ${name} shape (and memorize the word written on it!)`,
@@ -1857,7 +1866,7 @@ const T = {
     level_explain: '🆙 Ranked by total experience (XP).',
     divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
     tab_daily: '🗓️ Daily Challenge',
-    daily_card_desc: 'The same challenge for everyone, every day! You get <b>3 attempts</b> to get the highest score. Top scorers earn <span class="pigment-word">💧 Pigments</span>, which will be usable in the game shop, coming soon.',
+    daily_card_desc: 'The same challenge for everyone, every day! You get <b>3 attempts</b> to get the highest score. Top scorers earn <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigments</span>, which will be usable in the game shop, coming soon.',
     daily_ends_in: 'Ends in: ',
     daily_starts_in: 'Starts in: ',
     daily_card_best: n => `🎯 Best: ${n}`,
@@ -1888,9 +1897,18 @@ const T = {
     daily_subtab_today: '📅 Today',
     daily_subtab_alltime: '🏆 Hall of Fame',
     daily_col_wins: 'Wins',
-    daily_col_pigmentos: '💧 Pigments',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigments',
     daily_rank_explain: "Today's challenge ranking — your best score across up to 3 attempts.",
-    daily_prizes_legend: '🏆 Prizes (credited as Pigments the next day): 1st place → 500 · 2nd-3rd → 300 · 4th-10th → 150 · 11th-50th → 60 · other participants → 10',
+    daily_prizes_legend: {
+      title: '🏆 Prizes (credited as Pigments the next day)',
+      rows: [
+        { label: '🥇 1st place', amount: 500 },
+        { label: '🥈🥉 2nd–3rd place', amount: 300 },
+        { label: '4th–10th place', amount: 150 },
+        { label: '11th–50th place', amount: 60 },
+        { label: 'Other participants', amount: 10 },
+      ],
+    },
     daily_no_today_players: "No one has played today's challenge yet.",
     daily_no_wins_yet: 'No one has won a daily challenge yet.',
     points_header_divulgador: 'Invites',
@@ -1975,7 +1993,7 @@ const T = {
     verify_resent: '📧 ¡Correo reenviado!',
     verify_not_confirmed: 'Aún no confirmado. Revisa tu bandeja de entrada y el spam.',
     offline_label: '👤 Jugando sin cuenta ›', entrar_label: 'entrar', sair_label: 'salir',
-    user_greeting: nick => `👤 ${nick} 🎖️ ›`,
+    user_greeting: nick => `👤 ${nick} ›`,
     instr_first_classic: name => `👉 Haz clic en el cuadrado ${name} (¡y memoriza la palabra dentro de él!)`,
     instr_first_reverse: name => `👉 Haz clic donde está escrito ${name} (¡y memoriza el COLOR del cuadrado!)`,
     instr_first_shapes: name => `👉 Haz clic en la forma ${name} (¡y memoriza la palabra escrita en ella!)`,
@@ -2050,7 +2068,7 @@ const T = {
     level_explain: '🆙 Ranking por experiencia (XP) acumulada.',
     divulgador_explain: '📣 Quién invitó a más amigos mediante tu enlace de invitación.',
     tab_daily: '🗓️ Desafío Diario',
-    daily_card_desc: '¡El mismo desafío para todos, todos los días! Tienes <b>3 intentos</b> para conseguir la mayor puntuación. Los mejores clasificados ganan <span class="pigment-word">💧 Pigmentos</span>, que podrán usarse en la tienda del juego, próximamente.',
+    daily_card_desc: '¡El mismo desafío para todos, todos los días! Tienes <b>3 intentos</b> para conseguir la mayor puntuación. Los mejores clasificados ganan <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que podrán usarse en la tienda del juego, próximamente.',
     daily_ends_in: 'Termina en: ',
     daily_starts_in: 'Inicia en: ',
     daily_card_best: n => `🎯 Mejor: ${n}`,
@@ -2081,9 +2099,18 @@ const T = {
     daily_subtab_today: '📅 Hoy',
     daily_subtab_alltime: '🏆 Salón de la Fama',
     daily_col_wins: 'Victorias',
-    daily_col_pigmentos: '💧 Pigmentos',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos',
     daily_rank_explain: 'Ranking del desafío de hoy — tu mejor puntuación entre los hasta 3 intentos.',
-    daily_prizes_legend: '🏆 Premios (acreditados en Pigmentos al día siguiente): 1º lugar → 500 · 2º-3º → 300 · 4º-10º → 150 · 11º-50º → 60 · demás participantes → 10',
+    daily_prizes_legend: {
+      title: '🏆 Premios (acreditados en Pigmentos al día siguiente)',
+      rows: [
+        { label: '🥇 1º lugar', amount: 500 },
+        { label: '🥈🥉 2º–3º lugar', amount: 300 },
+        { label: '4º–10º lugar', amount: 150 },
+        { label: '11º–50º lugar', amount: 60 },
+        { label: 'Demás participantes', amount: 10 },
+      ],
+    },
     daily_no_today_players: 'Nadie ha jugado el desafío de hoy todavía.',
     daily_no_wins_yet: 'Nadie ha ganado un desafío diario todavía.',
     points_header_divulgador: 'Invitaciones',
@@ -2359,6 +2386,19 @@ function pigmentIconSvg(size = 18) {
     <path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#${gradId})" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
     <ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/>
   </svg>`;
+}
+// legenda de premiação do ranking diário — uma linha por faixa, com o ícone
+// colorido de Pigmentos (igual ao resto do jogo) do lado do valor
+function renderDailyPrizesLegend() {
+  const el = $('daily-prizes-legend');
+  if (!el) return;
+  const cfg = T[lang].daily_prizes_legend;
+  const rows = cfg.rows.map(r => `
+    <div style="display:flex; justify-content:space-between; align-items:center; max-width:220px; margin:2px auto;">
+      <span>${r.label}</span>
+      <span style="display:inline-flex; align-items:center; gap:3px; font-weight:700;">${r.amount} ${pigmentIconSvg(14)}</span>
+    </div>`).join('');
+  el.innerHTML = `<div style="margin-bottom:4px;">${cfg.title}</div>${rows}`;
 }
 function modeLabel(m) {
   return m === 'classic' ? T[lang].mode_name_classic
@@ -4077,6 +4117,7 @@ window.loadRanking = async (m) => {
   $('scope-tabs-row').style.display = (m === 'daily') ? 'none' : '';
   $('daily-prizes-legend').style.display = (m === 'daily') ? '' : 'none';
   if (m === 'daily') {
+    renderDailyPrizesLegend();
     $('ranking-pagination').innerHTML = '';
     $('ranking-explain').textContent = T[lang].daily_rank_explain;
     dailyRankSubtab = 'today';
