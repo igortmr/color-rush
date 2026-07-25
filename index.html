@@ -1438,7 +1438,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
-  serverTimestamp, writeBatch, where, onSnapshot
+  serverTimestamp, writeBatch, where, onSnapshot, Timestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import {
   getFunctions, httpsCallable
@@ -3295,7 +3295,14 @@ async function persistGameResult(xpEarned = 0) {
     myData[PLAYED_FIELD[mode]] = true;
     if (d.isNewRecord) {
       myData[mode] = score;
-      if (d.total !== undefined) myData.total = d.total;
+      // servidor grava [mode]+"At" com serverTimestamp() (ver submitGameResult em
+      // functions/index.js), mas o valor resolvido não volta na resposta — sem
+      // atualizar isso aqui, o ranking de prévia (mini-ranking do fim de jogo)
+      // ordenava o empate usando o carimbo do recorde ANTERIOR (ou nenhum),
+      // não o de agora, e o critério "quem fez primeiro" saía errado bem na
+      // hora que mais importa: logo após bater um recorde novo
+      myData[mode + 'At'] = Timestamp.now();
+      if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); } // mesmo motivo, pro ranking "Geral" (soma dos recordes)
       $('sync-status').textContent = T[lang].sync_success;
     }
   } catch (e) {
@@ -4122,7 +4129,8 @@ async function submitPendingScore() {
     if (d.xpEarned) myData.xp = (myData.xp || 0) + d.xpEarned;
     if (d.isNewRecord) {
       myData[m] = s;
-      if (d.total !== undefined) myData.total = d.total;
+      myData[m + 'At'] = Timestamp.now(); // mesmo motivo do persistGameResult() acima
+      if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); }
     }
   } catch {}
 }
@@ -4327,6 +4335,7 @@ function renderDailyTodayPage() {
     applyNickFrame(nickSpan, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
+    nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
     body.appendChild(tr);
   });
   if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
@@ -4384,6 +4393,7 @@ function renderDailyAlltimePage() {
     applyNickFrame(nickSpan, r.stats);
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
+    nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
     body.appendChild(tr);
   });
   if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].daily_no_wins_yet}</td></tr>`;
