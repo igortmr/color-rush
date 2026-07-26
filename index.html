@@ -830,28 +830,6 @@
     box-shadow: none;
   }
   .tut-link-btn:hover { background: rgba(45,214,255,0.18); box-shadow: none; transform: none; }
-  /* atalho pro ranking daquele modo específico, direto do card — canto
-     superior direito, igual ao lugar do cronômetro do card do desafio
-     diário (.daily-badge-today), só que aqui é um botão clicável mesmo */
-  .mode-rank-btn {
-    position: absolute;
-    top: 14px;
-    right: 16px;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #060a16;
-    border: 1px solid rgba(255,233,60,0.4);
-    color: var(--neon-yellow);
-    border-radius: 10px;
-    font-size: 1rem;
-    cursor: pointer;
-    box-shadow: none;
-    padding: 0;
-  }
-  .mode-rank-btn:hover { border-color: var(--neon-yellow); box-shadow: 0 0 10px rgba(255,233,60,0.4); transform: none; }
   #tutorial-screen .card { padding: 18px; gap: 14px; }
   .tut-header { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-shrink: 0; }
   .tut-header h2 { font-family: 'Orbitron', sans-serif; font-size: clamp(0.78rem, 3.4vw, 0.92rem); letter-spacing: 0.3px; color: #cfd8ff; white-space: nowrap; }
@@ -1218,40 +1196,36 @@
     <span class="record-badge lock-badge" id="lock-daily" style="display:none;"></span>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
-    <button class="mode-rank-btn" onclick="event.stopPropagation(); showRanking('classic');" title="Ver ranking do modo Clássico" aria-label="Ver ranking do modo Clássico">📊</button>
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
     <div class="mode-card-footer">
-      <span class="record-badge"><span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
+      <span class="record-badge" onclick="event.stopPropagation(); showRanking('classic');" style="cursor:pointer;" title="Ver ranking do modo Clássico"><span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('classic');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
   </div>
   <div class="mode-card" id="card-reverse" onclick="startGame('reverse')">
-    <button class="mode-rank-btn" onclick="event.stopPropagation(); showRanking('reverse');" title="Ver ranking do modo Reverso" aria-label="Ver ranking do modo Reverso">📊</button>
     <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
     <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
     <div class="mode-card-footer">
-      <span class="record-badge"><span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+      <span class="record-badge" onclick="event.stopPropagation(); showRanking('reverse');" style="cursor:pointer;" title="Ver ranking do modo Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('reverse');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-reverse" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
-    <button class="mode-rank-btn" onclick="event.stopPropagation(); showRanking('shapes');" title="Ver ranking do modo Formas" aria-label="Ver ranking do modo Formas">📊</button>
     <h2 data-i18n="mode_shapes_title">🔶 Formas</h2>
     <p data-i18n-html="mode_shapes_desc">Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.</p>
     <div class="mode-card-footer">
-      <span class="record-badge"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+      <span class="record-badge" onclick="event.stopPropagation(); showRanking('shapes');" style="cursor:pointer;" title="Ver ranking do modo Formas"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-shapes" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-shapes-reverse" onclick="startGame('shapes-reverse')">
-    <button class="mode-rank-btn" onclick="event.stopPropagation(); showRanking('shapes-reverse');" title="Ver ranking do modo Formas Reverso" aria-label="Ver ranking do modo Formas Reverso">📊</button>
     <h2 data-i18n-html="mode_shapes_reverse_title"><span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso</h2>
     <p data-i18n-html="mode_shapes_reverse_desc">Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.</p>
     <div class="mode-card-footer">
-      <span class="record-badge"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
+      <span class="record-badge" onclick="event.stopPropagation(); showRanking('shapes-reverse');" style="cursor:pointer;" title="Ver ranking do modo Formas Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes-reverse');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-shapes-reverse" style="display:none;"></span>
@@ -1659,7 +1633,7 @@ const T = {
     mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
-    record_label: '🏆 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
+    record_label: '📊 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
     your_score: 'Sua pontuação:', record_mode_label: '🏆 Seu recorde neste modo:',
@@ -1862,7 +1836,7 @@ const T = {
     mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
-    record_label: '🏆 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
+    record_label: '📊 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
     your_score: 'Your score:', record_mode_label: '🏆 Your record in this mode:',
@@ -2065,7 +2039,7 @@ const T = {
     mode_shapes_desc: 'Haz clic en la <b>forma pedida</b> y memoriza la <b>palabra</b> escrita en ella. En la siguiente ronda, haz clic en la forma cuyo nombre memorizaste.',
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Haz clic en la <b>palabra pedida</b> y memoriza la <b>forma que la rodea</b>. En la siguiente ronda, haz clic en el nombre de la forma memorizada.',
-    record_label: '🏆 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
+    record_label: '📊 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
     footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
     hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
     your_score: 'Tu puntuación:', record_mode_label: '🏆 Tu récord en este modo:',
