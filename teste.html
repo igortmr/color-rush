@@ -102,7 +102,7 @@
     gap: 20px;
     padding: 24px;
     padding-top: 52px;
-    padding-bottom: 74px; /* espaço extra pro rodapé fixo de redes sociais não tampar o fim do conteúdo */
+    padding-bottom: 48px;
     width: 100%;
     max-width: 520px;
     margin-top: 24px;
@@ -797,28 +797,20 @@
   /* tutorial passo a passo (modo clássico) */
   .mode-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 
-  /* rodapé com links das redes sociais do jogo — fixo na base da tela,
-     visível em todas as telas (não é filho de nenhum .screen) */
-  .social-links {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 300;
-    display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding: 7px calc(10px + env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
-    background: linear-gradient(0deg, rgba(5,8,16,0.95), rgba(5,8,16,0.72));
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
+  /* rodapé com links das redes sociais do jogo — aparece no final do
+     conteúdo de cada tela (não é fixo/flutuante, é só mais um elemento
+     dentro do fluxo normal da tela ativa) */
+  .social-links { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
   .social-link {
     display: flex; align-items: center; gap: 6px;
-    padding: 5px 12px;
+    padding: 6px 13px;
     border-radius: 999px;
     background: var(--bg-panel);
     border: 1px solid rgba(255,255,255,0.08);
     color: #fff;
     text-decoration: none;
     font-weight: 600;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     transition: transform 0.15s ease, background 0.15s ease;
   }
   .social-link:hover { transform: translateY(-2px); background: var(--bg-panel-2); }
@@ -1495,34 +1487,6 @@
     </div>
     <button onclick="pvpBackToMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
-</div>
-
-<!-- rodapé fixo com links das redes sociais — fica visível em TODAS as
-     telas (não é um .screen, então não entra no sistema de mostrar/esconder
-     telas; fica fixado por cima de tudo o tempo todo) -->
-<div class="social-links">
-  <a class="social-link" href="https://instagram.com/colorrushsaga" target="_blank" rel="noopener">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#ffdb73"/>
-          <stop offset="25%" stop-color="#fd5949"/>
-          <stop offset="55%" stop-color="#d6249f"/>
-          <stop offset="100%" stop-color="#285AEB"/>
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="20" height="20" rx="6" fill="none" stroke="url(#igGrad)" stroke-width="2"/>
-      <circle cx="12" cy="12" r="4.2" fill="none" stroke="url(#igGrad)" stroke-width="2"/>
-      <circle cx="17.4" cy="6.6" r="1.3" fill="url(#igGrad)"/>
-    </svg>
-    <span>@colorrushsaga</span>
-  </a>
-  <a class="social-link" href="https://x.com/colorrushsaga" target="_blank" rel="noopener">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff">
-      <path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.5 22H1.4l8.1-9.3L1 2h7.2l5 6.6L18.9 2zm-1.2 18h1.7L6.4 4H4.6l13.1 16z"/>
-    </svg>
-    <span>@colorrushsaga</span>
-  </a>
 </div>
 
 <script type="module">
@@ -2800,6 +2764,43 @@ let myData = {
 };
 
 const $ = id => document.getElementById(id);
+
+// rodapé com links das redes sociais — mesmo bloquinho HTML colado no fim
+// de CADA tela (não é fixo, é só mais um elemento normal dentro do fluxo de
+// cada .screen), pra dar visibilidade das redes em qualquer lugar do jogo
+// sem competir visualmente com o conteúdo enquanto joga. O índice "i" só
+// existe pra cada cópia ter seu próprio id de gradiente (evita ids
+// duplicados no HTML final, mesmo que o resultado visual seja idêntico).
+function socialLinksHtml(i) {
+  return `
+  <div class="social-links">
+    <a class="social-link" href="https://instagram.com/colorrushsaga" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="igGrad-${i}" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffdb73"/>
+            <stop offset="25%" stop-color="#fd5949"/>
+            <stop offset="55%" stop-color="#d6249f"/>
+            <stop offset="100%" stop-color="#285AEB"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="none" stroke="url(#igGrad-${i})" stroke-width="2"/>
+        <circle cx="12" cy="12" r="4.2" fill="none" stroke="url(#igGrad-${i})" stroke-width="2"/>
+        <circle cx="17.4" cy="6.6" r="1.3" fill="url(#igGrad-${i})"/>
+      </svg>
+      <span>@colorrushsaga</span>
+    </a>
+    <a class="social-link" href="https://x.com/colorrushsaga" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff">
+        <path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.5 22H1.4l8.1-9.3L1 2h7.2l5 6.6L18.9 2zm-1.2 18h1.7L6.4 4H4.6l13.1 16z"/>
+      </svg>
+      <span>@colorrushsaga</span>
+    </a>
+  </div>`;
+}
+document.querySelectorAll('.screen').forEach((screen, i) => {
+  screen.insertAdjacentHTML('beforeend', socialLinksHtml(i));
+});
 
 // ===== proteção global contra clique duplo/muito rápido =====
 // alguns cliques disparam ações com consequência real no servidor (aceitar/
