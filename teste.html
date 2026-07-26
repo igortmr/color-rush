@@ -382,6 +382,14 @@
   .mode-card.daily-card.coming-soon { cursor: default; }
   .mode-card.daily-card.coming-soon:hover { transform: none; border-color: rgba(255,233,60,0.5); box-shadow: none; }
   .mode-card.daily-card.coming-soon h2 { margin-bottom: 0; }
+  /* quando o motivo do "coming-soon" é nível baixo (não a estreia ainda não
+     ter chegado), mostra o aviso de bloqueio — precisa do mesmo respiro
+     abaixo do título que os outros modos bloqueados (Reverso/Formas/Formas
+     Reverso) têm, e o texto tem que ficar preto e branco igual aos deles
+     (que ficam assim por causa do filter:grayscale do card inteiro; aqui
+     aplicamos só no badge, já que o resto do daily-card continua colorido). */
+  .mode-card.daily-card.coming-soon.level-locked h2 { margin-bottom: 10px; }
+  .mode-card.daily-card .lock-badge { filter: grayscale(1); }
   .daily-badge-today {
     position: absolute;
     top: 14px;
@@ -619,13 +627,22 @@
      card da medalha no perfil (qual categoria tem a novidade) */
   .notif-dot {
     position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+    top: -4px;
+    right: -4px;
+    min-width: 15px;
+    height: 15px;
+    border-radius: 8px;
     background: var(--neon-red);
     box-shadow: 0 0 6px var(--neon-red), 0 0 0 2px #0a0e1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 0 3px;
+    line-height: 1;
   }
   .class-pill {
     display: inline-flex;
@@ -1155,6 +1172,7 @@
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
     </div>
+    <span class="record-badge lock-badge" id="lock-daily" style="display:none;"></span>
   </div>
   <div class="mode-card" onclick="startGame('classic')">
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
@@ -1382,7 +1400,7 @@
     <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="profile-header">
-    <div class="big-nick" id="profile-nick"></div>
+    <div class="big-nick" id="profile-nick"><span id="profile-nick-avatar"></span><span id="profile-nick-text"></span><span id="profile-nick-lv"></span></div>
     <div class="muted" id="profile-summary"></div>
   </div>
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
@@ -1498,43 +1516,59 @@ if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== 'COLOQUE_SUA_SITE_KEY_AQUI') {
 const auth = getAuth(app);
 const db = getFirestore(app);
 const functions = getFunctions(app);
+// contador de chamadas ao servidor em andamento — o travamento global de
+// clique mais abaixo usa isso pra travar QUALQUER clique novo enquanto uma
+// chamada ainda não recebeu resposta do servidor (em vez de só um tempo fixo
+// — ver o comentário perto do listener de clique pra entender por quê:
+// clicar duas vezes rápido no "resgatar" da caixa de entrada, por exemplo,
+// já chegou a resgatar o mesmo prêmio duas vezes). touchActivity fica de
+// fora de propósito: é um "batimento" de presença automático, não vem de
+// clique do usuário, não deve travar nada.
+let pendingServerCalls = 0;
+function callable(name) {
+  const fn = httpsCallable(functions, name);
+  return (...args) => {
+    pendingServerCalls++;
+    return fn(...args).finally(() => { pendingServerCalls--; });
+  };
+}
 // chamadas ao servidor: a pontuação final agora é validada lá (anti-cheat),
 // não é mais um simples write direto no Firestore vindo do navegador.
-const callStartSession = httpsCallable(functions, 'startGameSession');
-const callSubmitResult = httpsCallable(functions, 'submitGameResult');
-const callCreditReferral = httpsCallable(functions, 'creditReferral');
-const callSuggestFriendFromRef = httpsCallable(functions, 'suggestFriendFromRef');
-const callClaimPendingScore = httpsCallable(functions, 'claimPendingScore');
-const callRecomputeTotal = httpsCallable(functions, 'recomputeMyTotal');
+const callStartSession = callable('startGameSession');
+const callSubmitResult = callable('submitGameResult');
+const callCreditReferral = callable('creditReferral');
+const callSuggestFriendFromRef = callable('suggestFriendFromRef');
+const callClaimPendingScore = callable('claimPendingScore');
+const callRecomputeTotal = callable('recomputeMyTotal');
 // amigos — igual ao resto: nenhuma escrita cruzada (pedido/aceite/remoção)
 // acontece direto do navegador, sempre via function (ver functions/index.js)
-const callSendFriendRequest = httpsCallable(functions, 'sendFriendRequest');
-const callRespondFriendRequest = httpsCallable(functions, 'respondFriendRequest');
-const callCancelFriendRequest = httpsCallable(functions, 'cancelFriendRequest');
-const callRemoveFriend = httpsCallable(functions, 'removeFriend');
+const callSendFriendRequest = callable('sendFriendRequest');
+const callRespondFriendRequest = callable('respondFriendRequest');
+const callCancelFriendRequest = callable('cancelFriendRequest');
+const callRemoveFriend = callable('removeFriend');
 // duelo ao vivo (PvP) — igual ao resto: quem decide o que aconteceu é sempre
 // a function (o servidor), nunca o navegador direto
-const callChallengeFriend = httpsCallable(functions, 'challengeFriend');
-const callRespondChallenge = httpsCallable(functions, 'respondChallenge');
-const callCancelChallenge = httpsCallable(functions, 'cancelChallenge');
-const callSubmitPvpAnswer = httpsCallable(functions, 'submitPvpAnswer');
-const callClaimTimeout = httpsCallable(functions, 'claimTimeout');
-const callForfeitMatch = httpsCallable(functions, 'forfeitMatch');
-const callTouchActivity = httpsCallable(functions, 'touchActivity');
+const callChallengeFriend = callable('challengeFriend');
+const callRespondChallenge = callable('respondChallenge');
+const callCancelChallenge = callable('cancelChallenge');
+const callSubmitPvpAnswer = callable('submitPvpAnswer');
+const callClaimTimeout = callable('claimTimeout');
+const callForfeitMatch = callable('forfeitMatch');
+const callTouchActivity = httpsCallable(functions, 'touchActivity'); // batimento automático — não conta pro travamento de clique
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
-const callAdminGetUserDetails = httpsCallable(functions, 'adminGetUserDetails');
-const callAdminSetBanned = httpsCallable(functions, 'adminSetBanned');
-const callAdminSetNick = httpsCallable(functions, 'adminSetNick');
+const callAdminGetUserDetails = callable('adminGetUserDetails');
+const callAdminSetBanned = callable('adminSetBanned');
+const callAdminSetNick = callable('adminSetNick');
 // desafio diário — mesmo esquema de sessão/validação de tempo do modo normal
 // (ver startDailyAttempt/submitDailyResult em functions/index.js)
-const callStartDailyAttempt = httpsCallable(functions, 'startDailyAttempt');
-const callSubmitDailyResult = httpsCallable(functions, 'submitDailyResult');
-const callClaimDailyReward = httpsCallable(functions, 'claimDailyReward');
+const callStartDailyAttempt = callable('startDailyAttempt');
+const callSubmitDailyResult = callable('submitDailyResult');
+const callClaimDailyReward = callable('claimDailyReward');
 // loja de cosméticos (paga com Pigmentos)
-const callBuyShopItem = httpsCallable(functions, 'buyShopItem');
-const callSetEquippedItem = httpsCallable(functions, 'setEquippedItem');
+const callBuyShopItem = callable('buyShopItem');
+const callSetEquippedItem = callable('setEquippedItem');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -2537,14 +2571,27 @@ function unlockedTier(def, stats) {
 // registro começa vazio pra todo mundo, quem já tinha medalha desbloqueada
 // antes dessa funcionalidade existir também recebe o aviso na primeira vez.
 function hasNewBadgeFor(key) {
-  if (offline || !currentUser || !myData.nick) return false;
+  return newBadgeCountFor(key) > 0;
+}
+// quantos NÍVEIS novos essa categoria desbloqueou desde a última vez que a
+// pessoa viu o perfil (normalmente 1, mas pode ser mais se ela pulou vários
+// níveis de uma vez sem abrir o perfil) — usado pra mostrar o número dentro
+// da bolinha de notificação, em vez de só um sinal de "tem novidade"
+function newBadgeCountFor(key) {
+  if (offline || !currentUser || !myData.nick) return 0;
   const tier = unlockedTier(BADGE_DEFS[key], myData);
-  if (tier < 0) return false;
+  if (tier < 0) return 0;
   const seen = myData.badgesSeenTiers || {};
-  return tier > (seen[key] != null ? seen[key] : -1);
+  const seenTier = seen[key] != null ? seen[key] : -1;
+  return Math.max(0, tier - seenTier);
 }
 function hasAnyNewBadge() {
   return BADGE_ORDER.some(hasNewBadgeFor);
+}
+// soma de novidades em todas as categorias — número mostrado na bolinha do
+// nick, na tela principal
+function totalNewBadgeCount() {
+  return BADGE_ORDER.reduce((n, key) => n + newBadgeCountFor(key), 0);
 }
 // chamada depois que a pessoa vê o próprio perfil (onde todas as categorias
 // aparecem) — marca o nível atual de cada uma como "visto", até a próxima
@@ -2564,7 +2611,9 @@ async function markAllBadgesSeen() {
 function refreshBadgeNotifDot() {
   const dot = $('user-label-badge');
   if (!dot) return;
-  dot.style.display = hasAnyNewBadge() ? '' : 'none';
+  const n = totalNewBadgeCount();
+  dot.textContent = n;
+  dot.style.display = n > 0 ? '' : 'none';
 }
 // pill com ícone + nome da ÚNICA medalha escolhida pra aparecer ao lado do
 // nick no ranking (ver toggleEquippedBadge, no perfil próprio). Sem escolha
@@ -2690,6 +2739,43 @@ let myData = {
 };
 
 const $ = id => document.getElementById(id);
+
+// ===== proteção global contra clique duplo/muito rápido =====
+// alguns cliques disparam ações com consequência real no servidor (aceitar/
+// recusar duelo, resgatar prêmio, comprar na loja, salvar nick...). Um
+// clique duplo bem rápido (toque acidental, "ghost click" do celular, ou o
+// dedo escorregando) pode disparar a mesma ação duas vezes antes da primeira
+// terminar — já aconteceu de resgatar o mesmo prêmio da caixa de entrada
+// duas vezes clicando rápido demais, precisando corrigir na mão no Firestore
+// depois. Um tempo fixo curto (300ms) não é garantia nenhuma, porque a
+// resposta do servidor pode demorar mais que isso (rede lenta, function fria
+// etc.) — o que resolve de verdade é travar até a resposta chegar.
+// Por isso o travamento aqui combina os dois: (1) um mínimo de 300ms sempre,
+// pra cobrir ações que nem chamam o servidor, e (2) enquanto tiver alguma
+// chamada ao servidor pendente (pendingServerCalls, incrementado/decrementado
+// em `callable()`, ver mais acima), NENHUM clique novo passa — só libera de
+// verdade quando a resposta (sucesso ou erro) chega. Em vez de mexer em cada
+// botão um por um, um único listener no topo (fase de captura, roda ANTES de
+// qualquer onclick) cobre tudo de uma vez.
+// Fica de fora o jogo oficial (os grids de resposta: clássico/reverso/
+// formas/formas reverso, desafio diário e PvP) — ali cada clique já tem sua
+// própria trava (handleClick só aceita um clique por rodada, ver `playing`),
+// e o ritmo do jogo pode exigir cliques bem mais rápidos que 300ms conforme
+// a partida acelera, então esse travamento genérico não se aplica lá.
+const CLICK_LOCK_MS = 300;
+const CLICK_LOCK_EXCLUDE_SELECTOR = '#grid, #daily-grid, #pvp-grid';
+let clickLockedUntil = 0;
+document.addEventListener('click', (e) => {
+  if (e.target.closest(CLICK_LOCK_EXCLUDE_SELECTOR)) return; // jogo oficial: sem travamento genérico
+  const now = Date.now();
+  if (now < clickLockedUntil || pendingServerCalls > 0) {
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+  clickLockedUntil = now + CLICK_LOCK_MS;
+}, true);
+
 const show = id => {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
@@ -3708,8 +3794,8 @@ async function renderAdminPanel(uid, currentNick, stats) {
       await callAdminSetNick({ uid, nick });
       nickStatus.textContent = '✅ Nick atualizado.';
       stats.nick = nick;
-      $('profile-nick').textContent = T[lang].profile_nick_label(nick);
-      $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(stats.xp || 0));
+      $('profile-nick-text').textContent = T[lang].profile_nick_label(nick);
+      $('profile-nick-lv').innerHTML = ' ' + lvChip(stats.xp || 0);
     } catch (e) {
       nickStatus.textContent = '❌ ' + (e.message || 'Erro ao salvar.');
     } finally {
@@ -4080,7 +4166,9 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
 
   if (!isOther && offline) {
-    $('profile-nick').textContent = T[lang].profile_offline_label;
+    $('profile-nick-avatar').innerHTML = '';
+    $('profile-nick-text').textContent = T[lang].profile_offline_label;
+    $('profile-nick-lv').innerHTML = '';
     $('profile-summary').textContent = '';
     $('profile-friend-action').style.display = 'none';
     $('profile-friend-action').innerHTML = '';
@@ -4095,10 +4183,15 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     return;
   }
 
-  // nick sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção
-  $('profile-nick').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
-  $('profile-nick').insertAdjacentHTML('afterbegin', avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 24) + ' ');
-  $('profile-nick').insertAdjacentHTML('beforeend', ' ' + lvChip(isOther ? (stats.xp || 0) : myXp()));
+  // avatar e nível são markup fixo/confiável (innerHTML tudo bem); o nick
+  // sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção.
+  // Cada pedaço tem seu próprio <span> dedicado (profile-nick-avatar/-text/-lv)
+  // e é sempre SUBSTITUÍDO (nunca acrescentado) — antes usava insertAdjacentHTML
+  // direto no #profile-nick, o que podia deixar ícone duplicado se essa função
+  // rodasse mais de uma vez em sequência (ex.: ao trocar a medalha equipada).
+  $('profile-nick-avatar').innerHTML = avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 24) + ' ';
+  $('profile-nick-text').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
 
   if (isOther) {
@@ -4149,7 +4242,7 @@ function renderBadgeCard(key, def, stats) {
   const maxed = tier === def.tiers.length - 1;
   const color = tier >= 0 ? TIER_COLORS[tier] : '#0f3460';
   const currentName = tier >= 0 ? def.names[lang][tier] : T[lang].badge_not_unlocked;
-  const isNew = hasNewBadgeFor(key); // categoria com nível desbloqueado ainda não visto
+  const newCount = newBadgeCountFor(key); // quantos níveis novos essa categoria tem ainda não vistos
 
   let progressHtml;
   if (maxed) {
@@ -4187,7 +4280,7 @@ function renderBadgeCard(key, def, stats) {
   return `
     <div class="card badge-card">
       <div class="badge-card-head">
-        <span class="badge-chip big" style="background:${color}; position:relative;">${def.icon}${isNew ? '<span class="notif-dot"></span>' : ''}</span>
+        <span class="badge-chip big" style="background:${color}; position:relative;">${def.icon}${newCount > 0 ? `<span class="notif-dot">${newCount}</span>` : ''}</span>
         <div>
           <div class="name">${def.label[lang]}</div>
           <div class="muted" style="text-align:left;">${currentName}</div>
@@ -4210,7 +4303,13 @@ window.toggleEquippedBadge = async (key) => {
   // automático); clicar em outra troca na hora, sem precisar desmarcar antes
   const next = (myData.equippedBadge === key) ? null : key;
   myData.equippedBadge = next;
+  // renderProfile() sempre chama resetScroll('profile-screen') no final, que
+  // joga a página pro topo — é o certo ao ENTRAR na tela, mas aqui a pessoa já
+  // está nela só trocando a medalha, então guarda a posição e restaura logo
+  // depois, pra não pular a tela pra cima.
+  const scrollY = window.scrollY;
   renderProfile(); // atualiza o botão na hora, antes mesmo do Firestore confirmar
+  window.scrollTo(0, scrollY);
   try {
     await setDoc(doc(db, 'scores', currentUser.uid), { equippedBadge: next, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {
@@ -4704,14 +4803,25 @@ async function updateDailyMenuCard() {
   renderDailyCardCountdown(); // atualiza o rótulo (Inicia em/Termina em) na hora, sem esperar o próximo tique
 
   // antes da estreia (ou pra quem ainda tá no nível 1): só título + cronômetro,
-  // sem descrição nem dados — deixa a curiosidade no ar em vez de mostrar tudo
+  // sem descrição nem dados — deixa a curiosidade no ar em vez de mostrar tudo.
+  // Quando o motivo for nível baixo (não a estreia ainda não ter chegado),
+  // mostra o mesmo aviso de "🔒 Desbloqueia no nível N" que os modos
+  // Reverso/Formas/Formas Reverso já usam (ver lock-reverse/lock-shapes).
+  const lockEl = $('lock-daily');
   if (!isDailyChallengeLive() || !dailyLevelUnlocked()) {
     card.classList.add('coming-soon');
     $('daily-card-desc').style.display = 'none';
     $('daily-card-footer').style.display = 'none';
+    const showLock = !dailyLevelUnlocked();
+    card.classList.toggle('level-locked', showLock);
+    if (lockEl) {
+      lockEl.style.display = showLock ? '' : 'none';
+      if (showLock) lockEl.textContent = T[lang].unlock_at(DAILY_MIN_LEVEL);
+    }
     return;
   }
-  card.classList.remove('coming-soon');
+  card.classList.remove('coming-soon', 'level-locked');
+  if (lockEl) lockEl.style.display = 'none';
   $('daily-card-desc').style.display = '';
   $('daily-card-footer').style.display = '';
   try {
