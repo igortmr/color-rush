@@ -1,1 +1,8 @@
-
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "br.com.colorrush.app",
+        "sha256_cert_fingerprints": ["94:60:8E:A5:E1:72:F8:7A:79:45:A2:1D:FD:B4:9B:07:E1:48:A6:A9:90:4E:A9:A4:4C:A9:03:4D:CC:07:20:52"]
+      }
+    }]
