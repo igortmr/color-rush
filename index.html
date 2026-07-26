@@ -1745,6 +1745,7 @@ const T = {
     inbox_empty: 'Nenhuma mensagem por aqui ainda.',
     btn_claim_all: '💰 RESGATAR TODAS',
     btn_claim: '💰 RESGATAR',
+    daily_reward_claimed_label: '✅ Resgatado',
     daily_inbox_congrats: (pos, dateStr, score) => `🎉 Parabéns! Você ficou em ${pos} no desafio de ${dateStr} com ${score} pontos.`,
     daily_pos_1: '🥇 1º lugar',
     daily_pos_2: '🥈 2º lugar',
@@ -1948,6 +1949,7 @@ const T = {
     inbox_empty: 'No messages here yet.',
     btn_claim_all: '💰 CLAIM ALL',
     btn_claim: '💰 CLAIM',
+    daily_reward_claimed_label: '✅ Claimed',
     daily_inbox_congrats: (pos, dateStr, score) => `🎉 Congrats! You placed ${pos} in the ${dateStr} challenge with ${score} points.`,
     daily_pos_1: '🥇 1st place',
     daily_pos_2: '🥈 2nd place',
@@ -2151,6 +2153,7 @@ const T = {
     inbox_empty: 'Todavía no hay mensajes aquí.',
     btn_claim_all: '💰 RECLAMAR TODO',
     btn_claim: '💰 RECLAMAR',
+    daily_reward_claimed_label: '✅ Reclamado',
     daily_inbox_congrats: (pos, dateStr, score) => `🎉 ¡Felicidades! Quedaste en ${pos} en el desafío del ${dateStr} con ${score} puntos.`,
     daily_pos_1: '🥇 1er lugar',
     daily_pos_2: '🥈 2do lugar',
@@ -4819,13 +4822,17 @@ function renderInboxList(msgs) {
     allBtn.style.display = 'none';
     return;
   }
-  allBtn.style.display = msgs.length > 1 ? '' : 'none';
+  // mensagens já resgatadas continuam na lista como histórico — o botão
+  // "resgatar todas" só deve contar quem ainda está pendente
+  const pendingCount = msgs.filter(m => !m.claimed).length;
+  allBtn.style.display = pendingCount > 1 ? '' : 'none';
   list.innerHTML = '';
   msgs.forEach(msg => {
     const pos = msg.position;
     const posLabel = pos === 1 ? T[lang].daily_pos_1 : pos === 2 ? T[lang].daily_pos_2 : pos === 3 ? T[lang].daily_pos_3 : T[lang].daily_pos_n(pos);
     const box = document.createElement('div');
     box.className = 'daily-inbox-msg';
+    if (msg.claimed) box.style.opacity = '0.6';
 
     const posLine = document.createElement('div');
     posLine.className = 'pos-line';
@@ -4842,11 +4849,19 @@ function renderInboxList(msgs) {
     coinsSpan.appendChild(coinsNum);
     claimRow.appendChild(coinsSpan);
 
-    const claimBtn = document.createElement('button');
-    claimBtn.className = 'secondary';
-    claimBtn.textContent = T[lang].btn_claim;
-    claimBtn.onclick = () => claimOneDailyReward(msg.dateStr);
-    claimRow.appendChild(claimBtn);
+    if (msg.claimed) {
+      const claimedLabel = document.createElement('span');
+      claimedLabel.className = 'muted';
+      claimedLabel.style.fontWeight = '700';
+      claimedLabel.textContent = T[lang].daily_reward_claimed_label;
+      claimRow.appendChild(claimedLabel);
+    } else {
+      const claimBtn = document.createElement('button');
+      claimBtn.className = 'secondary';
+      claimBtn.textContent = T[lang].btn_claim;
+      claimBtn.onclick = () => claimOneDailyReward(msg.dateStr);
+      claimRow.appendChild(claimBtn);
+    }
 
     box.appendChild(claimRow);
     list.appendChild(box);
@@ -4860,7 +4875,9 @@ async function refreshInboxBadge() {
   if (offline || !currentUser || !myData.nick) { btn.style.display = 'none'; return; }
   btn.style.display = '';
   try {
-    const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
+    // só conta o que ainda não foi resgatado — mensagens já lidas continuam
+    // na caixa de entrada como histórico, mas não devem inflar a bolinha
+    const snap = await getDocs(query(collection(db, 'dailyInbox', currentUser.uid, 'messages'), where('claimed', '==', false)));
     const badge = $('inbox-badge');
     badge.textContent = snap.size;
     badge.style.display = snap.size > 0 ? '' : 'none';
