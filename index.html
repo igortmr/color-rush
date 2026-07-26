@@ -817,6 +817,24 @@
 
   /* tutorial passo a passo (modo clássico) */
   .mode-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* rodapé com links das redes sociais do jogo */
+  .social-links { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+  .social-link {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.82rem;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .social-link:hover { transform: translateY(-2px); background: var(--bg-panel-2); }
+  .social-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+
   .tut-link-btn {
     font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
@@ -1232,6 +1250,24 @@
     <span class="record-badge lock-badge" id="lock-shapes-reverse" style="display:none;"></span>
   </div>
   <p class="muted" data-i18n="footer_note">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
+  <div class="social-links">
+    <a class="social-link" href="https://instagram.com/colorrushsaga" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffdb73"/>
+            <stop offset="25%" stop-color="#fd5949"/>
+            <stop offset="55%" stop-color="#d6249f"/>
+            <stop offset="100%" stop-color="#285AEB"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="none" stroke="url(#igGrad)" stroke-width="2"/>
+        <circle cx="12" cy="12" r="4.2" fill="none" stroke="url(#igGrad)" stroke-width="2"/>
+        <circle cx="17.4" cy="6.6" r="1.3" fill="url(#igGrad)"/>
+      </svg>
+      <span>@colorrushsaga</span>
+    </a>
+  </div>
 </div>
 
 <!-- TUTORIAL (passo a passo, funciona pros modos clássico e reverso) -->
