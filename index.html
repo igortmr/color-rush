@@ -1537,47 +1537,64 @@ if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== 'COLOQUE_SUA_SITE_KEY_AQUI') {
 const auth = getAuth(app);
 const db = getFirestore(app);
 const functions = getFunctions(app);
+// contador de chamadas ao servidor em andamento — o travamento global de
+// clique mais abaixo usa isso pra travar QUALQUER clique novo enquanto uma
+// chamada ainda não recebeu resposta do servidor (em vez de só um tempo fixo
+// — ver o comentário perto do listener de clique pra entender por quê:
+// clicar duas vezes rápido no "resgatar" da caixa de entrada, por exemplo,
+// já chegou a resgatar o mesmo prêmio duas vezes). touchActivity fica de
+// fora de propósito: é um "batimento" de presença automático, não vem de
+// clique do usuário, não deve travar nada.
+let pendingServerCalls = 0;
+function callable(name) {
+  const fn = httpsCallable(functions, name);
+  return (...args) => {
+    pendingServerCalls++;
+    return fn(...args).finally(() => { pendingServerCalls--; });
+  };
+}
 // chamadas ao servidor: a pontuação final agora é validada lá (anti-cheat),
 // não é mais um simples write direto no Firestore vindo do navegador.
-const callStartSession = httpsCallable(functions, 'startGameSession');
-const callSubmitResult = httpsCallable(functions, 'submitGameResult');
-const callCreditReferral = httpsCallable(functions, 'creditReferral');
-const callSuggestFriendFromRef = httpsCallable(functions, 'suggestFriendFromRef');
-const callClaimPendingScore = httpsCallable(functions, 'claimPendingScore');
-const callRecomputeTotal = httpsCallable(functions, 'recomputeMyTotal');
+const callStartSession = callable('startGameSession');
+const callSubmitResult = callable('submitGameResult');
+const callCreditReferral = callable('creditReferral');
+const callSuggestFriendFromRef = callable('suggestFriendFromRef');
+const callClaimPendingScore = callable('claimPendingScore');
+const callRecomputeTotal = callable('recomputeMyTotal');
 // amigos — igual ao resto: nenhuma escrita cruzada (pedido/aceite/remoção)
 // acontece direto do navegador, sempre via function (ver functions/index.js)
-const callSendFriendRequest = httpsCallable(functions, 'sendFriendRequest');
-const callRespondFriendRequest = httpsCallable(functions, 'respondFriendRequest');
-const callCancelFriendRequest = httpsCallable(functions, 'cancelFriendRequest');
-const callRemoveFriend = httpsCallable(functions, 'removeFriend');
+const callSendFriendRequest = callable('sendFriendRequest');
+const callRespondFriendRequest = callable('respondFriendRequest');
+const callCancelFriendRequest = callable('cancelFriendRequest');
+const callRemoveFriend = callable('removeFriend');
 // duelo ao vivo (PvP) — igual ao resto: quem decide o que aconteceu é sempre
 // a function (o servidor), nunca o navegador direto
-const callChallengeFriend = httpsCallable(functions, 'challengeFriend');
-const callRespondChallenge = httpsCallable(functions, 'respondChallenge');
-const callCancelChallenge = httpsCallable(functions, 'cancelChallenge');
-const callSubmitPvpAnswer = httpsCallable(functions, 'submitPvpAnswer');
-const callClaimTimeout = httpsCallable(functions, 'claimTimeout');
-const callForfeitMatch = httpsCallable(functions, 'forfeitMatch');
-const callTouchActivity = httpsCallable(functions, 'touchActivity');
+const callChallengeFriend = callable('challengeFriend');
+const callRespondChallenge = callable('respondChallenge');
+const callCancelChallenge = callable('cancelChallenge');
+const callSubmitPvpAnswer = callable('submitPvpAnswer');
+const callClaimTimeout = callable('claimTimeout');
+const callForfeitMatch = callable('forfeitMatch');
+const callTouchActivity = httpsCallable(functions, 'touchActivity'); // batimento automático — não conta pro travamento de clique
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
-const callAdminGetUserDetails = httpsCallable(functions, 'adminGetUserDetails');
-const callAdminSetBanned = httpsCallable(functions, 'adminSetBanned');
-const callAdminSetNick = httpsCallable(functions, 'adminSetNick');
+const callAdminGetUserDetails = callable('adminGetUserDetails');
+const callAdminSetBanned = callable('adminSetBanned');
+const callAdminSetNick = callable('adminSetNick');
+const callBackfillPendingPigmentos = callable('backfillPendingPigmentos');
 // desafio diário — mesmo esquema de sessão/validação de tempo do modo normal
 // (ver startDailyAttempt/submitDailyResult em functions/index.js)
-const callStartDailyAttempt = httpsCallable(functions, 'startDailyAttempt');
-const callSubmitDailyResult = httpsCallable(functions, 'submitDailyResult');
-const callClaimDailyReward = httpsCallable(functions, 'claimDailyReward');
+const callStartDailyAttempt = callable('startDailyAttempt');
+const callSubmitDailyResult = callable('submitDailyResult');
+const callClaimDailyReward = callable('claimDailyReward');
 // loja de cosméticos (paga com Pigmentos)
-const callBuyShopItem = httpsCallable(functions, 'buyShopItem');
-const callSetEquippedItem = httpsCallable(functions, 'setEquippedItem');
+const callBuyShopItem = callable('buyShopItem');
+const callSetEquippedItem = callable('setEquippedItem');
 // notificações push — só usada dentro do app nativo (iOS/Android via
 // Capacitor); no navegador normal isso nunca chega a ser chamado (ver
 // initNativePush() mais abaixo)
-const callRegisterPushToken = httpsCallable(functions, 'registerPushToken');
+const callRegisterPushToken = callable('registerPushToken');
 
 /* ================== idioma ================== */
 let lang = 'pt';
@@ -2748,6 +2765,43 @@ let myData = {
 };
 
 const $ = id => document.getElementById(id);
+
+// ===== proteção global contra clique duplo/muito rápido =====
+// alguns cliques disparam ações com consequência real no servidor (aceitar/
+// recusar duelo, resgatar prêmio, comprar na loja, salvar nick...). Um
+// clique duplo bem rápido (toque acidental, "ghost click" do celular, ou o
+// dedo escorregando) pode disparar a mesma ação duas vezes antes da primeira
+// terminar — já aconteceu de resgatar o mesmo prêmio da caixa de entrada
+// duas vezes clicando rápido demais, precisando corrigir na mão no Firestore
+// depois. Um tempo fixo curto (300ms) não é garantia nenhuma, porque a
+// resposta do servidor pode demorar mais que isso (rede lenta, function fria
+// etc.) — o que resolve de verdade é travar até a resposta chegar.
+// Por isso o travamento aqui combina os dois: (1) um mínimo de 300ms sempre,
+// pra cobrir ações que nem chamam o servidor, e (2) enquanto tiver alguma
+// chamada ao servidor pendente (pendingServerCalls, incrementado/decrementado
+// em `callable()`, ver mais acima), NENHUM clique novo passa — só libera de
+// verdade quando a resposta (sucesso ou erro) chega. Em vez de mexer em cada
+// botão um por um, um único listener no topo (fase de captura, roda ANTES de
+// qualquer onclick) cobre tudo de uma vez.
+// Fica de fora o jogo oficial (os grids de resposta: clássico/reverso/
+// formas/formas reverso, desafio diário e PvP) — ali cada clique já tem sua
+// própria trava (handleClick só aceita um clique por rodada, ver `playing`),
+// e o ritmo do jogo pode exigir cliques bem mais rápidos que 300ms conforme
+// a partida acelera, então esse travamento genérico não se aplica lá.
+const CLICK_LOCK_MS = 300;
+const CLICK_LOCK_EXCLUDE_SELECTOR = '#grid, #daily-grid, #pvp-grid';
+let clickLockedUntil = 0;
+document.addEventListener('click', (e) => {
+  if (e.target.closest(CLICK_LOCK_EXCLUDE_SELECTOR)) return; // jogo oficial: sem travamento genérico
+  const now = Date.now();
+  if (now < clickLockedUntil || pendingServerCalls > 0) {
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+  clickLockedUntil = now + CLICK_LOCK_MS;
+}, true);
+
 const show = id => {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
@@ -2803,6 +2857,12 @@ function seededShuffle(rng, a) {
 // horário de verão desde 2019): dia do desafio + horário em que ele fecha
 function dailyLocalDateStr(d = new Date()) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // AAAA-MM-DD
+}
+// mostra a data da mensagem da caixa de entrada como dd/mm/aa (msg.dateStr
+// vem sempre como AAAA-MM-DD, ver dailyLocalDateStr acima)
+function formatDailyDateShort(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
 }
 function dailyNextMidnightSaoPauloMs(now = new Date()) {
   const [y, m, d] = dailyLocalDateStr(now).split('-').map(Number);
@@ -3846,6 +3906,23 @@ async function renderAdminPanel(uid, currentNick, stats) {
   resetScroll('profile-screen');
 }
 
+// botão avulso no PRÓPRIO perfil (não no painel de outra pessoa acima) —
+// dispara o backfill único de pendingPigmentos (ver comentário da function
+// no functions/index.js). Idempotente: pode clicar mais de uma vez à vontade.
+window.runBackfillPendingPigmentos = async (btn) => {
+  const status = $('backfill-status');
+  btn.disabled = true;
+  if (status) status.textContent = 'Rodando...';
+  try {
+    const res = await callBackfillPendingPigmentos();
+    if (status) status.textContent = `✅ Concluído — ${res.data.usersUpdated} conta(s) atualizada(s).`;
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro ao rodar backfill.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
 /* ================== amigos ================== */
 // Espelhado em dois documentos por conta (ver functions/index.js):
 //   friends/{uid}        -> { list: { [amigoUid]: { nick, since } } }
@@ -4234,6 +4311,20 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
   $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
   $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(key, BADGE_DEFS[key], stats)).join('');
+  // ferramenta avulsa só pra admin (myData.admin, setado à mão no Firebase
+  // Console) — corrige pendingPigmentos de quem já tinha prêmio parado na
+  // caixa de entrada de antes desse campo existir (ver comentário da
+  // function backfillPendingPigmentos em functions/index.js). Idempotente:
+  // pode rodar mais de uma vez sem risco.
+  if (myData.admin === true) {
+    $('profile-body').insertAdjacentHTML('beforeend', `
+      <div class="card" style="text-align:left;">
+        <b>🛠️ Admin — ferramentas gerais</b>
+        <p class="muted" style="margin-top:6px;">Recalcula pendingPigmentos de todo mundo a partir do que ainda está na caixa de entrada de cada um. Seguro rodar mais de uma vez.</p>
+        <button class="secondary" onclick="runBackfillPendingPigmentos(this)">Rodar backfill de pigmentos pendentes</button>
+        <div class="muted" id="backfill-status" style="margin-top:6px;"></div>
+      </div>`);
+  }
   resetScroll('profile-screen');
   // agora que a pessoa viu o próprio perfil (com todas as categorias e a
   // bolinha mostrando qual tinha novidade), marca tudo como visto — some a
@@ -4575,7 +4666,12 @@ async function loadDailyAlltimeRanking() {
     for (const r of all) {
       const data = rowData(r);
       const wins = data.dailyWins || 0;
-      const pig = data.pigmentos || 0;
+      // pigmentos (gastável na loja) só é creditado no resgate da caixa de
+      // entrada; pendingPigmentos é creditado na hora (junto com dailyWins,
+      // ver resolveDailyChallenge) e representa o que ainda está esperando
+      // ser resgatado — somando os dois, o ranking mostra o total certo
+      // independente de a pessoa já ter aberto a caixa de entrada ou não.
+      const pig = (data.pigmentos || 0) + (data.pendingPigmentos || 0);
       if (wins > 0 || pig > 0) rows.push({ uid: r.uid, nick: data.nick, wins, pig, stats: data });
     }
     // mais colunas => a ordenação mais importante é o nº de vitórias de 1º lugar
@@ -4732,7 +4828,7 @@ function renderInboxList(msgs) {
 
     const posLine = document.createElement('div');
     posLine.className = 'pos-line';
-    posLine.textContent = T[lang].daily_inbox_congrats(posLabel, msg.dateStr, msg.score);
+    posLine.textContent = T[lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
     box.appendChild(posLine);
 
     const claimRow = document.createElement('div');
