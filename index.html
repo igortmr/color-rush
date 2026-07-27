@@ -1541,6 +1541,7 @@
       <span id="replay-time-label">0:00 / 0:00</span>
     </div>
     <div class="timer-track"><div class="timer-fill" id="replay-timer-fill"></div></div>
+    <div class="instruction" id="replay-instruction"></div>
     <div style="position:relative; width:100%;">
       <div class="grid" id="replay-grid"></div>
       <div id="replay-cursor" class="replay-cursor-dot" style="display:none;"></div>
@@ -5115,12 +5116,13 @@ let replayTargetSquareEl = null; // elemento do quadrado certo da rodada atual �
 let replayLastFlashIdx = -1;     // índice da última rodada que já disparou o flash de clique (evita repetir ao redesenhar)
 const REPLAY_CLICK_FLASH_MS = 300; // janela, antes da rodada trocar, em que o "clique" é simulado (visual + som)
 
-function renderReplaySquares(round) {
+function renderReplaySquares(round, idx) {
   const rmode = replayData.mode;
   const pool = poolFor(rmode);
   const grid = $('replay-grid');
   grid.innerHTML = '';
   replayTargetSquareEl = null;
+  let targetItem = null;
   round.sq.forEach(cell => {
     const item = poolItemById(pool, cell.id);
     const paired = poolItemById(pool, cell.paired);
@@ -5141,9 +5143,26 @@ function renderReplaySquares(round) {
     // não marca mais o quadrado certo o tempo todo (era um contorno
     // tracejado fixo) — agora o quadrado certo só se destaca no instante
     // exato do clique, via triggerReplayClickFlash abaixo
-    if (cell.isTarget) replayTargetSquareEl = el;
+    if (cell.isTarget) { replayTargetSquareEl = el; targetItem = item; }
     grid.appendChild(el);
   });
+  // instrução igual à da partida de verdade (ver newRound): na primeira
+  // rodada (idx 0) nomeia o alvo (INSTR_FIRST — ainda não tem o que
+  // memorizar); nas seguintes é genérica (INSTR_NEXT — supõe que quem jogou
+  // memorizou o alvo no fim da rodada anterior), mesmo texto/i18n de sempre
+  const INSTR_FIRST = {
+    classic: () => T[lang].instr_first_classic(cName(targetItem)),
+    reverse: () => T[lang].instr_first_reverse(cName(targetItem)),
+    shapes: () => T[lang].instr_first_shapes(cName(targetItem)),
+    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(targetItem)),
+  };
+  const INSTR_NEXT = {
+    classic: T[lang].instr_next_classic,
+    reverse: T[lang].instr_next_reverse,
+    shapes: T[lang].instr_next_shapes,
+    'shapes-reverse': T[lang].instr_next_shapes_reverse,
+  };
+  $('replay-instruction').textContent = (idx === 0) ? INSTR_FIRST[rmode]() : INSTR_NEXT[rmode];
 }
 
 // dispara o "efeito de clique" (flash verde + som) no quadrado certo da
@@ -5204,7 +5223,7 @@ function renderReplayFrame(ms) {
   let idx = 0;
   for (let i = 0; i < rounds.length; i++) { if (rounds[i].t <= ms) idx = i; else break; }
   if (idx !== replayRoundIdx) {
-    renderReplaySquares(rounds[idx]);
+    renderReplaySquares(rounds[idx], idx);
     replayRoundIdx = idx;
   }
   // simula o clique (flash + som) perto do fim da rodada idx, no instante em
