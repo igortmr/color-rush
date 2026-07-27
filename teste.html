@@ -4961,15 +4961,17 @@ function updateReplayCursor(ms) {
   const trail = replayData.mouseTrail;
   if (!trail || trail.length === 0) { cursor.style.display = 'none'; return; }
   cursor.style.display = '';
-  if (replayMouseIdx > 0 && trail[replayMouseIdx][2] > ms) replayMouseIdx = 0; // tempo voltou (arrastou a barra) — reescaneia
-  while (replayMouseIdx < trail.length - 1 && trail[replayMouseIdx + 1][2] <= ms) replayMouseIdx++;
+  // amostras vêm do Firestore como objetos {x,y,t} (arrays-de-array não são
+  // permitidos como valor de campo — ver sanitizeReplayMouseTrail no servidor)
+  if (replayMouseIdx > 0 && trail[replayMouseIdx].t > ms) replayMouseIdx = 0; // tempo voltou (arrastou a barra) — reescaneia
+  while (replayMouseIdx < trail.length - 1 && trail[replayMouseIdx + 1].t <= ms) replayMouseIdx++;
   const a = trail[replayMouseIdx];
   const b = trail[Math.min(replayMouseIdx + 1, trail.length - 1)];
-  let xPct = a[0], yPct = a[1];
-  if (b !== a && b[2] > a[2]) {
-    const frac = Math.max(0, Math.min(1, (ms - a[2]) / (b[2] - a[2])));
-    xPct = a[0] + (b[0] - a[0]) * frac;
-    yPct = a[1] + (b[1] - a[1]) * frac;
+  let xPct = a.x, yPct = a.y;
+  if (b !== a && b.t > a.t) {
+    const frac = Math.max(0, Math.min(1, (ms - a.t) / (b.t - a.t)));
+    xPct = a.x + (b.x - a.x) * frac;
+    yPct = a.y + (b.y - a.y) * frac;
   }
   const grid = $('replay-grid');
   cursor.style.left = (xPct * grid.offsetWidth) + 'px';
