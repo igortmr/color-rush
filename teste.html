@@ -1313,20 +1313,18 @@
 
   <!-- introdução da tentativa: qual modo foi sorteado hoje + instruções + botão de tutorial opcional -->
   <div id="daily-intro" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
-    <div class="card" style="text-align:center; gap:10px;">
-      <p class="muted" style="margin:0;" data-i18n="daily_intro_heading">🎲 O modo sorteado de hoje é:</p>
-      <h2 id="daily-intro-mode-title" style="margin:0;"></h2>
-      <p id="daily-intro-mode-desc" class="muted" style="text-align:left; margin:0;"></p>
+    <div class="mode-card daily-card" style="cursor:default;">
+      <p class="muted" style="text-align:left; margin:0 0 8px;" data-i18n="daily_intro_heading">🎲 O modo sorteado de hoje é:</p>
+      <h2 id="daily-intro-mode-title"></h2>
+      <p id="daily-intro-mode-desc"></p>
+      <div class="mode-card-footer">
+        <span class="record-badge" id="daily-intro-countdown"><span id="daily-intro-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
+        <span class="record-badge" id="daily-intro-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
+        <button class="tut-link-btn" id="daily-intro-tut-btn" data-i18n="tut_btn">❓ Como jogar</button>
+      </div>
     </div>
-    <div class="mode-card-footer" style="width:100%;">
-      <span class="record-badge" id="daily-intro-countdown"><span id="daily-intro-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
-      <span class="record-badge" id="daily-intro-attempts">🎟️ Tentativas restantes: 3/3</span>
-    </div>
-    <button class="secondary" style="width:100%;" onclick="showRanking('daily')" data-i18n="btn_view_daily_ranking">🏆 VER RANKING DO DESAFIO</button>
-    <div class="btn-row" style="width:100%;">
-      <button id="daily-intro-tut-btn" class="secondary" style="flex:1;" data-i18n="tut_btn">❓ Como jogar</button>
-      <button id="daily-intro-start-btn" style="flex:1;" data-i18n="daily_intro_start_btn">▶️ Iniciar Desafio</button>
-    </div>
+    <span class="record-badge" id="daily-intro-attempts">🎟️ Tentativas restantes: 3/3</span>
+    <button id="daily-intro-start-btn" style="width:100%;" data-i18n="daily_intro_start_btn">▶️ Iniciar Desafio</button>
   </div>
 
   <!-- contagem regressiva antes da tentativa começar de vez (mesma ideia do duelo PvP) -->
@@ -4903,6 +4901,7 @@ window.showDailyIntro = () => {
   $('daily-intro-mode-title').innerHTML = T[lang][`mode_${modeKey}_title`];
   $('daily-intro-mode-desc').innerHTML = T[lang][`mode_${modeKey}_desc`];
   $('daily-intro-attempts').textContent = T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+  $('daily-intro-best').textContent = T[lang].daily_card_best(dailyBestScore);
   renderDailyCardCountdown(); // atualiza o cronômetro na hora, sem esperar o próximo tique do segundo
   $('daily-intro-tut-btn').onclick = () => startTutorial(dailyMode, { fromDaily: true });
   $('daily-intro-start-btn').onclick = () => startDailyChallenge();
