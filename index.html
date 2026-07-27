@@ -1208,7 +1208,7 @@
   </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
     <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
-    <h2 data-i18n="tab_daily">🗓️ Desafio Diário</h2>
+    <h2 data-i18n="tab_daily">📅 Desafio Diário</h2>
     <p id="daily-card-desc" data-i18n-html="daily_card_desc">O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo em breve.</p>
     <div class="mode-card-footer" id="daily-card-footer">
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
@@ -1323,8 +1323,21 @@
 <!-- DESAFIO DIÁRIO -->
 <div class="screen" id="daily-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:1.7rem;" data-i18n="daily_screen_title">🗓️ DESAFIO DIÁRIO</h1>
+    <h1 style="font-size:1.7rem;" data-i18n="daily_screen_title">📅 DESAFIO DIÁRIO</h1>
     <button class="pill-btn" onclick="dailyExitScreen()" data-i18n="btn_back">VOLTAR</button>
+  </div>
+
+  <!-- introdução da tentativa: qual modo foi sorteado hoje + instruções + botão de tutorial opcional -->
+  <div id="daily-intro" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
+    <div class="card" style="text-align:center; gap:10px;">
+      <p class="muted" style="margin:0;" data-i18n="daily_intro_heading">🎲 O modo sorteado de hoje é:</p>
+      <h2 id="daily-intro-mode-title" style="margin:0;"></h2>
+      <p id="daily-intro-mode-desc" class="muted" style="text-align:left; margin:0;"></p>
+    </div>
+    <div class="btn-row" style="width:100%;">
+      <button id="daily-intro-tut-btn" class="secondary" style="flex:1;" data-i18n="tut_btn">❓ Como jogar</button>
+      <button id="daily-intro-start-btn" style="flex:1;" data-i18n="daily_intro_start_btn">▶️ Iniciar Desafio</button>
+    </div>
   </div>
 
   <!-- contagem regressiva antes da tentativa começar de vez (mesma ideia do duelo PvP) -->
@@ -1406,7 +1419,7 @@
     <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
     <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
-    <option value="daily" data-i18n="tab_daily">🗓️ Desafio Diário</option>
+    <option value="daily" data-i18n="tab_daily">📅 Desafio Diário</option>
   </select>
   <div class="scope-tabs" id="scope-tabs-row">
     <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">Todos</button>
@@ -1752,14 +1765,14 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
-    tab_daily: '🗓️ Desafio Diário',
+    tab_daily: '📅 Desafio Diário',
     daily_card_desc: 'O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDesc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDesc)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que poderão ser usados na loja do jogo em breve.',
     daily_ends_in: 'Termina em: ',
     daily_starts_in: 'Inicia em: ',
     daily_card_best: n => `🎯 Melhor: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Tentativas restantes: ${left}/${max}`,
     daily_card_already_played: '✅ Já jogou hoje',
-    daily_screen_title: '🗓️ DESAFIO DIÁRIO',
+    daily_screen_title: '📅 DESAFIO DIÁRIO',
     daily_inbox_title: '📬 Caixa de Entrada',
     btn_close: 'FECHAR',
     inbox_empty: 'Nenhuma mensagem por aqui ainda.',
@@ -1782,6 +1795,8 @@ const T = {
     daily_attempts_left_msg: n => `Você ainda tem ${n} tentativa${n > 1 ? 's' : ''} hoje.`,
     daily_attempts_used_msg: 'Você usou suas 3 tentativas de hoje!',
     daily_start_error: 'Não foi possível iniciar. Tente de novo.',
+    daily_intro_heading: '🎲 O modo sorteado de hoje é:',
+    daily_intro_start_btn: '▶️ Iniciar Desafio',
     daily_subtab_today: '📅 Hoje',
     daily_subtab_alltime: '🏆 Salão da Fama',
     daily_col_wins: 'Vitórias',
@@ -1810,6 +1825,7 @@ const T = {
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
     tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR', 'shapes-reverse': '🎮 JOGAR' },
+    tut_play_btn_daily: '📅 INICIAR DESAFIO',
     tut_back_btn: 'VOLTAR AO MENU',
     tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
     tut_caption_classic_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
@@ -1955,14 +1971,14 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
     divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
-    tab_daily: '🗓️ Daily Challenge',
+    tab_daily: '📅 Daily Challenge',
     daily_card_desc: 'The same challenge for everyone, every day! You get <b>3 attempts</b> to get the highest score. Top scorers earn <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigments</span>, which will be usable in the game shop, coming soon.',
     daily_ends_in: 'Ends in: ',
     daily_starts_in: 'Starts in: ',
     daily_card_best: n => `🎯 Best: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Attempts left: ${left}/${max}`,
     daily_card_already_played: '✅ Already played today',
-    daily_screen_title: '🗓️ DAILY CHALLENGE',
+    daily_screen_title: '📅 DAILY CHALLENGE',
     daily_inbox_title: '📬 Inbox',
     btn_close: 'CLOSE',
     inbox_empty: 'No messages here yet.',
@@ -1985,6 +2001,8 @@ const T = {
     daily_attempts_left_msg: n => `You still have ${n} attempt${n > 1 ? 's' : ''} today.`,
     daily_attempts_used_msg: "You've used your 3 attempts today!",
     daily_start_error: 'Could not start. Please try again.',
+    daily_intro_heading: '🎲 Today\'s randomly picked mode is:',
+    daily_intro_start_btn: '▶️ Start Challenge',
     daily_subtab_today: '📅 Today',
     daily_subtab_alltime: '🏆 Hall of Fame',
     daily_col_wins: 'Wins',
@@ -2013,6 +2031,7 @@ const T = {
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
     tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY', 'shapes-reverse': '🎮 PLAY' },
+    tut_play_btn_daily: '📅 START CHALLENGE',
     tut_back_btn: 'BACK TO MENU',
     tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
     tut_caption_classic_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
@@ -2158,14 +2177,14 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiencia (XP) acumulada.',
     divulgador_explain: '📣 Quién invitó a más amigos mediante tu enlace de invitación.',
-    tab_daily: '🗓️ Desafío Diario',
+    tab_daily: '📅 Desafío Diario',
     daily_card_desc: '¡El mismo desafío para todos, todos los días! Tienes <b>3 intentos</b> para conseguir la mayor puntuación. Los mejores clasificados ganan <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que podrán usarse en la tienda del juego, próximamente.',
     daily_ends_in: 'Termina en: ',
     daily_starts_in: 'Inicia en: ',
     daily_card_best: n => `🎯 Mejor: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Intentos restantes: ${left}/${max}`,
     daily_card_already_played: '✅ Ya jugaste hoy',
-    daily_screen_title: '🗓️ DESAFÍO DIARIO',
+    daily_screen_title: '📅 DESAFÍO DIARIO',
     daily_inbox_title: '📬 Bandeja de Entrada',
     btn_close: 'CERRAR',
     inbox_empty: 'Todavía no hay mensajes aquí.',
@@ -2188,6 +2207,8 @@ const T = {
     daily_attempts_left_msg: n => `Todavía tienes ${n} intento${n > 1 ? 's' : ''} hoy.`,
     daily_attempts_used_msg: '¡Usaste tus 3 intentos de hoy!',
     daily_start_error: 'No fue posible iniciar. Inténtalo de nuevo.',
+    daily_intro_heading: '🎲 El modo sorteado de hoy es:',
+    daily_intro_start_btn: '▶️ Iniciar Desafío',
     daily_subtab_today: '📅 Hoy',
     daily_subtab_alltime: '🏆 Salón de la Fama',
     daily_col_wins: 'Victorias',
@@ -2216,6 +2237,7 @@ const T = {
     tut_prev: '‹ Anterior',
     tut_next: 'Siguiente ›',
     tut_play_btn: { classic: '🎮 JUGAR', reverse: '🎮 JUGAR', shapes: '🎮 JUGAR', 'shapes-reverse': '🎮 JUGAR' },
+    tut_play_btn_daily: '📅 INICIAR DESAFÍO',
     tut_back_btn: 'VOLVER AL MENÚ',
     tut_caption_classic_1: 'Fíjate: la instrucción de arriba pide un color (<b>ROJO</b>). Entonces debes buscar el cuadrado con ese <b>color de fondo</b>.',
     tut_caption_classic_2: 'Antes de hacer clic, memoriza la <b>palabra escrita en el medio</b> de ese cuadrado: <b>VERDE</b>.',
@@ -2716,6 +2738,7 @@ function isDailyChallengeLive() { return dailyLocalDateStr() >= DAILY_CHALLENGE_
 // estreia, até subir pro nível 2
 const DAILY_MIN_LEVEL = 2;
 function dailyLevelUnlocked() { return myData.admin === true || levelFromXp(myXp()) >= DAILY_MIN_LEVEL; }
+let dailyMode = 'classic';    // modo sorteado do dia (ver dailyModeForToday) — definido ao mostrar a tela de introdução/iniciar tentativa
 let dailyRng = null;          // gerador determinístico da rodada de hoje
 let dailyPlaying = false;
 let dailyScore = 0;
@@ -2910,6 +2933,14 @@ function seededShuffle(rng, a) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+// modo sorteado do desafio diário — determinístico por dia (mesmo modo pra
+// TODO MUNDO, e igual nas 3 tentativas), sorteado entre os 4 modos existentes
+// (clássico/reverso/formas/formas reverso) SEM olhar nível desbloqueado: o
+// desafio diário sempre foi acessível a qualquer um independente do modo
+// normal estar bloqueado ou não pro nível da pessoa.
+function dailyModeForToday(dateStr) {
+  return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), ALL_MODES);
 }
 // mesma regra de fuso do servidor (America/Sao_Paulo, sempre UTC-3 — sem
 // horário de verão desde 2019): dia do desafio + horário em que ele fecha
@@ -4834,13 +4865,39 @@ window.dailyCardClick = () => {
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
     $('daily-blocked-msg').textContent = T[lang].daily_blocked_msg;
+    $('daily-intro').style.display = 'none';
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
     show('daily-screen');
     return;
   }
-  startDailyChallenge();
+  showDailyIntro();
+};
+
+// tela de introdução: mostra qual modo foi sorteado pra hoje (mesmo se a
+// pessoa não tiver nível pra jogar esse modo no menu normal — o desafio
+// diário sempre valeu pra qualquer nível) + as instruções de como jogar +
+// atalho pro tutorial passo a passo. O botão de tutorial e o de "iniciar"
+// aqui usam handlers atribuídos na hora (não inline no HTML) porque este é
+// um <script type="module"> — atributos onclick inline só enxergam
+// identificadores expostos em window, e dailyMode/startTutorial/etc. não
+// precisam virar globais só por causa disso.
+window.showDailyIntro = () => {
+  dailyMode = dailyModeForToday(dailyLocalDateStr());
+  // as chaves de i18n usam "_" (mode_shapes_reverse_title), não "-" como o id
+  // do modo (shapes-reverse) — só o "shapes-reverse" precisa dessa troca
+  const modeKey = dailyMode.replace(/-/g, '_');
+  $('daily-intro-mode-title').innerHTML = T[lang][`mode_${modeKey}_title`];
+  $('daily-intro-mode-desc').innerHTML = T[lang][`mode_${modeKey}_desc`];
+  $('daily-intro-tut-btn').onclick = () => startTutorial(dailyMode, { fromDaily: true });
+  $('daily-intro-start-btn').onclick = () => startDailyChallenge();
+  $('daily-countdown').style.display = 'none';
+  $('daily-play').style.display = 'none';
+  $('daily-result').style.display = 'none';
+  $('daily-blocked').style.display = 'none';
+  $('daily-intro').style.display = 'flex';
+  show('daily-screen');
 };
 
 /* -------- caixa de entrada (comunicados do jogo) --------
@@ -5023,18 +5080,25 @@ window.startDailyChallenge = async () => {
     dailyDateStrCache = d.dateStr;
     dailyClosesAtMs = d.closesAt;
     dailyAttemptsUsed = d.attemptNumber;
-    track('daily_start', { attempt: d.attemptNumber });
+    // o modo já foi sorteado (e mostrado) na tela de introdução, mas recalcula
+    // aqui de novo (mesma conta determinística — ver dailyModeForToday) pro
+    // caso de "jogar de novo" a 2ª/3ª tentativa direto do resultado, sem
+    // passar pela introdução de novo
+    dailyMode = dailyModeForToday(d.dateStr);
+    track('daily_start', { attempt: d.attemptNumber, mode: dailyMode });
 
-    // a semente inclui o número da tentativa: a 1ª, 2ª e 3ª tentativas do dia
-    // têm sequências DIFERENTES entre si (senão daria pra decorar/gravar a
-    // sequência numa tentativa e "colar" nas próximas), mas a mesma tentativa
-    // Nº X é idêntica pra todo mundo — o desafio continua justo pra todos
-    dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-classic-v1|attempt' + d.attemptNumber));
+    // a semente inclui o modo do dia + o número da tentativa: a 1ª, 2ª e 3ª
+    // tentativas do dia têm sequências DIFERENTES entre si (senão daria pra
+    // decorar/gravar a sequência numa tentativa e "colar" nas próximas), mas
+    // a mesma tentativa Nº X é idêntica pra todo mundo — o desafio continua
+    // justo pra todos
+    dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-v2|' + dailyMode + '|attempt' + d.attemptNumber));
     dailyScore = 0;
     dailyDuration = 10000;
     dailyPlaying = true;
-    dailyTarget = seededPick(dailyRng, COLORS);
+    dailyTarget = seededPick(dailyRng, poolFor(dailyMode));
     $('daily-score').textContent = 0;
+    $('daily-intro').style.display = 'none';
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'none';
     $('daily-play').style.display = 'none';
@@ -5048,6 +5112,7 @@ window.startDailyChallenge = async () => {
     // mostrar a mensagem, então manda pra tela de "sem tentativas", que já
     // tem o link pro ranking do desafio
     $('daily-blocked-msg').textContent = e.message || T[lang].daily_start_error;
+    $('daily-intro').style.display = 'none';
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
     $('daily-blocked').style.display = 'flex';
@@ -5095,10 +5160,10 @@ function stopDailyCountdown() {
 }
 
 function dailyNewRound(first) {
-  const pool = COLORS;
+  const pool = poolFor(dailyMode);
   dailyNextTarget = seededPick(dailyRng, pool);
   const others = seededShuffle(dailyRng, pool.filter(c => c !== dailyTarget)).slice(0, SQUARES - 1);
-  const items = seededShuffle(dailyRng, [dailyTarget, ...others]);
+  const items = seededShuffle(dailyRng, [dailyTarget, ...others]); // clássico: fundos | reverso: palavras | formas: ícones
   const distractors = seededShuffle(dailyRng, pool.filter(c => c !== dailyNextTarget)).slice(0, SQUARES - 1);
   let d = 0;
 
@@ -5108,14 +5173,35 @@ function dailyNewRound(first) {
     const paired = (item === dailyTarget) ? dailyNextTarget : distractors[d++];
     const el = document.createElement('div');
     el.className = 'square';
-    el.style.background = item.hex;
-    el.style.boxShadow = `0 0 18px ${item.hex}99, 0 0 40px ${item.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-    el.innerHTML = `<span class="word">${cName(paired)}</span>`;
+    if (dailyMode === 'shapes' || dailyMode === 'shapes-reverse') {
+      const shapeSide = (dailyMode === 'shapes') ? item : paired;
+      const wordSide  = (dailyMode === 'shapes') ? paired : item;
+      el.classList.add('shape-square', shapeSide.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+    } else {
+      const bg   = (dailyMode === 'classic') ? item : paired;
+      const word = (dailyMode === 'classic') ? paired : item;
+      el.style.background = bg.hex;
+      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(word)}</span>`;
+    }
     el.onclick = () => dailyHandleClick(item);
     grid.appendChild(el);
   });
 
-  $('daily-instruction').textContent = first ? T[lang].instr_first_classic(cName(dailyTarget)) : T[lang].instr_next_classic;
+  const INSTR_FIRST = {
+    classic: () => T[lang].instr_first_classic(cName(dailyTarget)),
+    reverse: () => T[lang].instr_first_reverse(cName(dailyTarget)),
+    shapes: () => T[lang].instr_first_shapes(cName(dailyTarget)),
+    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(dailyTarget)),
+  };
+  const INSTR_NEXT = {
+    classic: T[lang].instr_next_classic,
+    reverse: T[lang].instr_next_reverse,
+    shapes: T[lang].instr_next_shapes,
+    'shapes-reverse': T[lang].instr_next_shapes_reverse,
+  };
+  $('daily-instruction').textContent = first ? INSTR_FIRST[dailyMode]() : INSTR_NEXT[dailyMode];
   $('daily-speed').textContent = `⏱️ ${(dailyDuration / 1000).toFixed(1)}s`;
   startDailyTimer();
 }
@@ -6022,6 +6108,11 @@ const TUT_DATA = {
 const TUT_TOTAL = 7;
 let tutMode = 'classic';
 let tutStep = 1;
+// quando o tutorial é aberto a partir da tela de introdução do desafio diário
+// (botão "Como jogar" ali), "pular"/"terminar" o tutorial deve voltar pra
+// essa tela (e terminar deve já iniciar a tentativa), em vez do fluxo normal
+// (voltar pro menu / ir pro modo livre) — ver startTutorial/tutBack/tutPlay
+let tutFromDaily = false;
 let tutTimers = [];
 function tutClearTimers() { tutTimers.forEach(clearTimeout); tutTimers = []; }
 function tutAfter(ms, fn) { const id = setTimeout(fn, ms); tutTimers.push(id); return id; }
@@ -6096,7 +6187,7 @@ function tutSetNav() {
   $('tut-prev-btn').style.visibility = tutStep === 1 ? 'hidden' : 'visible';
   const nextBtn = $('tut-next-btn');
   if (tutStep === TUT_TOTAL) {
-    nextBtn.textContent = T[lang].tut_play_btn[tutMode];
+    nextBtn.textContent = tutFromDaily ? T[lang].tut_play_btn_daily : T[lang].tut_play_btn[tutMode];
     nextBtn.onclick = tutPlay;
   } else {
     nextBtn.textContent = T[lang].tut_next;
@@ -6265,9 +6356,10 @@ function showTutStep(n) {
   }
 }
 
-window.startTutorial = (mode = 'classic') => {
+window.startTutorial = (mode = 'classic', opts = {}) => {
   tutMode = mode;
-  track('tutorial_start', { mode });
+  tutFromDaily = !!opts.fromDaily;
+  track('tutorial_start', { mode, fromDaily: tutFromDaily });
   show('tutorial-screen');
   $('tut-title-el').textContent = T[lang].tut_title[tutMode];
   showTutStep(1);
@@ -6276,8 +6368,16 @@ window.startTutorial = (mode = 'classic') => {
 };
 window.tutNext = () => { if (tutStep < TUT_TOTAL) showTutStep(tutStep + 1); };
 window.tutPrev = () => { if (tutStep > 1) showTutStep(tutStep - 1); };
-window.tutBack = () => { tutClearTimers(); track('tutorial_skip', { step: tutStep }); showMenu(); };
-window.tutPlay = () => { tutClearTimers(); track('tutorial_complete', { mode: tutMode }); startGame(tutMode); };
+window.tutBack = () => {
+  tutClearTimers();
+  track('tutorial_skip', { step: tutStep, fromDaily: tutFromDaily });
+  if (tutFromDaily) { tutFromDaily = false; showDailyIntro(); } else { showMenu(); }
+};
+window.tutPlay = () => {
+  tutClearTimers();
+  track('tutorial_complete', { mode: tutMode, fromDaily: tutFromDaily });
+  if (tutFromDaily) { tutFromDaily = false; startDailyChallenge(); } else { startGame(tutMode); }
+};
 
 applyLanguage();
 </script>
