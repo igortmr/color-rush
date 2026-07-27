@@ -5291,7 +5291,10 @@ function renderReplaySquares(round, idx) {
     reverse: () => T[lang].instr_first_reverse(cName(targetItem)),
     shapes: () => T[lang].instr_first_shapes(cName(targetItem)),
     'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(targetItem)),
-    trio: () => T[lang].instr_first_trio(cName(pairA), cName(pairB)),
+    // fallback pra replays gravados antes do fix do sanitizeReplayRounds no
+    // servidor (pairA/pairB descartados por engano) — em vez de travar toda
+    // a tela com cName(null), cai pra instrução genérica do modo Trio
+    trio: () => (pairA && pairB) ? T[lang].instr_first_trio(cName(pairA), cName(pairB)) : T[lang].instr_next_trio,
   };
   const INSTR_NEXT = {
     classic: T[lang].instr_next_classic,
