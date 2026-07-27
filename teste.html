@@ -615,6 +615,36 @@
   td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
+  /* botão de "assistir replay" — some pequeno do lado da pontuação, só nas
+     linhas de ranking que têm um replay salvo (ver saveMatchReplay) */
+  .replay-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; margin-left: 6px;
+    font-size: 0.7rem; line-height: 1; padding: 0;
+    background: rgba(45,214,255,0.1); border: 1px solid rgba(45,214,255,0.4); border-radius: 50%;
+    box-shadow: none; vertical-align: middle;
+  }
+  .replay-btn:hover { background: rgba(45,214,255,0.22); box-shadow: none; transform: none; }
+
+  /* tela de "assistir replay" — cursor reproduzindo o rastro do mouse
+     gravado (fica escondido se a partida não tiver rastro, ex.: celular) e
+     marcação tracejada no quadrado certo da rodada atual */
+  .replay-cursor-dot {
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--neon-blue);
+    box-shadow: 0 0 12px var(--neon-blue), 0 0 26px rgba(45,214,255,0.6);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+  }
+  .replay-target { outline: 3px dashed var(--neon-yellow); outline-offset: 3px; }
+  .replay-controls { display: flex; align-items: center; gap: 10px; width: 100%; }
+  .replay-controls input[type="range"] { flex: 1; accent-color: var(--neon-blue); }
+  #replay-play-btn { flex-shrink: 0; padding: 8px 14px; }
+  #replay-time-label { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; white-space: nowrap; }
+
   .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
 
   /* badges */
@@ -1441,6 +1471,31 @@
   <div class="pagination" id="ranking-pagination"></div>
 </div>
 
+<!-- REPLAY -->
+<div class="screen" id="replay-screen">
+  <div class="profile-top-row">
+    <h1 style="font-size:2rem;" data-i18n="replay_title">▶️ REPLAY</h1>
+    <button class="pill-btn" onclick="closeReplay()" data-i18n="btn_back">VOLTAR</button>
+  </div>
+  <div class="muted" id="replay-subtitle"></div>
+  <div class="muted" id="replay-loading" data-i18n="loading_text">Carregando...</div>
+  <div class="muted" id="replay-error" style="display:none;" data-i18n="replay_error">Não foi possível carregar este replay.</div>
+  <div id="replay-content" style="display:none; width:100%; flex-direction:column; align-items:center; gap:14px;">
+    <div class="hud">
+      <span><span data-i18n="hud_points">PONTOS:</span> <span id="replay-score">0</span></span>
+      <span id="replay-time-label">0:00 / 0:00</span>
+    </div>
+    <div style="position:relative; width:100%;">
+      <div class="grid" id="replay-grid"></div>
+      <div id="replay-cursor" class="replay-cursor-dot" style="display:none;"></div>
+    </div>
+    <div class="replay-controls">
+      <button class="pill-btn" id="replay-play-btn" onclick="toggleReplayPlayback()">⏸️</button>
+      <input type="range" id="replay-scrub" min="0" max="1000" value="0" oninput="scrubReplay(this.value)">
+    </div>
+  </div>
+</div>
+
 <!-- PERFIL -->
 <div class="screen" id="profile-screen">
   <div class="profile-top-row">
@@ -1617,6 +1672,13 @@ const callSyncProgress = httpsCallable(functions, 'syncRoundProgress');
 // armDailySession em functions/index.js) — mesmo padrão "dispare e esqueça"
 // acima, não passa pelo wrapper callable() pelo mesmo motivo.
 const callArmDailySession = httpsCallable(functions, 'armDailySession');
+// envia o "filme" (rodadas + rastro do mouse) de uma partida que acabou de
+// bater recorde — ver replayRounds/replayMouse lá em cima e saveMatchReplay
+// em functions/index.js. Só uma chamada, no fim da partida, com tudo junto
+// (não é "dispare e esqueça" por evento como as de cima); não precisa do
+// wrapper callable() porque não é um clique do usuário esperando resposta —
+// roda em segundo plano enquanto a pessoa já está vendo a tela de resultado.
+const callSaveMatchReplay = httpsCallable(functions, 'saveMatchReplay');
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
@@ -1678,6 +1740,7 @@ const T = {
     link_view_full: 'ver ranking completo', btn_play_again: 'JOGAR DE NOVO', btn_share: '📤 COMPARTILHAR',
     btn_menu: 'MENU', ranking_title: '🏆 RANKING', tab_geral: '🌍 Geral', tab_classic: '🎨 Clássico',
     tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', nick_header: 'Jogador', loading_text: 'Carregando...', btn_back: 'VOLTAR',
+    btn_watch_replay: 'Assistir replay', replay_title: '▶️ REPLAY', replay_error: 'Não foi possível carregar este replay.',
     profile_title: '🎖️ PERFIL',
 
     err_nick_length: 'O nick deve ter entre 3 e 16 caracteres.',
@@ -1885,6 +1948,7 @@ const T = {
     link_view_full: 'view full leaderboard', btn_play_again: 'PLAY AGAIN', btn_share: '📤 SHARE',
     btn_menu: 'MENU', ranking_title: '🏆 LEADERBOARD', tab_geral: '🌍 Overall', tab_classic: '🎨 Classic',
     tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse', nick_header: 'Player', loading_text: 'Loading...', btn_back: 'BACK',
+    btn_watch_replay: 'Watch replay', replay_title: '▶️ REPLAY', replay_error: 'Could not load this replay.',
     profile_title: '🎖️ PROFILE',
 
     err_nick_length: 'Nickname must be between 3 and 16 characters.',
@@ -2092,6 +2156,7 @@ const T = {
     link_view_full: 'ver ranking completo', btn_play_again: 'JUGAR DE NUEVO', btn_share: '📤 COMPARTIR',
     btn_menu: 'MENÚ', ranking_title: '🏆 RANKING', tab_geral: '🌍 General', tab_classic: '🎨 Clásico',
     tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', nick_header: 'Jugador', loading_text: 'Cargando...', btn_back: 'VOLVER',
+    btn_watch_replay: 'Ver repetición', replay_title: '▶️ REPETICIÓN', replay_error: 'No se pudo cargar esta repetición.',
     profile_title: '🎖️ PERFIL',
 
     err_nick_length: 'El apodo debe tener entre 3 y 16 caracteres.',
@@ -2432,6 +2497,12 @@ const SHAPES = [
   { name: { pt: 'CRUZ',       en: 'CROSS',    es: 'CRUZ'      }, shapeClass: 'shape-cross' },
 ];
 const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : COLORS;
+// identificador estável (string curta) de um item de cor/forma — usado só
+// pra gravar/reconstruir o "filme" da tela de replay (ver newRound/
+// dailyNewRound e renderReplayRound mais abaixo); nunca participa da
+// pontuação nem da validação, é puramente visual
+const poolItemId = item => item.key || item.shapeClass;
+const poolItemById = (pool, id) => pool.find(x => (x.key || x.shapeClass) === id) || pool[0];
 const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse' };
 const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse'];
 // Geral = soma dos recordes em TODOS os modos (conta 0 pro modo ainda não jogado)
@@ -2733,6 +2804,17 @@ let xpGain = 0; // XP acumulada na partida atual
 // sinais ainda em trânsito (ver conversa sobre a corrida entre os dois)
 let pendingRoundSync = [];
 
+// "filme" da partida atual (modo livre), pra tela de "assistir replay" —
+// só é enviado ao servidor se a partida bater recorde pessoal (ver
+// persistGameResult mais abaixo); senão fica só em memória e some quando a
+// pessoa sai da tela. replayRounds guarda o que apareceu em cada rodada
+// (ver newRound); replayMouse guarda o rastro do mouse (ver o listener de
+// mousemove mais abaixo), em % do tamanho do tabuleiro — assim funciona em
+// qualquer tamanho de tela na hora de reproduzir.
+let replayRounds = [];
+let replayMouse = [];
+let replayStartMs = 0; // referência (performance.now()) pro tempo relativo de cada amostra do rastro
+
 // desafio diário — estado separado do jogo normal (não usa "mode"/"score" etc.
 // acima, pra não arriscar misturar com uma partida solo aberta em paralelo)
 const DAILY_MAX_ATTEMPTS = 3; // tem que bater com DAILY_MAX_ATTEMPTS do servidor
@@ -2755,6 +2837,12 @@ let dailyPlaying = false;
 let dailyPendingRoundSync = []; // mesma ideia de pendingRoundSync (modo livre), mas pra tentativa do
                                  // desafio diário — também guarda a chamada que recarimba o início real
                                  // da tentativa depois do "Vai!" (ver callArmDailySession)
+// mesma ideia de replayRounds/replayMouse/replayStartMs (modo livre), mas
+// pra tentativa do desafio diário — só sobe se bater a melhor pontuação do
+// dia (ver dailyGameOver mais abaixo)
+let dailyReplayRounds = [];
+let dailyReplayMouse = [];
+let dailyReplayStartMs = 0;
 let dailyScore = 0;
 let dailyTarget = null, dailyNextTarget = null;
 let dailyDuration = 10000, dailyTimerStart = 0, dailyRafId = null;
@@ -3414,6 +3502,9 @@ window.startGame = (m) => {
   target = pick(poolFor(mode));
   $('score').textContent = 0;
   $('record-hud').textContent = myRecord(mode);
+  replayRounds = [];
+  replayMouse = [];
+  replayStartMs = performance.now();
   show('game-screen');
   newRound(true);
 
@@ -3427,6 +3518,33 @@ window.startGame = (m) => {
   }
 };
 
+// rastro do mouse pra tela de replay — throttlado (não grava cada micro-
+// movimento) e guardado em % do tamanho do tabuleiro (não pixel bruto), pra
+// funcionar igual em qualquer tamanho de tela na hora de reproduzir. Ao
+// contrário dos tiques do anti-cheat, isso é client-timestamped mesmo (não
+// precisa do carimbo do servidor) — é só cosmético, nunca entra na
+// validação de pontuação. No celular não existe "mousemove" contínuo (só
+// toque discreto), então esse rastro simplesmente fica vazio lá — o replay
+// mostra os cliques certos, sem cursor se movendo entre eles.
+const REPLAY_MOUSE_SAMPLE_MS = 40; // ~25 amostras/seg
+let lastReplayMouseSampleAt = 0;
+function recordReplayMouseSample(clientX, clientY) {
+  const now = performance.now();
+  if (now - lastReplayMouseSampleAt < REPLAY_MOUSE_SAMPLE_MS) return;
+  lastReplayMouseSampleAt = now;
+  let gridEl = null, arr = null, startMs = 0;
+  if (playing) { gridEl = $('grid'); arr = replayMouse; startMs = replayStartMs; }
+  else if (dailyPlaying) { gridEl = $('daily-grid'); arr = dailyReplayMouse; startMs = dailyReplayStartMs; }
+  else return;
+  if (!gridEl || arr.length >= 6000) return; // mesmo teto do servidor (MAX_REPLAY_MOUSE_SAMPLES)
+  const rect = gridEl.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const xPct = (clientX - rect.left) / rect.width;
+  const yPct = (clientY - rect.top) / rect.height;
+  arr.push([Math.round(xPct * 1000) / 1000, Math.round(yPct * 1000) / 1000, Math.round(now - startMs)]);
+}
+window.addEventListener('mousemove', e => recordReplayMouseSample(e.clientX, e.clientY));
+
 function newRound(first) {
   const pool = poolFor(mode);
   nextTarget = pick(pool);
@@ -3437,8 +3555,13 @@ function newRound(first) {
 
   const grid = $('grid');
   grid.innerHTML = '';
+  // "foto" desta rodada pra tela de replay — cada quadrado na MESMA ordem em
+  // que é exibido (ver poolItemId/replayRounds lá em cima); só isso já basta
+  // pra reconstruir o tabuleiro inteiro depois, sem precisar re-sortear nada
+  const roundSnapshot = [];
   items.forEach(item => {
     const paired = (item === target) ? nextTarget : distractors[d++];
+    roundSnapshot.push({ id: poolItemId(item), paired: poolItemId(paired), isTarget: item === target });
     const el = document.createElement('div');
     el.className = 'square';
     if (mode === 'shapes' || mode === 'shapes-reverse') {
@@ -3457,6 +3580,10 @@ function newRound(first) {
     el.onclick = () => handleClick(item);
     grid.appendChild(el);
   });
+  // "t" é o instante (relativo a replayStartMs) em que ESTA rodada apareceu
+  // na tela — é o que a tela de replay usa pra saber quando trocar de
+  // rodada e sincronizar com o rastro do mouse (ver renderReplayFrame)
+  if (replayRounds.length < 400) replayRounds.push({ t: Math.round(performance.now() - replayStartMs), sq: roundSnapshot }); // teto de sanidade — mesma ideia do HARD_SCORE_CAP do servidor
 
   const INSTR_FIRST = {
     classic: () => T[lang].instr_first_classic(cName(target)),
@@ -3650,6 +3777,12 @@ async function persistGameResult(xpEarned = 0) {
       myData[mode + 'At'] = Timestamp.now();
       if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); } // mesmo motivo, pro ranking "Geral" (soma dos recordes)
       $('sync-status').textContent = T[lang].sync_success;
+      // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima)
+      // só agora que virou recorde — em segundo plano, não atrasa a tela de
+      // resultado. myData[mode+'ReplaySessionId'] atualiza na hora, sem
+      // esperar o próximo carregamento do ranking, mesmo motivo do +'At' acima
+      myData[mode + 'ReplaySessionId'] = sessionId;
+      callSaveMatchReplay({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {});
     }
   } catch (e) {
     $('sync-status').textContent = T[lang].sync_fail;
@@ -4611,14 +4744,14 @@ window.loadRanking = async (m) => {
       if (m === 'level') {
         rows.push({ uid: r.uid, nick: data.nick, pts: data.xp || 0, at: null, stats: data });
       } else if (data[field] > 0) {
-        rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+        rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
       }
     }
     // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
     // (exceto se for admin — essa nunca deve aparecer no ranking, nem pra si mesma)
     if (!offline && currentUser && myData.nick && myData.admin !== true && !rows.some(r => r.uid === currentUser.uid)) {
       if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
-      else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData });
+      else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData, replaySessionId: myData[field + 'ReplaySessionId'] });
     }
     rows.sort(compareRankRows);
     rankingRows = rows;
@@ -4652,6 +4785,15 @@ function renderRankingPage() {
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats));
+    if (r.replaySessionId) {
+      const ptsCell = tr.children[2];
+      const replayBtn = document.createElement('button');
+      replayBtn.className = 'replay-btn';
+      replayBtn.textContent = '▶️';
+      replayBtn.title = T[lang].btn_watch_replay;
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick); };
+      ptsCell.appendChild(replayBtn);
+    }
     body.appendChild(tr);
   });
   if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[lang].ranking_no_friends : T[lang].ranking_no_players}</td></tr>`;
@@ -4705,7 +4847,7 @@ async function loadDailyTodayRanking() {
       // "última tentativa enviada", então dá pra usar de verdade pra
       // desempatar por "quem pontuou primeiro", igual já é feito nos outros
       // rankings (compareRankRows)
-      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, stats });
+      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, stats, replaySessionId: data.bestScoreSessionId });
     });
     rows.sort(compareRankRows);
     dailyTodayRows = rows;
@@ -4736,6 +4878,15 @@ function renderDailyTodayPage() {
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
+    if (r.replaySessionId) {
+      const ptsCell = tr.children[2];
+      const replayBtn = document.createElement('button');
+      replayBtn.className = 'replay-btn';
+      replayBtn.textContent = '▶️';
+      replayBtn.title = T[lang].btn_watch_replay;
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick); };
+      ptsCell.appendChild(replayBtn);
+    }
     body.appendChild(tr);
   });
   if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
@@ -4751,6 +4902,180 @@ window.dailyTodayGoPage = (p) => {
   const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
   dailyTodayPage = Math.max(0, Math.min(p, totalPages - 1));
   renderDailyTodayPage();
+};
+
+/* ================== tela de replay ==================
+   reconstrói uma partida gravada (ver replayRounds/replayMouse lá em cima e
+   saveMatchReplay no servidor) — não recalcula nem valida nada, só lê de
+   volta o que já está salvo em replays/{sessionId} e desenha de novo.
+   Rodada: cada round.sq já traz o tabuleiro inteiro resolvido (ver
+   poolItemId/poolItemById), então basta reconstruir os quadrados igual o
+   newRound de verdade fez na hora — sem precisar re-sortear nada. Cursor:
+   anda por interpolação linear entre as duas amostras do rastro do mouse
+   que cercam o instante atual (ponteiro pra frente amortizado O(1); só
+   reseta e escaneia de novo se o tempo "voltar", ao arrastar a barra). */
+let replayData = null;      // documento cru de replays/{sessionId}
+let replayPlaying = false;
+let replayAnimId = null;
+let replayClockMs = 0;      // relógio de reprodução, em ms desde o início da partida gravada
+let replayLastFrameAt = 0;  // performance.now() do último frame processado
+let replayRoundIdx = -1;    // índice da rodada desenhada agora (evita redesenhar à toa)
+let replayMouseIdx = 0;     // ponteiro pra frente no rastro do mouse
+let replayTotalMs = 0;      // duração total da reprodução
+
+function renderReplaySquares(round) {
+  const rmode = replayData.mode;
+  const pool = poolFor(rmode);
+  const grid = $('replay-grid');
+  grid.innerHTML = '';
+  round.sq.forEach(cell => {
+    const item = poolItemById(pool, cell.id);
+    const paired = poolItemById(pool, cell.paired);
+    const el = document.createElement('div');
+    el.className = 'square';
+    if (rmode === 'shapes' || rmode === 'shapes-reverse') {
+      const shapeSide = (rmode === 'shapes') ? item : paired;
+      const wordSide  = (rmode === 'shapes') ? paired : item;
+      el.classList.add('shape-square', shapeSide.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+    } else {
+      const bg   = (rmode === 'classic') ? item : paired;
+      const word = (rmode === 'classic') ? paired : item;
+      el.style.background = bg.hex;
+      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(word)}</span>`;
+    }
+    // marca o quadrado certo da rodada com um contorno tracejado a partida
+    // inteira (em vez de tentar cronometrar um "flash" exatamente no
+    // instante do clique) — mais simples e robusto, e como é só uma tela de
+    // assistir (não de jogar), "adiantar" um pouco a resposta não atrapalha
+    if (cell.isTarget) el.classList.add('replay-target');
+    grid.appendChild(el);
+  });
+}
+
+function updateReplayCursor(ms) {
+  const cursor = $('replay-cursor');
+  const trail = replayData.mouseTrail;
+  if (!trail || trail.length === 0) { cursor.style.display = 'none'; return; }
+  cursor.style.display = '';
+  if (replayMouseIdx > 0 && trail[replayMouseIdx][2] > ms) replayMouseIdx = 0; // tempo voltou (arrastou a barra) — reescaneia
+  while (replayMouseIdx < trail.length - 1 && trail[replayMouseIdx + 1][2] <= ms) replayMouseIdx++;
+  const a = trail[replayMouseIdx];
+  const b = trail[Math.min(replayMouseIdx + 1, trail.length - 1)];
+  let xPct = a[0], yPct = a[1];
+  if (b !== a && b[2] > a[2]) {
+    const frac = Math.max(0, Math.min(1, (ms - a[2]) / (b[2] - a[2])));
+    xPct = a[0] + (b[0] - a[0]) * frac;
+    yPct = a[1] + (b[1] - a[1]) * frac;
+  }
+  const grid = $('replay-grid');
+  cursor.style.left = (xPct * grid.offsetWidth) + 'px';
+  cursor.style.top = (yPct * grid.offsetHeight) + 'px';
+}
+
+function formatReplayTime(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function renderReplayFrame(ms) {
+  if (!replayData) return;
+  const rounds = replayData.rounds;
+  let idx = 0;
+  for (let i = 0; i < rounds.length; i++) { if (rounds[i].t <= ms) idx = i; else break; }
+  if (idx !== replayRoundIdx) {
+    renderReplaySquares(rounds[idx]);
+    replayRoundIdx = idx;
+  }
+  $('replay-score').textContent = idx;
+  $('replay-time-label').textContent = `${formatReplayTime(ms)} / ${formatReplayTime(replayTotalMs)}`;
+  $('replay-scrub').value = String(Math.round(ms));
+  updateReplayCursor(ms);
+}
+
+function replayTick(now) {
+  if (!replayPlaying) return;
+  const dt = now - replayLastFrameAt;
+  replayLastFrameAt = now;
+  replayClockMs += dt;
+  if (replayClockMs >= replayTotalMs) {
+    replayClockMs = replayTotalMs;
+    renderReplayFrame(replayClockMs);
+    replayPlaying = false;
+    cancelAnimationFrame(replayAnimId);
+    $('replay-play-btn').textContent = '▶️';
+    return;
+  }
+  renderReplayFrame(replayClockMs);
+  replayAnimId = requestAnimationFrame(replayTick);
+}
+
+function startReplayClock() {
+  replayPlaying = true;
+  $('replay-play-btn').textContent = '⏸️';
+  replayLastFrameAt = performance.now();
+  replayAnimId = requestAnimationFrame(replayTick);
+}
+function stopReplayClock() {
+  replayPlaying = false;
+  cancelAnimationFrame(replayAnimId);
+}
+
+window.openReplay = async (sessionId, nick) => {
+  show('replay-screen');
+  $('replay-subtitle').textContent = nick || '';
+  $('replay-loading').style.display = '';
+  $('replay-error').style.display = 'none';
+  $('replay-content').style.display = 'none';
+  stopReplayClock();
+  replayData = null;
+  try {
+    const snap = await getDoc(doc(db, 'replays', sessionId));
+    if (!snap.exists()) throw new Error('not found');
+    const data = snap.data();
+    if (!Array.isArray(data.rounds) || data.rounds.length === 0) throw new Error('empty');
+    replayData = data;
+    replayTotalMs = data.rounds[data.rounds.length - 1].t + 3000; // segura a última rodada na tela por mais um instante
+    replayRoundIdx = -1;
+    replayMouseIdx = 0;
+    replayClockMs = 0;
+    $('replay-scrub').max = String(Math.round(replayTotalMs));
+    $('replay-scrub').value = '0';
+    $('replay-loading').style.display = 'none';
+    $('replay-content').style.display = 'flex';
+    renderReplayFrame(0);
+    startReplayClock();
+  } catch (e) {
+    $('replay-loading').style.display = 'none';
+    $('replay-error').style.display = '';
+  }
+};
+
+window.closeReplay = () => {
+  stopReplayClock();
+  replayData = null;
+  show('ranking-screen');
+};
+
+window.toggleReplayPlayback = () => {
+  if (!replayData) return;
+  if (replayPlaying) {
+    stopReplayClock();
+    $('replay-play-btn').textContent = '▶️';
+  } else {
+    if (replayClockMs >= replayTotalMs) replayClockMs = 0;
+    startReplayClock();
+  }
+};
+
+window.scrubReplay = (val) => {
+  if (!replayData) return;
+  stopReplayClock();
+  $('replay-play-btn').textContent = '▶️';
+  replayClockMs = Math.max(0, Math.min(Number(val), replayTotalMs));
+  replayRoundIdx = -1; // força redesenho mesmo se cair na mesma rodada de antes
+  renderReplayFrame(replayClockMs);
 };
 
 async function loadDailyAlltimeRanking() {
@@ -5129,6 +5454,11 @@ window.startDailyChallenge = async () => {
       // neste instante (dispara e esquece, não atrasa a rodada em nada; ver
       // dailyPendingRoundSync/callArmDailySession)
       if (dailySessionId) dailyPendingRoundSync.push(callArmDailySession({ sessionId: dailySessionId }).catch(() => {}));
+      // o replay também começa a contar só a partir daqui (mesmo motivo do
+      // recarimbo acima) — ver dailyReplayRounds/dailyReplayMouse lá em cima
+      dailyReplayRounds = [];
+      dailyReplayMouse = [];
+      dailyReplayStartMs = performance.now();
       dailyNewRound(true);
     });
   } catch (e) {
@@ -5195,8 +5525,11 @@ function dailyNewRound(first) {
 
   const grid = $('daily-grid');
   grid.innerHTML = '';
+  // mesma ideia de "foto" da rodada que newRound() grava (ver comentário lá)
+  const roundSnapshot = [];
   items.forEach(item => {
     const paired = (item === dailyTarget) ? dailyNextTarget : distractors[d++];
+    roundSnapshot.push({ id: poolItemId(item), paired: poolItemId(paired), isTarget: item === dailyTarget });
     const el = document.createElement('div');
     el.className = 'square';
     if (dailyMode === 'shapes' || dailyMode === 'shapes-reverse') {
@@ -5214,6 +5547,7 @@ function dailyNewRound(first) {
     el.onclick = () => dailyHandleClick(item);
     grid.appendChild(el);
   });
+  if (dailyReplayRounds.length < 400) dailyReplayRounds.push({ t: Math.round(performance.now() - dailyReplayStartMs), sq: roundSnapshot });
 
   const INSTR_FIRST = {
     classic: () => T[lang].instr_first_classic(cName(dailyTarget)),
@@ -5309,7 +5643,13 @@ async function dailyGameOver(reason) {
     // não foi possível confirmar com o servidor — o placar oficial (ranking)
     // só considera o que o servidor validou; a tela ainda mostra o resultado local
   }
-  if (dailyScore >= bestScore && dailyScore > 0 && dailyScore > dailyBestScore) { sfx.record(); spawnConfetti(); }
+  if (dailyScore >= bestScore && dailyScore > 0 && dailyScore > dailyBestScore) {
+    sfx.record(); spawnConfetti();
+    // mesma ideia do modo livre (ver persistGameResult) — só sobe o "filme"
+    // da tentativa quando ela vira a melhor pontuação do dia, em segundo
+    // plano, sem atrasar a tela de resultado
+    if (dailySessionId) callSaveMatchReplay({ sessionId: dailySessionId, mode: dailyMode, rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {});
+  }
   dailyBestScore = bestScore;
   $('daily-result-best').textContent = dailyBestScore;
 
