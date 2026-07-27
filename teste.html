@@ -1488,6 +1488,7 @@
       <span><span data-i18n="hud_points">PONTOS:</span> <span id="replay-score">0</span></span>
       <span id="replay-time-label">0:00 / 0:00</span>
     </div>
+    <div class="timer-track"><div class="timer-fill" id="replay-timer-fill"></div></div>
     <div style="position:relative; width:100%;">
       <div class="grid" id="replay-grid"></div>
       <div id="replay-cursor" class="replay-cursor-dot" style="display:none;"></div>
@@ -5002,6 +5003,14 @@ function formatReplayTime(ms) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// duração do cronômetro da rodada idx — não foi gravada em lugar nenhum,
+// mas não precisa: é sempre 10s na primeira rodada e encolhe 5% a cada
+// acerto (ver "duration *= 0.95" em handleClick/dailyHandleClick), uma regra
+// fixa do jogo, então dá pra recalcular só a partir do índice da rodada
+function replayRoundDuration(idx) {
+  return 10000 * Math.pow(0.95, idx);
+}
+
 function renderReplayFrame(ms) {
   if (!replayData) return;
   const rounds = replayData.rounds;
@@ -5020,6 +5029,13 @@ function renderReplayFrame(ms) {
     triggerReplayClickFlash(idx);
     replayLastFlashIdx = idx;
   }
+  // barra de tempo da rodada — mesma lógica visual do jogo de verdade
+  // (timer-fill encolhendo de 100% a 0%), só que aqui é 100% calculada a
+  // partir do relógio da reprodução em vez de um requestAnimationFrame
+  // próprio, pra ficar sempre sincronizada com o resto da tela
+  const elapsedInRound = ms - rounds[idx].t;
+  const roundPct = Math.max(0, 1 - elapsedInRound / replayRoundDuration(idx)) * 100;
+  $('replay-timer-fill').style.width = roundPct + '%';
   $('replay-score').textContent = idx;
   $('replay-time-label').textContent = `${formatReplayTime(ms)} / ${formatReplayTime(replayTotalMs)}`;
   $('replay-scrub').value = String(Math.round(ms));
