@@ -163,6 +163,11 @@
     box-shadow: 0 0 14px rgba(255,45,107,0.45), 0 0 3px rgba(255,159,28,0.6);
   }
   button:hover { transform: scale(1.04); box-shadow: 0 0 22px rgba(255,45,107,0.65), 0 0 6px rgba(255,159,28,0.8); }
+  /* usado enquanto o placar do fim de jogo ainda está sendo confirmado com o
+     servidor (ver setOverButtonsEnabled/setDailyResultButtonsEnabled) —
+     trava clique e some com o efeito de hover pra ficar claro que tá parado */
+  button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
+  button:disabled:hover { transform: none; box-shadow: none; }
   button.secondary {
     background: #0a0e1e;
     border: 1.5px solid var(--neon-purple);
@@ -1672,6 +1677,7 @@ const T = {
     err_nick_save: msg => `Erro ao salvar: ${msg}`,
     sync_success: '✅ Recorde enviado para o ranking global!',
     sync_fail: '⚠️ Não foi possível salvar sua partida.',
+    sync_calculating: '⏳ Calculando pontuação...',
     share_copied: '✅ Copiado para a área de transferência!',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 Novo recorde pessoal!',
@@ -1878,6 +1884,7 @@ const T = {
     err_nick_save: msg => `Error saving: ${msg}`,
     sync_success: '✅ Record submitted to the global leaderboard!',
     sync_fail: '⚠️ Could not save your game.',
+    sync_calculating: '⏳ Calculating score...',
     share_copied: '✅ Copied to clipboard!',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — I scored ${score} point${score === 1 ? '' : 's'} in ${modeName} mode!${rec}\nCan you beat me? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 New personal record!',
@@ -2084,6 +2091,7 @@ const T = {
     err_nick_save: msg => `Error al guardar: ${msg}`,
     sync_success: '✅ ¡Récord enviado al ranking global!',
     sync_fail: '⚠️ No se pudo guardar tu partida.',
+    sync_calculating: '⏳ Calculando puntuación...',
     share_copied: '✅ ¡Copiado al portapapeles!',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — ¡hice ${score} punto${score === 1 ? '' : 's'} en el modo ${modeName}!${rec}\n¿Puedes superarme? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 ¡Nuevo récord personal!',
@@ -2710,6 +2718,11 @@ function compareRankRows(a, b) {
 
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
 let xpGain = 0; // XP acumulada na partida atual
+// promessas dos tiques do anti-cheat (ver callSubmitRoundTick) desta
+// partida — gameOver() espera todas "assentarem" no servidor antes de
+// mandar o resultado final, senão o envio pode chegar antes de alguns
+// tiques ainda em trânsito (ver conversa sobre a corrida entre os dois)
+let pendingRoundTicks = [];
 
 // desafio diário — estado separado do jogo normal (não usa "mode"/"score" etc.
 // acima, pra não arriscar misturar com uma partida solo aberta em paralelo)
@@ -2730,6 +2743,7 @@ function dailyLevelUnlocked() { return myData.admin === true || levelFromXp(myXp
 let dailyMode = 'classic';    // modo sorteado do dia (ver dailyModeForToday) — definido ao mostrar a tela de introdução/iniciar tentativa
 let dailyRng = null;          // gerador determinístico da rodada de hoje
 let dailyPlaying = false;
+let dailyPendingRoundTicks = []; // mesma ideia de pendingRoundTicks (modo livre), mas pra tentativa do desafio diário
 let dailyScore = 0;
 let dailyTarget = null, dailyNextTarget = null;
 let dailyDuration = 10000, dailyTimerStart = 0, dailyRafId = null;
@@ -3473,8 +3487,10 @@ function handleClick(item) {
     // tique do anti-cheat — dispara e esquece, não espera resposta nem
     // atrasa em nada a rodada seguinte (ver comentário junto de
     // callSubmitRoundTick lá em cima). Sem sessão (jogando offline/sem
-    // conta) não tem o que carimbar, então nem chama.
-    if (currentSessionId) callSubmitRoundTick({ sessionId: currentSessionId }).catch(() => {});
+    // conta) não tem o que carimbar, então nem chama. A promessa fica
+    // guardada em pendingRoundTicks — gameOver() espera todas assentarem
+    // antes de mandar o resultado final pro servidor.
+    if (currentSessionId) pendingRoundTicks.push(callSubmitRoundTick({ sessionId: currentSessionId }).catch(() => {}));
     // XP da rodada: quanto mais rápido acertar, mais ganha — e quanto mais longa a sequência, maior o bônus
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
@@ -3487,6 +3503,14 @@ function handleClick(item) {
     sfx.wrong();
     gameOver(T[lang].reason_wrong);
   }
+}
+
+// trava (ou destrava) os botões de ação da tela de fim de jogo — usado
+// enquanto o placar ainda está sendo confirmado com o servidor, pra ninguém
+// clicar "jogar de novo"/"menu"/"compartilhar" no meio da conta (ver
+// gameOver abaixo)
+function setOverButtonsEnabled(enabled) {
+  document.querySelectorAll('#over-screen .btn-row button, #signup-cta').forEach(b => { b.disabled = !enabled; });
 }
 
 async function gameOver(reason) {
@@ -3510,6 +3534,16 @@ async function gameOver(reason) {
   if (isNewRecord) { sfx.record(); spawnConfetti(); }
   show('over-screen');
 
+  // trava os botões e espera os tiques do anti-cheat desta partida
+  // "assentarem" no servidor (ver pendingRoundTicks/callSubmitRoundTick)
+  // antes de mandar o resultado final — fecha a corrida entre o envio final
+  // chegar antes de algum tique ainda em trânsito pela rede
+  setOverButtonsEnabled(false);
+  if (!offline && currentUser && myData.nick) $('sync-status').textContent = T[lang].sync_calculating;
+  await Promise.allSettled(pendingRoundTicks);
+  pendingRoundTicks = [];
+  $('sync-status').textContent = ''; // volta a ficar vazio — persistGameResult decide se mostra sucesso/erro
+
   // XP ganho + animação da barra subindo
   if (xpEarned > 0) {
     $('xp-gain').style.display = '';
@@ -3525,6 +3559,7 @@ async function gameOver(reason) {
   } else if (currentUser && myData.nick) {
     await persistGameResult(xpEarned);
   }
+  setOverButtonsEnabled(true);
 
   // convite para quem joga sem conta
   $('signup-cta').style.display = 'none';
@@ -5199,8 +5234,10 @@ function dailyHandleClick(item) {
     dailyScore++;
     // tique do anti-cheat — dispara e esquece, não espera resposta nem
     // atrasa em nada a rodada seguinte (mesma ideia de handleClick no modo
-    // livre — ver comentário junto de callSubmitRoundTick lá em cima)
-    if (dailySessionId) callSubmitRoundTick({ sessionId: dailySessionId }).catch(() => {});
+    // livre — ver comentário junto de callSubmitRoundTick lá em cima).
+    // dailyGameOver() espera todas essas promessas assentarem antes de
+    // mandar o resultado final.
+    if (dailySessionId) dailyPendingRoundTicks.push(callSubmitRoundTick({ sessionId: dailySessionId }).catch(() => {}));
     sfx.correct(dailyScore);
     $('daily-score').textContent = dailyScore;
     dailyTarget = dailyNextTarget;
@@ -5210,6 +5247,12 @@ function dailyHandleClick(item) {
     sfx.wrong();
     dailyGameOver(T[lang].reason_wrong);
   }
+}
+
+// mesma ideia de setOverButtonsEnabled (modo livre), pros botões da tela de
+// resultado do desafio diário
+function setDailyResultButtonsEnabled(enabled) {
+  document.querySelectorAll('#daily-result .btn-row button').forEach(b => { b.disabled = !enabled; });
 }
 
 async function dailyGameOver(reason) {
@@ -5223,6 +5266,14 @@ async function dailyGameOver(reason) {
   $('daily-result').style.display = 'flex';
   $('daily-result-xp').style.display = 'none';
   resetScroll('daily-screen');
+
+  // trava os botões e espera os tiques do anti-cheat desta tentativa
+  // "assentarem" no servidor antes de mandar o resultado final (mesma ideia
+  // de gameOver no modo livre — ver comentário lá)
+  setDailyResultButtonsEnabled(false);
+  $('daily-result-attempts').textContent = T[lang].sync_calculating;
+  await Promise.allSettled(dailyPendingRoundTicks);
+  dailyPendingRoundTicks = [];
 
   let bestScore = Math.max(dailyScore, dailyBestScore);
   const lvBefore = levelFromXp(myXp());
@@ -5248,6 +5299,7 @@ async function dailyGameOver(reason) {
     ? T[lang].daily_attempts_left_msg(left)
     : T[lang].daily_attempts_used_msg;
   $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
+  setDailyResultButtonsEnabled(true);
 
   refreshInboxBadge(); // atualiza a bolinha do 📬 caso esse resultado tenha desbloqueado algo pendente
 }
