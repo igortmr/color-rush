@@ -628,7 +628,8 @@
 
   /* tela de "assistir replay" — cursor reproduzindo o rastro do mouse
      gravado (fica escondido se a partida não tiver rastro, ex.: celular) e
-     marcação tracejada no quadrado certo da rodada atual */
+     um flash verde no quadrado certo no instante exato do clique (reaproveita
+     as mesmas @keyframes tutCorrectFlash/tutCorrectFlashShape do tutorial) */
   .replay-cursor-dot {
     position: absolute;
     width: 18px; height: 18px;
@@ -639,7 +640,8 @@
     transform: translate(-50%, -50%);
     z-index: 5;
   }
-  .replay-target { outline: 3px dashed var(--neon-yellow); outline-offset: 3px; }
+  #replay-grid .square.replay-click-flash { animation: tutCorrectFlash 0.35s ease; }
+  #replay-grid .square.shape-square.replay-click-flash { box-shadow: none; animation: tutCorrectFlashShape 0.35s ease; }
   .replay-controls { display: flex; align-items: center; gap: 10px; width: 100%; }
   .replay-controls input[type="range"] { flex: 1; accent-color: var(--neon-blue); }
   #replay-play-btn { flex-shrink: 0; padding: 8px 14px; }
@@ -1478,6 +1480,7 @@
     <button class="pill-btn" onclick="closeReplay()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="muted" id="replay-subtitle"></div>
+  <div class="muted" id="replay-meta" style="font-size:0.8rem;"></div>
   <div class="muted" id="replay-loading" data-i18n="loading_text">Carregando...</div>
   <div class="muted" id="replay-error" style="display:none;" data-i18n="replay_error">Não foi possível carregar este replay.</div>
   <div id="replay-content" style="display:none; width:100%; flex-direction:column; align-items:center; gap:14px;">
@@ -3526,7 +3529,8 @@ window.startGame = (m) => {
 // validação de pontuação. No celular não existe "mousemove" contínuo (só
 // toque discreto), então esse rastro simplesmente fica vazio lá — o replay
 // mostra os cliques certos, sem cursor se movendo entre eles.
-const REPLAY_MOUSE_SAMPLE_MS = 40; // ~25 amostras/seg
+const REPLAY_MOUSE_SAMPLE_MS = 30; // ~33 amostras/seg
+const REPLAY_MOUSE_CAP = 8000; // mesmo teto do servidor (MAX_REPLAY_MOUSE_SAMPLES) — a ~33/seg dá pra guardar uns 4min de rastro, e o documento final fica bem abaixo do limite de 1MB do Firestore mesmo assim
 let lastReplayMouseSampleAt = 0;
 function recordReplayMouseSample(clientX, clientY) {
   const now = performance.now();
@@ -3536,7 +3540,7 @@ function recordReplayMouseSample(clientX, clientY) {
   if (playing) { gridEl = $('grid'); arr = replayMouse; startMs = replayStartMs; }
   else if (dailyPlaying) { gridEl = $('daily-grid'); arr = dailyReplayMouse; startMs = dailyReplayStartMs; }
   else return;
-  if (!gridEl || arr.length >= 6000) return; // mesmo teto do servidor (MAX_REPLAY_MOUSE_SAMPLES)
+  if (!gridEl || arr.length >= REPLAY_MOUSE_CAP) return;
   const rect = gridEl.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
   const xPct = (clientX - rect.left) / rect.width;
@@ -4924,12 +4928,16 @@ let replayLastFrameAt = 0;  // performance.now() do último frame processado
 let replayRoundIdx = -1;    // índice da rodada desenhada agora (evita redesenhar à toa)
 let replayMouseIdx = 0;     // ponteiro pra frente no rastro do mouse
 let replayTotalMs = 0;      // duração total da reprodução
+let replayTargetSquareEl = null; // elemento do quadrado certo da rodada atual — usado pra disparar o flash de clique
+let replayLastFlashIdx = -1;     // índice da última rodada que já disparou o flash de clique (evita repetir ao redesenhar)
+const REPLAY_CLICK_FLASH_MS = 300; // janela, antes da rodada trocar, em que o "clique" é simulado (visual + som)
 
 function renderReplaySquares(round) {
   const rmode = replayData.mode;
   const pool = poolFor(rmode);
   const grid = $('replay-grid');
   grid.innerHTML = '';
+  replayTargetSquareEl = null;
   round.sq.forEach(cell => {
     const item = poolItemById(pool, cell.id);
     const paired = poolItemById(pool, cell.paired);
@@ -4947,13 +4955,24 @@ function renderReplaySquares(round) {
       el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
-    // marca o quadrado certo da rodada com um contorno tracejado a partida
-    // inteira (em vez de tentar cronometrar um "flash" exatamente no
-    // instante do clique) — mais simples e robusto, e como é só uma tela de
-    // assistir (não de jogar), "adiantar" um pouco a resposta não atrapalha
-    if (cell.isTarget) el.classList.add('replay-target');
+    // não marca mais o quadrado certo o tempo todo (era um contorno
+    // tracejado fixo) — agora o quadrado certo só se destaca no instante
+    // exato do clique, via triggerReplayClickFlash abaixo
+    if (cell.isTarget) replayTargetSquareEl = el;
     grid.appendChild(el);
   });
+}
+
+// dispara o "efeito de clique" (flash verde + som) no quadrado certo da
+// rodada idx, no instante em que ela é sincronizada com o clique de verdade
+// que a encerrou — ver chamada em renderReplayFrame
+function triggerReplayClickFlash(idx) {
+  if (replayTargetSquareEl) {
+    replayTargetSquareEl.classList.remove('replay-click-flash');
+    void replayTargetSquareEl.offsetWidth; // força reflow pra poder retriggerar a animação se o elemento ainda tiver a classe de uma execução anterior
+    replayTargetSquareEl.classList.add('replay-click-flash');
+  }
+  sfx.correct(idx + 1); // idx é a rodada que terminou; idx+1 é o placar resultante do clique — mesmo valor usado na partida real (ver handleClick)
 }
 
 function updateReplayCursor(ms) {
@@ -4992,6 +5011,15 @@ function renderReplayFrame(ms) {
     renderReplaySquares(rounds[idx]);
     replayRoundIdx = idx;
   }
+  // simula o clique (flash + som) perto do fim da rodada idx, no instante em
+  // que a rodada seguinte de verdade começou (rounds[idx+1].t) — só existe
+  // pra rodadas que realmente tiveram um acerto (a última rodada gravada
+  // nunca teve, já que terminou em erro/tempo esgotado, sem gerar próxima)
+  const nextRoundT = (idx + 1 < rounds.length) ? rounds[idx + 1].t : null;
+  if (nextRoundT !== null && replayLastFlashIdx !== idx && ms >= nextRoundT - REPLAY_CLICK_FLASH_MS) {
+    triggerReplayClickFlash(idx);
+    replayLastFlashIdx = idx;
+  }
   $('replay-score').textContent = idx;
   $('replay-time-label').textContent = `${formatReplayTime(ms)} / ${formatReplayTime(replayTotalMs)}`;
   $('replay-scrub').value = String(Math.round(ms));
@@ -5026,9 +5054,19 @@ function stopReplayClock() {
   cancelAnimationFrame(replayAnimId);
 }
 
+// "27/07/2026, 14:32" no idioma atual — mesmo padrão de fmtDateTime (painel
+// de admin), mas com locale certo pra cada idioma (essa tela é pública, não
+// só pra você) e sem depender de admin:true
+function formatReplayDateTime(ts) {
+  if (!ts || typeof ts.toMillis !== 'function') return '';
+  const loc = lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'pt-BR';
+  return new Date(ts.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 window.openReplay = async (sessionId, nick) => {
   show('replay-screen');
   $('replay-subtitle').textContent = nick || '';
+  $('replay-meta').textContent = '';
   $('replay-loading').style.display = '';
   $('replay-error').style.display = 'none';
   $('replay-content').style.display = 'none';
@@ -5040,9 +5078,11 @@ window.openReplay = async (sessionId, nick) => {
     const data = snap.data();
     if (!Array.isArray(data.rounds) || data.rounds.length === 0) throw new Error('empty');
     replayData = data;
+    $('replay-meta').textContent = [modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean).join(' · ');
     replayTotalMs = data.rounds[data.rounds.length - 1].t + 3000; // segura a última rodada na tela por mais um instante
     replayRoundIdx = -1;
     replayMouseIdx = 0;
+    replayLastFlashIdx = -1;
     replayClockMs = 0;
     $('replay-scrub').max = String(Math.round(replayTotalMs));
     $('replay-scrub').value = '0';
@@ -5080,6 +5120,7 @@ window.scrubReplay = (val) => {
   $('replay-play-btn').textContent = '▶️';
   replayClockMs = Math.max(0, Math.min(Number(val), replayTotalMs));
   replayRoundIdx = -1; // força redesenho mesmo se cair na mesma rodada de antes
+  replayLastFlashIdx = -1; // permite o flash de clique disparar de novo se arrastar de volta pra essa janela
   renderReplayFrame(replayClockMs);
 };
 
