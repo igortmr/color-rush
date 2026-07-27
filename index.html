@@ -397,6 +397,10 @@
     font-size: 0.85rem;
     text-shadow: 0 0 8px rgba(255,233,60,0.5);
   }
+  /* "seu recorde"/"melhor" quando é clicável (abre o ranking) — mesmo tipo de
+     reforço visual no hover que o botão "como jogar" (.tut-link-btn) já tem */
+  .record-badge.clickable { cursor: pointer; transition: background 0.15s ease; }
+  .record-badge.clickable:hover { background: rgba(255,233,60,0.18); }
 
   /* desafio diário — mesmo cartão de modo, com um contorno dourado pra se
      destacar como um evento (e o cronômetro no canto, no lugar de um selo fixo) */
@@ -1216,7 +1220,7 @@
     <h2 data-i18n="tab_daily">📅 Desafio Diário</h2>
     <p id="daily-card-desc" data-i18n-html="daily_card_desc">O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo em breve.</p>
     <div class="mode-card-footer" id="daily-card-footer">
-      <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
+      <span class="record-badge clickable" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" title="Ver ranking do desafio">🎯 Melhor: 0</span>
       <span class="record-badge" id="daily-card-attempts">🎟️ Tentativas restantes: 3/3</span>
     </div>
     <span class="record-badge lock-badge" id="lock-daily" style="display:none;"></span>
@@ -1225,7 +1229,7 @@
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
     <div class="mode-card-footer">
-      <span class="record-badge" onclick="event.stopPropagation(); showRanking('classic');" style="cursor:pointer;" title="Ver ranking do modo Clássico"><span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
+      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('classic');" title="Ver ranking do modo Clássico"><span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('classic');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
   </div>
@@ -1233,7 +1237,7 @@
     <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
     <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
     <div class="mode-card-footer">
-      <span class="record-badge" onclick="event.stopPropagation(); showRanking('reverse');" style="cursor:pointer;" title="Ver ranking do modo Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('reverse');" title="Ver ranking do modo Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('reverse');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-reverse" style="display:none;"></span>
@@ -1242,7 +1246,7 @@
     <h2 data-i18n="mode_shapes_title">🔶 Formas</h2>
     <p data-i18n-html="mode_shapes_desc">Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.</p>
     <div class="mode-card-footer">
-      <span class="record-badge" onclick="event.stopPropagation(); showRanking('shapes');" style="cursor:pointer;" title="Ver ranking do modo Formas"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('shapes');" title="Ver ranking do modo Formas"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-shapes" style="display:none;"></span>
@@ -1251,7 +1255,7 @@
     <h2 data-i18n-html="mode_shapes_reverse_title"><span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso</h2>
     <p data-i18n-html="mode_shapes_reverse_desc">Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.</p>
     <div class="mode-card-footer">
-      <span class="record-badge" onclick="event.stopPropagation(); showRanking('shapes-reverse');" style="cursor:pointer;" title="Ver ranking do modo Formas Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
+      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('shapes-reverse');" title="Ver ranking do modo Formas Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
       <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes-reverse');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-shapes-reverse" style="display:none;"></span>
@@ -1337,12 +1341,14 @@
     <div class="mode-card daily-card" style="cursor:default;">
       <span class="daily-badge-today" id="daily-intro-countdown"><span id="daily-intro-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
       <p class="muted" style="text-align:left; margin:0 0 8px;" data-i18n="daily_intro_heading">🎲 O modo sorteado de hoje é:</p>
-      <h2 id="daily-intro-mode-title"></h2>
+      <h2 style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+        <span id="daily-intro-mode-title"></span>
+        <button class="tut-link-btn" id="daily-intro-tut-btn" data-i18n="tut_btn">❓ Como jogar</button>
+      </h2>
       <p id="daily-intro-mode-desc"></p>
       <div class="mode-card-footer">
-        <span class="record-badge" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio"><span data-i18n="record_label">📊 Seu recorde:</span> <span id="daily-intro-best">0</span></span>
+        <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('daily');" title="Ver ranking do desafio"><span data-i18n="record_label">📊 Seu recorde:</span> <span id="daily-intro-best">0</span></span>
         <span class="record-badge" id="daily-intro-attempts">🎟️ Tentativas restantes: 3/3</span>
-        <button class="tut-link-btn" id="daily-intro-tut-btn" data-i18n="tut_btn">❓ Como jogar</button>
       </div>
     </div>
     <button id="daily-intro-start-btn" style="width:100%;" data-i18n="daily_intro_start_btn">▶️ Iniciar Desafio</button>
