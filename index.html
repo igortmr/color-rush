@@ -1334,6 +1334,11 @@
       <h2 id="daily-intro-mode-title" style="margin:0;"></h2>
       <p id="daily-intro-mode-desc" class="muted" style="text-align:left; margin:0;"></p>
     </div>
+    <div class="mode-card-footer" style="width:100%;">
+      <span class="record-badge" id="daily-intro-countdown"><span id="daily-intro-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
+      <span class="record-badge" id="daily-intro-attempts">🎟️ Tentativas restantes: 3/3</span>
+    </div>
+    <button class="secondary" style="width:100%;" onclick="showRanking('daily')" data-i18n="btn_view_daily_ranking">🏆 VER RANKING DO DESAFIO</button>
     <div class="btn-row" style="width:100%;">
       <button id="daily-intro-tut-btn" class="secondary" style="flex:1;" data-i18n="tut_btn">❓ Como jogar</button>
       <button id="daily-intro-start-btn" style="flex:1;" data-i18n="daily_intro_start_btn">▶️ Iniciar Desafio</button>
@@ -4836,10 +4841,6 @@ function startDailyCardTicker() {
   dailyCardTicker = setInterval(renderDailyCardCountdown, 1000);
 }
 function renderDailyCardCountdown() {
-  const el = $('daily-card-countdown');
-  const labelEl = $('daily-card-countdown-label');
-  const timeEl = el && el.querySelector('.daily-badge-time');
-  if (!el || !timeEl || !labelEl) return;
   const live = isDailyChallengeLive();
   const targetMs = live ? dailyNextMidnightSaoPauloMs() : dailyLaunchAtMs();
   let msLeft = targetMs - Date.now();
@@ -4848,8 +4849,21 @@ function renderDailyCardCountdown() {
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  labelEl.textContent = live ? T[lang].daily_ends_in : T[lang].daily_starts_in;
-  timeEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  const label = live ? T[lang].daily_ends_in : T[lang].daily_starts_in;
+  const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+  // atualiza os DOIS lugares que mostram esse cronômetro (card do menu e a
+  // tela de introdução do desafio) — mesma informação nos dois, só muda
+  // onde está visível na hora
+  [['daily-card-countdown', 'daily-card-countdown-label'], ['daily-intro-countdown', 'daily-intro-countdown-label']].forEach(([elId, labelId]) => {
+    const el = $(elId);
+    const labelEl = $(labelId);
+    const timeEl = el && el.querySelector('.daily-badge-time');
+    if (!el || !timeEl || !labelEl) return;
+    labelEl.textContent = label;
+    timeEl.textContent = timeStr;
+  });
+
   // virou o dia (fechou o desafio de hoje, ou estreou o desafio) — atualiza o
   // resto do card sozinho, se o menu estiver aberto
   if (rolledOver && $('menu-screen').classList.contains('active')) updateDailyMenuCard();
@@ -4890,6 +4904,8 @@ window.showDailyIntro = () => {
   const modeKey = dailyMode.replace(/-/g, '_');
   $('daily-intro-mode-title').innerHTML = T[lang][`mode_${modeKey}_title`];
   $('daily-intro-mode-desc').innerHTML = T[lang][`mode_${modeKey}_desc`];
+  $('daily-intro-attempts').textContent = T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+  renderDailyCardCountdown(); // atualiza o cronômetro na hora, sem esperar o próximo tique do segundo
   $('daily-intro-tut-btn').onclick = () => startTutorial(dailyMode, { fromDaily: true });
   $('daily-intro-start-btn').onclick = () => startDailyChallenge();
   $('daily-countdown').style.display = 'none';
