@@ -619,9 +619,9 @@
      linhas de ranking que têm um replay salvo (ver saveMatchReplay) */
   .replay-btn {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; margin-left: 6px;
-    font-size: 0.7rem; line-height: 1; padding: 0;
-    background: rgba(45,214,255,0.1); border: 1px solid rgba(45,214,255,0.4); border-radius: 50%;
+    width: 28px; height: 28px; margin-left: 6px;
+    font-size: 0.85rem; line-height: 1; padding: 0;
+    background: rgba(45,214,255,0.1); border: none; border-radius: 8px;
     box-shadow: none; vertical-align: middle;
   }
   .replay-btn:hover { background: rgba(45,214,255,0.22); box-shadow: none; transform: none; }
@@ -3847,14 +3847,14 @@ async function renderRankPreview(field, bodyElId, myPts) {
     const rows = [];
     for (const r of all) {
       const data = rowData(r);
-      if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data });
+      if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
     }
 
     // localiza (ou insere) a linha do jogador (admin nunca aparece, nem pra si mesma)
     const youLabel = lang === 'en' ? 'YOU' : lang === 'es' ? 'TÚ' : 'VOCÊ';
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
     if (myIndex === -1 && myData.admin !== true) {
-      rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData });
+      rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData, replaySessionId: offline ? undefined : myData[field + 'ReplaySessionId'] });
     }
 
     rows.sort(compareRankRows);
@@ -3887,6 +3887,15 @@ async function renderRankPreview(field, bodyElId, myPts) {
       nickCell.appendChild(nickSpan);
       if (r.stats) {
         nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
+      }
+      if (r.replaySessionId) {
+        const ptsCell = tr.children[2];
+        const replayBtn = document.createElement('button');
+        replayBtn.className = 'replay-btn';
+        replayBtn.textContent = '▶️';
+        replayBtn.title = T[lang].btn_watch_replay;
+        replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
+        ptsCell.appendChild(replayBtn);
       }
       body.appendChild(tr);
     }
@@ -4816,7 +4825,7 @@ function renderRankingPage() {
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
       replayBtn.title = T[lang].btn_watch_replay;
-      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats && r.stats.xp); };
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
       ptsCell.appendChild(replayBtn);
     }
     body.appendChild(tr);
@@ -4909,7 +4918,7 @@ function renderDailyTodayPage() {
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
       replayBtn.title = T[lang].btn_watch_replay;
-      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats && r.stats.xp); };
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
       ptsCell.appendChild(replayBtn);
     }
     body.appendChild(tr);
@@ -5102,7 +5111,7 @@ function formatReplayDateTime(ts) {
   return new Date(ts.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-window.openReplay = async (sessionId, nick, xp) => {
+window.openReplay = async (sessionId, nick, stats) => {
   show('replay-screen');
   $('replay-meta').innerHTML = '';
   $('replay-loading').style.display = '';
@@ -5116,19 +5125,20 @@ window.openReplay = async (sessionId, nick, xp) => {
     const data = snap.data();
     if (!Array.isArray(data.rounds) || data.rounds.length === 0) throw new Error('empty');
     replayData = data;
-    // nick, nível, modo e data/hora tudo na mesma linha — nick via textContent
-    // (mesmo cuidado usado nas linhas do ranking, ver renderRankingPage) pra
-    // nunca interpretar o apelido como HTML; o resto (nível + texto) entra
-    // como HTML de verdade, junto, depois do nick. xp vem da própria linha do
-    // ranking que abriu o replay (ver rowData nos dois call sites), sem
-    // precisar de leitura extra
+    // nick, nível, modo e data/hora tudo na mesma linha — nick clicável (igual
+    // aos outros nicks de ranking) abre o perfil de quem jogou, e volta pra
+    // esta mesma tela de replay ao fechar. "stats" vem da própria linha do
+    // ranking que abriu o replay (ver rowData nos call sites), sem precisar
+    // de leitura extra — e é o mesmo objeto que openProfileFromRanking espera
     const metaEl = $('replay-meta');
     const nickSpan = document.createElement('span');
     nickSpan.textContent = nick || '';
+    nickSpan.className = 'nick-click';
     nickSpan.style.color = '#cfd8ff';
     nickSpan.style.fontWeight = '700';
+    nickSpan.onclick = () => openProfileFromRanking({ uid: data.uid, nick, stats }, 'replay-screen');
     metaEl.appendChild(nickSpan);
-    const rest = [lvChip(xp || 0), modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean);
+    const rest = [lvChip(stats && stats.xp), modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean);
     if (rest.length) {
       metaEl.appendChild(document.createTextNode(' · '));
       const restSpan = document.createElement('span');
