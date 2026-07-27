@@ -3997,23 +3997,38 @@ function openProfileFromRanking(r, backTarget) {
   else renderProfile(r.stats, r.nick, r.uid);
 }
 
-// pra cada modo em que o jogador já pontuou, calcula a posição dele no ranking
-// daquele modo — reaproveita o mesmo cache de fetchAllScores() que já alimenta
-// os rankings normais, então não gera nenhuma consulta nova ao Firestore
-// (a não ser que o cache de 2min já tenha expirado).
+// pra cada ranking em que o jogador já pontuou (os 4 modos + geral/nível/
+// divulgador via RANK_FIELDS, mais o Salão da Fama do desafio diário à parte),
+// calcula a posição dele — reaproveita o mesmo cache de fetchAllScores() que já
+// alimenta os rankings normais, então não gera nenhuma consulta nova ao
+// Firestore (a não ser que o cache de 2min já tenha expirado).
 async function computeModeRanks(uid) {
   const all = await fetchAllScores();
   const ranks = {};
-  for (const m of ALL_MODES) {
+  for (const key of Object.keys(RANK_FIELDS)) {
+    const field = RANK_FIELDS[key];
     const rows = [];
     for (const r of all) {
       const data = rowData(r);
-      if ((data[m] || 0) > 0) rows.push({ uid: r.uid, pts: data[m], at: data[m + 'At'] });
+      if ((data[field] || 0) > 0) rows.push({ uid: r.uid, pts: data[field], at: data[field + 'At'] });
     }
     rows.sort(compareRankRows);
     const idx = rows.findIndex(x => x.uid === uid);
-    if (idx !== -1) ranks[m] = idx + 1;
+    if (idx !== -1) ranks[key] = idx + 1;
   }
+  // Salão da Fama (desafio diário) — ranking à parte: ordena por vitórias de
+  // 1º lugar e depois por pigmentos acumulados (mesma lógica de
+  // loadDailyAlltimeRanking), não é um campo simples então fica fora do loop
+  const dailyRows = [];
+  for (const r of all) {
+    const data = rowData(r);
+    const wins = data.dailyWins || 0;
+    const pig = (data.pigmentos || 0) + (data.pendingPigmentos || 0);
+    if (wins > 0 || pig > 0) dailyRows.push({ uid: r.uid, wins, pig });
+  }
+  dailyRows.sort((a, b) => (b.wins - a.wins) || (b.pig - a.pig));
+  const dailyIdx = dailyRows.findIndex(x => x.uid === uid);
+  if (dailyIdx !== -1) ranks.daily = dailyIdx + 1;
   return ranks;
 }
 
@@ -4047,17 +4062,28 @@ function renderPublicProfileBadges(stats) {
 // top 3, número pros demais) — vazio se ela ainda não pontuou em nenhum modo
 function renderPublicProfileRanks(stats, ranks) {
   const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸' };
-  const items = ALL_MODES.map(m => {
-    if (!(stats[m] > 0) || !ranks[m]) return null;
-    const pos = ranks[m];
+  const row = (label, pos) => {
     const medal = pos === 1 ? '🥇 ' : pos === 2 ? '🥈 ' : pos === 3 ? '🥉 ' : '';
-    const posLabel = `${medal}#${pos}`;
     return `
       <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px;">
-        <span>${MODE_ICON[m]} ${modeLabel(m)}</span>
-        <span style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-orange); font-size:1.1rem;">${posLabel}</span>
+        <span>${label}</span>
+        <span style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-orange); font-size:1.1rem;">${medal}#${pos}</span>
       </div>`;
-  }).filter(Boolean);
+  };
+  const items = [];
+  ALL_MODES.forEach(m => {
+    if (stats[m] > 0 && ranks[m]) items.push(row(`${MODE_ICON[m]} ${modeLabel(m)}`, ranks[m]));
+  });
+  // rankings gerais — mesmos campos (RANK_FIELDS) e rótulos com emoji já
+  // embutido das <option> da tela de ranking completo, pra ficar consistente
+  [['geral', T[lang].tab_geral], ['level', T[lang].tab_level], ['divulgador', T[lang].tab_divulgador]].forEach(([key, label]) => {
+    const field = RANK_FIELDS[key];
+    if ((stats[field] || 0) > 0 && ranks[key]) items.push(row(label, ranks[key]));
+  });
+  // Salão da Fama do desafio diário — não é um RANK_FIELDS comum (ver
+  // computeModeRanks), por isso checado à parte aqui
+  const dailyPig = (stats.pigmentos || 0) + (stats.pendingPigmentos || 0);
+  if (((stats.dailyWins || 0) > 0 || dailyPig > 0) && ranks.daily) items.push(row(T[lang].daily_subtab_alltime, ranks.daily));
   return items.join('');
 }
 
