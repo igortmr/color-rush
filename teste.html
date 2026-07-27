@@ -1594,6 +1594,15 @@ const callSubmitPvpAnswer = callable('submitPvpAnswer');
 const callClaimTimeout = callable('claimTimeout');
 const callForfeitMatch = callable('forfeitMatch');
 const callTouchActivity = httpsCallable(functions, 'touchActivity'); // batimento automático — não conta pro travamento de clique
+// tique de rodada do anti-cheat (ver submitRoundTick/analyzeRoundTicks em
+// functions/index.js) — chamada "dispare e esqueça" a cada acerto, igual ao
+// touchActivity acima: roda em segundo plano, não passa pelo wrapper
+// callable() de propósito (senão uma sequência rápida de acertos deixaria
+// pendingServerCalls sempre positivo, travando outros cliques da interface
+// à toa). O jogo continua 100% local e instantâneo — essa chamada só
+// carimba no servidor, em paralelo, o instante em que aquele acerto chegou
+// lá; não se espera a resposta em nenhum lugar que a use.
+const callSubmitRoundTick = httpsCallable(functions, 'submitRoundTick');
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
@@ -3461,6 +3470,11 @@ function handleClick(item) {
   if (!playing) return;
   if (item === target) {
     score++;
+    // tique do anti-cheat — dispara e esquece, não espera resposta nem
+    // atrasa em nada a rodada seguinte (ver comentário junto de
+    // callSubmitRoundTick lá em cima). Sem sessão (jogando offline/sem
+    // conta) não tem o que carimbar, então nem chama.
+    if (currentSessionId) callSubmitRoundTick({ sessionId: currentSessionId }).catch(() => {});
     // XP da rodada: quanto mais rápido acertar, mais ganha — e quanto mais longa a sequência, maior o bônus
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
@@ -5183,6 +5197,10 @@ function dailyHandleClick(item) {
   if (!dailyPlaying) return;
   if (item === dailyTarget) {
     dailyScore++;
+    // tique do anti-cheat — dispara e esquece, não espera resposta nem
+    // atrasa em nada a rodada seguinte (mesma ideia de handleClick no modo
+    // livre — ver comentário junto de callSubmitRoundTick lá em cima)
+    if (dailySessionId) callSubmitRoundTick({ sessionId: dailySessionId }).catch(() => {});
     sfx.correct(dailyScore);
     $('daily-score').textContent = dailyScore;
     dailyTarget = dailyNextTarget;
