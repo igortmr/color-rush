@@ -5047,6 +5047,7 @@ window.openReplay = async (sessionId, nick) => {
     renderReplayFrame(0);
     startReplayClock();
   } catch (e) {
+    console.error('[replay] falha ao carregar', e); // log temporário pra diagnóstico — remover depois
     $('replay-loading').style.display = 'none';
     $('replay-error').style.display = '';
   }
