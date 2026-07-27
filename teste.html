@@ -1608,6 +1608,11 @@ const callTouchActivity = httpsCallable(functions, 'touchActivity'); // batiment
 // carimba no servidor, em paralelo, o instante em que aquele acerto chegou
 // lá; não se espera a resposta em nenhum lugar que a use.
 const callSyncProgress = httpsCallable(functions, 'syncRoundProgress');
+// recarimba o início real da tentativa do desafio diário pro instante em que
+// a contagem "3, 2, 1, Vai!" termina e o tabuleiro libera de vez (ver
+// armDailySession em functions/index.js) — mesmo padrão "dispare e esqueça"
+// acima, não passa pelo wrapper callable() pelo mesmo motivo.
+const callArmDailySession = httpsCallable(functions, 'armDailySession');
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
@@ -2743,7 +2748,9 @@ function dailyLevelUnlocked() { return myData.admin === true || levelFromXp(myXp
 let dailyMode = 'classic';    // modo sorteado do dia (ver dailyModeForToday) — definido ao mostrar a tela de introdução/iniciar tentativa
 let dailyRng = null;          // gerador determinístico da rodada de hoje
 let dailyPlaying = false;
-let dailyPendingRoundSync = []; // mesma ideia de pendingRoundSync (modo livre), mas pra tentativa do desafio diário
+let dailyPendingRoundSync = []; // mesma ideia de pendingRoundSync (modo livre), mas pra tentativa do
+                                 // desafio diário — também guarda a chamada que recarimba o início real
+                                 // da tentativa depois do "Vai!" (ver callArmDailySession)
 let dailyScore = 0;
 let dailyTarget = null, dailyNextTarget = null;
 let dailyDuration = 10000, dailyTimerStart = 0, dailyRafId = null;
@@ -5112,6 +5119,11 @@ window.startDailyChallenge = async () => {
     show('daily-screen');
     startDailyCountdown(() => {
       $('daily-play').style.display = 'flex';
+      // o tabuleiro libera AGORA — a contagem regressiva não deve entrar na
+      // conta de tempo de jogo, então recarimba o início real da tentativa
+      // neste instante (dispara e esquece, não atrasa a rodada em nada; ver
+      // dailyPendingRoundSync/callArmDailySession)
+      if (dailySessionId) dailyPendingRoundSync.push(callArmDailySession({ sessionId: dailySessionId }).catch(() => {}));
       dailyNewRound(true);
     });
   } catch (e) {
@@ -5129,9 +5141,11 @@ window.startDailyChallenge = async () => {
 
 // mostra "3, 2, 1, Vai!" antes de liberar o tabuleiro pra pessoa se preparar
 // (mesma ideia visual/sonora do duelo PvP). Diferente do PvP, aqui não tem
-// servidor pra sincronizar dois jogadores — é uma pessoa só, então um
-// cronômetro local (performance.now/requestAnimationFrame) já é suficiente
-// e justo, sem precisar de nenhuma chamada extra ao backend.
+// servidor pra sincronizar dois jogadores — é uma pessoa só, então a
+// contagem em si roda 100% local (performance.now/requestAnimationFrame).
+// Só no fim, quando o tabuleiro libera de vez, é que dispara a chamada pro
+// servidor recarimbar o início real da tentativa (ver callArmDailySession
+// no onDone do startDailyCountdown, mais abaixo).
 const DAILY_COUNTDOWN_MS = 3000;
 function startDailyCountdown(onDone) {
   stopDailyCountdown();
