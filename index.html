@@ -184,6 +184,11 @@
     box-shadow: 0 0 14px rgba(255,45,107,0.45), 0 0 3px rgba(255,159,28,0.6);
   }
   button:hover { transform: scale(1.04); box-shadow: 0 0 22px rgba(255,45,107,0.65), 0 0 6px rgba(255,159,28,0.8); }
+  /* usado enquanto o placar do fim de jogo ainda está sendo confirmado com o
+     servidor (ver setOverButtonsEnabled/setDailyResultButtonsEnabled) —
+     trava clique e some com o efeito de hover pra ficar claro que tá parado */
+  button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
+  button:disabled:hover { transform: none; box-shadow: none; }
   button.secondary {
     background: #0a0e1e;
     border: 1.5px solid var(--neon-purple);
@@ -1592,7 +1597,7 @@ function callable(name) {
     return fn(...args).finally(() => { pendingServerCalls--; });
   };
 }
-// chamadas ao servidor: a pontuação final agora é validada lá (anti-cheat),
+// chamadas ao servidor: a pontuação final agora é validada lá,
 // não é mais um simples write direto no Firestore vindo do navegador.
 const callStartSession = callable('startGameSession');
 const callSubmitResult = callable('submitGameResult');
@@ -1615,6 +1620,20 @@ const callSubmitPvpAnswer = callable('submitPvpAnswer');
 const callClaimTimeout = callable('claimTimeout');
 const callForfeitMatch = callable('forfeitMatch');
 const callTouchActivity = httpsCallable(functions, 'touchActivity'); // batimento automático — não conta pro travamento de clique
+// sinal de progresso de rodada (ver syncRoundProgress/analyzeRoundSync em
+// functions/index.js) — chamada "dispare e esqueça" a cada acerto, igual ao
+// touchActivity acima: roda em segundo plano, não passa pelo wrapper
+// callable() de propósito (senão uma sequência rápida de acertos deixaria
+// pendingServerCalls sempre positivo, travando outros cliques da interface
+// à toa). O jogo continua 100% local e instantâneo — essa chamada só
+// carimba no servidor, em paralelo, o instante em que aquele acerto chegou
+// lá; não se espera a resposta em nenhum lugar que a use.
+const callSyncProgress = httpsCallable(functions, 'syncRoundProgress');
+// recarimba o início real da tentativa do desafio diário pro instante em que
+// a contagem "3, 2, 1, Vai!" termina e o tabuleiro libera de vez (ver
+// armDailySession em functions/index.js) — mesmo padrão "dispare e esqueça"
+// acima, não passa pelo wrapper callable() pelo mesmo motivo.
+const callArmDailySession = httpsCallable(functions, 'armDailySession');
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
@@ -1688,6 +1707,7 @@ const T = {
     err_nick_save: msg => `Erro ao salvar: ${msg}`,
     sync_success: '✅ Recorde enviado para o ranking global!',
     sync_fail: '⚠️ Não foi possível salvar sua partida.',
+    sync_calculating: '⏳ Calculando pontuação...',
     share_copied: '✅ Copiado para a área de transferência!',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 Novo recorde pessoal!',
@@ -1894,6 +1914,7 @@ const T = {
     err_nick_save: msg => `Error saving: ${msg}`,
     sync_success: '✅ Record submitted to the global leaderboard!',
     sync_fail: '⚠️ Could not save your game.',
+    sync_calculating: '⏳ Calculating score...',
     share_copied: '✅ Copied to clipboard!',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — I scored ${score} point${score === 1 ? '' : 's'} in ${modeName} mode!${rec}\nCan you beat me? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 New personal record!',
@@ -2100,6 +2121,7 @@ const T = {
     err_nick_save: msg => `Error al guardar: ${msg}`,
     sync_success: '✅ ¡Récord enviado al ranking global!',
     sync_fail: '⚠️ No se pudo guardar tu partida.',
+    sync_calculating: '⏳ Calculando puntuación...',
     share_copied: '✅ ¡Copiado al portapapeles!',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — ¡hice ${score} punto${score === 1 ? '' : 's'} en el modo ${modeName}!${rec}\n¿Puedes superarme? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 ¡Nuevo récord personal!',
@@ -2726,6 +2748,11 @@ function compareRankRows(a, b) {
 
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
 let xpGain = 0; // XP acumulada na partida atual
+// promessas dos sinais de progresso (ver callSyncProgress) desta
+// partida — gameOver() espera todas "assentarem" no servidor antes de
+// mandar o resultado final, senão o envio pode chegar antes de alguns
+// sinais ainda em trânsito (ver conversa sobre a corrida entre os dois)
+let pendingRoundSync = [];
 
 // desafio diário — estado separado do jogo normal (não usa "mode"/"score" etc.
 // acima, pra não arriscar misturar com uma partida solo aberta em paralelo)
@@ -2746,6 +2773,9 @@ function dailyLevelUnlocked() { return myData.admin === true || levelFromXp(myXp
 let dailyMode = 'classic';    // modo sorteado do dia (ver dailyModeForToday) — definido ao mostrar a tela de introdução/iniciar tentativa
 let dailyRng = null;          // gerador determinístico da rodada de hoje
 let dailyPlaying = false;
+let dailyPendingRoundSync = []; // mesma ideia de pendingRoundSync (modo livre), mas pra tentativa do
+                                 // desafio diário — também guarda a chamada que recarimba o início real
+                                 // da tentativa depois do "Vai!" (ver callArmDailySession)
 let dailyScore = 0;
 let dailyTarget = null, dailyNextTarget = null;
 let dailyDuration = 10000, dailyTimerStart = 0, dailyRafId = null;
@@ -2806,7 +2836,7 @@ function applyEquippedCosmetics() {
 let currentUser = null;          // usuário do firebase ou null
 let offline = false;             // jogando sem conta
 let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
-let currentSessionId = null;     // sessão validada pelo servidor pra partida atual (anti-cheat)
+let currentSessionId = null;     // sessão validada pelo servidor pra partida atual
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
@@ -3519,6 +3549,13 @@ function handleClick(item) {
   if (!playing) return;
   if (item === target) {
     score++;
+    // sinal de progresso — dispara e esquece, não espera resposta nem
+    // atrasa em nada a rodada seguinte (ver comentário junto de
+    // callSyncProgress lá em cima). Sem sessão (jogando offline/sem
+    // conta) não tem o que carimbar, então nem chama. A promessa fica
+    // guardada em pendingRoundSync — gameOver() espera todas assentarem
+    // antes de mandar o resultado final pro servidor.
+    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId }).catch(() => {}));
     // XP da rodada: quanto mais rápido acertar, mais ganha — e quanto mais longa a sequência, maior o bônus
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
@@ -3531,6 +3568,14 @@ function handleClick(item) {
     sfx.wrong();
     gameOver(T[lang].reason_wrong);
   }
+}
+
+// trava (ou destrava) os botões de ação da tela de fim de jogo — usado
+// enquanto o placar ainda está sendo confirmado com o servidor, pra ninguém
+// clicar "jogar de novo"/"menu"/"compartilhar" no meio da conta (ver
+// gameOver abaixo)
+function setOverButtonsEnabled(enabled) {
+  document.querySelectorAll('#over-screen .btn-row button, #signup-cta').forEach(b => { b.disabled = !enabled; });
 }
 
 async function gameOver(reason) {
@@ -3554,6 +3599,16 @@ async function gameOver(reason) {
   if (isNewRecord) { sfx.record(); spawnConfetti(); }
   show('over-screen');
 
+  // trava os botões e espera os sinais de progresso desta partida
+  // "assentarem" no servidor (ver pendingRoundSync/callSyncProgress)
+  // antes de mandar o resultado final — fecha a corrida entre o envio final
+  // chegar antes de algum sinal ainda em trânsito pela rede
+  setOverButtonsEnabled(false);
+  if (!offline && currentUser && myData.nick) $('sync-status').textContent = T[lang].sync_calculating;
+  await Promise.allSettled(pendingRoundSync);
+  pendingRoundSync = [];
+  $('sync-status').textContent = ''; // volta a ficar vazio — persistGameResult decide se mostra sucesso/erro
+
   // XP ganho + animação da barra subindo
   if (xpEarned > 0) {
     $('xp-gain').style.display = '';
@@ -3569,6 +3624,7 @@ async function gameOver(reason) {
   } else if (currentUser && myData.nick) {
     await persistGameResult(xpEarned);
   }
+  setOverButtonsEnabled(true);
 
   // convite para quem joga sem conta
   $('signup-cta').style.display = 'none';
@@ -4824,7 +4880,7 @@ window.setDailyRankSubtab = (tab) => {
 };
 
 /* ================== desafio diário — tela, cronômetro, jogo, caixa de entrada ==================
-   Mesmo esquema de anti-cheat do resto do jogo (sessão emitida pelo servidor,
+   Mesmo esquema de validação do resto do jogo (sessão emitida pelo servidor,
    validada no fim contra o tempo decorrido), mas com uma diferença central:
    as cores de cada rodada saem de um gerador DETERMINÍSTICO (seededPick/
    seededShuffle, semeado pela data do dia — ver hashSeed/mulberry32 lá em
@@ -5121,6 +5177,11 @@ window.startDailyChallenge = async () => {
     show('daily-screen');
     startDailyCountdown(() => {
       $('daily-play').style.display = 'flex';
+      // o tabuleiro libera AGORA — a contagem regressiva não deve entrar na
+      // conta de tempo de jogo, então recarimba o início real da tentativa
+      // neste instante (dispara e esquece, não atrasa a rodada em nada; ver
+      // dailyPendingRoundSync/callArmDailySession)
+      if (dailySessionId) dailyPendingRoundSync.push(callArmDailySession({ sessionId: dailySessionId }).catch(() => {}));
       dailyNewRound(true);
     });
   } catch (e) {
@@ -5138,9 +5199,11 @@ window.startDailyChallenge = async () => {
 
 // mostra "3, 2, 1, Vai!" antes de liberar o tabuleiro pra pessoa se preparar
 // (mesma ideia visual/sonora do duelo PvP). Diferente do PvP, aqui não tem
-// servidor pra sincronizar dois jogadores — é uma pessoa só, então um
-// cronômetro local (performance.now/requestAnimationFrame) já é suficiente
-// e justo, sem precisar de nenhuma chamada extra ao backend.
+// servidor pra sincronizar dois jogadores — é uma pessoa só, então a
+// contagem em si roda 100% local (performance.now/requestAnimationFrame).
+// Só no fim, quando o tabuleiro libera de vez, é que dispara a chamada pro
+// servidor recarimbar o início real da tentativa (ver callArmDailySession
+// no onDone do startDailyCountdown, mais abaixo).
 const DAILY_COUNTDOWN_MS = 3000;
 function startDailyCountdown(onDone) {
   stopDailyCountdown();
@@ -5241,6 +5304,12 @@ function dailyHandleClick(item) {
   if (!dailyPlaying) return;
   if (item === dailyTarget) {
     dailyScore++;
+    // sinal de progresso — dispara e esquece, não espera resposta nem
+    // atrasa em nada a rodada seguinte (mesma ideia de handleClick no modo
+    // livre — ver comentário junto de callSyncProgress lá em cima).
+    // dailyGameOver() espera todas essas promessas assentarem antes de
+    // mandar o resultado final.
+    if (dailySessionId) dailyPendingRoundSync.push(callSyncProgress({ sessionId: dailySessionId }).catch(() => {}));
     sfx.correct(dailyScore);
     $('daily-score').textContent = dailyScore;
     dailyTarget = dailyNextTarget;
@@ -5250,6 +5319,12 @@ function dailyHandleClick(item) {
     sfx.wrong();
     dailyGameOver(T[lang].reason_wrong);
   }
+}
+
+// mesma ideia de setOverButtonsEnabled (modo livre), pros botões da tela de
+// resultado do desafio diário
+function setDailyResultButtonsEnabled(enabled) {
+  document.querySelectorAll('#daily-result .btn-row button').forEach(b => { b.disabled = !enabled; });
 }
 
 async function dailyGameOver(reason) {
@@ -5263,6 +5338,14 @@ async function dailyGameOver(reason) {
   $('daily-result').style.display = 'flex';
   $('daily-result-xp').style.display = 'none';
   resetScroll('daily-screen');
+
+  // trava os botões e espera os sinais de progresso desta tentativa
+  // "assentarem" no servidor antes de mandar o resultado final (mesma ideia
+  // de gameOver no modo livre — ver comentário lá)
+  setDailyResultButtonsEnabled(false);
+  $('daily-result-attempts').textContent = T[lang].sync_calculating;
+  await Promise.allSettled(dailyPendingRoundSync);
+  dailyPendingRoundSync = [];
 
   let bestScore = Math.max(dailyScore, dailyBestScore);
   const lvBefore = levelFromXp(myXp());
@@ -5288,6 +5371,7 @@ async function dailyGameOver(reason) {
     ? T[lang].daily_attempts_left_msg(left)
     : T[lang].daily_attempts_used_msg;
   $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
+  setDailyResultButtonsEnabled(true);
 
   refreshInboxBadge(); // atualiza a bolinha do 📬 caso esse resultado tenha desbloqueado algo pendente
 }
