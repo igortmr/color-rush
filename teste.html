@@ -1187,7 +1187,7 @@
   </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
     <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
-    <h2 data-i18n="tab_daily">🗓️ Desafio Diário</h2>
+    <h2 data-i18n="tab_daily">📅 Desafio Diário</h2>
     <p id="daily-card-desc" data-i18n-html="daily_card_desc">O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que poderão ser usados na loja do jogo em breve.</p>
     <div class="mode-card-footer" id="daily-card-footer">
       <span class="record-badge" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
@@ -1302,7 +1302,7 @@
 <!-- DESAFIO DIÁRIO -->
 <div class="screen" id="daily-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:1.7rem;" data-i18n="daily_screen_title">🗓️ DESAFIO DIÁRIO</h1>
+    <h1 style="font-size:1.7rem;" data-i18n="daily_screen_title">📅 DESAFIO DIÁRIO</h1>
     <button class="pill-btn" onclick="dailyExitScreen()" data-i18n="btn_back">VOLTAR</button>
   </div>
 
@@ -1398,7 +1398,7 @@
     <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
     <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
-    <option value="daily" data-i18n="tab_daily">🗓️ Desafio Diário</option>
+    <option value="daily" data-i18n="tab_daily">📅 Desafio Diário</option>
   </select>
   <div class="scope-tabs" id="scope-tabs-row">
     <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">Todos</button>
@@ -1740,14 +1740,14 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiência (XP) acumulada.',
     divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
-    tab_daily: '🗓️ Desafio Diário',
+    tab_daily: '📅 Desafio Diário',
     daily_card_desc: 'O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDesc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDesc)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que poderão ser usados na loja do jogo em breve.',
     daily_ends_in: 'Termina em: ',
     daily_starts_in: 'Inicia em: ',
     daily_card_best: n => `🎯 Melhor: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Tentativas restantes: ${left}/${max}`,
     daily_card_already_played: '✅ Já jogou hoje',
-    daily_screen_title: '🗓️ DESAFIO DIÁRIO',
+    daily_screen_title: '📅 DESAFIO DIÁRIO',
     daily_inbox_title: '📬 Caixa de Entrada',
     btn_close: 'FECHAR',
     inbox_empty: 'Nenhuma mensagem por aqui ainda.',
@@ -1800,7 +1800,7 @@ const T = {
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
     tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR', 'shapes-reverse': '🎮 JOGAR' },
-    tut_play_btn_daily: '🗓️ INICIAR DESAFIO',
+    tut_play_btn_daily: '📅 INICIAR DESAFIO',
     tut_back_btn: 'VOLTAR AO MENU',
     tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
     tut_caption_classic_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
@@ -1946,14 +1946,14 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Shapes Reverse',
     level_explain: '🆙 Ranked by total experience (XP).',
     divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
-    tab_daily: '🗓️ Daily Challenge',
+    tab_daily: '📅 Daily Challenge',
     daily_card_desc: 'The same challenge for everyone, every day! You get <b>3 attempts</b> to get the highest score. Top scorers earn <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigments</span>, which will be usable in the game shop, coming soon.',
     daily_ends_in: 'Ends in: ',
     daily_starts_in: 'Starts in: ',
     daily_card_best: n => `🎯 Best: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Attempts left: ${left}/${max}`,
     daily_card_already_played: '✅ Already played today',
-    daily_screen_title: '🗓️ DAILY CHALLENGE',
+    daily_screen_title: '📅 DAILY CHALLENGE',
     daily_inbox_title: '📬 Inbox',
     btn_close: 'CLOSE',
     inbox_empty: 'No messages here yet.',
@@ -2006,7 +2006,7 @@ const T = {
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
     tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY', 'shapes-reverse': '🎮 PLAY' },
-    tut_play_btn_daily: '🗓️ START CHALLENGE',
+    tut_play_btn_daily: '📅 START CHALLENGE',
     tut_back_btn: 'BACK TO MENU',
     tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
     tut_caption_classic_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
@@ -2152,14 +2152,14 @@ const T = {
     tab_shapes_reverse_txt: '🔸 Formas Reverso',
     level_explain: '🆙 Ranking por experiencia (XP) acumulada.',
     divulgador_explain: '📣 Quién invitó a más amigos mediante tu enlace de invitación.',
-    tab_daily: '🗓️ Desafío Diario',
+    tab_daily: '📅 Desafío Diario',
     daily_card_desc: '¡El mismo desafío para todos, todos los días! Tienes <b>3 intentos</b> para conseguir la mayor puntuación. Los mejores clasificados ganan <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que podrán usarse en la tienda del juego, próximamente.',
     daily_ends_in: 'Termina en: ',
     daily_starts_in: 'Inicia en: ',
     daily_card_best: n => `🎯 Mejor: ${n}`,
     daily_card_attempts: (left, max) => `🎟️ Intentos restantes: ${left}/${max}`,
     daily_card_already_played: '✅ Ya jugaste hoy',
-    daily_screen_title: '🗓️ DESAFÍO DIARIO',
+    daily_screen_title: '📅 DESAFÍO DIARIO',
     daily_inbox_title: '📬 Bandeja de Entrada',
     btn_close: 'CERRAR',
     inbox_empty: 'Todavía no hay mensajes aquí.',
@@ -2212,7 +2212,7 @@ const T = {
     tut_prev: '‹ Anterior',
     tut_next: 'Siguiente ›',
     tut_play_btn: { classic: '🎮 JUGAR', reverse: '🎮 JUGAR', shapes: '🎮 JUGAR', 'shapes-reverse': '🎮 JUGAR' },
-    tut_play_btn_daily: '🗓️ INICIAR DESAFÍO',
+    tut_play_btn_daily: '📅 INICIAR DESAFÍO',
     tut_back_btn: 'VOLVER AL MENÚ',
     tut_caption_classic_1: 'Fíjate: la instrucción de arriba pide un color (<b>ROJO</b>). Entonces debes buscar el cuadrado con ese <b>color de fondo</b>.',
     tut_caption_classic_2: 'Antes de hacer clic, memoriza la <b>palabra escrita en el medio</b> de ese cuadrado: <b>VERDE</b>.',
