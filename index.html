@@ -1335,16 +1335,16 @@
   <!-- introdução da tentativa: qual modo foi sorteado hoje + instruções + botão de tutorial opcional -->
   <div id="daily-intro" style="display:none; width:100%; flex-direction:column; align-items:center; gap:16px;">
     <div class="mode-card daily-card" style="cursor:default;">
+      <span class="daily-badge-today" id="daily-intro-countdown"><span id="daily-intro-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
       <p class="muted" style="text-align:left; margin:0 0 8px;" data-i18n="daily_intro_heading">🎲 O modo sorteado de hoje é:</p>
       <h2 id="daily-intro-mode-title"></h2>
       <p id="daily-intro-mode-desc"></p>
       <div class="mode-card-footer">
-        <span class="record-badge" id="daily-intro-countdown"><span id="daily-intro-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
-        <span class="record-badge" id="daily-intro-best" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio">🎯 Melhor: 0</span>
+        <span class="record-badge" onclick="event.stopPropagation(); showRanking('daily');" style="cursor:pointer;" title="Ver ranking do desafio"><span data-i18n="record_label">📊 Seu recorde:</span> <span id="daily-intro-best">0</span></span>
+        <span class="record-badge" id="daily-intro-attempts">🎟️ Tentativas restantes: 3/3</span>
         <button class="tut-link-btn" id="daily-intro-tut-btn" data-i18n="tut_btn">❓ Como jogar</button>
       </div>
     </div>
-    <span class="record-badge" id="daily-intro-attempts">🎟️ Tentativas restantes: 3/3</span>
     <button id="daily-intro-start-btn" style="width:100%;" data-i18n="daily_intro_start_btn">▶️ Iniciar Desafio</button>
   </div>
 
@@ -4959,7 +4959,7 @@ window.showDailyIntro = () => {
   $('daily-intro-mode-title').innerHTML = T[lang][`mode_${modeKey}_title`];
   $('daily-intro-mode-desc').innerHTML = T[lang][`mode_${modeKey}_desc`];
   $('daily-intro-attempts').textContent = T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
-  $('daily-intro-best').textContent = T[lang].daily_card_best(dailyBestScore);
+  $('daily-intro-best').textContent = dailyBestScore;
   renderDailyCardCountdown(); // atualiza o cronômetro na hora, sem esperar o próximo tique do segundo
   $('daily-intro-tut-btn').onclick = () => startTutorial(dailyMode, { fromDaily: true });
   $('daily-intro-start-btn').onclick = () => startDailyChallenge();
