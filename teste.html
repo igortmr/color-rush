@@ -497,6 +497,14 @@
     letter-spacing: 1px;
     border: 1px solid rgba(255,255,255,0.5);
   }
+  /* modo Trio: a cor da palavra (tc) é uma das 3 informações do quadrado, então
+     precisa ficar bem legível — mais grossa (peso 900 + contorno reforçando o
+     traço) e maior que o .word padrão dos outros modos, sem mexer neles */
+  .word-trio {
+    font-weight: 900;
+    font-size: 1.32rem;
+    -webkit-text-stroke: 0.6px currentColor;
+  }
 
   /* game over */
   .final-score {
@@ -3645,7 +3653,7 @@ window.addEventListener('mousemove', e => recordReplayMouseSample(e.clientX, e.c
 function renderTrioSquare(el, sq) {
   el.style.background = sq.bg.hex;
   el.style.boxShadow = `0 0 18px ${sq.bg.hex}99, 0 0 40px ${sq.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-  el.innerHTML = `<span class="word" style="color:${sq.tc.hex}">${cName(sq.word)}</span>`;
+  el.innerHTML = `<span class="word word-trio" style="color:${sq.tc.hex}">${cName(sq.word)}</span>`;
 }
 
 // Modo Trio: cada quadrado tem 3 cores independentes (fundo/bg, cor da
@@ -3659,7 +3667,8 @@ function renderTrioSquare(el, sq) {
 // Viabilidade: como só é preciso excluir 2 cores por vez das 8 existentes
 // (COLORS), sempre sobram 6 cores livres — de sobra pros 2 preenchimentos do
 // quadrado certo (2 de 6) e pras 3 cores distintas de cada quadrado errado (3
-// de 6) — então NENHUMA cor nova precisou ser adicionada à paleta.
+// de 6), incluindo a reserva de até 4 fundos distintos entre si (ver
+// bgAssignment) — então NENHUMA cor nova precisou ser adicionada à paleta.
 function newTrioRound(first) {
   const pool = COLORS;
   let colorA, colorB;
@@ -3686,26 +3695,52 @@ function newTrioRound(first) {
   const matchSlot = SLOTS[Math.floor(Math.random() * SLOTS.length)];
   const fillerPool = pool.filter(c => c !== colorA && c !== colorB); // sempre 6 cores
 
+  // fundo NUNCA se repete entre os 4 quadrados da rodada — reserva antes de
+  // tudo uma cor de fundo distinta por quadrado (se o quadrado certo "gastar"
+  // o match no próprio fundo, ele já sai direto com matchColor; os outros 3,
+  // ou os 4, tiram fundos distintos do fillerPool). Isso não muda nenhuma
+  // regra: continua sendo o único jeito de saber qual é o certo (procurar as
+  // 2 cores decoradas nas 3 partes), só deixa o tabuleiro mais legível.
+  const bgShuffled = shuffle(fillerPool.slice());
+  const bgAssignment = [];
+  let bgCursor = 0;
+  for (let i = 0; i < SQUARES; i++) {
+    bgAssignment[i] = (i === targetIdx && matchSlot === 'bg') ? matchColor : bgShuffled[bgCursor++];
+  }
+
   const grid = $('grid');
   grid.innerHTML = '';
   const roundSnapshot = [];
   let newPairA = null, newPairB = null;
 
   for (let i = 0; i < SQUARES; i++) {
+    const bg = bgAssignment[i];
     let sq;
     if (i === targetIdx) {
-      const fillers = shuffle(fillerPool).slice(0, 2); // 2 cores distintas, nenhuma delas A/B
-      const otherSlots = SLOTS.filter(s => s !== matchSlot);
-      const attrs = {};
-      attrs[matchSlot] = matchColor;
-      attrs[otherSlots[0]] = fillers[0];
-      attrs[otherSlots[1]] = fillers[1];
-      sq = { bg: attrs.bg, tc: attrs.tc, word: attrs.word, isTarget: true };
-      newPairA = fillers[0];
-      newPairB = fillers[1];
+      if (matchSlot === 'bg') {
+        // fundo já é matchColor — tc/word são 2 cores distintas entre si (o
+        // fundo nunca entra nessa comparação, já não pode repetir por
+        // construção: matchColor nunca está no fillerPool)
+        const fillers = shuffle(fillerPool.slice()).slice(0, 2);
+        sq = { bg, tc: fillers[0], word: fillers[1], isTarget: true };
+        newPairA = fillers[0];
+        newPairB = fillers[1];
+      } else {
+        // matchSlot é tc OU word — esse vira matchColor; o slot restante
+        // (o outro entre tc/word) fica com mais uma cor do fillerPool,
+        // diferente do fundo já reservado pra esse quadrado
+        const otherSlot = SLOTS.find(s => s !== 'bg' && s !== matchSlot);
+        const otherFiller = shuffle(fillerPool.filter(c => c !== bg))[0];
+        const attrs = { bg };
+        attrs[matchSlot] = matchColor;
+        attrs[otherSlot] = otherFiller;
+        sq = { bg: attrs.bg, tc: attrs.tc, word: attrs.word, isTarget: true };
+        newPairA = bg;
+        newPairB = otherFiller;
+      }
     } else {
-      const fillers = shuffle(fillerPool).slice(0, 3); // 3 cores distintas, nenhuma delas A/B
-      sq = { bg: fillers[0], tc: fillers[1], word: fillers[2], isTarget: false };
+      const fillers = shuffle(fillerPool.filter(c => c !== bg)).slice(0, 2);
+      sq = { bg, tc: fillers[0], word: fillers[1], isTarget: false };
     }
     const el = document.createElement('div');
     el.className = 'square';
