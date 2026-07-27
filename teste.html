@@ -643,8 +643,36 @@
   #replay-grid .square.replay-click-flash { animation: tutCorrectFlash 0.35s ease; }
   #replay-grid .square.shape-square.replay-click-flash { box-shadow: none; animation: tutCorrectFlashShape 0.35s ease; }
   .replay-controls { display: flex; align-items: center; gap: 10px; width: 100%; }
-  .replay-controls input[type="range"] { flex: 1; accent-color: var(--neon-blue); }
-  #replay-play-btn { flex-shrink: 0; padding: 8px 14px; }
+  #replay-play-btn {
+    flex-shrink: 0; width: 42px; height: 42px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.35rem; line-height: 1;
+    background: #0a0e1e; border: 1px solid rgba(45,214,255,0.4); border-radius: 50%;
+    color: var(--neon-blue); cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+  #replay-play-btn:hover { background: rgba(45,214,255,0.18); box-shadow: 0 0 14px rgba(45,214,255,0.4); transform: none; }
+  /* range custom (sem aparência nativa) — a barra preenchida é pintada via
+     gradiente (ver updateReplayScrubFill), que preenche até a % exata do
+     progresso, sem o "respiro" nativo que sobra entre a bolinha e o fim da
+     barra em <input type=range> com estilo padrão */
+  .replay-controls input[type="range"] {
+    flex: 1; height: 6px; border-radius: 3px; outline: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    background: linear-gradient(to right, var(--neon-blue) 0%, rgba(255,255,255,0.12) 0%);
+  }
+  .replay-controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue);
+    cursor: pointer; border: none; margin-top: -5px;
+  }
+  .replay-controls input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue);
+    cursor: pointer; border: none;
+  }
+  .replay-controls input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: transparent; }
   #replay-time-label { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; white-space: nowrap; }
 
   .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
@@ -1494,7 +1522,7 @@
       <div id="replay-cursor" class="replay-cursor-dot" style="display:none;"></div>
     </div>
     <div class="replay-controls">
-      <button class="pill-btn" id="replay-play-btn" onclick="toggleReplayPlayback()">⏸️</button>
+      <button id="replay-play-btn" onclick="toggleReplayPlayback()">⏸️</button>
       <input type="range" id="replay-scrub" min="0" max="1000" value="0" oninput="scrubReplay(this.value)">
     </div>
   </div>
@@ -4798,7 +4826,7 @@ function renderRankingPage() {
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
       replayBtn.title = T[lang].btn_watch_replay;
-      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick); };
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats && r.stats.xp); };
       ptsCell.appendChild(replayBtn);
     }
     body.appendChild(tr);
@@ -4891,7 +4919,7 @@ function renderDailyTodayPage() {
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
       replayBtn.title = T[lang].btn_watch_replay;
-      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick); };
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats && r.stats.xp); };
       ptsCell.appendChild(replayBtn);
     }
     body.appendChild(tr);
@@ -5011,6 +5039,20 @@ function replayRoundDuration(idx) {
   return 10000 * Math.pow(0.95, idx);
 }
 
+// pinta a barra de progresso via gradiente (0% a X% azul, resto cinza) em vez
+// de depender do preenchimento nativo do <input type=range> — o nativo deixa
+// sempre um "respiro" entre a bolinha e a borda (raio da própria bolinha),
+// então mesmo em value==max a barra nunca parecia terminar de verdade
+function updateReplayScrubFill(pct) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  $('replay-scrub').style.background = `linear-gradient(to right, var(--neon-blue) ${clamped}%, rgba(255,255,255,0.12) ${clamped}%)`;
+}
+
+// ▶️ pausado no meio | ⏸️ tocando | 🔁 chegou ao fim (clicar recomeça do zero)
+function updateReplayPlayIcon() {
+  $('replay-play-btn').textContent = replayPlaying ? '⏸️' : (replayClockMs >= replayTotalMs ? '🔁' : '▶️');
+}
+
 function renderReplayFrame(ms) {
   if (!replayData) return;
   const rounds = replayData.rounds;
@@ -5039,6 +5081,7 @@ function renderReplayFrame(ms) {
   $('replay-score').textContent = idx;
   $('replay-time-label').textContent = `${formatReplayTime(ms)} / ${formatReplayTime(replayTotalMs)}`;
   $('replay-scrub').value = String(Math.round(ms));
+  updateReplayScrubFill(replayTotalMs > 0 ? (ms / replayTotalMs) * 100 : 0);
   updateReplayCursor(ms);
 }
 
@@ -5052,7 +5095,7 @@ function replayTick(now) {
     renderReplayFrame(replayClockMs);
     replayPlaying = false;
     cancelAnimationFrame(replayAnimId);
-    $('replay-play-btn').textContent = '▶️';
+    updateReplayPlayIcon(); // chegou ao fim — vira 🔁 (recomeçar)
     return;
   }
   renderReplayFrame(replayClockMs);
@@ -5061,7 +5104,7 @@ function replayTick(now) {
 
 function startReplayClock() {
   replayPlaying = true;
-  $('replay-play-btn').textContent = '⏸️';
+  updateReplayPlayIcon();
   replayLastFrameAt = performance.now();
   replayAnimId = requestAnimationFrame(replayTick);
 }
@@ -5079,10 +5122,10 @@ function formatReplayDateTime(ts) {
   return new Date(ts.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-window.openReplay = async (sessionId, nick) => {
+window.openReplay = async (sessionId, nick, xp) => {
   show('replay-screen');
   $('replay-subtitle').textContent = nick || '';
-  $('replay-meta').textContent = '';
+  $('replay-meta').innerHTML = '';
   $('replay-loading').style.display = '';
   $('replay-error').style.display = 'none';
   $('replay-content').style.display = 'none';
@@ -5094,7 +5137,10 @@ window.openReplay = async (sessionId, nick) => {
     const data = snap.data();
     if (!Array.isArray(data.rounds) || data.rounds.length === 0) throw new Error('empty');
     replayData = data;
-    $('replay-meta').textContent = [modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean).join(' · ');
+    // nível de quem jogou, junto do modo e data/hora, tudo na mesma linha —
+    // xp vem da própria linha do ranking que abriu o replay (ver rowData nos
+    // dois call sites de openReplay), não precisa de leitura extra
+    $('replay-meta').innerHTML = [lvChip(xp || 0), modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean).join(' · ');
     replayTotalMs = data.rounds[data.rounds.length - 1].t + 3000; // segura a última rodada na tela por mais um instante
     replayRoundIdx = -1;
     replayMouseIdx = 0;
@@ -5123,9 +5169,9 @@ window.toggleReplayPlayback = () => {
   if (!replayData) return;
   if (replayPlaying) {
     stopReplayClock();
-    $('replay-play-btn').textContent = '▶️';
+    updateReplayPlayIcon();
   } else {
-    if (replayClockMs >= replayTotalMs) replayClockMs = 0;
+    if (replayClockMs >= replayTotalMs) replayClockMs = 0; // no fim, ▶️/🔁 sempre recomeça do zero
     startReplayClock();
   }
 };
@@ -5133,8 +5179,8 @@ window.toggleReplayPlayback = () => {
 window.scrubReplay = (val) => {
   if (!replayData) return;
   stopReplayClock();
-  $('replay-play-btn').textContent = '▶️';
   replayClockMs = Math.max(0, Math.min(Number(val), replayTotalMs));
+  updateReplayPlayIcon();
   replayRoundIdx = -1; // força redesenho mesmo se cair na mesma rodada de antes
   replayLastFlashIdx = -1; // permite o flash de clique disparar de novo se arrastar de volta pra essa janela
   renderReplayFrame(replayClockMs);
