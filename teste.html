@@ -652,27 +652,18 @@
     transition: background 0.15s ease, box-shadow 0.15s ease;
   }
   #replay-play-btn:hover { background: rgba(45,214,255,0.18); box-shadow: 0 0 14px rgba(45,214,255,0.4); transform: none; }
-  /* range custom (sem aparência nativa) — a barra preenchida é pintada via
-     gradiente (ver updateReplayScrubFill), que preenche até a % exata do
-     progresso, sem o "respiro" nativo que sobra entre a bolinha e o fim da
-     barra em <input type=range> com estilo padrão */
+  /* range nativo (aparência padrão do navegador, só tingido com accent-color)
+     — tentamos um preenchimento 100% customizado antes, mas isso fez a barra
+     azul e a bolinha ficarem em posições diferentes (o navegador posiciona a
+     bolinha considerando o próprio raio dela, matemática que não bate com um
+     gradiente calculado à parte). Nativo evita esse desencontro; ainda sobra
+     um respiro de poucos pixels entre a bolinha e a ponta da barra quando o
+     valor chega ao máximo — isso é o próprio navegador reservando espaço pro
+     raio da bolinha em QUALQUER slider nativo, não dá pra zerar sem abrir mão
+     da aparência nativa de novo. */
   .replay-controls input[type="range"] {
-    flex: 1; height: 6px; border-radius: 3px; outline: none; cursor: pointer;
-    -webkit-appearance: none; appearance: none;
-    background: linear-gradient(to right, var(--neon-blue) 0%, rgba(255,255,255,0.12) 0%);
+    flex: 1; margin: 0; padding: 0; height: 6px; accent-color: var(--neon-blue); cursor: pointer;
   }
-  .replay-controls input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue);
-    cursor: pointer; border: none; margin-top: -5px;
-  }
-  .replay-controls input[type="range"]::-moz-range-thumb {
-    width: 16px; height: 16px; border-radius: 50%;
-    background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue);
-    cursor: pointer; border: none;
-  }
-  .replay-controls input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: transparent; }
   #replay-time-label { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; white-space: nowrap; }
 
   .muted { color: #6b76a8; font-size: 0.85rem; text-align: center; }
@@ -1507,8 +1498,7 @@
     <h1 style="font-size:2rem;" data-i18n="replay_title">▶️ REPLAY</h1>
     <button class="pill-btn" onclick="closeReplay()" data-i18n="btn_back">VOLTAR</button>
   </div>
-  <div class="muted" id="replay-subtitle"></div>
-  <div class="muted" id="replay-meta" style="font-size:0.8rem;"></div>
+  <div id="replay-meta" style="font-size:1rem; text-align:center;"></div>
   <div class="muted" id="replay-loading" data-i18n="loading_text">Carregando...</div>
   <div class="muted" id="replay-error" style="display:none;" data-i18n="replay_error">Não foi possível carregar este replay.</div>
   <div id="replay-content" style="display:none; width:100%; flex-direction:column; align-items:center; gap:14px;">
@@ -5039,15 +5029,6 @@ function replayRoundDuration(idx) {
   return 10000 * Math.pow(0.95, idx);
 }
 
-// pinta a barra de progresso via gradiente (0% a X% azul, resto cinza) em vez
-// de depender do preenchimento nativo do <input type=range> — o nativo deixa
-// sempre um "respiro" entre a bolinha e a borda (raio da própria bolinha),
-// então mesmo em value==max a barra nunca parecia terminar de verdade
-function updateReplayScrubFill(pct) {
-  const clamped = Math.max(0, Math.min(100, pct));
-  $('replay-scrub').style.background = `linear-gradient(to right, var(--neon-blue) ${clamped}%, rgba(255,255,255,0.12) ${clamped}%)`;
-}
-
 // ▶️ pausado no meio | ⏸️ tocando | 🔁 chegou ao fim (clicar recomeça do zero)
 function updateReplayPlayIcon() {
   $('replay-play-btn').textContent = replayPlaying ? '⏸️' : (replayClockMs >= replayTotalMs ? '🔁' : '▶️');
@@ -5081,7 +5062,6 @@ function renderReplayFrame(ms) {
   $('replay-score').textContent = idx;
   $('replay-time-label').textContent = `${formatReplayTime(ms)} / ${formatReplayTime(replayTotalMs)}`;
   $('replay-scrub').value = String(Math.round(ms));
-  updateReplayScrubFill(replayTotalMs > 0 ? (ms / replayTotalMs) * 100 : 0);
   updateReplayCursor(ms);
 }
 
@@ -5124,7 +5104,6 @@ function formatReplayDateTime(ts) {
 
 window.openReplay = async (sessionId, nick, xp) => {
   show('replay-screen');
-  $('replay-subtitle').textContent = nick || '';
   $('replay-meta').innerHTML = '';
   $('replay-loading').style.display = '';
   $('replay-error').style.display = 'none';
@@ -5137,10 +5116,25 @@ window.openReplay = async (sessionId, nick, xp) => {
     const data = snap.data();
     if (!Array.isArray(data.rounds) || data.rounds.length === 0) throw new Error('empty');
     replayData = data;
-    // nível de quem jogou, junto do modo e data/hora, tudo na mesma linha —
-    // xp vem da própria linha do ranking que abriu o replay (ver rowData nos
-    // dois call sites de openReplay), não precisa de leitura extra
-    $('replay-meta').innerHTML = [lvChip(xp || 0), modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean).join(' · ');
+    // nick, nível, modo e data/hora tudo na mesma linha — nick via textContent
+    // (mesmo cuidado usado nas linhas do ranking, ver renderRankingPage) pra
+    // nunca interpretar o apelido como HTML; o resto (nível + texto) entra
+    // como HTML de verdade, junto, depois do nick. xp vem da própria linha do
+    // ranking que abriu o replay (ver rowData nos dois call sites), sem
+    // precisar de leitura extra
+    const metaEl = $('replay-meta');
+    const nickSpan = document.createElement('span');
+    nickSpan.textContent = nick || '';
+    nickSpan.style.color = '#cfd8ff';
+    nickSpan.style.fontWeight = '700';
+    metaEl.appendChild(nickSpan);
+    const rest = [lvChip(xp || 0), modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean);
+    if (rest.length) {
+      metaEl.appendChild(document.createTextNode(' · '));
+      const restSpan = document.createElement('span');
+      restSpan.innerHTML = rest.join(' · ');
+      metaEl.appendChild(restSpan);
+    }
     replayTotalMs = data.rounds[data.rounds.length - 1].t + 3000; // segura a última rodada na tela por mais um instante
     replayRoundIdx = -1;
     replayMouseIdx = 0;
