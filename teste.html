@@ -5155,11 +5155,11 @@ async function loadDailyTodayRanking() {
       const data = d.data();
       if ((data.attempts || 0) <= 0 || !data.nick) return;
       const isMe = currentUser && data.uid === currentUser.uid;
-      // só entra quem a gente confirma que não é admin: veio do fetchAllScores
-      // (que já exclui admin) ou, se for a própria pessoa logada, checamos
-      // myData.admin direto — assim nenhum admin aparece nesse ranking
+      // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
+      // testar/depurar o ranking do desafio diário com a própria conta) — no
+      // index.html (produção) a exclusão de admin continua valendo
       const stats = statsByUid[data.uid] || (isMe ? myData : null);
-      if (!stats || stats.admin === true) return;
+      if (!stats) return;
       // bestScoreAt só avança no servidor quando a tentativa bate um recorde
       // novo do dia (ver submitDailyResult em functions/index.js) — não é só
       // "última tentativa enviada", então dá pra usar de verdade pra
