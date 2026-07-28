@@ -2564,7 +2564,7 @@ async function ensureRefCode() {
 /* ================== state ================== */
 const COLORS = [
   { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'      }, hex: '#1e90ff' },
-  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'      }, hex: '#ff4757' },
+  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'      }, hex: '#ff3c3c' }, // um pouco mais puro/forte que antes (#ff4757), pra diferenciar melhor do rosa (#ff6b9d) — hue quase idêntico ao original antes puxava pro lado do rosa
   { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'     }, hex: '#2ed573' },
   { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO'  }, hex: '#ffd32a' },
   { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'    }, hex: '#a55eea' },
@@ -4362,30 +4362,42 @@ function renderPublicProfileBadges(stats) {
 // top 3, número pros demais) — vazio se ela ainda não pontuou em nenhum modo
 function renderPublicProfileRanks(stats, ranks) {
   const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺' };
-  const row = (label, pos) => {
+  // cada linha leva pra aba daquele ranking no clique (ver profileRankGoto)
+  const row = (label, pos, key) => {
     const medal = pos === 1 ? '🥇 ' : pos === 2 ? '🥈 ' : pos === 3 ? '🥉 ' : '';
     return `
-      <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px;">
+      <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer;" onclick="profileRankGoto('${key}')">
         <span>${label}</span>
         <span style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-orange); font-size:1.1rem;">${medal}#${pos}</span>
       </div>`;
   };
   const items = [];
+  // geral primeiro (visão resumida da pessoa), depois os modos individuais,
+  // nível, divulgador e por último o Salão da Fama
+  if ((stats.total || 0) > 0 && ranks.geral) items.push(row(T[lang].tab_geral, ranks.geral, 'geral'));
   ALL_MODES.forEach(m => {
-    if (stats[m] > 0 && ranks[m]) items.push(row(`${MODE_ICON[m]} ${modeLabel(m)}`, ranks[m]));
+    if (stats[m] > 0 && ranks[m]) items.push(row(`${MODE_ICON[m]} ${modeLabel(m)}`, ranks[m], m));
   });
   // rankings gerais — mesmos campos (RANK_FIELDS) e rótulos com emoji já
   // embutido das <option> da tela de ranking completo, pra ficar consistente
-  [['geral', T[lang].tab_geral], ['level', T[lang].tab_level], ['divulgador', T[lang].tab_divulgador]].forEach(([key, label]) => {
+  [['level', T[lang].tab_level], ['divulgador', T[lang].tab_divulgador]].forEach(([key, label]) => {
     const field = RANK_FIELDS[key];
-    if ((stats[field] || 0) > 0 && ranks[key]) items.push(row(label, ranks[key]));
+    if ((stats[field] || 0) > 0 && ranks[key]) items.push(row(label, ranks[key], key));
   });
   // Salão da Fama do desafio diário — não é um RANK_FIELDS comum (ver
   // computeModeRanks), por isso checado à parte aqui
   const dailyPig = (stats.pigmentos || 0) + (stats.pendingPigmentos || 0);
-  if (((stats.dailyWins || 0) > 0 || dailyPig > 0) && ranks.daily) items.push(row(T[lang].daily_subtab_alltime, ranks.daily));
+  if (((stats.dailyWins || 0) > 0 || dailyPig > 0) && ranks.daily) items.push(row(T[lang].daily_subtab_alltime, ranks.daily, 'daily'));
   return items.join('');
 }
+// clique numa linha de posição no ranking do perfil de outra pessoa — leva
+// direto pra aquela aba do ranking completo. Salão da Fama é tratado à
+// parte porque mora numa sub-aba (ver setDailyRankSubtab) dentro da aba
+// "daily", não é uma aba própria como as outras
+window.profileRankGoto = (key) => {
+  showRanking(key);
+  if (key === 'daily') setDailyRankSubtab('alltime');
+};
 
 function profileSectionLabel(text) {
   return `<div class="muted" style="text-align:left; font-family:'Orbitron',sans-serif; font-size:0.75rem; letter-spacing:0.5px; text-transform:uppercase; margin-top:4px;">${text}</div>`;
