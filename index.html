@@ -2616,11 +2616,40 @@ const poolItemId = item => item.key || item.shapeClass;
 const poolItemById = (pool, id) => pool.find(x => (x.key || x.shapeClass) === id) || pool[0];
 const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio' };
 const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio'];
-// o desafio diário sorteia só entre os 4 modos originais (ver dailyModeForToday)
+// o desafio diário sorteia só entre Clássico e Reverso (ver dailyModeForToday)
 // — de propósito uma lista separada de ALL_MODES, pra um modo novo (como o
 // Trio) poder entrar no jogo livre/ranking sem precisar reconstruir também a
-// tela do desafio diário (grid/replay dele têm o próprio código de render)
-const DAILY_ROTATION_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse'];
+// tela do desafio diário (grid/replay dele têm o próprio código de render).
+// Formas/Formas Reverso saíram do sorteio a pedido (ficou só entre os 2 modos
+// de cor, que agora usam a paleta estendida DAILY_COLORS abaixo).
+const DAILY_ROTATION_MODES = ['classic', 'reverse'];
+// paleta exclusiva do desafio diário: as 8 cores normais + Marrom e Cinza, só
+// pra dar mais variedade/dificuldade nesse modo específico — o jogo livre
+// (Clássico/Reverso/Trio) continua só com as 8 cores de COLORS, sem mudança.
+// Precisa de um "kind: 'daily'" gravado no replay (ver saveMatchReplay em
+// functions/index.js e dailyGameOver aqui) pra tela de replay saber que deve
+// reconstruir com esta paleta em vez da COLORS normal (ver renderReplaySquares).
+const DAILY_COLORS = [
+  { key: 'white', name: { pt: 'BRANCO', en: 'WHITE', es: 'BLANCO' }, hex: '#f5f6fa' },
+  // um pouco mais claro que o fundo do jogo (#050810) de propósito — preto
+  // "puro" ficaria quase invisível ali; a borda branca do quadrado (ver CSS
+  // .square) ainda ajuda a marcar o contorno em qualquer um dos dois casos
+  { key: 'black', name: { pt: 'PRETO',  en: 'BLACK', es: 'NEGRO'  }, hex: '#1c1c22' },
+  { key: 'gray',  name: { pt: 'CINZA',  en: 'GRAY',  es: 'GRIS'   }, hex: '#b3bcc7' },
+  // "zebra" não é uma cor sólida — é um padrão (listras), então além do hex
+  // normal (usado só de reserva pro brilho neon da borda, ver dailyNewRound/
+  // renderReplaySquares) ela carrega "pattern": um valor CSS de background
+  // completo que o código usa no lugar do hex quando existir
+  {
+    key: 'zebra', name: { pt: 'ZEBRA', en: 'ZEBRA', es: 'CEBRA' }, hex: '#f5f6fa',
+    pattern: 'repeating-linear-gradient(45deg, #f5f6fa 0px, #f5f6fa 9px, #1c1c22 9px, #1c1c22 18px)',
+  },
+];
+// mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
+// paleta estendida (DAILY_COLORS); qualquer outro valor cai no poolFor normal
+// (dead code hoje, já que DAILY_ROTATION_MODES só tem esses 2, mas mantém a
+// função segura se um modo de forma voltar a entrar no sorteio um dia)
+const dailyPoolFor = m => (m === 'classic' || m === 'reverse') ? DAILY_COLORS : poolFor(m);
 // Geral = soma dos recordes em TODOS os modos (conta 0 pro modo ainda não jogado)
 const computeTotal = (overrideMode, overrideScore) =>
   ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (myData[k] || 0)), 0);
@@ -4145,7 +4174,10 @@ async function fetchScoresFromSnapshot() {
     Array.from({ length: chunkCount }, (_, i) => getDoc(doc(db, 'scoresSnapshot', 'chunk_' + i)))
   );
   const rows = [];
-  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => rows.push(r)); });
+  // o retrato (recomputeScoresSnapshot em functions/index.js) não filtra
+  // admin no servidor — é compartilhado com teste.html, que mostra admin de
+  // propósito; aqui em produção continua de fora de qualquer ranking
+  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => { if (r.data && r.data.admin !== true) rows.push(r); }); });
   return rows;
 }
 
@@ -5362,7 +5394,11 @@ const REPLAY_CLICK_FLASH_MS = 300; // janela, antes da rodada trocar, em que o "
 
 function renderReplaySquares(round, idx) {
   const rmode = replayData.mode;
-  const pool = poolFor(rmode);
+  // replay do desafio diário (kind:'daily', ver saveMatchReplay em
+  // functions/index.js) usa a paleta estendida (Marrom/Cinza) nos modos
+  // Clássico/Reverso — mesmo "mode" que o jogo livre usa, então só dá pra
+  // saber qual paleta reconstruir checando esse flag à parte
+  const pool = (replayData.kind === 'daily' && (rmode === 'classic' || rmode === 'reverse')) ? DAILY_COLORS : poolFor(rmode);
   const grid = $('replay-grid');
   grid.innerHTML = '';
   replayTargetSquareEl = null;
@@ -5386,7 +5422,7 @@ function renderReplaySquares(round, idx) {
       } else {
         const bg   = (rmode === 'classic') ? item : paired;
         const word = (rmode === 'classic') ? paired : item;
-        el.style.background = bg.hex;
+        el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
         el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
         el.innerHTML = `<span class="word">${cName(word)}</span>`;
       }
@@ -5983,7 +6019,7 @@ window.startDailyChallenge = async () => {
     dailyScore = 0;
     dailyDuration = 10000;
     dailyPlaying = true;
-    dailyTarget = seededPick(dailyRng, poolFor(dailyMode));
+    dailyTarget = seededPick(dailyRng, dailyPoolFor(dailyMode));
     $('daily-score').textContent = 0;
     $('daily-intro').style.display = 'none';
     $('daily-result').style.display = 'none';
@@ -6059,7 +6095,7 @@ function stopDailyCountdown() {
 }
 
 function dailyNewRound(first) {
-  const pool = poolFor(dailyMode);
+  const pool = dailyPoolFor(dailyMode);
   dailyNextTarget = seededPick(dailyRng, pool);
   const others = seededShuffle(dailyRng, pool.filter(c => c !== dailyTarget)).slice(0, SQUARES - 1);
   const items = seededShuffle(dailyRng, [dailyTarget, ...others]); // clássico: fundos | reverso: palavras | formas: ícones
@@ -6082,7 +6118,7 @@ function dailyNewRound(first) {
     } else {
       const bg   = (dailyMode === 'classic') ? item : paired;
       const word = (dailyMode === 'classic') ? paired : item;
-      el.style.background = bg.hex;
+      el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
       el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
@@ -6190,7 +6226,7 @@ async function dailyGameOver(reason) {
     // mesma ideia do modo livre (ver persistGameResult) — só sobe o "filme"
     // da tentativa quando ela vira a melhor pontuação do dia, em segundo
     // plano, sem atrasar a tela de resultado
-    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
+    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, kind: 'daily', rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
   }
   dailyBestScore = bestScore;
   $('daily-result-best').textContent = dailyBestScore;
