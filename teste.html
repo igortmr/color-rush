@@ -625,7 +625,7 @@
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
   th:first-child { text-align: center; }
   /* coluna própria do nível no ranking, separada do nick (ver buildRankRowNick) */
-  .lv-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
+  .lv-cell { text-align: center; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
   /* botão de "assistir replay" — some pequeno do lado da pontuação, só nas
      linhas de ranking que têm um replay salvo (ver saveMatchReplay) */
   .replay-btn {
@@ -1110,6 +1110,7 @@
     border-radius: 10px;
     padding: 1px 6px;
     flex-shrink: 0;
+    white-space: nowrap;
   }
   /* nível "master" (100+) — mesmo ciclo de cores e duração da moldura
      arco-íris da loja (nickFrameRainbow), só que animando o texto/borda do
@@ -1377,7 +1378,7 @@
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="card" style="padding:10px; gap:4px;">
     <table>
-      <colgroup><col style="width:32px;"><col style="width:46px;"><col><col style="width:112px;"></colgroup>
+      <colgroup><col style="width:32px;"><col style="width:54px;"><col><col style="width:112px;"></colgroup>
       <thead><tr><th>#</th><th></th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="mini-ranking-body"></tbody>
     </table>
@@ -1509,14 +1510,14 @@
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;" id="ranking-table-card">
     <table>
-      <colgroup><col style="width:32px;"><col style="width:46px;"><col><col style="width:112px;"></colgroup>
+      <colgroup><col style="width:32px;"><col style="width:54px;"><col><col style="width:112px;"></colgroup>
       <thead><tr><th>#</th><th></th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="ranking-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
-      <colgroup><col style="width:32px;"><col style="width:46px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
+      <colgroup><col style="width:32px;"><col style="width:54px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
       <thead><tr><th>#</th><th></th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n-html="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
       <tbody id="daily-alltime-body"><tr><td colspan="5" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>

@@ -641,9 +641,12 @@
   tbody tr.row-theme-fire   { background: linear-gradient(90deg, rgba(255,45,107,0.35), rgba(255,159,28,0.15)); }
   tbody tr.row-theme-ocean  { background: linear-gradient(90deg, rgba(30,144,255,0.35), rgba(0,210,211,0.15)); }
   tbody tr.row-theme-galaxy { background: linear-gradient(90deg, rgba(177,77,255,0.35), rgba(255,107,157,0.15)); }
-  td.pos { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  td.pos { text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
+  th:first-child { text-align: center; }
+  /* coluna própria do nível no ranking, separada do nick (ver buildRankRowNick) */
+  .lv-cell { text-align: center; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
 
   /* botão de "assistir replay" — some pequeno do lado da pontuação, só nas
      linhas de ranking que têm um replay salvo (ver saveMatchReplay) */
@@ -1129,6 +1132,7 @@
     border-radius: 10px;
     padding: 1px 6px;
     flex-shrink: 0;
+    white-space: nowrap;
   }
   /* nível "master" (100+) — mesmo ciclo de cores e duração da moldura
      arco-íris da loja (nickFrameRainbow), só que animando o texto/borda do
@@ -1396,8 +1400,8 @@
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
   <div class="card" style="padding:10px; gap:4px;">
     <table>
-      <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
-      <thead><tr><th>#</th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
+      <colgroup><col style="width:32px;"><col style="width:54px;"><col><col style="width:112px;"></colgroup>
+      <thead><tr><th>#</th><th></th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="mini-ranking-body"></tbody>
     </table>
     <button class="link" onclick="showRanking()" data-i18n="link_view_full">ver ranking completo</button>
@@ -1528,16 +1532,16 @@
   <div class="muted" id="ranking-explain"></div>
   <div class="card" style="padding:10px;" id="ranking-table-card">
     <table>
-      <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
-      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
-      <tbody id="ranking-body"><tr><td colspan="3" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
+      <colgroup><col style="width:32px;"><col style="width:54px;"><col><col style="width:112px;"></colgroup>
+      <thead><tr><th>#</th><th></th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
+      <tbody id="ranking-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
-      <colgroup><col style="width:32px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
-      <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n-html="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
-      <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
+      <colgroup><col style="width:32px;"><col style="width:54px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
+      <thead><tr><th>#</th><th></th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n-html="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
+      <tbody id="daily-alltime-body"><tr><td colspan="5" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
     </table>
   </div>
   <div class="muted" id="daily-prizes-legend" style="display:none; font-size:0.8rem; text-align:center; margin-top:6px;"></div>
@@ -2989,13 +2993,15 @@ function sharerTierLabel(stats) {
   const name = def.names[lang][t];
   return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${name}</span>`;
 }
-// monta o conteúdo de uma célula de ranking: nível, nick e conquista/classe
-// tudo numa linha só (ver .nick-cell no <style>). Usado nas 4 tabelas de
-// ranking (mini-ranking, ranking completo, desafio diário hoje e Salão da
-// Fama) pra não duplicar essa estrutura 4x. badgeHtml já vem pronto de quem
-// chama (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
-function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
-  nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+// monta o nível (coluna própria, ver .lv-cell) + nick/conquista (ver
+// .nick-cell) de uma linha de ranking. Nível fica numa <td> separada do nick
+// pra todo mundo começar alinhado, já que "Lv 5" e "Lv 100" têm larguras
+// diferentes. Usado nas 4 tabelas de ranking (mini-ranking, ranking completo,
+// desafio diário hoje e Salão da Fama) pra não duplicar essa estrutura 4x.
+// badgeHtml já vem pronto de quem chama (equippedBadgeLabel/sharerTierLabel/
+// '' variam conforme a tabela/aba).
+function buildRankRowNick(lvCell, nickCell, r, badgeHtml, backTarget) {
+  lvCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
   nickSpan.textContent = r.nick;
   nickSpan.className = 'nick-click';
@@ -4272,7 +4278,7 @@ function rowData(r) {
 
 async function renderRankPreview(field, bodyElId, myPts) {
   const body = $(bodyElId);
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
     const all = await fetchAllScores();
     const rows = [];
@@ -4306,12 +4312,13 @@ async function renderRankPreview(field, bodyElId, myPts) {
       const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + (lang === 'en' ? '' : 'º');
       const tr = document.createElement('tr');
       if (i === myIndex) tr.className = 'me';
-      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
-      const nickCell = tr.children[1];
-      buildRankRowNick(nickCell, r, r.stats ? equippedBadgeLabel(r.stats) : '', 'over-screen');
+      tr.innerHTML = `<td class="pos">${medal}</td><td class="lv-cell"></td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+      const lvCell = tr.children[1];
+      const nickCell = tr.children[2];
+      buildRankRowNick(lvCell, nickCell, r, r.stats ? equippedBadgeLabel(r.stats) : '', 'over-screen');
       applyRowTheme(tr, r.stats);
       if (r.replaySessionId) {
-        const ptsCell = tr.children[2];
+        const ptsCell = tr.children[3];
         const replayBtn = document.createElement('button');
         replayBtn.className = 'replay-btn';
         replayBtn.textContent = '▶️';
@@ -4321,9 +4328,9 @@ async function renderRankPreview(field, bodyElId, myPts) {
       }
       body.appendChild(tr);
     }
-    if (rows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players_mini}</td></tr>`;
+    if (rows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].ranking_no_players_mini}</td></tr>`;
   } catch {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error_mini}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].ranking_error_mini}</td></tr>`;
   }
 }
 
@@ -5251,7 +5258,7 @@ window.loadRanking = async (m) => {
   // ranking de amigos exige conta (não dá pra ter amigos jogando sem login)
   if (rankingScope === 'amigos' && (offline || !currentUser)) {
     body.innerHTML = `
-      <tr><td colspan="3">
+      <tr><td colspan="4">
         <div class="card" style="text-align:center;">
           <p>${T[lang].profile_offline_msg1}</p>
           <button onclick="goSignup()">${T[lang].btn_create_account}</button>
@@ -5262,7 +5269,7 @@ window.loadRanking = async (m) => {
     return;
   }
 
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
     const all = await fetchAllScores();
     // filtro de amigos usa o mesmo cache já lido pra tela de amigos — sem leitura extra
@@ -5289,7 +5296,7 @@ window.loadRanking = async (m) => {
     rankingPage = 0;
     renderRankingPage();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].ranking_error}</td></tr>`;
   }
 };
 
@@ -5305,13 +5312,14 @@ function renderRankingPage() {
     const ptsDisplay = r.pts;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
-    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
-    const nickCell = tr.children[1];
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="lv-cell"></td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
+    const lvCell = tr.children[1];
+    const nickCell = tr.children[2];
     const rankingBadgeHtml = (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats);
-    buildRankRowNick(nickCell, r, rankingBadgeHtml, 'ranking-screen');
+    buildRankRowNick(lvCell, nickCell, r, rankingBadgeHtml, 'ranking-screen');
     applyRowTheme(tr, r.stats);
     if (r.replaySessionId) {
-      const ptsCell = tr.children[2];
+      const ptsCell = tr.children[3];
       const replayBtn = document.createElement('button');
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
@@ -5321,7 +5329,7 @@ function renderRankingPage() {
     }
     body.appendChild(tr);
   });
-  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[lang].ranking_no_friends : T[lang].ranking_no_players}</td></tr>`;
+  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${rankingScope === 'amigos' ? T[lang].ranking_no_friends : T[lang].ranking_no_players}</td></tr>`;
 
   const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
@@ -5350,7 +5358,7 @@ window.rankingGoPage = (p) => {
    campos daquele mesmo documento. */
 async function loadDailyTodayRanking() {
   const body = $('ranking-body');
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
     const dateStr = dailyLocalDateStr();
     const snap = await getDocs(query(collection(db, 'dailyScores'), where('dateStr', '==', dateStr)));
@@ -5385,7 +5393,7 @@ async function loadDailyTodayRanking() {
     dailyTodayPage = 0;
     renderDailyTodayPage();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].ranking_error}</td></tr>`;
   }
 }
 function renderDailyTodayPage() {
@@ -5398,9 +5406,10 @@ function renderDailyTodayPage() {
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
-    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
-    const nickCell = tr.children[1];
-    buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="lv-cell"></td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+    const lvCell = tr.children[1];
+    const nickCell = tr.children[2];
+    buildRankRowNick(lvCell, nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
     applyRowTheme(tr, r.stats);
     // botão de replay só aparece depois que VOCÊ (quem está olhando) já usou
     // as 3 tentativas de hoje — a rodada do desafio diário é igual pra todo
@@ -5409,7 +5418,7 @@ function renderDailyTodayPage() {
     // antemão). Não depende de quantas tentativas o DONO da linha usou, só
     // das suas.
     if (r.replaySessionId && dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
-      const ptsCell = tr.children[2];
+      const ptsCell = tr.children[3];
       const replayBtn = document.createElement('button');
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
@@ -5419,7 +5428,7 @@ function renderDailyTodayPage() {
     }
     body.appendChild(tr);
   });
-  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
+  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
@@ -5723,7 +5732,7 @@ window.scrubReplay = (val) => {
 
 async function loadDailyAlltimeRanking() {
   const body = $('daily-alltime-body');
-  body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="5" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
     const all = await fetchAllScores();
     const rows = [];
@@ -5744,7 +5753,7 @@ async function loadDailyAlltimeRanking() {
     dailyAlltimePage = 0;
     renderDailyAlltimePage();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].ranking_error}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="5" class="muted">${T[lang].ranking_error}</td></tr>`;
   }
 }
 function renderDailyAlltimePage() {
@@ -5757,13 +5766,14 @@ function renderDailyAlltimePage() {
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
     const tr = document.createElement('tr');
     if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
-    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.wins}</td><td class="pts">${r.pig}</td>`;
-    const nickCell = tr.children[1];
-    buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="lv-cell"></td><td class="nick-cell"></td><td class="pts">${r.wins}</td><td class="pts">${r.pig}</td>`;
+    const lvCell = tr.children[1];
+    const nickCell = tr.children[2];
+    buildRankRowNick(lvCell, nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
     applyRowTheme(tr, r.stats);
     body.appendChild(tr);
   });
-  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].daily_no_wins_yet}</td></tr>`;
+  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="5" class="muted">${T[lang].daily_no_wins_yet}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
