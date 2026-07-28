@@ -2604,9 +2604,13 @@ const DAILY_ROTATION_MODES = ['classic', 'reverse'];
 // functions/index.js e dailyGameOver aqui) pra tela de replay saber que deve
 // reconstruir com esta paleta em vez da COLORS normal (ver renderReplaySquares).
 const DAILY_COLORS = [
-  ...COLORS,
-  { key: 'brown', name: { pt: 'MARROM', en: 'BROWN', es: 'MARRÓN' }, hex: '#a5682f' },
+  { key: 'white', name: { pt: 'BRANCO', en: 'WHITE', es: 'BLANCO' }, hex: '#f5f6fa' },
+  // um pouco mais claro que o fundo do jogo (#050810) de propósito — preto
+  // "puro" ficaria quase invisível ali; a borda branca do quadrado (ver CSS
+  // .square) ainda ajuda a marcar o contorno em qualquer um dos dois casos
+  { key: 'black', name: { pt: 'PRETO',  en: 'BLACK', es: 'NEGRO'  }, hex: '#1c1c22' },
   { key: 'gray',  name: { pt: 'CINZA',  en: 'GRAY',  es: 'GRIS'   }, hex: '#b3bcc7' },
+  { key: 'brown', name: { pt: 'MARROM', en: 'BROWN', es: 'MARRÓN' }, hex: '#a5682f' },
 ];
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS); qualquer outro valor cai no poolFor normal
