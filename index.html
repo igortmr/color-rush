@@ -3210,11 +3210,17 @@ function seededShuffle(rng, a) {
   return arr;
 }
 // modo sorteado do desafio diário — determinístico por dia (mesmo modo pra
-// TODO MUNDO, e igual nas 3 tentativas), sorteado entre os 4 modos existentes
-// (clássico/reverso/formas/formas reverso) SEM olhar nível desbloqueado: o
-// desafio diário sempre foi acessível a qualquer um independente do modo
-// normal estar bloqueado ou não pro nível da pessoa.
+// TODO MUNDO, e igual nas 3 tentativas), sorteado entre os modos de
+// DAILY_ROTATION_MODES, SEM olhar nível desbloqueado: o desafio diário
+// sempre foi acessível a qualquer um independente do modo normal estar
+// bloqueado ou não pro nível da pessoa.
+// DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
+// sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
+// de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
+// (28/07/2026) caiu Reverso.
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse' };
 function dailyModeForToday(dateStr) {
+  if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
 }
 // mesma regra de fuso do servidor (America/Sao_Paulo, sempre UTC-3 — sem
