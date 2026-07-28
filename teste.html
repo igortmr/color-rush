@@ -1731,6 +1731,26 @@ const callArmDailySession = httpsCallable(functions, 'armDailySession');
 // wrapper callable() porque não é um clique do usuário esperando resposta —
 // roda em segundo plano enquanto a pessoa já está vendo a tela de resultado.
 const callSaveMatchReplay = httpsCallable(functions, 'saveMatchReplay');
+// tenta salvar o replay algumas vezes antes de desistir — cobre quedas de
+// rede de um instante bem na hora que a partida termina (upload silencioso
+// que nunca chega no servidor não deixa log nenhum, nem de erro, porque a
+// function nem chega a rodar). Só re-tenta ERRO DE REDE (a chamada não
+// chegou no servidor) — uma resposta {ok:false} de verdade (sessão não
+// confere, modo inválido etc.) é determinística, re-tentar não muda nada.
+async function saveMatchReplayWithRetry(payload, attemptsLeft = 3) {
+  try {
+    const res = await callSaveMatchReplay(payload);
+    if (!res.data || !res.data.ok) console.warn('[replay] não salvou', res.data); // log temporário pra diagnóstico — remover depois
+    return res;
+  } catch (e) {
+    if (attemptsLeft > 1) {
+      await new Promise(r => setTimeout(r, 1200));
+      return saveMatchReplayWithRetry(payload, attemptsLeft - 1);
+    }
+    console.warn('[replay] erro ao salvar (sem mais tentativas)', e);
+    throw e;
+  }
+}
 // ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
 // ver requireAdmin em functions/index.js; qualquer outra conta que tentar
 // chamar recebe permission-denied do servidor)
@@ -4026,9 +4046,7 @@ async function persistGameResult(xpEarned = 0) {
       // resultado. myData[mode+'ReplaySessionId'] atualiza na hora, sem
       // esperar o próximo carregamento do ranking, mesmo motivo do +'At' acima
       myData[mode + 'ReplaySessionId'] = sessionId;
-      callSaveMatchReplay({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse })
-        .then(res => { if (!res.data || !res.data.ok) console.warn('[replay] não salvou', res.data); }) // log temporário pra diagnóstico — remover depois
-        .catch(e => console.warn('[replay] erro ao salvar', e));
+      saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
   } catch (e) {
     $('sync-status').textContent = T[lang].sync_fail;
@@ -6114,9 +6132,7 @@ async function dailyGameOver(reason) {
     // mesma ideia do modo livre (ver persistGameResult) — só sobe o "filme"
     // da tentativa quando ela vira a melhor pontuação do dia, em segundo
     // plano, sem atrasar a tela de resultado
-    if (dailySessionId) callSaveMatchReplay({ sessionId: dailySessionId, mode: dailyMode, rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse })
-      .then(res => { if (!res.data || !res.data.ok) console.warn('[replay] não salvou', res.data); }) // log temporário pra diagnóstico — remover depois
-      .catch(e => console.warn('[replay] erro ao salvar', e));
+    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
   }
   dailyBestScore = bestScore;
   $('daily-result-best').textContent = dailyBestScore;
