@@ -4237,6 +4237,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
       tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
       const nickCell = tr.children[1];
       if (r.stats) nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats.xp));
+      nickCell.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 24));
       const nickSpan = document.createElement('span');
       nickSpan.textContent = r.nick;
       nickSpan.className = 'nick-click';
@@ -5271,6 +5272,7 @@ function renderRankingPage() {
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
     const nickCell = tr.children[1];
     nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+    nickCell.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 24));
     const nickSpan = document.createElement('span'); // inserção segura do nick
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
@@ -5372,6 +5374,7 @@ function renderDailyTodayPage() {
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
     const nickCell = tr.children[1];
     nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+    nickCell.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 24));
     const nickSpan = document.createElement('span'); // nick sempre via textContent
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
@@ -5738,6 +5741,7 @@ function renderDailyAlltimePage() {
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.wins}</td><td class="pts">${r.pig}</td>`;
     const nickCell = tr.children[1];
     nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+    nickCell.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 24));
     const nickSpan = document.createElement('span');
     nickSpan.textContent = r.nick;
     nickSpan.className = 'nick-click';
