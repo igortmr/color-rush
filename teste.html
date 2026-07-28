@@ -2590,11 +2590,29 @@ const poolItemId = item => item.key || item.shapeClass;
 const poolItemById = (pool, id) => pool.find(x => (x.key || x.shapeClass) === id) || pool[0];
 const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio' };
 const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio'];
-// o desafio diário sorteia só entre os 4 modos originais (ver dailyModeForToday)
+// o desafio diário sorteia só entre Clássico e Reverso (ver dailyModeForToday)
 // — de propósito uma lista separada de ALL_MODES, pra um modo novo (como o
 // Trio) poder entrar no jogo livre/ranking sem precisar reconstruir também a
-// tela do desafio diário (grid/replay dele têm o próprio código de render)
-const DAILY_ROTATION_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse'];
+// tela do desafio diário (grid/replay dele têm o próprio código de render).
+// Formas/Formas Reverso saíram do sorteio a pedido (ficou só entre os 2 modos
+// de cor, que agora usam a paleta estendida DAILY_COLORS abaixo).
+const DAILY_ROTATION_MODES = ['classic', 'reverse'];
+// paleta exclusiva do desafio diário: as 8 cores normais + Marrom e Cinza, só
+// pra dar mais variedade/dificuldade nesse modo específico — o jogo livre
+// (Clássico/Reverso/Trio) continua só com as 8 cores de COLORS, sem mudança.
+// Precisa de um "kind: 'daily'" gravado no replay (ver saveMatchReplay em
+// functions/index.js e dailyGameOver aqui) pra tela de replay saber que deve
+// reconstruir com esta paleta em vez da COLORS normal (ver renderReplaySquares).
+const DAILY_COLORS = [
+  ...COLORS,
+  { key: 'brown', name: { pt: 'MARROM', en: 'BROWN', es: 'MARRÓN' }, hex: '#a5682f' },
+  { key: 'gray',  name: { pt: 'CINZA',  en: 'GRAY',  es: 'GRIS'   }, hex: '#b3bcc7' },
+];
+// mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
+// paleta estendida (DAILY_COLORS); qualquer outro valor cai no poolFor normal
+// (dead code hoje, já que DAILY_ROTATION_MODES só tem esses 2, mas mantém a
+// função segura se um modo de forma voltar a entrar no sorteio um dia)
+const dailyPoolFor = m => (m === 'classic' || m === 'reverse') ? DAILY_COLORS : poolFor(m);
 // Geral = soma dos recordes em TODOS os modos (conta 0 pro modo ainda não jogado)
 const computeTotal = (overrideMode, overrideScore) =>
   ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (myData[k] || 0)), 0);
@@ -5303,7 +5321,11 @@ const REPLAY_CLICK_FLASH_MS = 300; // janela, antes da rodada trocar, em que o "
 
 function renderReplaySquares(round, idx) {
   const rmode = replayData.mode;
-  const pool = poolFor(rmode);
+  // replay do desafio diário (kind:'daily', ver saveMatchReplay em
+  // functions/index.js) usa a paleta estendida (Marrom/Cinza) nos modos
+  // Clássico/Reverso — mesmo "mode" que o jogo livre usa, então só dá pra
+  // saber qual paleta reconstruir checando esse flag à parte
+  const pool = (replayData.kind === 'daily' && (rmode === 'classic' || rmode === 'reverse')) ? DAILY_COLORS : poolFor(rmode);
   const grid = $('replay-grid');
   grid.innerHTML = '';
   replayTargetSquareEl = null;
@@ -5924,7 +5946,7 @@ window.startDailyChallenge = async () => {
     dailyScore = 0;
     dailyDuration = 10000;
     dailyPlaying = true;
-    dailyTarget = seededPick(dailyRng, poolFor(dailyMode));
+    dailyTarget = seededPick(dailyRng, dailyPoolFor(dailyMode));
     $('daily-score').textContent = 0;
     $('daily-intro').style.display = 'none';
     $('daily-result').style.display = 'none';
@@ -6000,7 +6022,7 @@ function stopDailyCountdown() {
 }
 
 function dailyNewRound(first) {
-  const pool = poolFor(dailyMode);
+  const pool = dailyPoolFor(dailyMode);
   dailyNextTarget = seededPick(dailyRng, pool);
   const others = seededShuffle(dailyRng, pool.filter(c => c !== dailyTarget)).slice(0, SQUARES - 1);
   const items = seededShuffle(dailyRng, [dailyTarget, ...others]); // clássico: fundos | reverso: palavras | formas: ícones
@@ -6132,7 +6154,7 @@ async function dailyGameOver(reason) {
     // mesma ideia do modo livre (ver persistGameResult) — só sobe o "filme"
     // da tentativa quando ela vira a melhor pontuação do dia, em segundo
     // plano, sem atrasar a tela de resultado
-    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
+    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, kind: 'daily', rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
   }
   dailyBestScore = bestScore;
   $('daily-result-best').textContent = dailyBestScore;
