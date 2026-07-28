@@ -749,7 +749,8 @@
   .rank-row-stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .rank-row-line1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .rank-row-line2 { display: flex; }
-  .rank-row-line2 .class-pill { font-size: 0.36rem; padding: 1px 5px; } /* ~50% do .class-pill normal (0.72rem) */
+  .rank-row-line2 .class-pill { font-size: 0.52rem; padding: 2px 7px; } /* ~70% do .class-pill normal (0.72rem) */
+  .rank-row-flex .lv-chip { margin-left: auto; }
   .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
   .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
   /* moldura da loja — usa borda/glow em vez de gradiente de fundo, pra ficar
@@ -2987,7 +2988,6 @@ function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   stack.className = 'rank-row-stack';
   const line1 = document.createElement('span');
   line1.className = 'rank-row-line1';
-  line1.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
   nickSpan.textContent = r.nick;
   nickSpan.className = 'nick-click';
@@ -3002,6 +3002,9 @@ function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
     stack.appendChild(line2);
   }
   flex.appendChild(stack);
+  // lv-chip separado do nick, sozinho à direita — centralizado na vertical
+  // pelo align-items:center do .rank-row-flex, igual ao avatar do outro lado
+  flex.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   nickCell.appendChild(flex);
   return nickSpan;
 }
