@@ -3673,7 +3673,7 @@ window.showMenu = () => {
     // textContent/createTextNode (pode ter qualquer caractere não-espaço)
     const labelEl = $('user-label');
     labelEl.innerHTML = '';
-    labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 18) + ' ');
+    labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 32) + ' ');
     labelEl.appendChild(document.createTextNode(T[lang].user_greeting(myData.nick || '')));
     $('menu-logout-btn').textContent = T[lang].sair_label;
   }
@@ -4978,7 +4978,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   // e é sempre SUBSTITUÍDO (nunca acrescentado) — antes usava insertAdjacentHTML
   // direto no #profile-nick, o que podia deixar ícone duplicado se essa função
   // rodasse mais de uma vez em sequência (ex.: ao trocar a medalha equipada).
-  $('profile-nick-avatar').innerHTML = avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 24) + ' ';
+  $('profile-nick-avatar').innerHTML = avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 42) + ' ';
   $('profile-nick-text').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
   $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
@@ -6433,7 +6433,7 @@ function shopItemPreview(item) {
     wrap.appendChild(mini);
   } else if (item.slot === 'avatar') {
     // sempre visível (não precisa clicar em nada pra "testar" um desenho fixo)
-    wrap.innerHTML = avatarSvg(item.id, 40);
+    wrap.innerHTML = avatarSvg(item.id, 100); // 2.5x o tamanho antigo (40), só na prévia da loja
   }
   return wrap;
 }
@@ -6565,7 +6565,7 @@ async function ensurePvpOppXp(uid) {
 // qualquer caractere), avatar e chip são HTML fixo/confiável
 function setPvpNameWithLevel(el, labelText, xp, avatarId) {
   el.innerHTML = '';
-  el.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(avatarId, 18) + ' ');
+  el.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(avatarId, 32) + ' ');
   el.appendChild(document.createTextNode(labelText));
   if (xp !== undefined) el.insertAdjacentHTML('beforeend', ' ' + lvChip(xp));
 }
