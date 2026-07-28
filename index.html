@@ -1334,9 +1334,10 @@
   </div>
   <div class="mode-card" id="card-trio" onclick="startGame('trio')">
     <h2 data-i18n="mode_trio_title">🔺 Trio</h2>
-    <p data-i18n-html="mode_trio_desc">Cada quadrado tem <b>3 cores</b>: o fundo, a cor da palavra e a palavra em si (que também nomeia uma cor). Decore as <b>2 cores pedidas</b> e clique no único quadrado que tiver uma delas em qualquer uma das 3 partes. Para a próxima rodada, decore as outras 2 cores desse quadrado.</p>
+    <p data-i18n-html="mode_trio_desc">Cada quadrado tem <b>3 cores</b>: o fundo, a cor da palavra e a palavra em si. Decore as <b>2 cores pedidas</b> e clique no único quadrado que tiver uma delas em qualquer uma das 3 partes. Para a próxima rodada, decore as outras 2 cores desse quadrado.</p>
     <div class="mode-card-footer">
       <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('trio');" title="Ver ranking do modo Trio"><span data-i18n="record_label">Seu recorde:</span> <span id="record-trio">0</span></span>
+      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('trio');" data-i18n="tut_btn">❓ Como jogar</button>
     </div>
     <span class="record-badge lock-badge" id="lock-trio" style="display:none;"></span>
   </div>
@@ -1832,7 +1833,7 @@ const T = {
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
     mode_trio_title: '🔺 Trio',
-    mode_trio_desc: 'Cada quadrado tem <b>3 cores</b>: o fundo, a cor da palavra e a palavra em si (que também nomeia uma cor). Decore as <b>2 cores pedidas</b> e clique no único quadrado que tiver uma delas em qualquer uma das 3 partes. Para a próxima rodada, decore as outras 2 cores desse quadrado.',
+    mode_trio_desc: 'Cada quadrado tem <b>3 cores</b>: o fundo, a cor da palavra e a palavra em si. Decore as <b>2 cores pedidas</b> e clique no único quadrado que tiver uma delas em qualquer uma das 3 partes. Para a próxima rodada, decore as outras 2 cores desse quadrado.',
     record_label: '📊 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
@@ -1867,8 +1868,8 @@ const T = {
     instr_next_reverse: '🧠 Clique onde está escrito o nome da cor que você memorizou (e memorize a nova COR do quadrado!)',
     instr_next_shapes: '🧠 Clique na forma cujo nome você memorizou (e memorize a nova palavra escrita nela!)',
     instr_next_shapes_reverse: '🧠 Clique no nome da forma que você memorizou (e memorize a nova FORMA ao redor!)',
-    instr_first_trio: (nameA, nameB) => `👉 Decore o ${nameA} e o ${nameB}. Ache o único quadrado com uma dessas cores (no fundo, na cor da palavra ou na própria palavra)!`,
-    instr_next_trio: '🧠 Ache o quadrado com uma das 2 cores que você acabou de decorar (fundo, cor da palavra ou a palavra) — e memorize as 2 novas cores desse quadrado!',
+    instr_first_trio: (nameA, nameB) => `👉 Decore o ${nameA} e o ${nameB}. Encontre o único quadrado com uma dessas cores (no fundo do quadrado, na cor da palavra ou na própria palavra)!`,
+    instr_next_trio: '🧠 Encontre uma das 2 cores que você memorizou (fundo, cor da palavra ou a palavra) — e memorize as outras 2 cores nesse quadrado!',
     reason_timeout: '⏰ TEMPO ESGOTADO!', reason_wrong: '❌ QUADRADO ERRADO!',
     mode_name_classic: 'Clássico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trio',
     ranking_no_players: 'Ninguém pontuou ainda. Seja o primeiro! 🚀',
@@ -1990,11 +1991,11 @@ const T = {
 
     tut_btn: '❓ Como jogar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO' },
+    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRIO' },
     tut_skip: 'Fechar tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
-    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR', 'shapes-reverse': '🎮 JOGAR' },
+    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR', 'shapes-reverse': '🎮 JOGAR', trio: '🎮 JOGAR' },
     tut_play_btn_daily: '📅 INICIAR DESAFIO',
     tut_back_btn: 'VOLTAR AO MENU',
     tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
@@ -2025,6 +2026,13 @@ const T = {
     'tut_caption_shapes-reverse_5': 'Memorize a <b>forma ao redor</b> dessa palavra: <b>TRIÂNGULO</b>.',
     'tut_caption_shapes-reverse_6': 'Após memorizar, <b>clique</b> nessa figura.',
     'tut_caption_shapes-reverse_7': 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a forma ao redor → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_trio_1: 'Repare: a instrução lá em cima pede <b>2 cores</b> (<b>VERMELHO</b> e <b>VERDE</b>). Procure o único quadrado que tenha uma delas em qualquer uma das <b>situações</b>. Aqui foi o <b>fundo do quadrado</b>.',
+    tut_caption_trio_2: 'Antes de clicar, memorize as <b>outras 2 cores</b> desse quadrado: a cor da palavra (<b>LARANJA</b>) e a própria palavra (<b>ROXO</b>).',
+    tut_caption_trio_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_trio_4: 'Agora encontre o quadrado com uma das cores que você acabou de memorizar (<b>LARANJA</b> ou <b>ROXO</b>) — dessa vez bateu na <b>cor da palavra</b> (<b>LARANJA</b>).',
+    tut_caption_trio_5: 'Memorize as outras 2 cores nesse quadrado: o <b>fundo</b> (<b>VERDE</b>) e a <b>palavra</b> (<b>AMARELO</b>).',
+    tut_caption_trio_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_trio_7: 'É isso — o ciclo será sempre: <b>encontre uma das 2 cores memorizadas na rodada anterior → memorize as outras duas cores naquele quadrado → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -2044,7 +2052,7 @@ const T = {
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
     mode_trio_title: '🔺 Trio',
-    mode_trio_desc: "Every square has <b>3 colors</b>: the background, the word's own color, and the word itself (which also names a color). Memorize the <b>2 requested colors</b> and click the only square with one of them anywhere among those 3 parts. For the next round, memorize that square's other 2 colors.",
+    mode_trio_desc: "Every square has <b>3 colors</b>: the background, the word's own color, and the word itself. Memorize the <b>2 requested colors</b> and click the only square with one of them anywhere among those 3 parts. For the next round, memorize that square's other 2 colors.",
     record_label: '📊 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
@@ -2202,11 +2210,11 @@ const T = {
 
     tut_btn: '❓ How to play',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL', shapes: '📖 SHAPES TUTORIAL', 'shapes-reverse': '📖 SHAPES REVERSE TUTORIAL' },
+    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL', shapes: '📖 SHAPES TUTORIAL', 'shapes-reverse': '📖 SHAPES REVERSE TUTORIAL', trio: '📖 TRIO TUTORIAL' },
     tut_skip: 'Close tutorial',
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
-    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY', 'shapes-reverse': '🎮 PLAY' },
+    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY', 'shapes-reverse': '🎮 PLAY', trio: '🎮 PLAY' },
     tut_play_btn_daily: '📅 START CHALLENGE',
     tut_back_btn: 'BACK TO MENU',
     tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
@@ -2237,6 +2245,13 @@ const T = {
     'tut_caption_shapes-reverse_5': 'Memorize the <b>surrounding shape</b> of that word: <b>TRIANGLE</b>.',
     'tut_caption_shapes-reverse_6': 'After memorizing, <b>click</b> that shape.',
     'tut_caption_shapes-reverse_7': "That's it — the cycle is always: <b>find the requested word → memorize the surrounding shape → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_trio_1: 'Notice: the instruction up top asks for <b>2 colors</b> (<b>RED</b> and <b>GREEN</b>). Look for the only square that has one of them in any of its <b>3 parts</b> — here, it matched the <b>background</b>.',
+    tut_caption_trio_2: "Before clicking, memorize the <b>other 2 colors</b> on that square: the word's color (<b>ORANGE</b>) and the word itself (<b>PURPLE</b>).",
+    tut_caption_trio_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_trio_4: 'Now find the square with one of the colors you just memorized (<b>ORANGE</b> or <b>PURPLE</b>) — this time it matched the <b>word\'s color</b>.',
+    tut_caption_trio_5: 'Memorize the other 2 colors on that square: the <b>background</b> (<b>GREEN</b>) and the <b>word</b> (<b>YELLOW</b>).',
+    tut_caption_trio_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_trio_7: "That's it — the cycle is always: <b>find one of the 2 memorized colors (in any of the 3 parts) → memorize the other 2 → click</b>, getting faster each time. Ready to play? 🚀",
   },
   es: {
     btn_login: 'INICIAR SESIÓN', btn_signup: 'CREAR CUENTA', btn_google: 'Iniciar sesión con Google',
@@ -2256,7 +2271,7 @@ const T = {
     mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
     mode_shapes_reverse_desc: 'Haz clic en la <b>palabra pedida</b> y memoriza la <b>forma que la rodea</b>. En la siguiente ronda, haz clic en el nombre de la forma memorizada.',
     mode_trio_title: '🔺 Trío',
-    mode_trio_desc: 'Cada cuadrado tiene <b>3 colores</b>: el fondo, el color de la palabra y la palabra en sí (que también nombra un color). Memoriza los <b>2 colores pedidos</b> y haz clic en el único cuadrado que tenga uno de ellos en cualquiera de esas 3 partes. Para la siguiente ronda, memoriza los otros 2 colores de ese cuadrado.',
+    mode_trio_desc: 'Cada cuadrado tiene <b>3 colores</b>: el fondo, el color de la palabra y la palabra en sí. Memoriza los <b>2 colores pedidos</b> y haz clic en el único cuadrado que tenga uno de ellos en cualquiera de esas 3 partes. Para la siguiente ronda, memoriza los otros 2 colores de ese cuadrado.',
     record_label: '📊 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
     footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
     hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
@@ -2414,11 +2429,11 @@ const T = {
 
     tut_btn: '❓ Cómo jugar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL CLÁSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO' },
+    tut_title: { classic: '📖 TUTORIAL CLÁSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRÍO' },
     tut_skip: 'Cerrar tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Siguiente ›',
-    tut_play_btn: { classic: '🎮 JUGAR', reverse: '🎮 JUGAR', shapes: '🎮 JUGAR', 'shapes-reverse': '🎮 JUGAR' },
+    tut_play_btn: { classic: '🎮 JUGAR', reverse: '🎮 JUGAR', shapes: '🎮 JUGAR', 'shapes-reverse': '🎮 JUGAR', trio: '🎮 JUGAR' },
     tut_play_btn_daily: '📅 INICIAR DESAFÍO',
     tut_back_btn: 'VOLVER AL MENÚ',
     tut_caption_classic_1: 'Fíjate: la instrucción de arriba pide un color (<b>ROJO</b>). Entonces debes buscar el cuadrado con ese <b>color de fondo</b>.',
@@ -2449,6 +2464,13 @@ const T = {
     'tut_caption_shapes-reverse_5': 'Memoriza la <b>forma que la rodea</b>: <b>TRIÁNGULO</b>.',
     'tut_caption_shapes-reverse_6': 'Después de memorizar, <b>haz clic</b> en esa figura.',
     'tut_caption_shapes-reverse_7': 'Eso es todo — el ciclo siempre será: <b>busca la palabra pedida → memoriza la forma que la rodea → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
+    tut_caption_trio_1: 'Fíjate: la instrucción de arriba pide <b>2 colores</b> (<b>ROJO</b> y <b>VERDE</b>). Busca el único cuadrado que tenga uno de ellos en cualquiera de sus <b>3 partes</b> — aquí, coincidió en el <b>fondo</b>.',
+    tut_caption_trio_2: 'Antes de hacer clic, memoriza los <b>otros 2 colores</b> de ese cuadrado: el color de la palabra (<b>NARANJA</b>) y la propia palabra (<b>MORADO</b>).',
+    tut_caption_trio_3: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_trio_4: 'Ahora encuentra el cuadrado con uno de los colores que acabas de memorizar (<b>NARANJA</b> o <b>MORADO</b>) — esta vez coincidió en el <b>color de la palabra</b>.',
+    tut_caption_trio_5: 'Memoriza los otros 2 colores de ese cuadrado: el <b>fondo</b> (<b>VERDE</b>) y la <b>palabra</b> (<b>AMARILLO</b>).',
+    tut_caption_trio_6: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_trio_7: 'Eso es todo — el ciclo siempre será: <b>encuentra uno de los 2 colores memorizados (en cualquiera de las 3 partes) → memoriza los otros 2 → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
   },
 };
 
@@ -7075,6 +7097,42 @@ const TUT_DATA = {
       ],
     },
   ],
+  // trio: cada quadrado tem 3 cores independentes (bg/tc/word — mesmo shape
+  // que renderTrioSquare espera). Pedem-se 2 cores (targetA/targetB); o
+  // quadrado certo é o único em que UMA delas aparece em QUALQUER das 3
+  // partes; o que se memoriza pra rodada seguinte são as OUTRAS 2 cores
+  // desse quadrado. As 3 rodadas de exemplo variam de propósito ONDE a cor
+  // pedida bate (fundo → cor da palavra → a própria palavra), pra ensinar
+  // que vale qualquer uma das 3 partes, não só o fundo.
+  trio: [
+    {
+      targetA: COLORS[1], targetB: COLORS[2], // vermelho e verde
+      squares: [
+        { bg: COLORS[0], tc: COLORS[6], word: COLORS[7] },
+        { bg: COLORS[1], tc: COLORS[5], word: COLORS[4], correct: true }, // bate no FUNDO (vermelho) — memoriza tc=laranja e word=roxo
+        { bg: COLORS[3], tc: COLORS[7], word: COLORS[6] },
+        { bg: COLORS[7], tc: COLORS[4], word: COLORS[5] },
+      ],
+    },
+    {
+      // par memorizado na rodada A: laranja (tc) + roxo (word)
+      squares: [
+        { bg: COLORS[0], tc: COLORS[7], word: COLORS[1] },
+        { bg: COLORS[1], tc: COLORS[6], word: COLORS[7] },
+        { bg: COLORS[2], tc: COLORS[5], word: COLORS[3], correct: true }, // bate na COR DA PALAVRA (laranja) — memoriza bg=verde e word=amarelo
+        { bg: COLORS[6], tc: COLORS[1], word: COLORS[0] },
+      ],
+    },
+    {
+      // par memorizado na rodada B: verde (bg) + amarelo (word)
+      squares: [
+        { bg: COLORS[0], tc: COLORS[5], word: COLORS[1] },
+        { bg: COLORS[1], tc: COLORS[4], word: COLORS[5] },
+        { bg: COLORS[4], tc: COLORS[0], word: COLORS[5] },
+        { bg: COLORS[7], tc: COLORS[6], word: COLORS[2], correct: true }, // bate na PRÓPRIA PALAVRA (verde) — posição diferente das anteriores
+      ],
+    },
+  ],
 };
 const TUT_TOTAL = 7;
 let tutMode = 'classic';
@@ -7099,6 +7157,12 @@ function tutRenderRound(roundIdx, instrText) {
     if (tutMode === 'shapes' || tutMode === 'shapes-reverse') {
       el.classList.add('shape-square', s.shape.shapeClass);
       el.innerHTML = `<span class="shape-fill ${s.shape.shapeClass}"></span><span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    } else if (tutMode === 'trio') {
+      // mesmo visual de renderTrioSquare (jogo/replay), só acrescentando o
+      // check verde que só o tutorial usa
+      el.style.background = s.bg.hex;
+      el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word word-trio" style="color:${s.tc.hex}">${cName(s.word)}</span><span class="tut-check">✅</span>`;
     } else {
       el.style.background = s.bg.hex;
       el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
@@ -7174,20 +7238,34 @@ function showTutStep(n) {
   tutSetNav();
   $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
 
-  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes, 'shapes-reverse': T[lang].instr_first_shapes_reverse };
-  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes, 'shapes-reverse': T[lang].instr_next_shapes_reverse };
+  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes, 'shapes-reverse': T[lang].instr_first_shapes_reverse, trio: T[lang].instr_first_trio };
+  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes, 'shapes-reverse': T[lang].instr_next_shapes_reverse, trio: T[lang].instr_next_trio };
   const instrFirst = INSTR_FIRST_BY_TUT_MODE[tutMode];
   const instrNext = INSTR_NEXT_BY_TUT_MODE[tutMode];
-  const round0 = () => tutRenderRound(0, instrFirst(cName(TUT_DATA[tutMode][0].target)));
+  // trio pede 2 cores (targetA/targetB) — instrFirst recebe os 2 nomes; os
+  // outros modos pedem só 1 (target)
+  const round0 = () => tutRenderRound(0, (tutMode === 'trio')
+    ? instrFirst(cName(TUT_DATA.trio[0].targetA), cName(TUT_DATA.trio[0].targetB))
+    : instrFirst(cName(TUT_DATA[tutMode][0].target)));
   const round1 = () => tutRenderRound(1, instrNext);
   const round2 = () => tutRenderRound(2, instrNext);
-  // destaca (pisca) o nome da cor/palavra dentro da instrução no topo
-  const tutHighlightInstrWord = (name) => {
+  // destaca (pisca) o(s) nome(s) da(s) cor(es)/palavra(s) dentro da instrução no
+  // topo — aceita mais de um nome (trio pede 2 cores de uma vez só)
+  const tutHighlightInstrWord = (...names) => {
     const el = $('tut-instruction');
     const raw = el.textContent;
-    const idx = raw.indexOf(name);
-    if (idx === -1) return;
-    el.innerHTML = raw.slice(0, idx) + `<span class="tut-instr-color">${name}</span>` + raw.slice(idx + name.length);
+    const found = names
+      .map(name => ({ name, idx: raw.indexOf(name) }))
+      .filter(m => m.idx !== -1)
+      .sort((a, b) => a.idx - b.idx);
+    if (!found.length) return;
+    let out = '', cursor = 0;
+    found.forEach(({ name, idx }) => {
+      out += raw.slice(cursor, idx) + `<span class="tut-instr-color">${name}</span>`;
+      cursor = idx + name.length;
+    });
+    out += raw.slice(cursor);
+    el.innerHTML = out;
   };
   // escurece os outros quadrados do grid aos poucos (~2s), deixando só o "sq" em
   // destaque — força um reflow antes de aplicar a classe, senão o navegador pula
@@ -7219,7 +7297,7 @@ function showTutStep(n) {
     el.textContent = '👆';
     el.classList.add('tut-pointer-up');
     sq.querySelector('.word').classList.add('tut-word-glow');
-    tutPointAt(sq.querySelector('.word'), { static: !!opts.static, yr: 1.35 });
+    tutPointAt(sq.querySelector('.word'), { static: !!opts.static, xr: opts.xr ?? 0.5, yr: opts.yr ?? 1.35 });
   };
   // mãozinha "chega" deslizando pela esquerda e para bem na borda do alvo, sem entrar no texto
   const tutSlideInFromLeft = (targetEl, opts = {}) => {
@@ -7273,7 +7351,11 @@ function showTutStep(n) {
     round0();
     const sq = tutCorrectSquare(0);
     tutFocusSquare(sq);
-    tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
+    if (tutMode === 'trio') {
+      tutHighlightInstrWord(cName(TUT_DATA.trio[0].targetA), cName(TUT_DATA.trio[0].targetB));
+    } else {
+      tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
+    }
     if (tutMode === 'reverse' || tutMode === 'shapes-reverse') {
       tutPointAtWord(sq, { static: true }); // no reverso (e no formas reverso), destaca só a palavra (é ela que se procura)
     } else {
@@ -7296,6 +7378,11 @@ function showTutStep(n) {
     tutFocusSquare(sq);
     if (tutMode === 'reverse' || tutMode === 'shapes-reverse') {
       tutPointAtWord(sq); // destaca só a palavra, sem piscar o quadrado inteiro
+    } else if (tutMode === 'trio') {
+      // aqui o match é na COR da palavra — aponta pra ela, mas deslocada pra
+      // esquerda (xr baixo) pra não sobrepor o texto no meio do quadrado
+      sq.classList.add('tut-glow');
+      tutPointAtWord(sq, { xr: 0.2 });
     } else {
       sq.classList.add('tut-glow');
       tutPointAt(sq, { yr: 0.42 });

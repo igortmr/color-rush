@@ -2001,13 +2001,13 @@ const T = {
     'tut_caption_shapes-reverse_5': 'Memorize a <b>forma ao redor</b> dessa palavra: <b>TRIÂNGULO</b>.',
     'tut_caption_shapes-reverse_6': 'Após memorizar, <b>clique</b> nessa figura.',
     'tut_caption_shapes-reverse_7': 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a forma ao redor → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
-    tut_caption_trio_1: 'Repare: a instrução lá em cima pede <b>2 cores</b> (<b>VERMELHO</b> e <b>VERDE</b>). Procure o único quadrado que tenha uma delas em qualquer uma das <b>3 partes</b> — aqui, bateu no <b>fundo</b>.',
+    tut_caption_trio_1: 'Repare: a instrução lá em cima pede <b>2 cores</b> (<b>VERMELHO</b> e <b>VERDE</b>). Procure o único quadrado que tenha uma delas em qualquer uma das <b>situações</b>. Aqui foi o <b>fundo do quadrado</b>.',
     tut_caption_trio_2: 'Antes de clicar, memorize as <b>outras 2 cores</b> desse quadrado: a cor da palavra (<b>LARANJA</b>) e a própria palavra (<b>ROXO</b>).',
     tut_caption_trio_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
-    tut_caption_trio_4: 'Agora encontre o quadrado com uma das cores que você acabou de memorizar (<b>LARANJA</b> ou <b>ROXO</b>) — dessa vez bateu na <b>cor da palavra</b>.',
-    tut_caption_trio_5: 'Memorize as outras 2 cores desse quadrado: o <b>fundo</b> (<b>VERDE</b>) e a <b>palavra</b> (<b>AMARELO</b>).',
+    tut_caption_trio_4: 'Agora encontre o quadrado com uma das cores que você acabou de memorizar (<b>LARANJA</b> ou <b>ROXO</b>) — dessa vez bateu na <b>cor da palavra</b> (<b>LARANJA</b>).',
+    tut_caption_trio_5: 'Memorize as outras 2 cores nesse quadrado: o <b>fundo</b> (<b>VERDE</b>) e a <b>palavra</b> (<b>AMARELO</b>).',
     tut_caption_trio_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
-    tut_caption_trio_7: 'É isso — o ciclo será sempre: <b>encontre uma das 2 cores memorizadas (em qualquer uma das 3 partes) → memorize as outras 2 → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_trio_7: 'É isso — o ciclo será sempre: <b>encontre uma das 2 cores memorizadas na rodada anterior → memorize as outras duas cores naquele quadrado → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -7264,7 +7264,7 @@ function showTutStep(n) {
     el.textContent = '👆';
     el.classList.add('tut-pointer-up');
     sq.querySelector('.word').classList.add('tut-word-glow');
-    tutPointAt(sq.querySelector('.word'), { static: !!opts.static, yr: 1.35 });
+    tutPointAt(sq.querySelector('.word'), { static: !!opts.static, xr: opts.xr ?? 0.5, yr: opts.yr ?? 1.35 });
   };
   // mãozinha "chega" deslizando pela esquerda e para bem na borda do alvo, sem entrar no texto
   const tutSlideInFromLeft = (targetEl, opts = {}) => {
@@ -7345,6 +7345,11 @@ function showTutStep(n) {
     tutFocusSquare(sq);
     if (tutMode === 'reverse' || tutMode === 'shapes-reverse') {
       tutPointAtWord(sq); // destaca só a palavra, sem piscar o quadrado inteiro
+    } else if (tutMode === 'trio') {
+      // aqui o match é na COR da palavra — aponta pra ela, mas deslocada pra
+      // esquerda (xr baixo) pra não sobrepor o texto no meio do quadrado
+      sq.classList.add('tut-glow');
+      tutPointAtWord(sq, { xr: 0.2 });
     } else {
       sq.classList.add('tut-glow');
       tutPointAt(sq, { yr: 0.42 });
