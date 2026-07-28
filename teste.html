@@ -744,12 +744,12 @@
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   /* remodelagem do avatar+nick+nível+conquista no ranking: avatar maior à
      esquerda, ocupando a altura das duas linhas empilhadas à direita — nick
-     + nível lado a lado em cima, conquista centralizada embaixo (entre o
-     nick e o nível) — ver buildRankRowNick() */
+     + nível lado a lado em cima, conquista alinhada à esquerda embaixo —
+     ver buildRankRowNick() */
   .rank-row-flex { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .rank-row-stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .rank-row-line1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .rank-row-line2 { display: flex; justify-content: center; }
+  .rank-row-line2 { display: flex; justify-content: flex-start; }
   .rank-row-line2 .class-pill { font-size: 0.62rem; padding: 2px 8px; } /* maior que antes (era 0.52rem) pra ficar legível */
   .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
   .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
