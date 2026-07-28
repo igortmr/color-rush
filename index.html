@@ -740,13 +740,13 @@
     align-items: center;
     padding: 2px 10px;
     border-radius: 20px;
+    border: 1px solid;
+    background: transparent;
     font-family: 'Rajdhani', sans-serif;
     font-size: 0.72rem;
     font-weight: 700;
-    color: #0a0e1e;
     white-space: nowrap;
     flex-shrink: 0;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.25), 0 0 8px rgba(255,255,255,0.25);
   }
   .chip-wrap { position: relative; display: inline-flex; }
   .chip-lock {
@@ -2987,7 +2987,7 @@ function equippedBadgeLabel(stats) {
   if (t < 0) return ''; // reconfere contra as stats reais — se não desbloqueou de verdade, não mostra
   const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
   const name = def.names[lang][t];
-  return `<span class="class-pill" style="background:${color}" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
+  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
 }
 // nome da classe de divulgador (ex.: "Viral") com a cor da medalha — usado só no ranking de divulgador
 function sharerTierLabel(stats) {
@@ -2996,7 +2996,7 @@ function sharerTierLabel(stats) {
   if (t < 0) return '';
   const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
   const name = def.names[lang][t];
-  return `<span class="class-pill" style="background:${color}" title="${def.label[lang]}: ${name}">${name}</span>`;
+  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${name}</span>`;
 }
 // monta o conteúdo de uma célula de ranking no novo layout: avatar maior à
 // esquerda, ocupando a altura das duas linhas empilhadas à direita — nick
@@ -3008,7 +3008,9 @@ function sharerTierLabel(stats) {
 function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   const flex = document.createElement('span');
   flex.className = 'rank-row-flex';
-  flex.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 40));
+  // avatar desativado por enquanto no ranking (ver buildRankRowNick) — só
+  // descomentar a linha abaixo pra trazer de volta
+  // flex.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 40));
   const stack = document.createElement('span');
   stack.className = 'rank-row-stack';
   const line1 = document.createElement('span');

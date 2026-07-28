@@ -2983,7 +2983,9 @@ function sharerTierLabel(stats) {
 function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   const flex = document.createElement('span');
   flex.className = 'rank-row-flex';
-  flex.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 40));
+  // avatar desativado por enquanto no ranking (ver buildRankRowNick) — só
+  // descomentar a linha abaixo pra trazer de volta
+  // flex.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 40));
   const stack = document.createElement('span');
   stack.className = 'rank-row-stack';
   const line1 = document.createElement('span');
