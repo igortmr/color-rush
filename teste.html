@@ -4040,10 +4040,49 @@ async function persistGameResult(xpEarned = 0) {
 // pra não consultar o banco a cada partida (economiza a cota do Firestore).
 // Os dados do PRÓPRIO jogador são sempre mesclados por cima do cache, então o
 // seu recorde aparece na hora — só o dos outros pode demorar até 2 min.
-const SCORES_CACHE_MS = 2 * 60 * 1000;
+// cache de 5min alinhado com a cadência do retrato pré-calculado (ver
+// recomputeScoresSnapshot em functions/index.js) — não tem por que checar de
+// novo antes disso, os dados só mudam quando aquela function roda
+const SCORES_CACHE_MS = 5 * 60 * 1000;
 let scoresCache = { rows: null, at: 0 };
+
+// se o retrato não for recalculado há mais que isso, algo parou de funcionar
+// (function quebrada, agendamento removido etc.) — cai pro modo antigo em vez
+// de deixar o ranking eternamente desatualizado ou vazio
+const SCORES_SNAPSHOT_STALE_MS = 30 * 60 * 1000;
+
+// lê o retrato em pedaços (ver recomputeScoresSnapshot) — poucas leituras
+// (1 + nº de pedaços) em vez de até 300. Retorna null se o retrato ainda não
+// existe (ex.: acabou de ser implantado, 1ª rodada da function ainda não
+// rodou) ou parece velho demais — nesses casos fetchAllScores() cai pro modo
+// antigo (ler a coleção "scores" ao vivo) como rede de segurança.
+async function fetchScoresFromSnapshot() {
+  const metaSnap = await getDoc(doc(db, 'scoresSnapshot', 'meta'));
+  if (!metaSnap.exists()) return null;
+  const meta = metaSnap.data();
+  const updatedMs = (meta.updatedAt && typeof meta.updatedAt.toMillis === 'function') ? meta.updatedAt.toMillis() : 0;
+  if (!updatedMs || Date.now() - updatedMs > SCORES_SNAPSHOT_STALE_MS) return null;
+  const chunkCount = meta.chunkCount || 0;
+  if (chunkCount <= 0) return [];
+  const chunkSnaps = await Promise.all(
+    Array.from({ length: chunkCount }, (_, i) => getDoc(doc(db, 'scoresSnapshot', 'chunk_' + i)))
+  );
+  const rows = [];
+  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => rows.push(r)); });
+  return rows;
+}
+
 async function fetchAllScores() {
   if (scoresCache.rows && Date.now() - scoresCache.at < SCORES_CACHE_MS) return scoresCache.rows;
+  try {
+    const rows = await fetchScoresFromSnapshot();
+    if (rows) { scoresCache = { rows, at: Date.now() }; return rows; }
+  } catch (e) {
+    console.warn('[scoresSnapshot] falha ao ler retrato, caindo pro modo antigo', e);
+  }
+  // modo antigo: lê a coleção "scores" ao vivo (até 300 leituras) — só
+  // acontece se o retrato ainda não existir, estiver velho, ou a leitura
+  // dele falhar por algum motivo; nunca deixa o ranking aparecer vazio
   const snap = await getDocs(query(collection(db, 'scores'), limit(300)));
   const rows = [];
   snap.forEach(d => {
