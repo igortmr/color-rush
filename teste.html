@@ -2001,8 +2001,8 @@ const T = {
     'tut_caption_shapes-reverse_5': 'Memorize a <b>forma ao redor</b> dessa palavra: <b>TRIÂNGULO</b>.',
     'tut_caption_shapes-reverse_6': 'Após memorizar, <b>clique</b> nessa figura.',
     'tut_caption_shapes-reverse_7': 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a forma ao redor → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
-    tut_caption_trio_1: 'Repare: a instrução lá em cima pede <b>2 cores</b> (<b>VERMELHO</b> e <b>VERDE</b>). Procure o único quadrado que tenha uma delas em qualquer uma das <b>situações</b>. Aqui foi o <b>fundo do quadrado</b>.',
-    tut_caption_trio_2: 'Antes de clicar, memorize as <b>outras 2 cores</b> desse quadrado: a cor da palavra (<b>LARANJA</b>) e a própria palavra (<b>ROXO</b>).',
+    tut_caption_trio_1: 'Repare: a instrução lá em cima pede <b>2 cores</b> (<b>VERMELHO</b> e <b>VERDE</b>). Procure o único quadrado que tenha uma delas em qualquer uma das <b>situações</b>. Aqui foi o <b>fundo do quadrado</b> (<b>VERMELHO</b>).',
+    tut_caption_trio_2: 'Antes de clicar, memorize as <b>outras 2 cores</b> nesse quadrado: a cor da palavra (<b>LARANJA</b>) e a própria palavra (<b>ROXO</b>).',
     tut_caption_trio_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
     tut_caption_trio_4: 'Agora encontre o quadrado com uma das cores que você acabou de memorizar (<b>LARANJA</b> ou <b>ROXO</b>) — dessa vez bateu na <b>cor da palavra</b> (<b>LARANJA</b>).',
     tut_caption_trio_5: 'Memorize as outras 2 cores nesse quadrado: o <b>fundo</b> (<b>VERDE</b>) e a <b>palavra</b> (<b>AMARELO</b>).',
@@ -5297,6 +5297,11 @@ async function loadDailyTodayRanking() {
       const data = d.data();
       if ((data.attempts || 0) <= 0 || !data.nick) return;
       const isMe = currentUser && data.uid === currentUser.uid;
+      // aproveita que a própria linha já vem nesse mesmo snap (é só mais um
+      // documento de dailyScores) pra atualizar dailyAttemptsUsed com dado
+      // fresco direto do servidor — usado logo abaixo em renderDailyTodayPage
+      // pra decidir se os botões de replay já podem aparecer (ver comentário lá)
+      if (isMe) dailyAttemptsUsed = data.attempts || 0;
       // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
       // testar/depurar o ranking do desafio diário com a própria conta) — no
       // index.html (produção) a exclusão de admin continua valendo
@@ -5338,7 +5343,13 @@ function renderDailyTodayPage() {
     nickSpan.onclick = () => openProfileFromRanking(r, 'ranking-screen');
     nickCell.appendChild(nickSpan);
     nickCell.insertAdjacentHTML('beforeend', equippedBadgeLabel(r.stats));
-    if (r.replaySessionId) {
+    // botão de replay só aparece depois que VOCÊ (quem está olhando) já usou
+    // as 3 tentativas de hoje — a rodada do desafio diário é igual pra todo
+    // mundo, então assistir o replay de alguém ANTES de terminar suas
+    // próprias tentativas seria colar (você veria o tabuleiro inteiro de
+    // antemão). Não depende de quantas tentativas o DONO da linha usou, só
+    // das suas.
+    if (r.replaySessionId && dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
       const ptsCell = tr.children[2];
       const replayBtn = document.createElement('button');
       replayBtn.className = 'replay-btn';
