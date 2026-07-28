@@ -742,14 +742,14 @@
     box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
   }
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  /* remodelagem do nível+avatar+nick+conquista no ranking: nível primeiro
-     (mais à esquerda), depois avatar maior, ocupando a altura das duas linhas
-     empilhadas à direita (nick em cima, conquista embaixo bem menor) —
-     ver buildRankRowNick() */
+  /* remodelagem do avatar+nick+nível+conquista no ranking: avatar maior à
+     esquerda, ocupando a altura das duas linhas empilhadas à direita — nick
+     + nível lado a lado em cima, conquista centralizada embaixo (entre o
+     nick e o nível) — ver buildRankRowNick() */
   .rank-row-flex { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .rank-row-stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .rank-row-line1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .rank-row-line2 { display: flex; }
+  .rank-row-line2 { display: flex; justify-content: center; }
   .rank-row-line2 .class-pill { font-size: 0.62rem; padding: 2px 8px; } /* maior que antes (era 0.52rem) pra ficar legível */
   .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
   .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
@@ -2973,9 +2973,9 @@ function sharerTierLabel(stats) {
   const name = def.names[lang][t];
   return `<span class="class-pill" style="background:${color}" title="${def.label[lang]}: ${name}">${name}</span>`;
 }
-// monta o conteúdo de uma célula de ranking no novo layout: nível primeiro
-// (mais à esquerda), depois avatar maior, ocupando a altura das duas linhas
-// empilhadas à direita — nick em cima, conquista/classe embaixo (ver
+// monta o conteúdo de uma célula de ranking no novo layout: avatar maior à
+// esquerda, ocupando a altura das duas linhas empilhadas à direita — nick
+// + nível lado a lado em cima, conquista/classe centralizada embaixo (ver
 // .rank-row-* no <style>). Usado nas 4 tabelas de ranking (mini-ranking,
 // ranking completo, desafio diário hoje e Salão da Fama) pra não duplicar
 // essa estrutura 4x. badgeHtml já vem pronto de quem chama (equippedBadgeLabel/
@@ -2983,9 +2983,6 @@ function sharerTierLabel(stats) {
 function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   const flex = document.createElement('span');
   flex.className = 'rank-row-flex';
-  // lv-chip vem primeiro, mais à esquerda — centralizado na vertical pelo
-  // align-items:center do .rank-row-flex, igual ao avatar ao lado
-  flex.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   flex.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 40));
   const stack = document.createElement('span');
   stack.className = 'rank-row-stack';
@@ -2997,6 +2994,8 @@ function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   applyNickFrame(nickSpan, r.stats);
   nickSpan.onclick = () => openProfileFromRanking(r, backTarget);
   line1.appendChild(nickSpan);
+  // nível ao lado do nick, na mesma linha de cima
+  line1.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   stack.appendChild(line1);
   if (badgeHtml) {
     const line2 = document.createElement('span');
