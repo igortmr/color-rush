@@ -2610,7 +2610,14 @@ const DAILY_COLORS = [
   // .square) ainda ajuda a marcar o contorno em qualquer um dos dois casos
   { key: 'black', name: { pt: 'PRETO',  en: 'BLACK', es: 'NEGRO'  }, hex: '#1c1c22' },
   { key: 'gray',  name: { pt: 'CINZA',  en: 'GRAY',  es: 'GRIS'   }, hex: '#b3bcc7' },
-  { key: 'brown', name: { pt: 'MARROM', en: 'BROWN', es: 'MARRÓN' }, hex: '#a5682f' },
+  // "zebra" não é uma cor sólida — é um padrão (listras), então além do hex
+  // normal (usado só de reserva pro brilho neon da borda, ver dailyNewRound/
+  // renderReplaySquares) ela carrega "pattern": um valor CSS de background
+  // completo que o código usa no lugar do hex quando existir
+  {
+    key: 'zebra', name: { pt: 'ZEBRA', en: 'ZEBRA', es: 'CEBRA' }, hex: '#f5f6fa',
+    pattern: 'repeating-linear-gradient(45deg, #f5f6fa 0px, #f5f6fa 9px, #1c1c22 9px, #1c1c22 18px)',
+  },
 ];
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS); qualquer outro valor cai no poolFor normal
@@ -5353,7 +5360,7 @@ function renderReplaySquares(round, idx) {
       } else {
         const bg   = (rmode === 'classic') ? item : paired;
         const word = (rmode === 'classic') ? paired : item;
-        el.style.background = bg.hex;
+        el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
         el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
         el.innerHTML = `<span class="word">${cName(word)}</span>`;
       }
@@ -6050,7 +6057,7 @@ function dailyNewRound(first) {
     } else {
       const bg   = (dailyMode === 'classic') ? item : paired;
       const word = (dailyMode === 'classic') ? paired : item;
-      el.style.background = bg.hex;
+      el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
       el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
