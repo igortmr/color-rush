@@ -1759,6 +1759,7 @@ const callAdminSetBanned = callable('adminSetBanned');
 const callAdminSetNick = callable('adminSetNick');
 const callAdminSetXp = callable('adminSetXp');
 const callBackfillPendingPigmentos = callable('backfillPendingPigmentos');
+const callAdminRecomputeScoresSnapshot = callable('adminRecomputeScoresSnapshot');
 // desafio diário — mesmo esquema de sessão/validação de tempo do modo normal
 // (ver startDailyAttempt/submitDailyResult em functions/index.js)
 const callStartDailyAttempt = callable('startDailyAttempt');
@@ -4526,6 +4527,25 @@ window.runBackfillPendingPigmentos = async (btn) => {
 // Só atualiza o essencial na tela (chip de nível no cabeçalho + myData.xp),
 // sem chamar renderProfile() de novo — isso reconstruiria o card inteiro e
 // apagaria a mensagem de status antes da pessoa conseguir ler.
+// força o recálculo do retrato de ranking (scoresSnapshot) na hora, em vez de
+// esperar os até 5min do agendamento — útil pra ver na hora o efeito de uma
+// mudança recém-implantada em functions/index.js (ex.: admin entrar/sair do
+// ranking) sem precisar esperar o próximo ciclo automático
+window.runAdminRecomputeSnapshot = async (btn) => {
+  const status = $('recompute-snapshot-status');
+  btn.disabled = true;
+  if (status) status.textContent = 'Recalculando...';
+  try {
+    const res = await callAdminRecomputeScoresSnapshot();
+    scoresCache = { rows: null, at: 0 }; // invalida o cache local de 2min pra próxima leitura já vir atualizada
+    if (status) status.textContent = `✅ Retrato atualizado — ${res.data.userCount} conta(s), ${res.data.chunkCount} pedaço(s).`;
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro ao recalcular.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
 window.runAdminSetOwnLevel = async (btn) => {
   const input = $('admin-set-level-input');
   const status = $('admin-set-level-status');
@@ -4949,6 +4969,12 @@ async function renderProfile(viewStats, viewNick, viewUid) {
         <p class="muted" style="margin-top:6px;">Recalcula pendingPigmentos de todo mundo a partir do que ainda está na caixa de entrada de cada um. Seguro rodar mais de uma vez.</p>
         <button class="secondary" onclick="runBackfillPendingPigmentos(this)">Rodar backfill de pigmentos pendentes</button>
         <div class="muted" id="backfill-status" style="margin-top:6px;"></div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <b>🛠️ Admin — atualizar ranking agora</b>
+        <p class="muted" style="margin-top:6px;">Recalcula o retrato do ranking (scoresSnapshot) na hora, em vez de esperar até 5min pelo agendamento automático. Útil pra testar mudanças recém-implantadas nas functions.</p>
+        <button class="secondary" onclick="runAdminRecomputeSnapshot(this)">Recalcular ranking agora</button>
+        <div class="muted" id="recompute-snapshot-status" style="margin-top:6px;"></div>
       </div>
       <div class="card" style="text-align:left;">
         <b>🛠️ Admin — editar meu nível</b>
