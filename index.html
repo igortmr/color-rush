@@ -1905,6 +1905,7 @@ const T = {
     btn_cancel_request: 'Cancelar pedido',
     friend_request_sent_label: 'Pedido de amizade enviado',
     friend_action_error: 'Não foi possível concluir a ação. Tente novamente.',
+    banned_msg: '🚫 Sua conta está suspensa e não pode jogar.',
     btn_challenge: '⚔️ Desafiar',
     btn_forfeit: '🏳️ Desistir',
     pvp_title: '⚔️ DUELO',
@@ -2124,6 +2125,7 @@ const T = {
     btn_cancel_request: 'Cancel request',
     friend_request_sent_label: 'Friend request sent',
     friend_action_error: 'Could not complete the action. Please try again.',
+    banned_msg: '🚫 Your account is suspended and cannot play.',
     btn_challenge: '⚔️ Challenge',
     btn_forfeit: '🏳️ Forfeit',
     pvp_title: '⚔️ DUEL',
@@ -2343,6 +2345,7 @@ const T = {
     btn_cancel_request: 'Cancelar solicitud',
     friend_request_sent_label: 'Solicitud de amistad enviada',
     friend_action_error: 'No se pudo completar la acción. Inténtalo de nuevo.',
+    banned_msg: '🚫 Tu cuenta está suspendida y no puede jugar.',
     btn_challenge: '⚔️ Desafiar',
     btn_forfeit: '🏳️ Rendirse',
     pvp_title: '⚔️ DUELO',
@@ -2702,6 +2705,18 @@ function xpInfo(xp) {
 }
 function myXp() { return offline ? 0 : (myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
 function modeUnlocked(m) { return myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+// conta banida (campo "banned" setado à mão no Firebase Console, ver
+// checkNotBanned em functions/index.js) não pode jogar NENHUM modo — isso
+// aqui é só a trava do client (mensagem amigável antes de nem tentar); o
+// servidor já rejeitaria qualquer sessão/pontuação de uma conta banida de
+// qualquer forma, isso aqui só evita deixar a pessoa jogar a partida
+// inteira só pra descobrir no fim que não vai valer nada
+function isBanned() { return myData.banned === true; }
+function blockIfBanned() {
+  if (!isBanned()) return false;
+  alert(T[lang].banned_msg);
+  return true;
+}
 
 // cor do emblema de nível muda a cada faixa de 5 níveis: até o nível 29 usa
 // uma paleta fixa de 6 cores só (1-4 verde, 5-9 azul, 10-14 roxo, ...); da
@@ -3727,6 +3742,7 @@ window.showMenu = () => {
 window.playAgain = () => window.startGame(mode);
 
 window.startGame = (m) => {
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   if (!modeUnlocked(m)) return; // modo ainda bloqueado pelo nível
   track('game_start', { mode: m });
   mode = m;
@@ -4204,8 +4220,9 @@ async function fetchScoresFromSnapshot() {
   const rows = [];
   // o retrato (recomputeScoresSnapshot em functions/index.js) não filtra
   // admin no servidor — é compartilhado com teste.html, que mostra admin de
-  // propósito; aqui em produção continua de fora de qualquer ranking
-  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => { if (r.data && r.data.admin !== true) rows.push(r); }); });
+  // propósito; aqui em produção continua de fora de qualquer ranking. Já
+  // banido fica de fora dos dois, teste.html e produção.
+  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => { if (r.data && r.data.admin !== true && r.data.banned !== true) rows.push(r); }); });
   return rows;
 }
 
@@ -4225,8 +4242,9 @@ async function fetchAllScores() {
   snap.forEach(d => {
     const data = d.data();
     // contas admin (campo definido só pelo Firebase Console) ficam de fora de
-    // qualquer ranking, embora tenham acesso liberado a tudo no jogo
-    if (data.nick && data.admin !== true) rows.push({ uid: d.id, data });
+    // qualquer ranking, embora tenham acesso liberado a tudo no jogo. Contas
+    // banidas também ficam de fora de qualquer ranking.
+    if (data.nick && data.admin !== true && data.banned !== true) rows.push({ uid: d.id, data });
   });
   scoresCache = { rows, at: Date.now() };
   return rows;
@@ -4247,10 +4265,10 @@ async function renderRankPreview(field, bodyElId, myPts) {
       if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
     }
 
-    // localiza (ou insere) a linha do jogador (admin nunca aparece, nem pra si mesma)
+    // localiza (ou insere) a linha do jogador (admin/banido nunca aparece, nem pra si mesma)
     const youLabel = lang === 'en' ? 'YOU' : lang === 'es' ? 'TÚ' : 'VOCÊ';
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
-    if (myIndex === -1 && myData.admin !== true) {
+    if (myIndex === -1 && myData.admin !== true && myData.banned !== true) {
       rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData, replaySessionId: offline ? undefined : myData[field + 'ReplaySessionId'] });
     }
 
@@ -5242,8 +5260,8 @@ window.loadRanking = async (m) => {
       }
     }
     // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
-    // (exceto se for admin — essa nunca deve aparecer no ranking, nem pra si mesma)
-    if (!offline && currentUser && myData.nick && myData.admin !== true && !rows.some(r => r.uid === currentUser.uid)) {
+    // (exceto se for admin ou banido — essas nunca devem aparecer no ranking, nem pra si mesmas)
+    if (!offline && currentUser && myData.nick && myData.admin !== true && myData.banned !== true && !rows.some(r => r.uid === currentUser.uid)) {
       if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
       else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData, replaySessionId: myData[field + 'ReplaySessionId'] });
     }
@@ -5336,11 +5354,12 @@ async function loadDailyTodayRanking() {
       // fresco direto do servidor — usado logo abaixo em renderDailyTodayPage
       // pra decidir se os botões de replay já podem aparecer (ver comentário lá)
       if (isMe) dailyAttemptsUsed = data.attempts || 0;
-      // só entra quem a gente confirma que não é admin: veio do fetchAllScores
-      // (que já exclui admin) ou, se for a própria pessoa logada, checamos
-      // myData.admin direto — assim nenhum admin aparece nesse ranking
+      // só entra quem a gente confirma que não é admin nem banido: veio do
+      // fetchAllScores (que já exclui os dois) ou, se for a própria pessoa
+      // logada, checamos myData direto — assim nenhum admin/banido aparece
+      // nesse ranking, nem pra si mesmo
       const stats = statsByUid[data.uid] || (isMe ? myData : null);
-      if (!stats || stats.admin === true) return;
+      if (!stats || stats.admin === true || stats.banned === true) return;
       // bestScoreAt só avança no servidor quando a tentativa bate um recorde
       // novo do dia (ver submitDailyResult em functions/index.js) — não é só
       // "última tentativa enviada", então dá pra usar de verdade pra
@@ -5822,6 +5841,7 @@ startDailyCardTicker();
 window.dailyCardClick = () => {
   if (!isDailyChallengeLive() || !dailyLevelUnlocked()) return;
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
     $('daily-blocked-msg').textContent = T[lang].daily_blocked_msg;
     $('daily-intro').style.display = 'none';
@@ -6642,6 +6662,7 @@ function renderPvpChallengeBanner(m) {
 window.uiAcceptChallenge = async () => {
   const matchId = $('pvp-challenge-banner').dataset.matchId;
   if (!matchId) return;
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   $('pvp-challenge-banner').style.display = 'none';
   try {
     await callRespondChallenge({ matchId, accept: true });
@@ -6657,6 +6678,7 @@ window.uiDeclineChallenge = async () => {
 };
 
 window.uiChallengeFriend = async (toUid) => {
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   try {
     const res = await callChallengeFriend({ toUid });
     const data = res.data || {};
