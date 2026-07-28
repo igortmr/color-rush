@@ -742,15 +742,6 @@
     box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
   }
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  /* remodelagem do avatar+nick+nível+conquista no ranking: avatar maior à
-     esquerda, ocupando a altura das duas linhas empilhadas à direita — nick
-     + nível lado a lado em cima, conquista alinhada à esquerda embaixo —
-     ver buildRankRowNick() */
-  .rank-row-flex { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .rank-row-stack { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .rank-row-line1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .rank-row-line2 { display: flex; justify-content: flex-start; }
-  .rank-row-line2 .class-pill { font-size: 0.62rem; padding: 2px 8px; } /* maior que antes (era 0.52rem) pra ficar legível */
   .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
   .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
   /* moldura da loja — usa borda/glow em vez de gradiente de fundo, pra ficar
@@ -2973,40 +2964,20 @@ function sharerTierLabel(stats) {
   const name = def.names[lang][t];
   return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${name}</span>`;
 }
-// monta o conteúdo de uma célula de ranking no novo layout: avatar maior à
-// esquerda, ocupando a altura das duas linhas empilhadas à direita — nick
-// + nível lado a lado em cima, conquista/classe centralizada embaixo (ver
-// .rank-row-* no <style>). Usado nas 4 tabelas de ranking (mini-ranking,
-// ranking completo, desafio diário hoje e Salão da Fama) pra não duplicar
-// essa estrutura 4x. badgeHtml já vem pronto de quem chama (equippedBadgeLabel/
-// sharerTierLabel/'' variam conforme a tabela/aba).
+// monta o conteúdo de uma célula de ranking: nível, nick e conquista/classe
+// tudo numa linha só (ver .nick-cell no <style>). Usado nas 4 tabelas de
+// ranking (mini-ranking, ranking completo, desafio diário hoje e Salão da
+// Fama) pra não duplicar essa estrutura 4x. badgeHtml já vem pronto de quem
+// chama (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
 function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
-  const flex = document.createElement('span');
-  flex.className = 'rank-row-flex';
-  // avatar desativado por enquanto no ranking (ver buildRankRowNick) — só
-  // descomentar a linha abaixo pra trazer de volta
-  // flex.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(r.stats && r.stats.equipped && r.stats.equipped.avatar, 40));
-  const stack = document.createElement('span');
-  stack.className = 'rank-row-stack';
-  const line1 = document.createElement('span');
-  line1.className = 'rank-row-line1';
+  nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
   nickSpan.textContent = r.nick;
   nickSpan.className = 'nick-click';
   applyNickFrame(nickSpan, r.stats);
   nickSpan.onclick = () => openProfileFromRanking(r, backTarget);
-  line1.appendChild(nickSpan);
-  // nível ao lado do nick, na mesma linha de cima
-  line1.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
-  stack.appendChild(line1);
-  if (badgeHtml) {
-    const line2 = document.createElement('span');
-    line2.className = 'rank-row-line2';
-    line2.innerHTML = badgeHtml; // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
-    stack.appendChild(line2);
-  }
-  flex.appendChild(stack);
-  nickCell.appendChild(flex);
+  nickCell.appendChild(nickSpan);
+  if (badgeHtml) nickCell.insertAdjacentHTML('beforeend', badgeHtml); // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
   return nickSpan;
 }
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
