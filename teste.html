@@ -183,6 +183,19 @@
     justify-content: center;
     gap: 10px;
   }
+  /* botão "Sign in with Apple" seguindo as Human Interface Guidelines da
+     Apple (fundo preto, texto/logo branco) — exigido pela guideline 4.8 como
+     opção de login equivalente ao Google, já que oferecemos um login de
+     terceiro (ver btn_apple / doApple) */
+  button.apple {
+    background: #000;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
   button.link {
     background: none;
     border: none;
@@ -1192,6 +1205,10 @@
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       <span data-i18n="btn_google">Entrar com Google</span>
     </button>
+    <button class="apple" onclick="doApple()">
+      <svg width="18" height="18" viewBox="0 0 170 170" aria-hidden="true"><path fill="#fff" d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.197-2.12-9.973-3.17-14.34-3.17-4.58 0-9.492 1.05-14.746 3.17-5.262 2.13-9.501 3.24-12.742 3.35-4.929.21-9.842-1.96-14.746-6.52-3.13-2.73-7.045-7.41-11.735-14.04-5.032-7.08-9.169-15.29-12.41-24.65-3.471-10.11-5.211-19.9-5.211-29.378 0-10.857 2.346-20.221 7.045-28.068 3.693-6.303 8.606-11.275 14.755-14.925s12.793-5.51 19.948-5.629c3.915 0 9.049 1.211 15.429 3.591 6.362 2.388 10.447 3.599 12.238 3.599 1.339 0 5.877-1.416 13.573-4.239 7.275-2.618 13.42-3.702 18.445-3.275 13.63 1.1 23.87 6.473 30.68 16.153-12.19 7.386-18.22 17.731-18.1 31.002.11 10.336 3.86 18.939 11.23 25.769 3.34 3.17 7.07 5.62 11.22 7.36-.9 2.61-1.85 5.11-2.86 7.51zM119.11 7.24c0 8.102-2.96 15.667-8.86 22.669-7.12 8.324-15.732 13.134-25.071 12.375a25.222 25.222 0 0 1-.188-3.07c0-7.778 3.386-16.102 9.399-22.908 3.002-3.446 6.822-6.311 11.45-8.597 4.62-2.252 8.99-3.497 13.1-3.71.12 1.083.17 2.166.17 3.24z"/></svg>
+      <span data-i18n="btn_apple">Entrar com a Apple</span>
+    </button>
     <button class="link" onclick="playOffline()" data-i18n="btn_play_offline">Jogar sem conta (sem ranking)</button>
   </div>
 </div>
@@ -1643,7 +1660,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut,
+  signInWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithPopup, signOut,
   sendEmailVerification
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
@@ -1805,6 +1822,7 @@ const track = (name, params) => { try { if (window.gtag) window.gtag('event', na
 const T = {
   pt: {
     btn_login: 'ENTRAR', btn_signup: 'CRIAR CONTA', btn_google: 'Entrar com Google',
+    btn_apple: 'Entrar com a Apple',
     btn_play_offline: 'Jogar sem conta (sem ranking)',
     auth_email_ph: 'E-mail', auth_pass_ph: 'Senha (mín. 6 caracteres)',
     verify_sent: '📧 Enviamos um link de confirmação para',
@@ -2035,6 +2053,7 @@ const T = {
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
+    btn_apple: 'Sign in with Apple',
     btn_play_offline: 'Play without an account (no leaderboard)',
     auth_email_ph: 'Email', auth_pass_ph: 'Password (min. 6 characters)',
     verify_sent: '📧 We sent a confirmation link to',
@@ -2265,6 +2284,7 @@ const T = {
   },
   es: {
     btn_login: 'INICIAR SESIÓN', btn_signup: 'CREAR CUENTA', btn_google: 'Iniciar sesión con Google',
+    btn_apple: 'Iniciar sesión con Apple',
     btn_play_offline: 'Jugar sin cuenta (sin ranking)',
     auth_email_ph: 'Correo electrónico', auth_pass_ph: 'Contraseña (mín. 6 caracteres)',
     verify_sent: '📧 Enviamos un enlace de confirmación a',
@@ -3555,6 +3575,23 @@ window.doGoogle = async () => {
   try {
     await signInWithPopup(auth, new GoogleAuthProvider());
     track('login', { method: 'google' });
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+// exigido pela guideline 4.8 da Apple: como já oferecemos login de terceiro
+// (Google), precisamos oferecer "Sign in with Apple" como opção equivalente.
+// O provider "apple.com" do Firebase é um OAuth genérico — funciona igual ao
+// signInWithPopup do Google acima, sem precisar de SDK nativo da Apple; só
+// precisa estar habilitado no Firebase Console (Authentication > Sign-in
+// method > Apple, com o Services ID/Team ID/Key ID/chave .p8 configurados no
+// Apple Developer Portal — isso é config de console, não tem como vir daqui).
+window.doApple = async () => {
+  $('auth-error').textContent = '';
+  try {
+    const provider = new OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    await signInWithPopup(auth, provider);
+    track('login', { method: 'apple' });
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
 };
 window.doLogout = async () => {
