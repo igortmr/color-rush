@@ -3294,6 +3294,19 @@ function dailyNextMidnightSaoPauloMs(now = new Date()) {
   const midnightTodayUtcMs = Date.UTC(y, m - 1, d, 3, 0, 0, 0);
   return midnightTodayUtcMs + 24 * 60 * 60 * 1000;
 }
+// o desafio de cada dia só abre 5min depois da virada (00:05, não 00:00 em
+// ponto — ver DAILY_START_DELAY_MS/todayStartAtSaoPauloMs no
+// functions/index.js, que é quem realmente barra; isso aqui é só pra saber
+// quando mostrar o cronômetro "Inicia em" em vez de "Termina em")
+const DAILY_START_DELAY_MS = 5 * 60 * 1000;
+function dailyTodayStartsAtMs(now = new Date()) {
+  const [y, m, d] = dailyLocalDateStr(now).split('-').map(Number);
+  const midnightTodayUtcMs = Date.UTC(y, m - 1, d, 3, 0, 0, 0);
+  return midnightTodayUtcMs + DAILY_START_DELAY_MS;
+}
+// true só na janela 00:00–00:05 de Brasília, quando o dia já virou mas o
+// desafio de hoje ainda não abriu
+function isDailyStartDelay(now = new Date()) { return now.getTime() < dailyTodayStartsAtMs(now); }
 
 /* ================== recordes locais (modo sem conta) ================== */
 function getLocalRecord(m) {
@@ -5807,14 +5820,18 @@ function startDailyCardTicker() {
 }
 function renderDailyCardCountdown() {
   const live = isDailyChallengeLive();
-  const targetMs = live ? dailyNextMidnightSaoPauloMs() : dailyLaunchAtMs();
+  // dentro da janela 00:00–00:05 (ver isDailyStartDelay), o desafio de hoje
+  // ainda não abriu mesmo já tendo estreado — mostra "Inicia em" contando
+  // pra dailyTodayStartsAtMs() em vez de "Termina em"
+  const startDelay = live && isDailyStartDelay();
+  const targetMs = !live ? dailyLaunchAtMs() : startDelay ? dailyTodayStartsAtMs() : dailyNextMidnightSaoPauloMs();
   let msLeft = targetMs - Date.now();
   const rolledOver = msLeft <= 0;
   if (rolledOver) msLeft = 0;
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  const label = live ? T[lang].daily_ends_in : T[lang].daily_starts_in;
+  const label = (!live || startDelay) ? T[lang].daily_starts_in : T[lang].daily_ends_in;
   const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
   // atualiza os DOIS lugares que mostram esse cronômetro (card do menu e a
@@ -5840,7 +5857,7 @@ startDailyCardTicker();
 // (sem tela intermediária); se já usou as 3, manda pra caixa de entrada/
 // ranking do desafio, que é a informação útil nesse caso
 window.dailyCardClick = () => {
-  if (!isDailyChallengeLive() || !dailyLevelUnlocked()) return;
+  if (!isDailyChallengeLive() || isDailyStartDelay() || !dailyLevelUnlocked()) return;
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
@@ -6021,7 +6038,7 @@ async function updateDailyMenuCard() {
   // mostra o mesmo aviso de "🔒 Desbloqueia no nível N" que os modos
   // Reverso/Formas/Formas Reverso já usam (ver lock-reverse/lock-shapes).
   const lockEl = $('lock-daily');
-  if (!isDailyChallengeLive() || !dailyLevelUnlocked()) {
+  if (!isDailyChallengeLive() || isDailyStartDelay() || !dailyLevelUnlocked()) {
     card.classList.add('coming-soon');
     $('daily-card-desc').style.display = 'none';
     $('daily-card-footer').style.display = 'none';
