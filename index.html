@@ -3600,15 +3600,15 @@ window.checkVerification = async () => {
   }
 };
 // dentro do app nativo (Capacitor/WKWebView) window.open não funciona como
-// popup de verdade, então signInWithPopup trava/falha ali — signInWithRedirect
-// navega a própria WebView pro OAuth e volta (funciona porque o app carrega
-// colorrush.com.br inteiro remotamente, não uma página local empacotada). No
-// navegador comum continua usando popup (não recarrega a página à toa).
+// popup de verdade, e em navegador MOBILE o popup perde a referência da
+// janela original ao trocar de aba pro OAuth — nos dois casos
+// signInWithRedirect resolve (ver shouldUseRedirect acima). Só no desktop
+// continua usando popup (não recarrega a página à toa).
 window.doGoogle = async () => {
   $('auth-error').textContent = '';
   try {
     const provider = new GoogleAuthProvider();
-    if (isNativeApp()) { await signInWithRedirect(auth, provider); return; }
+    if (shouldUseRedirect()) { await signInWithRedirect(auth, provider); return; }
     await signInWithPopup(auth, provider);
     track('login', { method: 'google' });
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
@@ -3626,7 +3626,7 @@ window.doApple = async () => {
     const provider = new OAuthProvider('apple.com');
     provider.addScope('email');
     provider.addScope('name');
-    if (isNativeApp()) { await signInWithRedirect(auth, provider); return; }
+    if (shouldUseRedirect()) { await signInWithRedirect(auth, provider); return; }
     const result = await signInWithPopup(auth, provider);
     registerAppleAuthCodeIfPresent(result);
     track('login', { method: 'apple' });
@@ -3754,6 +3754,15 @@ const EMPTY_PROFILE = {
 // existe, então isso nunca chega a ser true fora do app publicado nas lojas.
 function isNativeApp() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+// signInWithPopup (Google/Apple) não é confiável em navegador MOBILE (o
+// resultado se perde quando o navegador troca de aba/contexto pro OAuth e
+// volta), o mesmo motivo que já nos obrigou a usar redirect dentro do app
+// nativo — aqui só estende a mesma checagem pro Chrome/Safari mobile comum
+// (ver doGoogle/doApple).
+function shouldUseRedirect() {
+  return isNativeApp() || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
 // pede permissão e registra o dispositivo pra notificação push, só dentro do
