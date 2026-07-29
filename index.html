@@ -2650,27 +2650,21 @@ const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio'];
 // Formas/Formas Reverso saíram do sorteio a pedido (ficou só entre os 2 modos
 // de cor, que agora usam a paleta estendida DAILY_COLORS abaixo).
 const DAILY_ROTATION_MODES = ['classic', 'reverse'];
-// paleta exclusiva do desafio diário: as 8 cores normais + Marrom e Cinza, só
-// pra dar mais variedade/dificuldade nesse modo específico — o jogo livre
-// (Clássico/Reverso/Trio) continua só com as 8 cores de COLORS, sem mudança.
-// Precisa de um "kind: 'daily'" gravado no replay (ver saveMatchReplay em
-// functions/index.js e dailyGameOver aqui) pra tela de replay saber que deve
-// reconstruir com esta paleta em vez da COLORS normal (ver renderReplaySquares).
+// paleta exclusiva do desafio diário: só 4 tons quentes próximos (Amarelo,
+// Laranja, Marrom e Vermelho), de propósito bem mais difícil de diferenciar
+// que as 8 cores normais — o jogo livre (Clássico/Reverso/Trio) continua só
+// com as 8 cores de COLORS, sem mudança. Precisa de um "kind: 'daily'"
+// gravado no replay (ver saveMatchReplay em functions/index.js e
+// dailyGameOver aqui) pra tela de replay saber que deve reconstruir com esta
+// paleta em vez da COLORS normal (ver renderReplaySquares).
+// Como o pool tem exatamente 4 cores e cada rodada mostra exatamente 4
+// quadrados (ver SQUARES), dailyNewRound() sempre usa as 4 de uma vez
+// (embaralhadas) — nunca duas cores de fundo repetidas na mesma rodada.
 const DAILY_COLORS = [
-  { key: 'white', name: { pt: 'BRANCO', en: 'WHITE', es: 'BLANCO' }, hex: '#f5f6fa' },
-  // um pouco mais claro que o fundo do jogo (#050810) de propósito — preto
-  // "puro" ficaria quase invisível ali; a borda branca do quadrado (ver CSS
-  // .square) ainda ajuda a marcar o contorno em qualquer um dos dois casos
-  { key: 'black', name: { pt: 'PRETO',  en: 'BLACK', es: 'NEGRO'  }, hex: '#1c1c22' },
-  { key: 'gray',  name: { pt: 'CINZA',  en: 'GRAY',  es: 'GRIS'   }, hex: '#b3bcc7' },
-  // "zebra" não é uma cor sólida — é um padrão (listras), então além do hex
-  // normal (usado só de reserva pro brilho neon da borda, ver dailyNewRound/
-  // renderReplaySquares) ela carrega "pattern": um valor CSS de background
-  // completo que o código usa no lugar do hex quando existir
-  {
-    key: 'zebra', name: { pt: 'ZEBRA', en: 'ZEBRA', es: 'CEBRA' }, hex: '#f5f6fa',
-    pattern: 'repeating-linear-gradient(45deg, #f5f6fa 0px, #f5f6fa 9px, #1c1c22 9px, #1c1c22 18px)',
-  },
+  { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW',  es: 'AMARILLO'   }, hex: '#ffd32a' },
+  { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE',  es: 'NARANJA'    }, hex: '#ff7f24' },
+  { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',   es: 'MARRÓN'     }, hex: '#7a2a12' },
+  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',     es: 'ROJO'       }, hex: '#ff3c3c' },
 ];
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS); qualquer outro valor cai no poolFor normal
@@ -3272,8 +3266,8 @@ function seededShuffle(rng, a) {
 // DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
 // sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
 // de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
-// (28/07/2026) caiu Reverso.
-const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse' };
+// (28/07/2026) caiu Reverso; amanhã (29/07/2026) é Clássico.
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic' };
 function dailyModeForToday(dateStr) {
   if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
