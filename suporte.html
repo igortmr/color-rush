@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suporte — Color Rush</title>
+<meta name="description" content="Central de suporte do Color Rush: perguntas frequentes e contato direto com o desenvolvedor.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://colorrush.com.br/suporte.html">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎨</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --neon-red: #ff2d6b;
+    --neon-orange: #ff9f1c;
+    --neon-green: #21e6a1;
+    --neon-blue: #2dd6ff;
+    --neon-purple: #b14dff;
+    --neon-yellow: #ffe93c;
+    --bg-deep: #050810;
+    --bg-panel: #0e1224;
+    --bg-panel-2: #131a33;
+  }
+  body {
+    font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(177,77,255,0.25), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(45,214,255,0.18), transparent 55%),
+      radial-gradient(ellipse 700px 500px at 50% 110%, rgba(255,45,107,0.16), transparent 55%),
+      var(--bg-deep);
+    color: #eef1ff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 60px;
+  }
+  .wrap { width: 100%; max-width: 720px; }
+  h1 {
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange), var(--neon-green), var(--neon-blue), var(--neon-purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 4px;
+  }
+  .updated { color: #6b76a8; font-size: 0.9rem; margin-bottom: 24px; }
+  h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.05rem;
+    color: var(--neon-blue);
+    margin: 30px 0 10px;
+  }
+  p, li { line-height: 1.6; margin-bottom: 10px; color: #d5d9f0; }
+  ul, ol { padding-left: 22px; margin-bottom: 10px; }
+  strong { color: #fff; }
+  a { color: var(--neon-yellow); }
+  .card {
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(177,77,255,0.35);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .back {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #8a93b8;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  .back:hover { color: var(--neon-blue); }
+  .btn-mail {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-purple));
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+  }
+  .faq-q { color: #fff; font-weight: 700; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">‹ voltar ao jogo</a>
+  <h1>🛟 Suporte</h1>
+  <div class="updated">Color Rush (colorrush.com.br) — desenvolvido por Igor Tadeu Maciel Ramos</div>
+
+  <div class="card">
+    <p>Precisa de ajuda com o <strong>Color Rush</strong>? Está no lugar certo. Veja abaixo as perguntas mais comuns — se não encontrar o que precisa, fale direto com o desenvolvedor por e-mail.</p>
+    <a class="btn-mail" href="mailto:contato@colorrush.com.br?subject=Suporte%20-%20Color%20Rush">✉️ contato@colorrush.com.br</a>
+    <p style="margin-top:14px;">Respondemos em até <strong>2 dias úteis</strong>.</p>
+  </div>
+
+  <h2>Perguntas frequentes</h2>
+  <div class="card">
+    <p class="faq-q">Esqueci minha senha, e agora?</p>
+    <p>Na tela de login, use a opção de recuperação de senha com o mesmo e-mail cadastrado no jogo. Se preferir, entre em contato pelo e-mail acima informando o e-mail ou nick da sua conta.</p>
+
+    <p class="faq-q">Minha pontuação não apareceu no ranking.</p>
+    <p>O ranking geral é atualizado a cada poucos minutos automaticamente — se a pontuação ainda não aparecer depois de alguns minutos, entre em contato com detalhes da partida (modo, horário, nick) pra investigarmos.</p>
+
+    <p class="faq-q">Como funciona o desafio diário?</p>
+    <p>Um novo desafio libera todo dia às 00:05 (horário de Brasília) e fecha à meia-noite seguinte. Cada conta tem até 3 tentativas por dia, e os melhores colocados ganham Pigmentos.</p>
+
+    <p class="faq-q">Quero excluir minha conta.</p>
+    <p>Isso pode ser feito direto no jogo, na tela de perfil (opção "Excluir minha conta"), ou consultando a <a href="/excluir-conta.html">página de exclusão de conta</a>.</p>
+
+    <p class="faq-q">Encontrei um bug ou alguém trapaceando.</p>
+    <p>Agradecemos muito o aviso — mande os detalhes (nick, modo, horário, print se tiver) pro e-mail de contato.</p>
+  </div>
+
+  <h2>Outros links úteis</h2>
+  <div class="card">
+    <p><a href="/privacidade.html">Política de Privacidade</a></p>
+    <p><a href="/excluir-conta.html">Exclusão de conta e dados</a></p>
+  </div>
+
+  <a class="back" href="/">‹ voltar ao jogo</a>
+</div>
+</body>
+</html>

@@ -1698,6 +1698,7 @@ const callCreditReferral = callable('creditReferral');
 const callSuggestFriendFromRef = callable('suggestFriendFromRef');
 const callClaimPendingScore = callable('claimPendingScore');
 const callRecomputeTotal = callable('recomputeMyTotal');
+const callDeleteMyAccount = callable('deleteMyAccount');
 // amigos — igual ao resto: nenhuma escrita cruzada (pedido/aceite/remoção)
 // acontece direto do navegador, sempre via function (ver functions/index.js)
 const callSendFriendRequest = callable('sendFriendRequest');
@@ -1796,6 +1797,13 @@ const T = {
     verify_sent: '📧 Enviamos um link de confirmação para',
     verify_instructions: 'Clique no link do e-mail e depois volte aqui.<br>(confira também a caixa de spam)',
     btn_verified: 'JÁ CONFIRMEI', btn_resend: 'REENVIAR E-MAIL', link_logout: 'sair',
+    delete_account_title: '⚠️ Excluir conta',
+    delete_account_desc: 'Apaga permanentemente sua conta e todos os dados vinculados a ela (pontuações, XP, amigos, medalhas, Pigmentos). Essa ação não pode ser desfeita.',
+    delete_account_btn: 'Excluir minha conta',
+    delete_account_confirm: 'Tem certeza que quer excluir sua conta? Todos os seus dados (pontuações, XP, amigos, medalhas, Pigmentos) serão apagados permanentemente. Essa ação não pode ser desfeita.',
+    delete_account_progress: 'Excluindo conta...',
+    delete_account_done: 'Sua conta foi excluída.',
+    delete_account_error: 'Não foi possível excluir a conta agora. Tente novamente.',
     nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     mode_classic_title: '🎨 Clássico',
@@ -2017,6 +2025,13 @@ const T = {
     verify_sent: '📧 We sent a confirmation link to',
     verify_instructions: 'Click the link in the email, then come back here.<br>(check your spam folder too)',
     btn_verified: "I'VE CONFIRMED", btn_resend: 'RESEND EMAIL', link_logout: 'log out',
+    delete_account_title: '⚠️ Delete account',
+    delete_account_desc: 'Permanently deletes your account and all data linked to it (scores, XP, friends, badges, Pigments). This action cannot be undone.',
+    delete_account_btn: 'Delete my account',
+    delete_account_confirm: 'Are you sure you want to delete your account? All your data (scores, XP, friends, badges, Pigments) will be permanently erased. This action cannot be undone.',
+    delete_account_progress: 'Deleting account...',
+    delete_account_done: 'Your account has been deleted.',
+    delete_account_error: "Couldn't delete your account right now. Please try again.",
     nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
     mode_classic_title: '🎨 Classic',
@@ -2238,6 +2253,13 @@ const T = {
     verify_sent: '📧 Enviamos un enlace de confirmación a',
     verify_instructions: 'Haz clic en el enlace del correo y luego vuelve aquí.<br>(revisa también la carpeta de spam)',
     btn_verified: 'YA CONFIRMÉ', btn_resend: 'REENVIAR CORREO', link_logout: 'salir',
+    delete_account_title: '⚠️ Eliminar cuenta',
+    delete_account_desc: 'Elimina permanentemente tu cuenta y todos los datos vinculados a ella (puntuaciones, XP, amigos, medallas, Pigmentos). Esta acción no se puede deshacer.',
+    delete_account_btn: 'Eliminar mi cuenta',
+    delete_account_confirm: '¿Seguro que quieres eliminar tu cuenta? Todos tus datos (puntuaciones, XP, amigos, medallas, Pigmentos) se borrarán permanentemente. Esta acción no se puede deshacer.',
+    delete_account_progress: 'Eliminando cuenta...',
+    delete_account_done: 'Tu cuenta fue eliminada.',
+    delete_account_error: 'No se pudo eliminar la cuenta ahora. Inténtalo de nuevo.',
     nick_prompt: 'Elige tu apodo para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu apodo (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     mode_classic_title: '🎨 Clásico',
@@ -3521,6 +3543,25 @@ window.doLogout = async () => {
   stopPvpListener();
   await signOut(auth);
   show('auth-screen');
+};
+window.startDeleteMyAccount = async (btn) => {
+  if (offline || !currentUser) return;
+  if (!confirm(T[lang].delete_account_confirm)) return;
+  const statusEl = $('delete-account-status');
+  btn.disabled = true;
+  if (statusEl) statusEl.textContent = T[lang].delete_account_progress;
+  try {
+    await callDeleteMyAccount();
+    stopPvpListener();
+    offline = false;
+    currentUser = null;
+    await signOut(auth);
+    show('auth-screen');
+    alert(T[lang].delete_account_done);
+  } catch (e) {
+    btn.disabled = false;
+    if (statusEl) statusEl.textContent = T[lang].delete_account_error;
+  }
 };
 window.playOffline = () => {
   track('play_offline');
@@ -5084,6 +5125,13 @@ async function renderProfile(viewStats, viewNick, viewUid) {
         <div class="muted" id="admin-set-level-status" style="margin-top:6px;"></div>
       </div>`);
   }
+  $('profile-body').insertAdjacentHTML('beforeend', `
+    <div class="card" style="text-align:left;">
+      <b data-i18n="delete_account_title">⚠️ Excluir conta</b>
+      <p class="muted" style="margin-top:6px;" data-i18n="delete_account_desc">Apaga permanentemente sua conta e todos os dados vinculados a ela (pontuações, XP, amigos, medalhas, Pigmentos). Essa ação não pode ser desfeita.</p>
+      <button class="secondary" style="border-color:var(--neon-red,#ff2d6b); color:var(--neon-red,#ff2d6b); margin-top:6px;" onclick="startDeleteMyAccount(this)" data-i18n="delete_account_btn">Excluir minha conta</button>
+      <div class="muted" id="delete-account-status" style="margin-top:6px;"></div>
+    </div>`);
   resetScroll('profile-screen');
   // agora que a pessoa viu o próprio perfil (com todas as categorias e a
   // bolinha mostrando qual tinha novidade), marca tudo como visto — some a
