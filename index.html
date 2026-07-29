@@ -1735,19 +1735,16 @@ const callSubmitPvpAnswer = callable('submitPvpAnswer');
 const callClaimTimeout = callable('claimTimeout');
 const callForfeitMatch = callable('forfeitMatch');
 const callTouchActivity = httpsCallable(functions, 'touchActivity'); // batimento automático — não conta pro travamento de clique
-// sinal de progresso de rodada (ver syncRoundProgress/analyzeRoundSync em
-// functions/index.js) — chamada "dispare e esqueça" a cada acerto, igual ao
-// touchActivity acima: roda em segundo plano, não passa pelo wrapper
-// callable() de propósito (senão uma sequência rápida de acertos deixaria
-// pendingServerCalls sempre positivo, travando outros cliques da interface
-// à toa). O jogo continua 100% local e instantâneo — essa chamada só
-// carimba no servidor, em paralelo, o instante em que aquele acerto chegou
-// lá; não se espera a resposta em nenhum lugar que a use.
+// chamada "dispare e esqueça" a cada acerto, igual ao touchActivity acima:
+// roda em segundo plano, não passa pelo wrapper callable() de propósito
+// (senão uma sequência rápida de acertos deixaria pendingServerCalls sempre
+// positivo, travando outros cliques da interface à toa). O jogo continua
+// 100% local e instantâneo.
 const callSyncProgress = httpsCallable(functions, 'syncRoundProgress');
 // recarimba o início real da tentativa do desafio diário pro instante em que
-// a contagem "3, 2, 1, Vai!" termina e o tabuleiro libera de vez (ver
-// armDailySession em functions/index.js) — mesmo padrão "dispare e esqueça"
-// acima, não passa pelo wrapper callable() pelo mesmo motivo.
+// a contagem "3, 2, 1, Vai!" termina e o tabuleiro libera de vez — mesmo
+// padrão "dispare e esqueça" acima, não passa pelo wrapper callable() pelo
+// mesmo motivo.
 const callArmDailySession = httpsCallable(functions, 'armDailySession');
 // envia o "filme" (rodadas + rastro do mouse) de uma partida que acabou de
 // bater recorde — ver replayRounds/replayMouse lá em cima e saveMatchReplay
@@ -3816,12 +3813,10 @@ window.startGame = (m) => {
 
 // rastro do mouse pra tela de replay — throttlado (não grava cada micro-
 // movimento) e guardado em % do tamanho do tabuleiro (não pixel bruto), pra
-// funcionar igual em qualquer tamanho de tela na hora de reproduzir. Ao
-// contrário dos tiques do anti-cheat, isso é client-timestamped mesmo (não
-// precisa do carimbo do servidor) — é só cosmético, nunca entra na
-// validação de pontuação. No celular não existe "mousemove" contínuo (só
-// toque discreto), então esse rastro simplesmente fica vazio lá — o replay
-// mostra os cliques certos, sem cursor se movendo entre eles.
+// funcionar igual em qualquer tamanho de tela na hora de reproduzir. É só
+// cosmético, nunca entra na validação de pontuação. No celular não existe
+// "mousemove" contínuo (só toque discreto), então esse rastro simplesmente
+// fica vazio lá — o replay mostra os cliques certos, sem cursor se movendo entre eles.
 const REPLAY_MOUSE_SAMPLE_MS = 30; // ~33 amostras/seg
 const REPLAY_MOUSE_CAP = 8000; // mesmo teto do servidor (MAX_REPLAY_MOUSE_SAMPLES) — a ~33/seg dá pra guardar uns 4min de rastro, e o documento final fica bem abaixo do limite de 1MB do Firestore mesmo assim
 let lastReplayMouseSampleAt = 0;
@@ -6124,14 +6119,6 @@ window.startDailyChallenge = async () => {
     dailyMode = dailyModeForToday(d.dateStr);
     track('daily_start', { attempt: d.attemptNumber, mode: dailyMode });
 
-    // a semente inclui o modo do dia + o número da tentativa: a 1ª, 2ª e 3ª
-    // tentativas do dia têm sequências DIFERENTES entre si (senão daria pra
-    // decorar/gravar a sequência numa tentativa e "colar" nas próximas), mas
-    // a mesma tentativa Nº X é idêntica pra todo mundo — o desafio continua
-    // justo pra todos. Além disso, entra também um "sal" aleatório que só o
-    // servidor gera e só chega aqui NESTA resposta (seedSalt) — sem ele, a
-    // semente seria só data+modo+tentativa, tudo público, e daria pra
-    // calcular a sequência inteira ANTES de chamar o servidor.
     dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-v2|' + dailyMode + '|attempt' + d.attemptNumber + '|salt' + (d.seedSalt || '')));
     dailyScore = 0;
     dailyDuration = 10000;
