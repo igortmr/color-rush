@@ -6128,8 +6128,11 @@ window.startDailyChallenge = async () => {
     // tentativas do dia têm sequências DIFERENTES entre si (senão daria pra
     // decorar/gravar a sequência numa tentativa e "colar" nas próximas), mas
     // a mesma tentativa Nº X é idêntica pra todo mundo — o desafio continua
-    // justo pra todos
-    dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-v2|' + dailyMode + '|attempt' + d.attemptNumber));
+    // justo pra todos. Além disso, entra também um "sal" aleatório que só o
+    // servidor gera e só chega aqui NESTA resposta (seedSalt) — sem ele, a
+    // semente seria só data+modo+tentativa, tudo público, e daria pra
+    // calcular a sequência inteira ANTES de chamar o servidor.
+    dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-v2|' + dailyMode + '|attempt' + d.attemptNumber + '|salt' + (d.seedSalt || '')));
     dailyScore = 0;
     dailyDuration = 10000;
     dailyPlaying = true;
