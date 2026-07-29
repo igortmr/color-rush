@@ -4212,6 +4212,26 @@ async function fetchScoresFromSnapshot() {
   return rows;
 }
 
+// leitura AO VIVO da coleção "scores" (sem cache, sem depender do retrato de
+// 5min) — mesmo filtro de admin/banido de sempre. Usada como "modo antigo"
+// de fetchAllScores() (rede de segurança se o retrato falhar) E pelo Salão
+// da Fama (loadDailyAlltimeRanking), que precisa refletir dailyWins/
+// pigmentos na hora — sem esperar o próximo ciclo do retrato nem o cache de
+// 5min que o resto dos rankings continua usando normalmente.
+async function fetchScoresLive() {
+  const snap = await getDocs(query(collection(db, 'scores'), limit(300)));
+  const rows = [];
+  snap.forEach(d => {
+    const data = d.data();
+    // TESTE.HTML: admin aparece normalmente em qualquer ranking aqui de
+    // propósito (pra dar pra testar/depurar com a própria conta) — no
+    // index.html (produção) a exclusão de admin continua valendo. Já
+    // banido fica de fora dos dois: não tem motivo pra aparecer nem em teste
+    if (data.nick && data.banned !== true) rows.push({ uid: d.id, data });
+  });
+  return rows;
+}
+
 async function fetchAllScores() {
   if (scoresCache.rows && Date.now() - scoresCache.at < SCORES_CACHE_MS) return scoresCache.rows;
   try {
@@ -4223,16 +4243,7 @@ async function fetchAllScores() {
   // modo antigo: lê a coleção "scores" ao vivo (até 300 leituras) — só
   // acontece se o retrato ainda não existir, estiver velho, ou a leitura
   // dele falhar por algum motivo; nunca deixa o ranking aparecer vazio
-  const snap = await getDocs(query(collection(db, 'scores'), limit(300)));
-  const rows = [];
-  snap.forEach(d => {
-    const data = d.data();
-    // TESTE.HTML: admin aparece normalmente em qualquer ranking aqui de
-    // propósito (pra dar pra testar/depurar com a própria conta) — no
-    // index.html (produção) a exclusão de admin continua valendo. Já
-    // banido fica de fora dos dois: não tem motivo pra aparecer nem em teste
-    if (data.nick && data.banned !== true) rows.push({ uid: d.id, data });
-  });
+  const rows = await fetchScoresLive();
   scoresCache = { rows, at: Date.now() };
   return rows;
 }
@@ -5726,7 +5737,10 @@ async function loadDailyAlltimeRanking() {
   const body = $('daily-alltime-body');
   body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].loading_text}</td></tr>`;
   try {
-    const all = await fetchAllScores();
+    // Salão da Fama sempre lê AO VIVO (fetchScoresLive), não o retrato de
+    // 5min nem o cache de fetchAllScores — é o único ranking que precisa
+    // refletir dailyWins/pigmentos na hora, logo depois do resolveDailyChallenge
+    const all = await fetchScoresLive();
     const rows = [];
     for (const r of all) {
       const data = rowData(r);
