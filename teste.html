@@ -1660,8 +1660,8 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithPopup, signOut,
-  sendEmailVerification
+  signInWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithPopup, signInWithRedirect,
+  getRedirectResult, signOut, sendEmailVerification
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
@@ -3570,10 +3570,25 @@ window.checkVerification = async () => {
     $('verify-status').textContent = T[lang].verify_not_confirmed;
   }
 };
+// true só quando a página está rodando dentro do app nativo (Capacitor,
+// iOS/Android); no navegador comum (mesmo mobile) window.Capacitor não
+// existe, então isso nunca chega a ser true fora do app publicado nas lojas.
+// (mesma função de index.html — teste.html não tinha nenhum código ciente
+// de Capacitor até agora)
+function isNativeApp() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+// dentro do app nativo (Capacitor/WKWebView) window.open não funciona como
+// popup de verdade, então signInWithPopup trava/falha ali — signInWithRedirect
+// navega a própria WebView pro OAuth e volta (funciona porque o app carrega
+// colorrush.com.br inteiro remotamente, não uma página local empacotada). No
+// navegador comum continua usando popup (não recarrega a página à toa).
 window.doGoogle = async () => {
   $('auth-error').textContent = '';
   try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    const provider = new GoogleAuthProvider();
+    if (isNativeApp()) { await signInWithRedirect(auth, provider); return; }
+    await signInWithPopup(auth, provider);
     track('login', { method: 'google' });
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
 };
@@ -3590,10 +3605,17 @@ window.doApple = async () => {
     const provider = new OAuthProvider('apple.com');
     provider.addScope('email');
     provider.addScope('name');
+    if (isNativeApp()) { await signInWithRedirect(auth, provider); return; }
     await signInWithPopup(auth, provider);
     track('login', { method: 'apple' });
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
 };
+// pega o resultado de um signInWithRedirect (login no app nativo, ver
+// doGoogle/doApple acima) depois que a WebView volta do OAuth. Só serve pra
+// capturar ERRO do redirect — o login em si (usuário logado com sucesso) já é
+// pego pelo onAuthStateChanged normal logo abaixo, então não precisa duplicar
+// track('login', ...) aqui.
+getRedirectResult(auth).catch(e => { $('auth-error').textContent = authErrMsg(e); });
 window.doLogout = async () => {
   offline = false;
   stopPvpListener();
