@@ -1465,6 +1465,19 @@
   </div>
 </div>
 
+<!-- confirmação de exclusão de conta: popup temática (não usa confirm() nativo)
+     pra garantir que quem clica sabe exatamente no que está clicando -->
+<div class="modal-overlay" id="delete-account-modal" style="display:none;" onclick="if(event.target===this) closeDeleteAccountModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-red); text-shadow:0 0 10px rgba(255,45,107,0.5);" data-i18n="delete_account_title">⚠️ Excluir conta</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" data-i18n="delete_account_confirm">Tem certeza que quer excluir sua conta?</p>
+    </div>
+    <button class="secondary" onclick="closeDeleteAccountModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
+    <button onclick="confirmDeleteAccount()" data-i18n="delete_account_modal_confirm_btn">Confirmo a exclusão da conta</button>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">
@@ -1804,6 +1817,8 @@ const T = {
     delete_account_progress: 'Excluindo conta...',
     delete_account_done: 'Sua conta foi desativada. Todos os seus dados serão apagados permanentemente em 15 dias. Para cancelar antes disso, contate o suporte.',
     delete_account_error: 'Não foi possível excluir a conta agora. Tente novamente.',
+    delete_account_modal_cancel_btn: 'Cancelar',
+    delete_account_modal_confirm_btn: 'Confirmo a exclusão da conta',
     nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     mode_classic_title: '🎨 Clássico',
@@ -2032,6 +2047,8 @@ const T = {
     delete_account_progress: 'Deleting account...',
     delete_account_done: 'Your account has been deactivated. All your data will be permanently deleted in 15 days. To cancel before then, contact support.',
     delete_account_error: "Couldn't delete your account right now. Please try again.",
+    delete_account_modal_cancel_btn: 'Cancel',
+    delete_account_modal_confirm_btn: 'I confirm account deletion',
     nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
     mode_classic_title: '🎨 Classic',
@@ -2260,6 +2277,8 @@ const T = {
     delete_account_progress: 'Eliminando cuenta...',
     delete_account_done: 'Tu cuenta fue desactivada. Todos tus datos se eliminarán permanentemente en 15 días. Para cancelarlo antes, contacta al soporte.',
     delete_account_error: 'No se pudo eliminar la cuenta ahora. Inténtalo de nuevo.',
+    delete_account_modal_cancel_btn: 'Cancelar',
+    delete_account_modal_confirm_btn: 'Confirmo la eliminación de la cuenta',
     nick_prompt: 'Elige tu apodo para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu apodo (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     mode_classic_title: '🎨 Clásico',
@@ -3544,11 +3563,24 @@ window.doLogout = async () => {
   await signOut(auth);
   show('auth-screen');
 };
-window.startDeleteMyAccount = async (btn) => {
+// em vez de window.confirm (um "OK" genérico que ninguém lê), a exclusão de
+// conta usa a popup temática #delete-account-modal — o botão de lá tem o
+// texto explícito "Confirmo a exclusão da conta" pra garantir que a pessoa
+// sabe o que está clicando antes da conta ser desativada
+let deleteAccountBtnRef = null;
+window.startDeleteMyAccount = (btn) => {
   if (offline || !currentUser) return;
-  if (!confirm(T[lang].delete_account_confirm)) return;
+  deleteAccountBtnRef = btn;
+  $('delete-account-modal').style.display = 'flex';
+};
+window.closeDeleteAccountModal = () => {
+  $('delete-account-modal').style.display = 'none';
+};
+window.confirmDeleteAccount = async () => {
+  closeDeleteAccountModal();
+  const btn = deleteAccountBtnRef;
   const statusEl = $('delete-account-status');
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   if (statusEl) statusEl.textContent = T[lang].delete_account_progress;
   try {
     await callDeleteMyAccount();
@@ -3559,7 +3591,7 @@ window.startDeleteMyAccount = async (btn) => {
     show('auth-screen');
     alert(T[lang].delete_account_done);
   } catch (e) {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
     if (statusEl) statusEl.textContent = T[lang].delete_account_error;
   }
 };
