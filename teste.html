@@ -1729,6 +1729,10 @@ const callSuggestFriendFromRef = callable('suggestFriendFromRef');
 const callClaimPendingScore = callable('claimPendingScore');
 const callRecomputeTotal = callable('recomputeMyTotal');
 const callDeleteMyAccount = callable('deleteMyAccount');
+// troca o authorization code do login com Apple por um refresh token que o
+// servidor guarda pra poder revogar na exclusão de conta (exigência da Apple,
+// ver doApple/registerAppleAuthCode mais abaixo e functions/index.js)
+const callRegisterAppleAuthCode = httpsCallable(functions, 'registerAppleAuthCode');
 // amigos — igual ao resto: nenhuma escrita cruzada (pedido/aceite/remoção)
 // acontece direto do navegador, sempre via function (ver functions/index.js)
 const callSendFriendRequest = callable('sendFriendRequest');
@@ -3606,16 +3610,31 @@ window.doApple = async () => {
     provider.addScope('email');
     provider.addScope('name');
     if (isNativeApp()) { await signInWithRedirect(auth, provider); return; }
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    registerAppleAuthCodeIfPresent(result);
     track('login', { method: 'apple' });
   } catch (e) { $('auth-error').textContent = authErrMsg(e); }
 };
+// a Apple exige (guideline 5.1.1(v)) revogar o token junto a ELES quando a
+// conta é excluída — isso precisa de um refresh token da Apple, que só dá pra
+// conseguir trocando o authorization code (aqui em credential.accessToken,
+// só populado pro provider 'apple.com') pelo token de verdade, no servidor
+// (ver registerAppleAuthCode em functions/index.js). Melhor esforço: se
+// falhar, o login em si já aconteceu normalmente por fora desta função.
+function registerAppleAuthCodeIfPresent(result) {
+  if (!result) return;
+  const credential = OAuthProvider.credentialFromResult(result);
+  if (!credential || credential.providerId !== 'apple.com' || !credential.accessToken) return;
+  callRegisterAppleAuthCode({ code: credential.accessToken }).catch(() => {});
+}
 // pega o resultado de um signInWithRedirect (login no app nativo, ver
-// doGoogle/doApple acima) depois que a WebView volta do OAuth. Só serve pra
-// capturar ERRO do redirect — o login em si (usuário logado com sucesso) já é
-// pego pelo onAuthStateChanged normal logo abaixo, então não precisa duplicar
-// track('login', ...) aqui.
-getRedirectResult(auth).catch(e => { $('auth-error').textContent = authErrMsg(e); });
+// doGoogle/doApple acima) depois que a WebView volta do OAuth. Erro vai pra
+// tela de login; sucesso é tratado igual popup (registra o code da Apple se
+// for o caso) — o restante do login em si já é pego pelo onAuthStateChanged
+// normal logo abaixo, então não precisa duplicar track('login', ...) aqui.
+getRedirectResult(auth)
+  .then(result => registerAppleAuthCodeIfPresent(result))
+  .catch(e => { $('auth-error').textContent = authErrMsg(e); });
 window.doLogout = async () => {
   offline = false;
   stopPvpListener();
