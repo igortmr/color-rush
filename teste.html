@@ -3880,7 +3880,7 @@ function newTrioRound(first) {
     const el = document.createElement('div');
     el.className = 'square';
     renderTrioSquare(el, sq);
-    el.onclick = () => handleTrioClick(sq.isTarget);
+    el.onclick = (e) => handleTrioClick(sq.isTarget, e);
     grid.appendChild(el);
     roundSnapshot.push({
       bg: sq.bg.key, tc: sq.tc.key, word: sq.word.key, isTarget: sq.isTarget,
@@ -3904,11 +3904,11 @@ function newTrioRound(first) {
   startTimer();
 }
 
-function handleTrioClick(isCorrect) {
+function handleTrioClick(isCorrect, e) {
   if (!playing) return;
   if (isCorrect) {
     score++;
-    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId }).catch(() => {}));
+    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
     sfx.correct(score);
@@ -3956,7 +3956,7 @@ function newRound(first) {
       el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
-    el.onclick = () => handleClick(item);
+    el.onclick = (e) => handleClick(item, e);
     grid.appendChild(el);
   });
   // "t" é o instante (relativo a replayStartMs) em que ESTA rodada apareceu
@@ -3997,17 +3997,11 @@ function startTimer() {
   rafId = requestAnimationFrame(tick);
 }
 
-function handleClick(item) {
+function handleClick(item, e) {
   if (!playing) return;
   if (item === target) {
     score++;
-    // sinal de progresso — dispara e esquece, não espera resposta nem
-    // atrasa em nada a rodada seguinte (ver comentário junto de
-    // callSyncProgress lá em cima). Sem sessão (jogando offline/sem
-    // conta) não tem o que carimbar, então nem chama. A promessa fica
-    // guardada em pendingRoundSync — gameOver() espera todas assentarem
-    // antes de mandar o resultado final pro servidor.
-    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId }).catch(() => {}));
+    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
     // XP da rodada: quanto mais rápido acertar, mais ganha — e quanto mais longa a sequência, maior o bônus
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
@@ -6200,7 +6194,7 @@ function dailyNewRound(first) {
       el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
-    el.onclick = () => dailyHandleClick(item);
+    el.onclick = (e) => dailyHandleClick(item, e);
     grid.appendChild(el);
   });
   if (dailyReplayRounds.length < 400) dailyReplayRounds.push({ t: Math.round(performance.now() - dailyReplayStartMs), sq: roundSnapshot });
@@ -6237,16 +6231,11 @@ function startDailyTimer() {
   dailyRafId = requestAnimationFrame(tick);
 }
 
-function dailyHandleClick(item) {
+function dailyHandleClick(item, e) {
   if (!dailyPlaying) return;
   if (item === dailyTarget) {
     dailyScore++;
-    // sinal de progresso — dispara e esquece, não espera resposta nem
-    // atrasa em nada a rodada seguinte (mesma ideia de handleClick no modo
-    // livre — ver comentário junto de callSyncProgress lá em cima).
-    // dailyGameOver() espera todas essas promessas assentarem antes de
-    // mandar o resultado final.
-    if (dailySessionId) dailyPendingRoundSync.push(callSyncProgress({ sessionId: dailySessionId }).catch(() => {}));
+    if (dailySessionId) dailyPendingRoundSync.push(callSyncProgress({ sessionId: dailySessionId, trusted: !e || e.isTrusted }).catch(() => {}));
     sfx.correct(dailyScore);
     $('daily-score').textContent = dailyScore;
     dailyTarget = dailyNextTarget;
