@@ -2626,7 +2626,7 @@ const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio'];
 // de cor, que agora usam a paleta estendida DAILY_COLORS abaixo).
 const DAILY_ROTATION_MODES = ['classic', 'reverse'];
 // paleta exclusiva do desafio diário: só 4 tons quentes próximos (Amarelo,
-// Laranja, Marrom e Mostarda), de propósito bem mais difícil de diferenciar
+// Laranja, Marrom e Vermelho), de propósito bem mais difícil de diferenciar
 // que as 8 cores normais — o jogo livre (Clássico/Reverso/Trio) continua só
 // com as 8 cores de COLORS, sem mudança. Precisa de um "kind: 'daily'"
 // gravado no replay (ver saveMatchReplay em functions/index.js e
@@ -2638,8 +2638,8 @@ const DAILY_ROTATION_MODES = ['classic', 'reverse'];
 const DAILY_COLORS = [
   { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW',  es: 'AMARILLO'   }, hex: '#ffd32a' },
   { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE',  es: 'NARANJA'    }, hex: '#ff7f24' },
-  { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',   es: 'MARRÓN'     }, hex: '#a0522d' },
-  { key: 'mustard', name: { pt: 'MOSTARDA', en: 'MUSTARD', es: 'MOSTAZA' }, hex: '#c9a227' },
+  { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',   es: 'MARRÓN'     }, hex: '#7a2a12' },
+  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',     es: 'ROJO'       }, hex: '#ff3c3c' },
 ];
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS); qualquer outro valor cai no poolFor normal
