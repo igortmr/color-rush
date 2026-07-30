@@ -1,0 +1,6142 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithPopup,
+  signInWithCredential, signOut, sendEmailVerification, setPersistence, browserLocalPersistence
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {
+  getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
+  serverTimestamp, writeBatch, where, onSnapshot, Timestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import {
+  getFunctions, httpsCallable
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+import {
+  initializeAppCheck, ReCaptchaV3Provider
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
+  authDomain: "auth.colorrush.com.br",
+  projectId: "color-rush-474ee",
+  storageBucket: "color-rush-474ee.firebasestorage.app",
+  messagingSenderId: "988545815222",
+  appId: "1:988545815222:web:f0cae8432b04550ca60c17"
+};
+
+const app = initializeApp(firebaseConfig);
+
+// App Check: prova pro backend que a chamada vem mesmo do site oficial, não
+// de um script externo batendo direto na API. Preencha com a site key
+// gerada em Firebase Console > App Check > reCAPTCHA v3. Enquanto ficar com
+// o valor de exemplo, isso fica desligado (não faz nada, não quebra nada).
+// Só ative "Enforce" nas Cloud Functions DEPOIS de confirmar no Console que
+// as chamadas estão chegando "verified" — senão o jogo para pra todo mundo.
+const APP_CHECK_SITE_KEY = '6Lfa3GAtAAAAABb7d8QcGR41xZ8gmhoKbQS1elkd';
+if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== 'COLOQUE_SUA_SITE_KEY_AQUI') {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch {}
+}
+
+const auth = getAuth(app);
+// localStorage em vez de deixar o Firebase escolher sozinho (IndexedDB por
+// padrão) — mais previsível entre navegadores; sem isso alguns fluxos de
+// sessão já se mostraram frágeis em Safari/Chrome iOS.
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+const db = getFirestore(app);
+const functions = getFunctions(app);
+// contador de chamadas ao servidor em andamento — o travamento global de
+// clique mais abaixo usa isso pra travar QUALQUER clique novo enquanto uma
+// chamada ainda não recebeu resposta do servidor (em vez de só um tempo fixo
+// — ver o comentário perto do listener de clique pra entender por quê:
+// clicar duas vezes rápido no "resgatar" da caixa de entrada, por exemplo,
+// já chegou a resgatar o mesmo prêmio duas vezes). touchActivity fica de
+// fora de propósito: é um "batimento" de presença automático, não vem de
+// clique do usuário, não deve travar nada.
+let pendingServerCalls = 0;
+function callable(name) {
+  const fn = httpsCallable(functions, name);
+  return (...args) => {
+    pendingServerCalls++;
+    return fn(...args).finally(() => { pendingServerCalls--; });
+  };
+}
+// chamadas ao servidor: a pontuação final agora é validada lá,
+// não é mais um simples write direto no Firestore vindo do navegador.
+const callStartSession = callable('startGameSession');
+const callSubmitResult = callable('submitGameResult');
+const callCreditReferral = callable('creditReferral');
+const callSuggestFriendFromRef = callable('suggestFriendFromRef');
+const callClaimPendingScore = callable('claimPendingScore');
+const callRecomputeTotal = callable('recomputeMyTotal');
+const callDeleteMyAccount = callable('deleteMyAccount');
+// troca o authorization code do login com Apple por um refresh token que o
+// servidor guarda pra poder revogar na exclusão de conta (exigência da Apple,
+// ver doApple/registerAppleAuthCode mais abaixo e functions/index.js)
+const callRegisterAppleAuthCode = httpsCallable(functions, 'registerAppleAuthCode');
+// amigos — igual ao resto: nenhuma escrita cruzada (pedido/aceite/remoção)
+// acontece direto do navegador, sempre via function (ver functions/index.js)
+const callSendFriendRequest = callable('sendFriendRequest');
+const callRespondFriendRequest = callable('respondFriendRequest');
+const callCancelFriendRequest = callable('cancelFriendRequest');
+const callRemoveFriend = callable('removeFriend');
+// duelo ao vivo (PvP) — igual ao resto: quem decide o que aconteceu é sempre
+// a function (o servidor), nunca o navegador direto
+const callChallengeFriend = callable('challengeFriend');
+const callRespondChallenge = callable('respondChallenge');
+const callCancelChallenge = callable('cancelChallenge');
+const callSubmitPvpAnswer = callable('submitPvpAnswer');
+const callClaimTimeout = callable('claimTimeout');
+const callForfeitMatch = callable('forfeitMatch');
+const callTouchActivity = httpsCallable(functions, 'touchActivity'); // batimento automático — não conta pro travamento de clique
+// chamada "dispare e esqueça" a cada acerto, igual ao touchActivity acima:
+// roda em segundo plano, não passa pelo wrapper callable() de propósito
+// (senão uma sequência rápida de acertos deixaria pendingServerCalls sempre
+// positivo, travando outros cliques da interface à toa). O jogo continua
+// 100% local e instantâneo.
+const callSyncProgress = httpsCallable(functions, 'syncRoundProgress');
+// recarimba o início real da tentativa do desafio diário pro instante em que
+// a contagem "3, 2, 1, Vai!" termina e o tabuleiro libera de vez — mesmo
+// padrão "dispare e esqueça" acima, não passa pelo wrapper callable() pelo
+// mesmo motivo.
+const callArmDailySession = httpsCallable(functions, 'armDailySession');
+// envia o "filme" (rodadas + rastro do mouse) de uma partida que acabou de
+// bater recorde — ver replayRounds/replayMouse lá em cima e saveMatchReplay
+// em functions/index.js. Só uma chamada, no fim da partida, com tudo junto
+// (não é "dispare e esqueça" por evento como as de cima); não precisa do
+// wrapper callable() porque não é um clique do usuário esperando resposta —
+// roda em segundo plano enquanto a pessoa já está vendo a tela de resultado.
+const callSaveMatchReplay = httpsCallable(functions, 'saveMatchReplay');
+// tenta salvar o replay algumas vezes antes de desistir — cobre quedas de
+// rede de um instante bem na hora que a partida termina (upload silencioso
+// que nunca chega no servidor não deixa log nenhum, nem de erro, porque a
+// function nem chega a rodar). Só re-tenta ERRO DE REDE (a chamada não
+// chegou no servidor) — uma resposta {ok:false} de verdade (sessão não
+// confere, modo inválido etc.) é determinística, re-tentar não muda nada.
+async function saveMatchReplayWithRetry(payload, attemptsLeft = 3) {
+  try {
+    const res = await callSaveMatchReplay(payload);
+    if (!res.data || !res.data.ok) console.warn('[replay] não salvou', res.data); // log temporário pra diagnóstico — remover depois
+    return res;
+  } catch (e) {
+    if (attemptsLeft > 1) {
+      await new Promise(r => setTimeout(r, 1200));
+      return saveMatchReplayWithRetry(payload, attemptsLeft - 1);
+    }
+    console.warn('[replay] erro ao salvar (sem mais tentativas)', e);
+    throw e;
+  }
+}
+// ferramentas de admin (só funcionam de verdade pra quem tem admin:true —
+// ver requireAdmin em functions/index.js; qualquer outra conta que tentar
+// chamar recebe permission-denied do servidor)
+const callAdminGetUserDetails = callable('adminGetUserDetails');
+const callAdminSetBanned = callable('adminSetBanned');
+const callAdminSetNick = callable('adminSetNick');
+const callAdminSetXp = callable('adminSetXp');
+const callBackfillPendingPigmentos = callable('backfillPendingPigmentos');
+const callAdminRecomputeScoresSnapshot = callable('adminRecomputeScoresSnapshot');
+// desafio diário — mesmo esquema de sessão/validação de tempo do modo normal
+// (ver startDailyAttempt/submitDailyResult em functions/index.js)
+const callStartDailyAttempt = callable('startDailyAttempt');
+const callSubmitDailyResult = callable('submitDailyResult');
+const callClaimDailyReward = callable('claimDailyReward');
+// loja de cosméticos (paga com Pigmentos)
+const callBuyShopItem = callable('buyShopItem');
+const callSetEquippedItem = callable('setEquippedItem');
+
+/* ================== idioma ================== */
+let lang = 'pt';
+try {
+  // link de compartilhamento pode vir com ?lang=en — se vier, abre já traduzido
+  // e lembra a escolha (senão cai no idioma salvo, ou português por padrão)
+  const urlLang = new URLSearchParams(location.search).get('lang');
+  if (urlLang === 'en' || urlLang === 'pt' || urlLang === 'es') {
+    lang = urlLang;
+    localStorage.setItem('colorRushLang', urlLang);
+  } else {
+    const saved = localStorage.getItem('colorRushLang');
+    lang = (saved === 'en' || saved === 'es') ? saved : 'pt';
+  }
+} catch {}
+auth.languageCode = (lang === 'en' || lang === 'es') ? lang : 'pt'; // e-mails do Firebase (verificação etc.) saem no idioma do jogo
+
+// eventos pro Google Analytics (se o gtag não estiver na página, vira um no-op silencioso)
+const track = (name, params) => { try { if (window.gtag) window.gtag('event', name, params || {}); } catch {} };
+
+const T = {
+  pt: {
+    btn_login: 'ENTRAR', btn_signup: 'CRIAR CONTA', btn_google: 'Entrar com Google',
+    btn_apple: 'Entrar com a Apple',
+    btn_play_offline: 'Jogar sem conta (sem ranking)',
+    auth_email_ph: 'E-mail', auth_pass_ph: 'Senha (mín. 6 caracteres)',
+    verify_sent: '📧 Enviamos um link de confirmação para',
+    verify_instructions: 'Clique no link do e-mail e depois volte aqui.<br>(confira também a caixa de spam)',
+    btn_verified: 'JÁ CONFIRMEI', btn_resend: 'REENVIAR E-MAIL', link_logout: 'sair',
+    delete_account_title: '⚠️ Excluir conta',
+    delete_account_desc: 'Desativa sua conta na hora e agenda a exclusão definitiva de todos os dados vinculados a ela (pontuações, XP, amigos, medalhas, Pigmentos) para 15 dias depois. Dentro desse prazo, você pode cancelar entrando em contato com o suporte.',
+    delete_account_btn: 'Excluir minha conta',
+    delete_account_confirm: 'Tem certeza que quer excluir sua conta? Ela será desativada agora (você será desconectado e não vai conseguir entrar de novo) e todos os seus dados (pontuações, XP, amigos, medalhas, Pigmentos) serão apagados permanentemente em 15 dias. Se mudar de ideia antes disso, contate o suporte (contato@colorrush.com.br) para cancelar.',
+    delete_account_progress: 'Excluindo conta...',
+    delete_account_done: 'Sua conta foi desativada. Todos os seus dados serão apagados permanentemente em 15 dias. Para cancelar antes disso, contate o suporte.',
+    delete_account_error: 'Não foi possível excluir a conta agora. Tente novamente.',
+    delete_account_modal_cancel_btn: 'Cancelar',
+    delete_account_modal_confirm_btn: 'Confirmo a exclusão da conta',
+    nick_prompt: 'Escolha seu nome de usuário para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
+    nick_ph: 'Seu nome de usuário (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
+    ref_code_label_short: 'Cód. de indicação',
+    ref_code_optional_note: '(opcional)',
+    mode_classic_title: '🎨 Clássico',
+    mode_classic_desc: 'Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.',
+    mode_reverse_title: '🔄 Reverso',
+    mode_reverse_desc: 'Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.',
+    mode_shapes_title: '🔶 Formas',
+    mode_shapes_desc: 'Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.',
+    mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
+    mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
+    mode_trio_title: '🔺 Trio',
+    mode_trio_desc: 'Cada quadrado tem <b>3 cores</b>: o fundo, a cor da palavra e a palavra em si. Decore as <b>2 cores pedidas</b> e clique no único quadrado que tiver uma delas em qualquer uma das 3 partes. Para a próxima rodada, decore as outras 2 cores desse quadrado.',
+    record_label: '📊 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
+    footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
+    hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
+    your_score: 'Sua pontuação:', record_mode_label: '🏆 Seu recorde neste modo:',
+    btn_create_save: '🏆 CRIAR CONTA E SALVAR PONTOS', ranking_dash: 'Ranking —', points_header: 'Pontos',
+    link_view_full: 'ver ranking completo', btn_play_again: 'JOGAR DE NOVO', btn_share: '📤 COMPARTILHAR',
+    btn_menu: 'MENU', ranking_title: '🏆 RANKING', tab_geral: '🌍 Geral', tab_classic: '🎨 Clássico',
+    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', tab_trio: '🔺 Trio', nick_header: 'Jogador', loading_text: 'Carregando...', btn_back: 'VOLTAR',
+    btn_watch_replay: 'Assistir replay', replay_title: '▶️ REPLAY', replay_error: 'Não foi possível carregar este replay.',
+    profile_title: '🎖️ PERFIL',
+
+    err_nick_length: 'O nome de usuário deve ter entre 3 e 16 caracteres.',
+    err_nick_spaces: 'O nome de usuário não pode ter espaços.',
+    err_nick_consent: 'Marque a caixinha confirmando que leu a Política de Privacidade.',
+    nick_consent_text: 'Meu nome de usuário e minhas pontuações vão aparecer publicamente no ranking do jogo. Li a <a href="/privacidade.html" target="_blank" style="color:var(--neon-yellow);">Política de Privacidade</a>.',
+    err_nick_taken: 'Este nome de usuário já está em uso. Escolha outro.',
+    err_nick_save: msg => `Erro ao salvar: ${msg}`,
+    sync_success: '✅ Recorde enviado para o ranking global!',
+    sync_fail: '⚠️ Não foi possível salvar sua partida.',
+    sync_calculating: '⏳ Calculando pontuação...',
+    share_copied: '✅ Copiado para a área de transferência!',
+    your_refcode_label: 'Seu código de indicação:',
+    share_text: (score, modeName, rec, link) => `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`,
+    share_new_record_suffix: ' 🎉 Novo recorde pessoal!',
+    invite_text: link => `🎨 Bora jogar Color Rush comigo? Teste seus reflexos e sua memória! 👉 ${link}`,
+    verify_resent: '📧 E-mail reenviado!',
+    verify_not_confirmed: 'Ainda não confirmado. Confira sua caixa de entrada e o spam.',
+    offline_label: '👤 Jogando sem conta ›', entrar_label: 'entrar', sair_label: 'sair',
+    user_greeting: nick => `${nick} ›`,
+    instr_first_classic: name => `👉 Clique no quadrado ${name} (e memorize a palavra dentro dele!)`,
+    instr_first_reverse: name => `👉 Clique onde está escrito ${name} (e memorize a COR do quadrado!)`,
+    instr_first_shapes: name => `👉 Clique na forma ${name} (e memorize a palavra escrita nela!)`,
+    instr_first_shapes_reverse: name => `👉 Clique na palavra ${name} (e memorize a FORMA ao redor dela!)`,
+    instr_next_classic: '🧠 Clique no quadrado da cor da palavra que você memorizou (e memorize a nova palavra dentro dele!)',
+    instr_next_reverse: '🧠 Clique onde está escrito o nome da cor que você memorizou (e memorize a nova COR do quadrado!)',
+    instr_next_shapes: '🧠 Clique na forma cujo nome você memorizou (e memorize a nova palavra escrita nela!)',
+    instr_next_shapes_reverse: '🧠 Clique no nome da forma que você memorizou (e memorize a nova FORMA ao redor!)',
+    instr_first_trio: (nameA, nameB) => `👉 Decore o ${nameA} e o ${nameB}. Encontre o único quadrado com uma dessas cores (no fundo do quadrado, na cor da palavra ou na própria palavra)!`,
+    instr_next_trio: '🧠 Encontre uma das 2 cores que você memorizou (fundo, cor da palavra ou a palavra) — e memorize as outras 2 cores nesse quadrado!',
+    reason_timeout: '⏰ TEMPO ESGOTADO!', reason_wrong: '❌ QUADRADO ERRADO!',
+    mode_name_classic: 'Clássico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trio',
+    ranking_no_players: 'Ninguém pontuou ainda. Seja o primeiro! 🚀',
+    ranking_no_players_mini: 'Ninguém no ranking ainda. Seja o primeiro! 🚀',
+    ranking_no_friends: 'Nenhum dos seus amigos pontuou neste ranking ainda.',
+    scope_all: 'Todos',
+    scope_friends: '👥 Amigos',
+    ranking_error: 'Erro ao carregar ranking.', ranking_error_mini: 'Não foi possível carregar.',
+    pagination_prev: '‹ Anterior', pagination_next: 'Próxima ›',
+    pagination_page: (cur, total) => `Página ${cur} de ${total}`,
+    profile_offline_msg1: '🔒 Suas conquistas não são salvas jogando sem conta.',
+    profile_offline_msg2: 'Crie uma conta para começar a desbloquear badges e acompanhar seu progresso!',
+    btn_create_account: 'CRIAR CONTA',
+    profile_offline_label: '👤 Jogando sem conta',
+    profile_nick_label: nick => nick, // sem 👤 fixo — o ícone de avatar já vem em #profile-nick-avatar do lado
+    profile_summary: (n, total) => `${n} de ${total} conquistas desbloqueadas`,
+    profile_badges_section: '🏅 Medalhas',
+    profile_badge_equip_btn: '👁️ Exibir no ranking',
+    profile_badge_equipped_btn: '✅ Exibindo no ranking',
+    profile_ranks_section: '🏆 Rankings',
+    profile_no_badges_yet: 'Essa pessoa ainda não desbloqueou nenhuma medalha.',
+    btn_friends: '👥 AMIGOS',
+    friends_title: '👥 AMIGOS',
+    friends_incoming_title: 'Pedidos recebidos',
+    friends_outgoing_title: 'Pedidos enviados',
+    friends_list_title: 'Seus amigos',
+    friends_empty: 'Você ainda não tem amigos. Adicione-os pelo ranking, ou compartilhando seu link de convite.',
+    btn_add_friend: '➕ Adicionar amigo',
+    btn_remove_friend: 'Remover',
+    btn_remove_friend_profile: 'Remover amigo',
+    btn_accept: 'Aceitar',
+    btn_decline: 'Recusar',
+    btn_cancel_request: 'Cancelar pedido',
+    friend_request_sent_label: 'Pedido de amizade enviado',
+    friend_action_error: 'Não foi possível concluir a ação. Tente novamente.',
+    banned_msg: '🚫 Sua conta está suspensa e não pode jogar.',
+    btn_challenge: '⚔️ Desafiar',
+    btn_forfeit: '🏳️ Desistir',
+    pvp_title: '⚔️ DUELO',
+    pvp_challenge_received: nick => `⚔️ ${nick} te desafiou para um duelo!`,
+    pvp_waiting_text: nick => `Aguardando ${nick} aceitar o duelo...`,
+    pvp_you_label: nick => `${nick} (você)`,
+    pvp_your_turn: '👉 Sua vez!',
+    pvp_opp_turn: nick => `Vez de ${nick}...`,
+    pvp_win_title: '🎉 VOCÊ VENCEU!',
+    pvp_lose_title: '💀 VOCÊ PERDEU',
+    pvp_declined_title: 'Desafio recusado',
+    pvp_cancelled_title: 'Desafio cancelado',
+    pvp_draw_title: '🤝 EMPATE',
+    pvp_draw_sub: '3 rodadas seguidas sem nenhum acerto de ninguém.',
+    pvp_get_ready: 'Prepare-se!',
+    pvp_go: 'Vai!',
+    pvp_reason_timeout: (won, opp) => won ? `${opp} ficou sem tempo.` : 'Você ficou sem tempo.',
+    pvp_reason_wrong: (won, opp) => won ? `${opp} clicou no quadrado errado.` : 'Você clicou no quadrado errado.',
+    pvp_reason_forfeit: (won, opp) => won ? `${opp} desistiu do duelo.` : 'Você desistiu do duelo.',
+    pvp_rounds_played: n => `Rodadas jogadas: ${n}`,
+    pvp_explain: 'Repare na <b>palavra</b> abaixo. Clique no quadrado com a <b>cor de fundo</b> correspondente.',
+    pvp_bonus_toast: '✨ Os dois ficam com 5 segundos para o desempate!',
+    badge_not_unlocked: 'Ainda não conquistado', badge_maxed: '🌟 Nível máximo alcançado!',
+    badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
+    badge_rank_unknown: 'Você ainda não pontuou no ranking global.',
+    badge_rank_current: n => `Sua melhor posição até agora: ${n}º lugar.`,
+    tab_level: '🆙 Nível',
+    tab_divulgador: '📣 Divulgador',
+    tab_shapes_reverse_txt: '🔸 Formas Reverso',
+    level_explain: '🆙 Ranking por experiência (XP) acumulada.',
+    divulgador_explain: '📣 Quem mais convidou amigos pelo seu link de compartilhamento.',
+    tab_daily: '📅 Desafio Diário',
+    daily_card_desc: 'O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDesc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDesc)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que poderão ser usados na loja do jogo em breve.',
+    daily_ends_in: 'Termina em: ',
+    daily_starts_in: 'Inicia em: ',
+    daily_card_best: n => `🎯 Melhor: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Tentativas restantes: ${left}/${max}`,
+    daily_card_already_played: '✅ Já jogou hoje',
+    daily_screen_title: '📅 DESAFIO DIÁRIO',
+    daily_inbox_title: '📬 Caixa de Entrada',
+    btn_close: 'FECHAR',
+    inbox_empty: 'Nenhuma mensagem por aqui ainda.',
+    btn_claim_all: '💰 RESGATAR TODAS',
+    btn_claim: '💰 RESGATAR',
+    daily_reward_claimed_label: '✅ Resgatado',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 Parabéns! Você ficou em ${pos} no desafio de ${dateStr} com ${score} pontos.`,
+    daily_pos_1: '🥇 1º lugar',
+    daily_pos_2: '🥈 2º lugar',
+    daily_pos_3: '🥉 3º lugar',
+    daily_pos_n: n => `${n}º lugar`,
+    daily_claim_error: 'Não foi possível resgatar agora.',
+    daily_blocked_msg: '✅ Você já usou suas 3 tentativas de hoje. Volte amanhã!',
+    btn_view_daily_ranking: '🏆 VER RANKING DO DESAFIO',
+    btn_view_ranking_short: '🏆 VER RANKING',
+    daily_result_title: 'FIM DA TENTATIVA',
+    daily_result_score_label: 'Pontuação desta tentativa:',
+    daily_result_best_label: '🎯 Sua melhor de hoje:',
+    daily_xp_bonus: n => `⭐ +${n} XP por completar a tentativa!`,
+    daily_attempts_left_msg: n => `Você ainda tem ${n} tentativa${n > 1 ? 's' : ''} hoje.`,
+    daily_attempts_used_msg: 'Você usou suas 3 tentativas de hoje!',
+    daily_start_error: 'Não foi possível iniciar. Tente de novo.',
+    daily_update_required: '⚠️ Seu jogo está desatualizado. Atualize para a versão mais recente pra jogar o desafio diário.',
+    daily_intro_heading: '🎲 O modo sorteado de hoje é:',
+    daily_intro_start_btn: '▶️ Iniciar Desafio',
+    daily_subtab_today: '📅 Hoje',
+    daily_subtab_alltime: '🏆 Salão da Fama',
+    daily_col_wins: 'Vitórias',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeader" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeader)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos',
+    daily_prizes_legend: {
+      title: '🏆 Premiação (creditada em Pigmentos no dia seguinte)',
+      rows: [
+        { label: '🥇 1º lugar', amount: 500 },
+        { label: '🥈🥉 2º–3º lugar', amount: 300 },
+        { label: '4º–10º lugar', amount: 150 },
+        { label: '11º–50º lugar', amount: 60 },
+        { label: 'Demais participantes', amount: 10 },
+      ],
+    },
+    daily_no_today_players: 'Ninguém jogou o desafio de hoje ainda.',
+    daily_no_wins_yet: 'Ninguém venceu um desafio diário ainda.',
+    points_header_divulgador: 'Convites',
+    points_header_level: 'XP',
+    unlock_at: n => `🔒 Desbloqueia no nível ${n}`,
+    levelup_title: '🎉 SUBIU DE NÍVEL!',
+
+    tut_btn: '❓ Como jogar',
+    tut_intro_banner: '📖 TUTORIAL',
+    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRIO' },
+    tut_skip: 'Fechar tutorial',
+    tut_prev: '‹ Anterior',
+    tut_next: 'Próximo ›',
+    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR', 'shapes-reverse': '🎮 JOGAR', trio: '🎮 JOGAR' },
+    tut_play_btn_daily: '📅 INICIAR DESAFIO',
+    tut_back_btn: 'VOLTAR AO MENU',
+    tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
+    tut_caption_classic_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> desse quadrado: <b>VERDE</b>.',
+    tut_caption_classic_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_classic_4: 'Agora encontre o quadrado com a <b>cor</b> que você acabou de memorizar (<b>VERDE</b>).',
+    tut_caption_classic_5: 'Memorize a <b>palavra</b> escrita nesse quadrado: <b>AMARELO</b>.',
+    tut_caption_classic_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_classic_7: 'É isso — o ciclo será sempre: <b>procure a cor pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_reverse_1: 'Repare: a instrução lá em cima pede uma palavra (<b>VERMELHO</b>). Você deve então procurar o quadrado onde essa <b>palavra está escrita</b>.',
+    tut_caption_reverse_2: 'Antes de clicar, memorize a <b>cor de fundo</b> desse quadrado: <b>ROSA</b>.',
+    tut_caption_reverse_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_reverse_4: 'Agora encontre o quadrado onde está escrita a <b>palavra</b> da cor que você acabou de memorizar (<b>ROSA</b>).',
+    tut_caption_reverse_5: 'Memorize a <b>cor de fundo</b> desse quadrado: <b>AMARELO</b>.',
+    tut_caption_reverse_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_reverse_7: 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a cor de fundo → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_shapes_1: 'Repare: a instrução lá em cima pede uma forma (<b>CÍRCULO</b>). Você deve então procurar a figura com essa <b>forma desenhada</b>.',
+    tut_caption_shapes_2: 'Antes de clicar, memorize a <b>palavra escrita no meio</b> dessa figura: <b>QUADRADO</b>.',
+    tut_caption_shapes_3: 'Após memorizar, <b>clique</b> nessa figura.',
+    tut_caption_shapes_4: 'Agora encontre a figura com a <b>forma</b> que você acabou de memorizar (<b>QUADRADO</b>).',
+    tut_caption_shapes_5: 'Memorize a <b>palavra</b> escrita nessa figura: <b>TRIÂNGULO</b>.',
+    tut_caption_shapes_6: 'Após memorizar, <b>clique</b> nessa figura.',
+    tut_caption_shapes_7: 'É isso — o ciclo será sempre: <b>procure a forma pedida → memorize a palavra do meio → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    'tut_caption_shapes-reverse_1': 'Repare: a instrução lá em cima pede uma palavra (<b>QUADRADO</b>). Você deve então procurar a figura onde essa <b>palavra está escrita</b>.',
+    'tut_caption_shapes-reverse_2': 'Antes de clicar, memorize a <b>forma ao redor</b> dessa palavra: <b>ESTRELA</b>.',
+    'tut_caption_shapes-reverse_3': 'Após memorizar, <b>clique</b> nessa figura.',
+    'tut_caption_shapes-reverse_4': 'Agora encontre a figura onde está escrita a <b>palavra</b> da forma que você acabou de memorizar (<b>ESTRELA</b>).',
+    'tut_caption_shapes-reverse_5': 'Memorize a <b>forma ao redor</b> dessa palavra: <b>TRIÂNGULO</b>.',
+    'tut_caption_shapes-reverse_6': 'Após memorizar, <b>clique</b> nessa figura.',
+    'tut_caption_shapes-reverse_7': 'É isso — o ciclo será sempre: <b>procure a palavra pedida → memorize a forma ao redor → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_trio_1: 'Repare: a instrução lá em cima pede <b>2 cores</b> (<b>VERMELHO</b> e <b>VERDE</b>). Procure o único quadrado que tenha uma delas em qualquer uma das <b>situações</b>. Aqui foi o <b>fundo do quadrado</b> (<b>VERMELHO</b>).',
+    tut_caption_trio_2: 'Antes de clicar, memorize as <b>outras 2 cores</b> nesse quadrado: a cor da palavra (<b>LARANJA</b>) e a própria palavra (<b>ROXO</b>).',
+    tut_caption_trio_3: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_trio_4: 'Agora encontre o quadrado com uma das cores que você acabou de memorizar (<b>LARANJA</b> ou <b>ROXO</b>) — dessa vez bateu na <b>cor da palavra</b> (<b>LARANJA</b>).',
+    tut_caption_trio_5: 'Memorize as outras 2 cores nesse quadrado: o <b>fundo</b> (<b>VERDE</b>) e a <b>palavra</b> (<b>AMARELO</b>).',
+    tut_caption_trio_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
+    tut_caption_trio_7: 'É isso — o ciclo será sempre: <b>encontre uma das 2 cores memorizadas na rodada anterior → memorize as outras duas cores naquele quadrado → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+  },
+  en: {
+    btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
+    btn_apple: 'Sign in with Apple',
+    btn_play_offline: 'Play without an account (no leaderboard)',
+    auth_email_ph: 'Email', auth_pass_ph: 'Password (min. 6 characters)',
+    verify_sent: '📧 We sent a confirmation link to',
+    verify_instructions: 'Click the link in the email, then come back here.<br>(check your spam folder too)',
+    btn_verified: "I'VE CONFIRMED", btn_resend: 'RESEND EMAIL', link_logout: 'log out',
+    delete_account_title: '⚠️ Delete account',
+    delete_account_desc: 'Deactivates your account right away and schedules the permanent deletion of all data linked to it (scores, XP, friends, badges, Pigments) for 15 days later. You can cancel during that period by contacting support.',
+    delete_account_btn: 'Delete my account',
+    delete_account_confirm: "Are you sure you want to delete your account? It will be deactivated now (you'll be signed out and won't be able to log back in) and all your data (scores, XP, friends, badges, Pigments) will be permanently erased in 15 days. If you change your mind before then, contact support (contato@colorrush.com.br) to cancel.",
+    delete_account_progress: 'Deleting account...',
+    delete_account_done: 'Your account has been deactivated. All your data will be permanently deleted in 15 days. To cancel before then, contact support.',
+    delete_account_error: "Couldn't delete your account right now. Please try again.",
+    delete_account_modal_cancel_btn: 'Cancel',
+    delete_account_modal_confirm_btn: 'I confirm account deletion',
+    nick_prompt: 'Choose your username for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
+    nick_ph: 'Your username (3 to 16 characters)', btn_confirm: 'CONFIRM',
+    ref_code_label_short: 'Referral code',
+    ref_code_optional_note: '(optional)',
+    mode_classic_title: '🎨 Classic',
+    mode_classic_desc: "Click the square with the <b>requested color</b> and memorize the <b>word</b> inside it. Next round, click the square whose color matches the memorized word.",
+    mode_reverse_title: '🔄 Reverse',
+    mode_reverse_desc: "Click the square where the <b>requested word</b> is written and memorize the <b>square's color</b>. Next round, click where the memorized color's name is written.",
+    mode_shapes_title: '🔶 Shapes',
+    mode_shapes_desc: 'Click the <b>requested shape</b> and memorize the <b>word</b> written on it. Next round, click the shape whose name you memorized.',
+    mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse',
+    mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
+    mode_trio_title: '🔺 Trio',
+    mode_trio_desc: "Every square has <b>3 colors</b>: the background, the word's own color, and the word itself. Memorize the <b>2 requested colors</b> and click the only square with one of them anywhere among those 3 parts. For the next round, memorize that square's other 2 colors.",
+    record_label: '📊 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
+    footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
+    hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
+    your_score: 'Your score:', record_mode_label: '🏆 Your record in this mode:',
+    btn_create_save: '🏆 CREATE ACCOUNT AND SAVE SCORE', ranking_dash: 'Leaderboard —', points_header: 'Points',
+    link_view_full: 'view full leaderboard', btn_play_again: 'PLAY AGAIN', btn_share: '📤 SHARE',
+    btn_menu: 'MENU', ranking_title: '🏆 LEADERBOARD', tab_geral: '🌍 Overall', tab_classic: '🎨 Classic',
+    tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse', tab_trio: '🔺 Trio', nick_header: 'Player', loading_text: 'Loading...', btn_back: 'BACK',
+    btn_watch_replay: 'Watch replay', replay_title: '▶️ REPLAY', replay_error: 'Could not load this replay.',
+    profile_title: '🎖️ PROFILE',
+
+    err_nick_length: 'Username must be between 3 and 16 characters.',
+    err_nick_spaces: 'Username can\'t contain spaces.',
+    err_nick_consent: 'Check the box confirming you\'ve read the Privacy Policy.',
+    nick_consent_text: 'My username and scores will be publicly shown on the game\'s leaderboard. I\'ve read the <a href="/privacidade.html" target="_blank" style="color:var(--neon-yellow);">Privacy Policy</a>.',
+    err_nick_taken: 'This username is already taken. Choose another.',
+    err_nick_save: msg => `Error saving: ${msg}`,
+    sync_success: '✅ Record submitted to the global leaderboard!',
+    sync_fail: '⚠️ Could not save your game.',
+    sync_calculating: '⏳ Calculating score...',
+    share_copied: '✅ Copied to clipboard!',
+    your_refcode_label: 'Your referral code:',
+    share_text: (score, modeName, rec, link) => `🎨 Color Rush — I scored ${score} point${score === 1 ? '' : 's'} in ${modeName} mode!${rec}\nCan you beat me? 👉 ${link}`,
+    share_new_record_suffix: ' 🎉 New personal record!',
+    invite_text: link => `🎨 Wanna play Color Rush with me? Test your reflexes and memory! 👉 ${link}`,
+    verify_resent: '📧 Email resent!',
+    verify_not_confirmed: 'Not confirmed yet. Check your inbox and spam folder.',
+    offline_label: '👤 Playing without an account ›', entrar_label: 'log in', sair_label: 'log out',
+    user_greeting: nick => `${nick} ›`,
+    instr_first_classic: name => `👉 Click the ${name} square (and memorize the word inside it!)`,
+    instr_first_reverse: name => `👉 Click where it says ${name} (and memorize the square's COLOR!)`,
+    instr_first_shapes: name => `👉 Click the ${name} shape (and memorize the word written on it!)`,
+    instr_first_shapes_reverse: name => `👉 Click the word ${name} (and memorize the surrounding SHAPE!)`,
+    instr_next_classic: "🧠 Click the square whose color matches the word you memorized (and memorize the new word inside it!)",
+    instr_next_reverse: "🧠 Click where the name of the color you memorized is written (and memorize the square's new COLOR!)",
+    instr_next_shapes: "🧠 Click the shape whose name you memorized (and memorize the new word written on it!)",
+    instr_next_shapes_reverse: "🧠 Click on the name of the shape you memorized (and memorize the new surrounding SHAPE!)",
+    instr_first_trio: (nameA, nameB) => `👉 Memorize ${nameA} and ${nameB}. Find the only square with one of these colors (in the background, the word's color, or the word itself)!`,
+    instr_next_trio: "🧠 Find the square with one of the 2 colors you just memorized (background, word color, or the word) — and memorize that square's 2 new colors!",
+    reason_timeout: "⏰ TIME'S UP!", reason_wrong: '❌ WRONG SQUARE!',
+    mode_name_classic: 'Classic', mode_name_reverse: 'Reverse', mode_name_shapes: 'Shapes', mode_name_shapes_reverse: 'Shapes Reverse', mode_name_trio: 'Trio',
+    ranking_no_players: 'No one has scored yet. Be the first! 🚀',
+    ranking_no_players_mini: 'No one on the leaderboard yet. Be the first! 🚀',
+    ranking_no_friends: "None of your friends have scored in this leaderboard yet.",
+    scope_all: 'All',
+    scope_friends: '👥 Friends',
+    ranking_error: 'Error loading leaderboard.', ranking_error_mini: 'Could not load.',
+    pagination_prev: '‹ Previous', pagination_next: 'Next ›',
+    pagination_page: (cur, total) => `Page ${cur} of ${total}`,
+    profile_offline_msg1: "🔒 Your achievements aren't saved while playing without an account.",
+    profile_offline_msg2: 'Create an account to start unlocking badges and tracking your progress!',
+    btn_create_account: 'CREATE ACCOUNT',
+    profile_offline_label: '👤 Playing without an account',
+    profile_nick_label: nick => nick, // sem 👤 fixo — o ícone de avatar já vem em #profile-nick-avatar do lado
+    profile_summary: (n, total) => `${n} of ${total} achievements unlocked`,
+    profile_badges_section: '🏅 Medals',
+    profile_badge_equip_btn: '👁️ Show on ranking',
+    profile_badge_equipped_btn: '✅ Showing on ranking',
+    profile_ranks_section: '🏆 Rankings',
+    profile_no_badges_yet: "This player hasn't unlocked any medals yet.",
+    btn_friends: '👥 FRIENDS',
+    friends_title: '👥 FRIENDS',
+    friends_incoming_title: 'Incoming requests',
+    friends_outgoing_title: 'Sent requests',
+    friends_list_title: 'Your friends',
+    friends_empty: "You don't have any friends yet. Add them from the leaderboard, or by sharing your invite link.",
+    btn_add_friend: '➕ Add friend',
+    btn_remove_friend: 'Remove',
+    btn_remove_friend_profile: 'Remove friend',
+    btn_accept: 'Accept',
+    btn_decline: 'Decline',
+    btn_cancel_request: 'Cancel request',
+    friend_request_sent_label: 'Friend request sent',
+    friend_action_error: 'Could not complete the action. Please try again.',
+    banned_msg: '🚫 Your account is suspended and cannot play.',
+    btn_challenge: '⚔️ Challenge',
+    btn_forfeit: '🏳️ Forfeit',
+    pvp_title: '⚔️ DUEL',
+    pvp_challenge_received: nick => `⚔️ ${nick} challenged you to a duel!`,
+    pvp_waiting_text: nick => `Waiting for ${nick} to accept the duel...`,
+    pvp_you_label: nick => `${nick} (you)`,
+    pvp_your_turn: '👉 Your turn!',
+    pvp_opp_turn: nick => `${nick}'s turn...`,
+    pvp_win_title: '🎉 YOU WON!',
+    pvp_lose_title: '💀 YOU LOST',
+    pvp_declined_title: 'Challenge declined',
+    pvp_cancelled_title: 'Challenge cancelled',
+    pvp_draw_title: '🤝 DRAW',
+    pvp_draw_sub: '3 rounds in a row with no one getting it right.',
+    pvp_get_ready: 'Get ready!',
+    pvp_go: 'Go!',
+    pvp_reason_timeout: (won, opp) => won ? `${opp} ran out of time.` : 'You ran out of time.',
+    pvp_reason_wrong: (won, opp) => won ? `${opp} clicked the wrong square.` : 'You clicked the wrong square.',
+    pvp_reason_forfeit: (won, opp) => won ? `${opp} forfeited the duel.` : 'You forfeited the duel.',
+    pvp_rounds_played: n => `Rounds played: ${n}`,
+    pvp_explain: 'Look at the <b>word</b> below. Click the square with the matching <b>background color</b>.',
+    pvp_bonus_toast: '✨ Both players are set to 5 seconds for the tiebreaker!',
+    badge_not_unlocked: 'Not unlocked yet', badge_maxed: '🌟 Maximum level reached!',
+    badge_next_goal: desc => `🎯 Next goal: ${desc}`,
+    badge_rank_unknown: "You haven't scored on the global leaderboard yet.",
+    badge_rank_current: n => `Your best position so far: #${n}.`,
+    tab_level: '🆙 Level',
+    tab_divulgador: '📣 Promoter',
+    tab_shapes_reverse_txt: '🔸 Shapes Reverse',
+    level_explain: '🆙 Ranked by total experience (XP).',
+    divulgador_explain: '📣 Who invited the most friends who signed up through your share link.',
+    tab_daily: '📅 Daily Challenge',
+    daily_card_desc: 'The same challenge for everyone, every day! You get <b>3 attempts</b> to get the highest score. Top scorers earn <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigments</span>, which will be usable in the game shop, coming soon.',
+    daily_ends_in: 'Ends in: ',
+    daily_starts_in: 'Starts in: ',
+    daily_card_best: n => `🎯 Best: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Attempts left: ${left}/${max}`,
+    daily_card_already_played: '✅ Already played today',
+    daily_screen_title: '📅 DAILY CHALLENGE',
+    daily_inbox_title: '📬 Inbox',
+    btn_close: 'CLOSE',
+    inbox_empty: 'No messages here yet.',
+    btn_claim_all: '💰 CLAIM ALL',
+    btn_claim: '💰 CLAIM',
+    daily_reward_claimed_label: '✅ Claimed',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 Congrats! You placed ${pos} in the ${dateStr} challenge with ${score} points.`,
+    daily_pos_1: '🥇 1st place',
+    daily_pos_2: '🥈 2nd place',
+    daily_pos_3: '🥉 3rd place',
+    daily_pos_n: n => `#${n} place`,
+    daily_claim_error: 'Could not claim right now.',
+    daily_blocked_msg: "✅ You've already used your 3 attempts today. Come back tomorrow!",
+    btn_view_daily_ranking: '🏆 VIEW CHALLENGE RANKING',
+    btn_view_ranking_short: '🏆 VIEW RANKING',
+    daily_result_title: 'ATTEMPT OVER',
+    daily_result_score_label: 'Score this attempt:',
+    daily_result_best_label: '🎯 Your best today:',
+    daily_xp_bonus: n => `⭐ +${n} XP for completing the attempt!`,
+    daily_attempts_left_msg: n => `You still have ${n} attempt${n > 1 ? 's' : ''} today.`,
+    daily_attempts_used_msg: "You've used your 3 attempts today!",
+    daily_start_error: 'Could not start. Please try again.',
+    daily_update_required: '⚠️ Your game is out of date. Update to the latest version to play the daily challenge.',
+    daily_intro_heading: '🎲 Today\'s randomly picked mode is:',
+    daily_intro_start_btn: '▶️ Start Challenge',
+    daily_subtab_today: '📅 Today',
+    daily_subtab_alltime: '🏆 Hall of Fame',
+    daily_col_wins: 'Wins',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigments',
+    daily_prizes_legend: {
+      title: '🏆 Prizes (credited as Pigments the next day)',
+      rows: [
+        { label: '🥇 1st place', amount: 500 },
+        { label: '🥈🥉 2nd–3rd place', amount: 300 },
+        { label: '4th–10th place', amount: 150 },
+        { label: '11th–50th place', amount: 60 },
+        { label: 'Other participants', amount: 10 },
+      ],
+    },
+    daily_no_today_players: "No one has played today's challenge yet.",
+    daily_no_wins_yet: 'No one has won a daily challenge yet.',
+    points_header_divulgador: 'Invites',
+    points_header_level: 'XP',
+    unlock_at: n => `🔒 Unlocks at level ${n}`,
+    levelup_title: '🎉 LEVEL UP!',
+
+    tut_btn: '❓ How to play',
+    tut_intro_banner: '📖 TUTORIAL',
+    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL', shapes: '📖 SHAPES TUTORIAL', 'shapes-reverse': '📖 SHAPES REVERSE TUTORIAL', trio: '📖 TRIO TUTORIAL' },
+    tut_skip: 'Close tutorial',
+    tut_prev: '‹ Previous',
+    tut_next: 'Next ›',
+    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY', 'shapes-reverse': '🎮 PLAY', trio: '🎮 PLAY' },
+    tut_play_btn_daily: '📅 START CHALLENGE',
+    tut_back_btn: 'BACK TO MENU',
+    tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
+    tut_caption_classic_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>GREEN</b>.',
+    tut_caption_classic_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_classic_4: 'Now find the square with the <b>color</b> you just memorized (<b>GREEN</b>).',
+    tut_caption_classic_5: 'Memorize the <b>word</b> written on that square: <b>YELLOW</b>.',
+    tut_caption_classic_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_classic_7: "That's it — the cycle is always: <b>find the requested color → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_reverse_1: 'Notice: the instruction up top asks for a word (<b>RED</b>). You should then look for the square where that <b>word is written</b>.',
+    tut_caption_reverse_2: 'Before clicking, memorize the <b>background color</b> of that square: <b>PINK</b>.',
+    tut_caption_reverse_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_reverse_4: 'Now find the square where the <b>word</b> for the color you just memorized is written (<b>PINK</b>).',
+    tut_caption_reverse_5: 'Memorize the <b>background color</b> of that square: <b>YELLOW</b>.',
+    tut_caption_reverse_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_reverse_7: "That's it — the cycle is always: <b>find the requested word → memorize the background color → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_shapes_1: 'Notice: the instruction up top asks for a shape (<b>CIRCLE</b>). You should then look for the square drawn with that <b>shape</b>.',
+    tut_caption_shapes_2: 'Before clicking, memorize the <b>word written in the middle</b> of that square: <b>SQUARE</b>.',
+    tut_caption_shapes_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_shapes_4: 'Now find the square with the <b>shape</b> you just memorized (<b>SQUARE</b>).',
+    tut_caption_shapes_5: 'Memorize the <b>word</b> written on that square: <b>TRIANGLE</b>.',
+    tut_caption_shapes_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_shapes_7: "That's it — the cycle is always: <b>find the requested shape → memorize the middle word → click</b>, getting faster each time. Ready to play? 🚀",
+    'tut_caption_shapes-reverse_1': 'Notice: the instruction up top asks for a word (<b>SQUARE</b>). You should then look for the shape where that <b>word is written</b>.',
+    'tut_caption_shapes-reverse_2': 'Before clicking, memorize the <b>surrounding shape</b> of that word: <b>STAR</b>.',
+    'tut_caption_shapes-reverse_3': 'After memorizing, <b>click</b> that shape.',
+    'tut_caption_shapes-reverse_4': 'Now find the shape where the <b>word</b> for the shape you just memorized is written (<b>STAR</b>).',
+    'tut_caption_shapes-reverse_5': 'Memorize the <b>surrounding shape</b> of that word: <b>TRIANGLE</b>.',
+    'tut_caption_shapes-reverse_6': 'After memorizing, <b>click</b> that shape.',
+    'tut_caption_shapes-reverse_7': "That's it — the cycle is always: <b>find the requested word → memorize the surrounding shape → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_trio_1: 'Notice: the instruction up top asks for <b>2 colors</b> (<b>RED</b> and <b>GREEN</b>). Look for the only square that has one of them in any of its <b>3 parts</b> — here, it matched the <b>background</b>.',
+    tut_caption_trio_2: "Before clicking, memorize the <b>other 2 colors</b> on that square: the word's color (<b>ORANGE</b>) and the word itself (<b>PURPLE</b>).",
+    tut_caption_trio_3: 'After memorizing, <b>click</b> that square.',
+    tut_caption_trio_4: 'Now find the square with one of the colors you just memorized (<b>ORANGE</b> or <b>PURPLE</b>) — this time it matched the <b>word\'s color</b>.',
+    tut_caption_trio_5: 'Memorize the other 2 colors on that square: the <b>background</b> (<b>GREEN</b>) and the <b>word</b> (<b>YELLOW</b>).',
+    tut_caption_trio_6: 'After memorizing, <b>click</b> that square.',
+    tut_caption_trio_7: "That's it — the cycle is always: <b>find one of the 2 memorized colors (in any of the 3 parts) → memorize the other 2 → click</b>, getting faster each time. Ready to play? 🚀",
+  },
+  es: {
+    btn_login: 'INICIAR SESIÓN', btn_signup: 'CREAR CUENTA', btn_google: 'Iniciar sesión con Google',
+    btn_apple: 'Iniciar sesión con Apple',
+    btn_play_offline: 'Jugar sin cuenta (sin ranking)',
+    auth_email_ph: 'Correo electrónico', auth_pass_ph: 'Contraseña (mín. 6 caracteres)',
+    verify_sent: '📧 Enviamos un enlace de confirmación a',
+    verify_instructions: 'Haz clic en el enlace del correo y luego vuelve aquí.<br>(revisa también la carpeta de spam)',
+    btn_verified: 'YA CONFIRMÉ', btn_resend: 'REENVIAR CORREO', link_logout: 'salir',
+    delete_account_title: '⚠️ Eliminar cuenta',
+    delete_account_desc: 'Desactiva tu cuenta de inmediato y programa la eliminación permanente de todos los datos vinculados a ella (puntuaciones, XP, amigos, medallas, Pigmentos) para 15 días después. Puedes cancelarlo durante ese plazo contactando al soporte.',
+    delete_account_btn: 'Eliminar mi cuenta',
+    delete_account_confirm: '¿Seguro que quieres eliminar tu cuenta? Se desactivará ahora (se cerrará tu sesión y no podrás volver a iniciar sesión) y todos tus datos (puntuaciones, XP, amigos, medallas, Pigmentos) se borrarán permanentemente en 15 días. Si cambias de opinión antes, contacta al soporte (contato@colorrush.com.br) para cancelarlo.',
+    delete_account_progress: 'Eliminando cuenta...',
+    delete_account_done: 'Tu cuenta fue desactivada. Todos tus datos se eliminarán permanentemente en 15 días. Para cancelarlo antes, contacta al soporte.',
+    delete_account_error: 'No se pudo eliminar la cuenta ahora. Inténtalo de nuevo.',
+    delete_account_modal_cancel_btn: 'Cancelar',
+    delete_account_modal_confirm_btn: 'Confirmo la eliminación de la cuenta',
+    nick_prompt: 'Elige tu nombre de usuario para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
+    nick_ph: 'Tu nombre de usuario (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
+    ref_code_label_short: 'Cód. de invitación',
+    ref_code_optional_note: '(opcional)',
+    mode_classic_title: '🎨 Clásico',
+    mode_classic_desc: 'Haz clic en el cuadrado del <b>color pedido</b> y memoriza la <b>palabra</b> dentro de él. En la siguiente ronda, haz clic en el cuadrado del color de la palabra memorizada.',
+    mode_reverse_title: '🔄 Reverso',
+    mode_reverse_desc: 'Haz clic en el cuadrado donde está escrita la <b>palabra pedida</b> y memoriza el <b>color del cuadrado</b>. En la siguiente ronda, haz clic donde esté escrito el nombre del color memorizado.',
+    mode_shapes_title: '🔶 Formas',
+    mode_shapes_desc: 'Haz clic en la <b>forma pedida</b> y memoriza la <b>palabra</b> escrita en ella. En la siguiente ronda, haz clic en la forma cuyo nombre memorizaste.',
+    mode_shapes_reverse_title: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso',
+    mode_shapes_reverse_desc: 'Haz clic en la <b>palabra pedida</b> y memoriza la <b>forma que la rodea</b>. En la siguiente ronda, haz clic en el nombre de la forma memorizada.',
+    mode_trio_title: '🔺 Trío',
+    mode_trio_desc: 'Cada cuadrado tiene <b>3 colores</b>: el fondo, el color de la palabra y la palabra en sí. Memoriza los <b>2 colores pedidos</b> y haz clic en el único cuadrado que tenga uno de ellos en cualquiera de esas 3 partes. Para la siguiente ronda, memoriza los otros 2 colores de ese cuadrado.',
+    record_label: '📊 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
+    footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
+    hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
+    your_score: 'Tu puntuación:', record_mode_label: '🏆 Tu récord en este modo:',
+    btn_create_save: '🏆 CREAR CUENTA Y GUARDAR PUNTOS', ranking_dash: 'Ranking —', points_header: 'Puntos',
+    link_view_full: 'ver ranking completo', btn_play_again: 'JUGAR DE NUEVO', btn_share: '📤 COMPARTIR',
+    btn_menu: 'MENÚ', ranking_title: '🏆 RANKING', tab_geral: '🌍 General', tab_classic: '🎨 Clásico',
+    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', tab_trio: '🔺 Trío', nick_header: 'Jugador', loading_text: 'Cargando...', btn_back: 'VOLVER',
+    btn_watch_replay: 'Ver repetición', replay_title: '▶️ REPETICIÓN', replay_error: 'No se pudo cargar esta repetición.',
+    profile_title: '🎖️ PERFIL',
+
+    err_nick_length: 'El nombre de usuario debe tener entre 3 y 16 caracteres.',
+    err_nick_spaces: 'El nombre de usuario no puede tener espacios.',
+    err_nick_consent: 'Marca la casilla confirmando que leíste la Política de Privacidad.',
+    nick_consent_text: 'Mi nombre de usuario y mis puntuaciones aparecerán públicamente en el ranking del juego. Leí la <a href="/privacidade.html" target="_blank" style="color:var(--neon-yellow);">Política de Privacidad</a>.',
+    err_nick_taken: 'Este nombre de usuario ya está en uso. Elige otro.',
+    err_nick_save: msg => `Error al guardar: ${msg}`,
+    sync_success: '✅ ¡Récord enviado al ranking global!',
+    sync_fail: '⚠️ No se pudo guardar tu partida.',
+    sync_calculating: '⏳ Calculando puntuación...',
+    share_copied: '✅ ¡Copiado al portapapeles!',
+    your_refcode_label: 'Tu código de invitación:',
+    share_text: (score, modeName, rec, link) => `🎨 Color Rush — ¡hice ${score} punto${score === 1 ? '' : 's'} en el modo ${modeName}!${rec}\n¿Puedes superarme? 👉 ${link}`,
+    share_new_record_suffix: ' 🎉 ¡Nuevo récord personal!',
+    invite_text: link => `🎨 ¿Jugamos Color Rush? ¡Prueba tus reflejos y tu memoria! 👉 ${link}`,
+    verify_resent: '📧 ¡Correo reenviado!',
+    verify_not_confirmed: 'Aún no confirmado. Revisa tu bandeja de entrada y el spam.',
+    offline_label: '👤 Jugando sin cuenta ›', entrar_label: 'entrar', sair_label: 'salir',
+    user_greeting: nick => `${nick} ›`,
+    instr_first_classic: name => `👉 Haz clic en el cuadrado ${name} (¡y memoriza la palabra dentro de él!)`,
+    instr_first_reverse: name => `👉 Haz clic donde está escrito ${name} (¡y memoriza el COLOR del cuadrado!)`,
+    instr_first_shapes: name => `👉 Haz clic en la forma ${name} (¡y memoriza la palabra escrita en ella!)`,
+    instr_first_shapes_reverse: name => `👉 Haz clic en la palabra ${name} (¡y memoriza la FORMA que la rodea!)`,
+    instr_next_classic: '🧠 Haz clic en el cuadrado del color de la palabra que memorizaste (¡y memoriza la nueva palabra dentro de él!)',
+    instr_next_reverse: '🧠 Haz clic donde está escrito el nombre del color que memorizaste (¡y memoriza el nuevo COLOR del cuadrado!)',
+    instr_next_shapes: '🧠 Haz clic en la forma cuyo nombre memorizaste (¡y memoriza la nueva palabra escrita en ella!)',
+    instr_next_shapes_reverse: '🧠 Haz clic en el nombre de la forma que memorizaste (¡y memoriza la nueva FORMA que la rodea!)',
+    instr_first_trio: (nameA, nameB) => `👉 Memoriza ${nameA} y ${nameB}. ¡Encuentra el único cuadrado con uno de estos colores (en el fondo, en el color de la palabra o en la propia palabra)!`,
+    instr_next_trio: '🧠 Encuentra el cuadrado con uno de los 2 colores que acabas de memorizar (fondo, color de la palabra o la palabra) — ¡y memoriza los 2 nuevos colores de ese cuadrado!',
+    reason_timeout: '⏰ ¡SE ACABÓ EL TIEMPO!', reason_wrong: '❌ ¡CUADRADO EQUIVOCADO!',
+    mode_name_classic: 'Clásico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trío',
+    ranking_no_players: 'Nadie ha puntuado todavía. ¡Sé el primero! 🚀',
+    ranking_no_players_mini: 'Nadie en el ranking todavía. ¡Sé el primero! 🚀',
+    ranking_no_friends: 'Ninguno de tus amigos ha puntuado en este ranking todavía.',
+    scope_all: 'Todos',
+    scope_friends: '👥 Amigos',
+    ranking_error: 'Error al cargar el ranking.', ranking_error_mini: 'No se pudo cargar.',
+    pagination_prev: '‹ Anterior', pagination_next: 'Siguiente ›',
+    pagination_page: (cur, total) => `Página ${cur} de ${total}`,
+    profile_offline_msg1: '🔒 Tus logros no se guardan jugando sin cuenta.',
+    profile_offline_msg2: '¡Crea una cuenta para empezar a desbloquear medallas y seguir tu progreso!',
+    btn_create_account: 'CREAR CUENTA',
+    profile_offline_label: '👤 Jugando sin cuenta',
+    profile_nick_label: nick => nick, // sem 👤 fixo — o ícone de avatar já vem em #profile-nick-avatar do lado
+    profile_summary: (n, total) => `${n} de ${total} logros desbloqueados`,
+    profile_badges_section: '🏅 Medallas',
+    profile_badge_equip_btn: '👁️ Mostrar en el ranking',
+    profile_badge_equipped_btn: '✅ Mostrando en el ranking',
+    profile_ranks_section: '🏆 Rankings',
+    profile_no_badges_yet: 'Esta persona aún no ha desbloqueado ninguna medalla.',
+    btn_friends: '👥 AMIGOS',
+    friends_title: '👥 AMIGOS',
+    friends_incoming_title: 'Solicitudes recibidas',
+    friends_outgoing_title: 'Solicitudes enviadas',
+    friends_list_title: 'Tus amigos',
+    friends_empty: 'Todavía no tienes amigos. Agrégalos desde el ranking, o compartiendo tu enlace de invitación.',
+    btn_add_friend: '➕ Agregar amigo',
+    btn_remove_friend: 'Quitar',
+    btn_remove_friend_profile: 'Quitar amigo',
+    btn_accept: 'Aceptar',
+    btn_decline: 'Rechazar',
+    btn_cancel_request: 'Cancelar solicitud',
+    friend_request_sent_label: 'Solicitud de amistad enviada',
+    friend_action_error: 'No se pudo completar la acción. Inténtalo de nuevo.',
+    banned_msg: '🚫 Tu cuenta está suspendida y no puede jugar.',
+    btn_challenge: '⚔️ Desafiar',
+    btn_forfeit: '🏳️ Rendirse',
+    pvp_title: '⚔️ DUELO',
+    pvp_challenge_received: nick => `⚔️ ¡${nick} te desafió a un duelo!`,
+    pvp_waiting_text: nick => `Esperando a que ${nick} acepte el duelo...`,
+    pvp_you_label: nick => `${nick} (tú)`,
+    pvp_your_turn: '👉 ¡Tu turno!',
+    pvp_opp_turn: nick => `Turno de ${nick}...`,
+    pvp_win_title: '🎉 ¡GANASTE!',
+    pvp_lose_title: '💀 PERDISTE',
+    pvp_declined_title: 'Desafío rechazado',
+    pvp_cancelled_title: 'Desafío cancelado',
+    pvp_draw_title: '🤝 EMPATE',
+    pvp_draw_sub: '3 rondas seguidas sin que nadie acertara.',
+    pvp_get_ready: '¡Prepárate!',
+    pvp_go: '¡Vamos!',
+    pvp_reason_timeout: (won, opp) => won ? `${opp} se quedó sin tiempo.` : 'Te quedaste sin tiempo.',
+    pvp_reason_wrong: (won, opp) => won ? `${opp} hizo clic en el cuadrado equivocado.` : 'Hiciste clic en el cuadrado equivocado.',
+    pvp_reason_forfeit: (won, opp) => won ? `${opp} abandonó el duelo.` : 'Abandonaste el duelo.',
+    pvp_rounds_played: n => `Rondas jugadas: ${n}`,
+    pvp_explain: 'Fíjate en la <b>palabra</b> de abajo. Haz clic en el cuadrado con el <b>color de fondo</b> correspondiente.',
+    pvp_bonus_toast: '✨ ¡Los dos quedan con 5 segundos para el desempate!',
+    badge_not_unlocked: 'Aún no conseguido', badge_maxed: '🌟 ¡Nivel máximo alcanzado!',
+    badge_next_goal: desc => `🎯 Próxima meta: ${desc}`,
+    badge_rank_unknown: 'Todavía no has puntuado en el ranking global.',
+    badge_rank_current: n => `Tu mejor posición hasta ahora: ${n}º lugar.`,
+    tab_level: '🆙 Nivel',
+    tab_divulgador: '📣 Promotor',
+    tab_shapes_reverse_txt: '🔸 Formas Reverso',
+    level_explain: '🆙 Ranking por experiencia (XP) acumulada.',
+    divulgador_explain: '📣 Quién invitó a más amigos mediante tu enlace de invitación.',
+    tab_daily: '📅 Desafío Diario',
+    daily_card_desc: '¡El mismo desafío para todos, todos los días! Tienes <b>3 intentos</b> para conseguir la mayor puntuación. Los mejores clasificados ganan <span class="pigment-word"><svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradDescEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradDescEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos</span>, que podrán usarse en la tienda del juego, próximamente.',
+    daily_ends_in: 'Termina en: ',
+    daily_starts_in: 'Inicia en: ',
+    daily_card_best: n => `🎯 Mejor: ${n}`,
+    daily_card_attempts: (left, max) => `🎟️ Intentos restantes: ${left}/${max}`,
+    daily_card_already_played: '✅ Ya jugaste hoy',
+    daily_screen_title: '📅 DESAFÍO DIARIO',
+    daily_inbox_title: '📬 Bandeja de Entrada',
+    btn_close: 'CERRAR',
+    inbox_empty: 'Todavía no hay mensajes aquí.',
+    btn_claim_all: '💰 RECLAMAR TODO',
+    btn_claim: '💰 RECLAMAR',
+    daily_reward_claimed_label: '✅ Reclamado',
+    daily_inbox_congrats: (pos, dateStr, score) => `🎉 ¡Felicidades! Quedaste en ${pos} en el desafío del ${dateStr} con ${score} puntos.`,
+    daily_pos_1: '🥇 1er lugar',
+    daily_pos_2: '🥈 2do lugar',
+    daily_pos_3: '🥉 3er lugar',
+    daily_pos_n: n => `${n}º lugar`,
+    daily_claim_error: 'No fue posible reclamar ahora.',
+    daily_blocked_msg: '✅ Ya usaste tus 3 intentos de hoy. ¡Vuelve mañana!',
+    btn_view_daily_ranking: '🏆 VER RANKING DEL DESAFÍO',
+    btn_view_ranking_short: '🏆 VER RANKING',
+    daily_result_title: 'FIN DEL INTENTO',
+    daily_result_score_label: 'Puntuación de este intento:',
+    daily_result_best_label: '🎯 Tu mejor de hoy:',
+    daily_xp_bonus: n => `⭐ ¡+${n} XP por completar el intento!`,
+    daily_attempts_left_msg: n => `Todavía tienes ${n} intento${n > 1 ? 's' : ''} hoy.`,
+    daily_attempts_used_msg: '¡Usaste tus 3 intentos de hoy!',
+    daily_start_error: 'No fue posible iniciar. Inténtalo de nuevo.',
+    daily_update_required: '⚠️ Tu juego está desactualizado. Actualiza a la versión más reciente para jugar el desafío diario.',
+    daily_intro_heading: '🎲 El modo sorteado de hoy es:',
+    daily_intro_start_btn: '▶️ Iniciar Desafío',
+    daily_subtab_today: '📅 Hoy',
+    daily_subtab_alltime: '🏆 Salón de la Fama',
+    daily_col_wins: 'Victorias',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos',
+    daily_prizes_legend: {
+      title: '🏆 Premios (acreditados en Pigmentos al día siguiente)',
+      rows: [
+        { label: '🥇 1º lugar', amount: 500 },
+        { label: '🥈🥉 2º–3º lugar', amount: 300 },
+        { label: '4º–10º lugar', amount: 150 },
+        { label: '11º–50º lugar', amount: 60 },
+        { label: 'Demás participantes', amount: 10 },
+      ],
+    },
+    daily_no_today_players: 'Nadie ha jugado el desafío de hoy todavía.',
+    daily_no_wins_yet: 'Nadie ha ganado un desafío diario todavía.',
+    points_header_divulgador: 'Invitaciones',
+    points_header_level: 'XP',
+    unlock_at: n => `🔒 Se desbloquea en el nivel ${n}`,
+    levelup_title: '🎉 ¡SUBISTE DE NIVEL!',
+
+    tut_btn: '❓ Cómo jugar',
+    tut_intro_banner: '📖 TUTORIAL',
+    tut_title: { classic: '📖 TUTORIAL CLÁSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRÍO' },
+    tut_skip: 'Cerrar tutorial',
+    tut_prev: '‹ Anterior',
+    tut_next: 'Siguiente ›',
+    tut_play_btn: { classic: '🎮 JUGAR', reverse: '🎮 JUGAR', shapes: '🎮 JUGAR', 'shapes-reverse': '🎮 JUGAR', trio: '🎮 JUGAR' },
+    tut_play_btn_daily: '📅 INICIAR DESAFÍO',
+    tut_back_btn: 'VOLVER AL MENÚ',
+    tut_caption_classic_1: 'Fíjate: la instrucción de arriba pide un color (<b>ROJO</b>). Entonces debes buscar el cuadrado con ese <b>color de fondo</b>.',
+    tut_caption_classic_2: 'Antes de hacer clic, memoriza la <b>palabra escrita en el medio</b> de ese cuadrado: <b>VERDE</b>.',
+    tut_caption_classic_3: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_classic_4: 'Ahora encuentra el cuadrado con el <b>color</b> que acabas de memorizar (<b>VERDE</b>).',
+    tut_caption_classic_5: 'Memoriza la <b>palabra</b> escrita en ese cuadrado: <b>AMARILLO</b>.',
+    tut_caption_classic_6: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_classic_7: 'Eso es todo — el ciclo siempre será: <b>busca el color pedido → memoriza la palabra del medio → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
+    tut_caption_reverse_1: 'Fíjate: la instrucción de arriba pide una palabra (<b>ROJO</b>). Entonces debes buscar el cuadrado donde esa <b>palabra está escrita</b>.',
+    tut_caption_reverse_2: 'Antes de hacer clic, memoriza el <b>color de fondo</b> de ese cuadrado: <b>ROSA</b>.',
+    tut_caption_reverse_3: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_reverse_4: 'Ahora encuentra el cuadrado donde está escrita la <b>palabra</b> del color que acabas de memorizar (<b>ROSA</b>).',
+    tut_caption_reverse_5: 'Memoriza el <b>color de fondo</b> de ese cuadrado: <b>AMARILLO</b>.',
+    tut_caption_reverse_6: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_reverse_7: 'Eso es todo — el ciclo siempre será: <b>busca la palabra pedida → memoriza el color de fondo → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
+    tut_caption_shapes_1: 'Fíjate: la instrucción de arriba pide una forma (<b>CÍRCULO</b>). Entonces debes buscar la figura con esa <b>forma dibujada</b>.',
+    tut_caption_shapes_2: 'Antes de hacer clic, memoriza la <b>palabra escrita en el medio</b> de esa figura: <b>CUADRADO</b>.',
+    tut_caption_shapes_3: 'Después de memorizar, <b>haz clic</b> en esa figura.',
+    tut_caption_shapes_4: 'Ahora encuentra la figura con la <b>forma</b> que acabas de memorizar (<b>CUADRADO</b>).',
+    tut_caption_shapes_5: 'Memoriza la <b>palabra</b> escrita en esa figura: <b>TRIÁNGULO</b>.',
+    tut_caption_shapes_6: 'Después de memorizar, <b>haz clic</b> en esa figura.',
+    tut_caption_shapes_7: 'Eso es todo — el ciclo siempre será: <b>busca la forma pedida → memoriza la palabra del medio → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
+    'tut_caption_shapes-reverse_1': 'Fíjate: la instrucción de arriba pide una palabra (<b>CUADRADO</b>). Entonces debes buscar la figura donde esa <b>palabra está escrita</b>.',
+    'tut_caption_shapes-reverse_2': 'Antes de hacer clic, memoriza la <b>forma que la rodea</b>: <b>ESTRELLA</b>.',
+    'tut_caption_shapes-reverse_3': 'Después de memorizar, <b>haz clic</b> en esa figura.',
+    'tut_caption_shapes-reverse_4': 'Ahora encuentra la figura donde está escrita la <b>palabra</b> de la forma que acabas de memorizar (<b>ESTRELLA</b>).',
+    'tut_caption_shapes-reverse_5': 'Memoriza la <b>forma que la rodea</b>: <b>TRIÁNGULO</b>.',
+    'tut_caption_shapes-reverse_6': 'Después de memorizar, <b>haz clic</b> en esa figura.',
+    'tut_caption_shapes-reverse_7': 'Eso es todo — el ciclo siempre será: <b>busca la palabra pedida → memoriza la forma que la rodea → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
+    tut_caption_trio_1: 'Fíjate: la instrucción de arriba pide <b>2 colores</b> (<b>ROJO</b> y <b>VERDE</b>). Busca el único cuadrado que tenga uno de ellos en cualquiera de sus <b>3 partes</b> — aquí, coincidió en el <b>fondo</b>.',
+    tut_caption_trio_2: 'Antes de hacer clic, memoriza los <b>otros 2 colores</b> de ese cuadrado: el color de la palabra (<b>NARANJA</b>) y la propia palabra (<b>MORADO</b>).',
+    tut_caption_trio_3: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_trio_4: 'Ahora encuentra el cuadrado con uno de los colores que acabas de memorizar (<b>NARANJA</b> o <b>MORADO</b>) — esta vez coincidió en el <b>color de la palabra</b>.',
+    tut_caption_trio_5: 'Memoriza los otros 2 colores de ese cuadrado: el <b>fondo</b> (<b>VERDE</b>) y la <b>palabra</b> (<b>AMARILLO</b>).',
+    tut_caption_trio_6: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
+    tut_caption_trio_7: 'Eso es todo — el ciclo siempre será: <b>encuentra uno de los 2 colores memorizados (en cualquiera de las 3 partes) → memoriza los otros 2 → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
+  },
+};
+
+function applyLanguage() {
+  const dict = T[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] != null) el.textContent = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    if (dict[key] != null) el.innerHTML = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key] != null) el.placeholder = dict[key];
+  });
+  document.documentElement.lang = (lang === 'en') ? 'en' : (lang === 'es') ? 'es' : 'pt-BR';
+  $('lang-select').value = lang;
+
+  // re-renderiza a tela dinâmica que já estava aberta, se aplicável
+  if ($('menu-screen').classList.contains('active')) showMenu();
+  if ($('profile-screen').classList.contains('active')) renderProfile();
+  if ($('ranking-screen').classList.contains('active')) loadRanking(rankingTab || 'geral');
+  if ($('tutorial-screen').classList.contains('active')) {
+    $('tut-title-el').textContent = T[lang].tut_title[tutMode];
+    showTutStep(tutStep);
+  }
+}
+
+window.setLang = (l) => {
+  lang = l;
+  try { localStorage.setItem('colorRushLang', l); } catch {}
+  auth.languageCode = (l === 'en' || l === 'es') ? l : 'pt';
+  // reflete o idioma na URL da barra de endereço (sem recarregar a página), pra
+  // quem copiar o link diretamente dali — não só pelo botão de compartilhar — já
+  // levar o idioma junto. Mantém outros parâmetros existentes (ex.: ?ref=)
+  try {
+    const params = new URLSearchParams(location.search);
+    if (l === 'pt') params.delete('lang'); else params.set('lang', l);
+    const qs = params.toString();
+    const newUrl = location.pathname + (qs ? `?${qs}` : '') + location.hash;
+    history.replaceState(null, '', newUrl);
+  } catch {}
+  applyLanguage();
+};
+
+/* ================== versão (commit real do GitHub) + auto-atualização ================== */
+let loadedSha = null;
+async function fetchLatestSha() {
+  const res = await fetch('https://api.github.com/repos/igortmr/color-rush/commits?path=index.html&per_page=1');
+  const data = await res.json();
+  return (data && data[0]) ? data[0].sha : null;
+}
+(async () => {
+  const el = document.getElementById('version-tag');
+  try {
+    loadedSha = await fetchLatestSha();
+    el.textContent = loadedSha ? `#${loadedSha.slice(0, 7)}` : '';
+  } catch {
+    el.textContent = '';
+  }
+})();
+
+// confere se o client está na versão mais nova antes de liberar o desafio
+// diário — o desafio precisa que todo mundo rode a MESMA lógica (paleta de
+// cores do dia, modo sorteado, RNG determinística etc. — ver DAILY_COLORS/
+// dailyModeForToday), então uma versão desatualizada pode mostrar um desafio
+// diferente do que o servidor espera. Fail-open: se não der pra confirmar
+// (1ª busca do load ainda não terminou, ou a requisição falha agora), deixa
+// jogar — só barra quando dá pra confirmar de verdade que saiu versão nova.
+async function isDailyClientUpToDate() {
+  try {
+    const sha = await fetchLatestSha();
+    if (!sha || !loadedSha) return true;
+    return sha === loadedSha;
+  } catch {
+    return true;
+  }
+}
+
+// se sair versão nova no GitHub, recarrega sozinho — mas nunca no meio de uma partida
+async function checkForUpdate() {
+  if (playing || document.hidden) return;
+  try {
+    const sha = await fetchLatestSha();
+    if (!sha) return;
+    if (!loadedSha) { loadedSha = sha; return; } // primeira busca falhou no load; só registra
+    if (sha !== loadedSha) {
+      document.getElementById('version-tag').textContent = '🔄 atualizando...';
+      // ?v= força o navegador a buscar o HTML novo em vez do cache
+      setTimeout(() => location.replace(`${location.pathname}?v=${sha.slice(0, 7)}`), 1000);
+    }
+  } catch {}
+}
+setInterval(checkForUpdate, 5 * 60 * 1000); // a cada 5 minutos
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+
+/* ================== indicação (referral) ================== */
+// captura ?ref=<código curto> da URL de compartilhamento e guarda até o cadastro terminar
+let referrerCode = new URLSearchParams(location.search).get('ref') || null;
+if (referrerCode) {
+  try { sessionStorage.setItem('colorRushRef', referrerCode); } catch {}
+} else {
+  try { referrerCode = sessionStorage.getItem('colorRushRef'); } catch {}
+}
+if (location.search) history.replaceState({}, '', location.pathname); // limpa ?ref= / ?v= da URL visível
+
+const REF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I/L, pra não confundir
+async function generateUniqueRefCode() {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    let code = '';
+    for (let i = 0; i < 4; i++) code += REF_CHARS[Math.floor(Math.random() * REF_CHARS.length)];
+    const snap = await getDoc(doc(db, 'refcodes', code));
+    if (!snap.exists()) return code;
+  }
+  return Math.random().toString(36).slice(2, 8).toUpperCase(); // fallback improvável
+}
+async function ensureRefCode() {
+  if (myData.refCode) return myData.refCode;
+  try {
+    const code = await generateUniqueRefCode();
+    await setDoc(doc(db, 'refcodes', code), { uid: currentUser.uid });
+    await setDoc(doc(db, 'scores', currentUser.uid), { refCode: code, updatedAt: serverTimestamp() }, { merge: true });
+    myData.refCode = code;
+  } catch {}
+  return myData.refCode;
+}
+
+/* ================== state ================== */
+const COLORS = [
+  { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'      }, hex: '#1e90ff' },
+  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'      }, hex: '#ff3c3c' }, // um pouco mais puro/forte que antes (#ff4757), pra diferenciar melhor do rosa (#ff6b9d) — hue quase idêntico ao original antes puxava pro lado do rosa
+  { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'     }, hex: '#2ed573' },
+  { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO'  }, hex: '#ffd32a' },
+  { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'    }, hex: '#a55eea' },
+  { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'   }, hex: '#ff7f24' },
+  { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'      }, hex: '#ff6b9d' },
+  { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'      }, hex: '#00d2d3' },
+];
+const CONFETTI_COLORS = { confetti_gold: ['#ffd700', '#ffe93c', '#fff2a8'] };
+// confete cosmético da loja ao bater um novo recorde — camada leve (sem
+// biblioteca), some sozinha depois da animação. "confettiId" explícito permite
+// reusar a mesma função tanto pro confete realmente equipado quanto pra prévia
+// da loja (que precisa funcionar mesmo sem nada equipado ainda).
+function spawnConfettiVariant(confettiId) {
+  if (!confettiId) return;
+  const colors = CONFETTI_COLORS[confettiId] || ['#ffd700'];
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  for (let i = 0; i < 28; i++) {
+    const bit = document.createElement('span');
+    bit.className = 'confetti-bit';
+    bit.style.left = Math.random() * 100 + '%';
+    bit.style.background = colors[i % colors.length];
+    bit.style.animationDelay = (Math.random() * 0.5) + 's';
+    bit.style.animationDuration = (1.6 + Math.random() * 0.9) + 's';
+    bit.style.setProperty('--drift', Math.round(Math.random() * 70 - 35) + 'px');
+    layer.appendChild(bit);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 2800);
+}
+function spawnConfetti() { spawnConfettiVariant(equippedConfetti); }
+const cName = c => c.name[lang];
+const SQUARES = 4;
+
+const SHAPES = [
+  { name: { pt: 'CÍRCULO',    en: 'CIRCLE',   es: 'CÍRCULO'   }, shapeClass: 'shape-circle' },
+  { name: { pt: 'QUADRADO',   en: 'SQUARE',   es: 'CUADRADO'  }, shapeClass: 'shape-square-shape' },
+  { name: { pt: 'TRIÂNGULO',  en: 'TRIANGLE', es: 'TRIÁNGULO' }, shapeClass: 'shape-triangle' },
+  { name: { pt: 'LOSANGO',    en: 'DIAMOND',  es: 'ROMBO'     }, shapeClass: 'shape-diamond' },
+  { name: { pt: 'ESTRELA',    en: 'STAR',     es: 'ESTRELLA'  }, shapeClass: 'shape-star' },
+  { name: { pt: 'CRUZ',       en: 'CROSS',    es: 'CRUZ'      }, shapeClass: 'shape-cross' },
+];
+const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : COLORS;
+// identificador estável (string curta) de um item de cor/forma — usado só
+// pra gravar/reconstruir o "filme" da tela de replay (ver newRound/
+// dailyNewRound e renderReplayRound mais abaixo); nunca participa da
+// pontuação nem da validação, é puramente visual
+const poolItemId = item => item.key || item.shapeClass;
+const poolItemById = (pool, id) => pool.find(x => (x.key || x.shapeClass) === id) || pool[0];
+const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio' };
+const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio'];
+// o desafio diário sorteia só entre Clássico e Reverso (ver dailyModeForToday)
+// — de propósito uma lista separada de ALL_MODES, pra um modo novo (como o
+// Trio) poder entrar no jogo livre/ranking sem precisar reconstruir também a
+// tela do desafio diário (grid/replay dele têm o próprio código de render).
+// Formas/Formas Reverso saíram do sorteio a pedido (ficou só entre os 2 modos
+// de cor, que agora usam a paleta estendida DAILY_COLORS abaixo).
+const DAILY_ROTATION_MODES = ['classic', 'reverse'];
+// paleta exclusiva do desafio diário: só 4 tons quentes próximos (Amarelo,
+// Laranja, Marrom e Vermelho), de propósito bem mais difícil de diferenciar
+// que as 8 cores normais — o jogo livre (Clássico/Reverso/Trio) continua só
+// com as 8 cores de COLORS, sem mudança. Precisa de um "kind: 'daily'"
+// gravado no replay (ver saveMatchReplay em functions/index.js e
+// dailyGameOver aqui) pra tela de replay saber que deve reconstruir com esta
+// paleta em vez da COLORS normal (ver renderReplaySquares).
+// Como o pool tem exatamente 4 cores e cada rodada mostra exatamente 4
+// quadrados (ver SQUARES), dailyNewRound() sempre usa as 4 de uma vez
+// (embaralhadas) — nunca duas cores de fundo repetidas na mesma rodada.
+const DAILY_COLORS = [
+  { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW',  es: 'AMARILLO'   }, hex: '#ffd32a' },
+  { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE',  es: 'NARANJA'    }, hex: '#ff7f24' },
+  { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',   es: 'MARRÓN'     }, hex: '#73421c' },
+  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',     es: 'ROJO'       }, hex: '#ff3c3c' },
+];
+// DAILY_PALETTE_OVERRIDE: mesma ideia do DAILY_MODE_OVERRIDE (ver mais
+// abaixo) só que pra paleta — força um dia específico a usar outras 4 cores
+// em vez da paleta padrão do desafio diário (DAILY_COLORS), sem mexer no
+// sorteio de verdade dos outros dias. Sempre precisa ter EXATAMENTE 4 cores
+// (== SQUARES) pra continuar garantindo que nunca repete cor de fundo na
+// mesma rodada (ver dailyNewRound).
+const DAILY_PALETTE_OVERRIDE = {
+  '2026-07-30': [
+    { key: 'blue',   name: { pt: 'AZUL',  en: 'BLUE',   es: 'AZUL'   }, hex: '#1e90ff' },
+    { key: 'cyan',   name: { pt: 'CIANO', en: 'CYAN',   es: 'CIAN'   }, hex: '#00d2d3' },
+    { key: 'green',  name: { pt: 'VERDE', en: 'GREEN',  es: 'VERDE'  }, hex: '#2ed573' },
+    { key: 'purple', name: { pt: 'ROXO',  en: 'PURPLE', es: 'MORADO' }, hex: '#a55eea' },
+  ],
+};
+// mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
+// paleta estendida (DAILY_COLORS, ou o override do dia — ver
+// DAILY_PALETTE_OVERRIDE acima); qualquer outro valor cai no poolFor normal
+// (dead code hoje, já que DAILY_ROTATION_MODES só tem esses 2, mas mantém a
+// função segura se um modo de forma voltar a entrar no sorteio um dia)
+const dailyPoolFor = m => (m === 'classic' || m === 'reverse')
+  ? (DAILY_PALETTE_OVERRIDE[dailyLocalDateStr()] || DAILY_COLORS)
+  : poolFor(m);
+// Geral = soma dos recordes em TODOS os modos (conta 0 pro modo ainda não jogado)
+const computeTotal = (overrideMode, overrideScore) =>
+  ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (myData[k] || 0)), 0);
+
+/* ================== níveis / XP ================== */
+// XP por rodada certa: (3 - 0,2 * segundos gastos) * multiplicador de sequência
+// (quanto mais rápido, mais XP; quanto mais longa a sequência, maior o multiplicador)
+// Nível N -> N+1 custa N * 100 de XP (100, 200, 300, ...)
+// bônus de sequência: recompensa acertos mais avançados no run, já que ficam mais difíceis
+// (o tempo por rodada encolhe 5% a cada acerto)
+function xpStreakMultiplier(streak) {
+  if (streak <= 10) return 1;
+  if (streak <= 25) return 1.25;
+  if (streak <= 50) return 1.5;
+  return 2;
+}
+const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15, trio: 20 }; // nível mínimo pra jogar cada modo
+const xpForNext = lv => lv * 100;
+const totalXpForLevel = lv => 50 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
+function levelFromXp(xp) {
+  let lv = 1;
+  while (xp >= totalXpForLevel(lv + 1)) lv++;
+  return lv;
+}
+function xpInfo(xp) {
+  const lv = levelFromXp(xp);
+  return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
+}
+function myXp() { return offline ? 0 : (myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
+function modeUnlocked(m) { return myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+// conta banida (campo "banned" setado à mão no Firebase Console, ver
+// checkNotBanned em functions/index.js) não pode jogar NENHUM modo — isso
+// aqui é só a trava do client (mensagem amigável antes de nem tentar); o
+// servidor já rejeitaria qualquer sessão/pontuação de uma conta banida de
+// qualquer forma, isso aqui só evita deixar a pessoa jogar a partida
+// inteira só pra descobrir no fim que não vai valer nada
+function isBanned() { return myData.banned === true; }
+function blockIfBanned() {
+  if (!isBanned()) return false;
+  alert(T[lang].banned_msg);
+  return true;
+}
+
+// cor do emblema de nível é um único degradê contínuo por toda a subida: começa
+// verde no nível 5, passa por azul, roxo, branco, amarelo e laranja, e termina
+// vermelho no nível 95 (ver LV_SPECTRUM/lvSpectrumColor — interpolação linear
+// de RGB entre os "stops" da paleta da marca); cada chip mostra 3 tons vizinhos
+// desse degradê centrados na sua própria faixa de 5 níveis (ver lvChipGradient),
+// então a cor muda suave e continuamente de faixa pra faixa sem nunca repetir; e
+// o nível 100 vira "master" — arco-íris animado, igual (mesmo ciclo de cores e
+// duração) a moldura arco-íris da loja (ver .lv-chip-master no CSS)
+const LV_SPECTRUM = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffffff', '#ffe93c', '#ff9f1c', '#ff2d6b'];
+const LV_MAX_BAND = 19; // faixa do nível 95-99, o último degrau antes do "master" no nível 100
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function mixHex(hexA, hexB, f) {
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * f).toString(16).padStart(2, '0')).join('');
+}
+function lvSpectrumColor(t) {
+  const segs = LV_SPECTRUM.length - 1;
+  const scaled = Math.min(Math.max(t, 0), 1) * segs;
+  const i = Math.min(Math.floor(scaled), segs - 1);
+  return mixHex(LV_SPECTRUM[i], LV_SPECTRUM[i + 1], scaled - i);
+}
+function lvChipGradient(band) {
+  const t = Math.min(Math.max(band / LV_MAX_BAND, 0), 1);
+  const d = 0.035;
+  return [lvSpectrumColor(Math.max(0, t - d)), lvSpectrumColor(t), lvSpectrumColor(Math.min(1, t + d))];
+}
+function lvChip(xp) {
+  const lv = levelFromXp(xp || 0);
+  if (lv >= 100) return `<span class="lv-chip lv-chip-master">Lv ${lv}</span>`;
+  const band = Math.floor(lv / 5);
+  const [c1, c2, c3] = lvChipGradient(band);
+  return `<span class="lv-chip" style="background:linear-gradient(90deg, ${c1}, ${c2}, ${c3}); -webkit-background-clip:text; background-clip:text; color:transparent; border-color:${c2}88; text-shadow:0 0 6px ${c2}80">Lv ${lv}</span>`;
+}
+// moldura da loja ao redor do nick — "equipped" é público (mesmo doc de
+// scores/{uid} que já alimenta o ranking), então aparece pra QUALQUER um que
+// tiver comprado e equipado, não só pra você mesmo
+function applyNickFrame(el, stats) {
+  const frame = stats && stats.equipped && stats.equipped.frame;
+  el.classList.remove('nick-frame-gold', 'nick-frame-rainbow');
+  if (frame === 'frame_gold') el.classList.add('nick-frame-gold');
+  else if (frame === 'frame_rainbow') el.classList.add('nick-frame-rainbow');
+}
+// linha temática da loja — fundo diferenciado na <tr> do jogador nas tabelas
+// de ranking, pra se destacar na lista. Mesmo raciocínio da moldura: campo
+// público (stats.equipped), então funciona pra QUALQUER linha (não só a sua)
+function applyRowTheme(el, stats) {
+  const theme = stats && stats.equipped && stats.equipped.rowTheme;
+  el.classList.remove('row-theme-fire', 'row-theme-ocean', 'row-theme-galaxy');
+  if (theme === 'row_fire') el.classList.add('row-theme-fire');
+  else if (theme === 'row_ocean') el.classList.add('row-theme-ocean');
+  else if (theme === 'row_galaxy') el.classList.add('row-theme-galaxy');
+}
+// avatares da loja — desenhados em SVG (sem imagem externa), um ícone
+// circular por personagem. "glyph" é só o miolo do desenho, sempre
+// centralizado em (0,0); avatarSvg() monta o círculo + halo em volta.
+const AVATAR_SHAPES = {
+  avatar_robot: { color: '#2dd6ff', glyph: '<rect x="-26" y="-26" width="52" height="52" rx="10" fill="#2dd6ff"/><line x1="0" y1="-26" x2="0" y2="-38" stroke="#2dd6ff" stroke-width="3"/><circle cx="0" cy="-40" r="4" fill="#2dd6ff"/><rect x="-18" y="-8" width="36" height="16" rx="4" fill="#0a0e1e"/><circle cx="-9" cy="0" r="4" fill="#e8ecfa"/><circle cx="9" cy="0" r="4" fill="#e8ecfa"/>' },
+  avatar_ninja: { color: '#b14dff', glyph: '<circle r="30" fill="#b14dff"/><rect x="-30" y="-6" width="60" height="12" fill="#0a0e1e"/><ellipse cx="-11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><ellipse cx="11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><circle cx="-11" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="11" cy="0" r="2.5" fill="#0a0e1e"/>' },
+  avatar_ghost: { color: '#e8ecfa', glyph: '<path d="M -26 6 C -26 -22 26 -22 26 6 L 26 20 L 17 12 L 8 20 L 0 12 L -8 20 L -17 12 L -26 20 Z" fill="#e8ecfa"/><ellipse cx="-10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/><ellipse cx="10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/>' },
+  avatar_cat: { color: '#ff9f1c', glyph: '<polygon points="-26,-14 -14,-32 -4,-12" fill="#ff9f1c"/><polygon points="26,-14 14,-32 4,-12" fill="#ff9f1c"/><circle r="28" fill="#ff9f1c"/><ellipse cx="-9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><ellipse cx="9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><circle cx="-9" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="9" cy="0" r="2.5" fill="#0a0e1e"/><polygon points="-4,10 4,10 0,15" fill="#ff6b9d"/>' },
+  avatar_alien: { color: '#21e6a1', glyph: '<ellipse rx="26" ry="32" fill="#21e6a1"/><line x1="-10" y1="-30" x2="-16" y2="-42" stroke="#21e6a1" stroke-width="3"/><line x1="10" y1="-30" x2="16" y2="-42" stroke="#21e6a1" stroke-width="3"/><circle cx="-16" cy="-42" r="3.5" fill="#21e6a1"/><circle cx="16" cy="-42" r="3.5" fill="#21e6a1"/><ellipse cx="-10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/><ellipse cx="10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/>' },
+  avatar_flame: { color: '#ff2d6b', glyph: '<path d="M 0 -34 C 14 -18 24 0 14 18 C 20 8 16 -2 8 -6 C 12 6 4 20 -6 24 C -22 18 -22 0 -12 -12 C -16 -4 -12 6 -6 8 C -10 -6 -8 -22 0 -34 Z" fill="#ff2d6b"/><path d="M -8 -8 L -2 -14 L 4 -8" fill="none" stroke="#0a0e1e" stroke-width="2.5" stroke-linecap="round"/><circle cx="-6" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="0" r="2.5" fill="#0a0e1e"/>' },
+  avatar_crystal: { color: '#00d2d3', glyph: '<polygon points="-16,-28 16,-28 26,-4 0,30 -26,-4" fill="#00d2d3"/><line x1="-16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="-26" y1="-4" x2="26" y2="-4" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><circle cx="14" cy="-18" r="2.5" fill="#e8ecfa"/>' },
+  avatar_star: { color: '#ffe93c', glyph: '<polygon points="0,-30 7.5,-10.3 28.5,-9.3 12.1,3.9 17.7,24.3 0,12.7 -17.7,24.3 -12.1,3.9 -28.5,-9.3 -7.5,-10.3" fill="#ffe93c"/><circle cx="-6" cy="-2" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="-2" r="2.5" fill="#0a0e1e"/><path d="M -6 6 Q 0 11 6 6" fill="none" stroke="#0a0e1e" stroke-width="2" stroke-linecap="round"/>' },
+};
+function avatarSvg(id, size = 32) {
+  const a = AVATAR_SHAPES[id];
+  if (!a) return '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><circle cx="60" cy="60" r="56" fill="${a.color}" opacity="0.22"/><circle cx="60" cy="60" r="48" fill="#131a33" stroke="${a.color}" stroke-width="4"/><g transform="translate(60,60)">${a.glyph}</g></svg>`;
+}
+// devolve o avatar equipado (SVG, markup fixo/confiável) ou o emoji padrão de
+// "pessoa" se nada foi comprado/equipado ainda — mesmo raciocínio de
+// fallback gracioso dos outros cosméticos da loja (glow/tema já removidos,
+// frame/confetti seguem esse mesmo padrão)
+function avatarOrDefaultIcon(avatarId, size = 20) {
+  return avatarId && AVATAR_SHAPES[avatarId] ? avatarSvg(avatarId, size) : '👤';
+}
+// ícone dos Pigmentos (moeda do desafio diário) — uma gota com as cores do
+// jogo se misturando, pra remeter ao tema sem precisar de nenhum arquivo de
+// imagem externo. Markup fixo/confiável (sem dado de usuário), inserido só
+// via insertAdjacentHTML/template literal mesmo mais abaixo.
+// contador só pra dar um id único de gradiente a cada ícone renderizado —
+// com o mesmo id "pigGrad" repetido em vários <svg> na mesma página (menu,
+// loja, legenda de prêmio, botão de compra...), o navegador às vezes usa a
+// cor errada (ou vira sólida) por causa do id duplicado. Cada ícone agora
+// tem seu próprio gradiente, sempre com as mesmas cores.
+let pigmentIconSeq = 0;
+function pigmentIconSvg(size = 18) {
+  const gradId = `pigGrad${pigmentIconSeq++}`;
+  return `<svg class="pigment-icon" width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#a55eea"/>
+        <stop offset="35%" stop-color="#1e90ff"/>
+        <stop offset="65%" stop-color="#2ed573"/>
+        <stop offset="100%" stop-color="#ffd32a"/>
+      </linearGradient>
+    </defs>
+    <path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#${gradId})" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+    <ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/>
+  </svg>`;
+}
+// legenda de premiação do ranking diário — uma linha por faixa, com o ícone
+// colorido de Pigmentos (igual ao resto do jogo) do lado do valor
+function renderDailyPrizesLegend() {
+  const el = $('daily-prizes-legend');
+  if (!el) return;
+  const cfg = T[lang].daily_prizes_legend;
+  const rows = cfg.rows.map(r => `
+    <div style="display:flex; justify-content:space-between; align-items:center; max-width:220px; margin:2px auto;">
+      <span>${r.label}</span>
+      <span style="display:inline-flex; align-items:center; gap:3px; font-weight:700;">${r.amount} ${pigmentIconSvg(14)}</span>
+    </div>`).join('');
+  el.innerHTML = `<div style="margin-bottom:4px;">${cfg.title}</div>${rows}`;
+}
+function modeLabel(m) {
+  return m === 'classic' ? T[lang].mode_name_classic
+    : m === 'reverse' ? T[lang].mode_name_reverse
+    : m === 'shapes' ? T[lang].mode_name_shapes
+    : m === 'shapes-reverse' ? T[lang].mode_name_shapes_reverse
+    : T[lang].mode_name_trio;
+}
+
+/* ================== conquistas (badges) ================== */
+const TIER_COLORS = ['#cd7f32', '#c0c0c0', '#ffd700', '#66ccff', '#a55eea', '#ff4757']; // bronze, prata, ouro, platina, diamante, rubi
+
+const BADGE_DEFS = {
+  points: {
+    icon: '⭐',
+    label: { pt: 'Pontos Totais', en: 'Total Points', es: 'Puntos Totales' },
+    tiers: [500, 2000, 5000, 15000, 50000, 150000],
+    names: {
+      pt: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores', 'Universo Cromático'],
+      en: ['Shining', 'Radiant', 'Stellar', 'Supernova', 'Constellation of Colors', 'Chromatic Universe'],
+      es: ['Brillante', 'Radiante', 'Estelar', 'Supernova', 'Constelación de Colores', 'Universo Cromático'],
+    },
+    metric: u => u.totalPoints || 0,
+    desc: n => lang === 'en' ? `Accumulate ${n} points (sum of all games)`
+      : lang === 'es' ? `Acumula ${n} puntos (suma de todas las partidas)`
+      : `Acumule ${n} pontos (soma de todas as partidas)`,
+  },
+  games: {
+    icon: '🎮',
+    label: { pt: 'Partidas Jogadas', en: 'Games Played', es: 'Partidas Jugadas' },
+    tiers: [10, 50, 100, 250, 500, 1000],
+    names: {
+      pt: ['Iniciante', 'Frequente', 'Dedicado', 'Veterano', 'Lenda', 'Imortal'],
+      en: ['Beginner', 'Regular', 'Dedicated', 'Veteran', 'Legend', 'Immortal'],
+      es: ['Principiante', 'Habitual', 'Dedicado', 'Veterano', 'Leyenda', 'Inmortal'],
+    },
+    metric: u => u.gamesPlayed || 0,
+    desc: n => lang === 'en' ? `Play ${n} games`
+      : lang === 'es' ? `Juega ${n} partidas`
+      : `Jogue ${n} partidas`,
+  },
+  streak: {
+    icon: '🔥',
+    label: { pt: 'Sequência de Dias', en: 'Day Streak', es: 'Racha de Días' },
+    tiers: [3, 7, 14, 30, 100, 365],
+    names: {
+      pt: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável', 'Chama Eterna'],
+      en: ['Committed', 'Full Week', 'Fortnightly', 'Monthly', 'Unshakable', 'Eternal Flame'],
+      es: ['Comprometido', 'Semana Completa', 'Quincenal', 'Mensual', 'Inquebrantable', 'Llama Eterna'],
+    },
+    metric: u => u.bestStreak || 0,
+    desc: n => lang === 'en' ? `Play ${n} days in a row`
+      : lang === 'es' ? `Juega ${n} días seguidos`
+      : `Jogue ${n} dias seguidos`,
+  },
+  sharer: {
+    icon: '📣',
+    label: { pt: 'Divulgador', en: 'Promoter', es: 'Promotor' },
+    tiers: [1, 5, 15, 30, 50, 100],
+    names: {
+      pt: ['Recruta', 'Influencer', 'Viral', 'Embaixador', 'Celebridade', 'Fenômeno'],
+      en: ['Word of Mouth', 'Influencer', 'Viral', 'Ambassador', 'Celebrity', 'Phenomenon'],
+      es: ['Recluta', 'Influencer', 'Viral', 'Embajador', 'Celebridad', 'Fenómeno'],
+    },
+    metric: u => u.referrals || 0,
+    desc: n => lang === 'en'
+      ? `Have ${n} friend${n > 1 ? 's' : ''} sign up through your invite link`
+      : lang === 'es'
+      ? `Consigue que ${n} amigo${n > 1 ? 's' : ''} se registre${n > 1 ? 'n' : ''} con tu enlace de invitación`
+      : `Tenha ${n} amigo${n > 1 ? 's' : ''} cadastrado${n > 1 ? 's' : ''} pelo seu link de compartilhamento`,
+  },
+};
+const BADGE_ORDER = ['points', 'games', 'streak', 'sharer'];
+
+function unlockedTier(def, stats) {
+  const val = def.metric(stats);
+  let tier = -1;
+  for (let i = 0; i < def.tiers.length; i++) {
+    const ok = def.inverse ? val <= def.tiers[i] : val >= def.tiers[i];
+    if (ok) tier = i;
+  }
+  return tier;
+}
+// aviso de "medalha nova, ainda não vista" — como as medalhas não aparecem
+// mais sozinhas no ranking (a pessoa precisa ir no perfil e equipar se
+// quiser), essa bolinha avisa que tem uma categoria com nível desbloqueado
+// que ainda não foi conferido. Guardado em scores/{uid}.badgesSeenTiers (ver
+// firestore.rules), não no navegador — assim funciona certo mesmo trocando
+// de dispositivo/navegador pra entrar na mesma conta. Sem valor de jogo: é
+// puramente uma marcação de "já olhei", então o cliente pode escrever direto
+// sem precisar de Cloud Function (mesmo raciocínio do equippedBadge). Como o
+// registro começa vazio pra todo mundo, quem já tinha medalha desbloqueada
+// antes dessa funcionalidade existir também recebe o aviso na primeira vez.
+function hasNewBadgeFor(key) {
+  return newBadgeCountFor(key) > 0;
+}
+// quantos NÍVEIS novos essa categoria desbloqueou desde a última vez que a
+// pessoa viu o perfil (normalmente 1, mas pode ser mais se ela pulou vários
+// níveis de uma vez sem abrir o perfil) — usado pra mostrar o número dentro
+// da bolinha de notificação, em vez de só um sinal de "tem novidade"
+function newBadgeCountFor(key) {
+  if (offline || !currentUser || !myData.nick) return 0;
+  const tier = unlockedTier(BADGE_DEFS[key], myData);
+  if (tier < 0) return 0;
+  const seen = myData.badgesSeenTiers || {};
+  const seenTier = seen[key] != null ? seen[key] : -1;
+  return Math.max(0, tier - seenTier);
+}
+function hasAnyNewBadge() {
+  return BADGE_ORDER.some(hasNewBadgeFor);
+}
+// soma de novidades em todas as categorias — número mostrado na bolinha do
+// nick, na tela principal
+function totalNewBadgeCount() {
+  return BADGE_ORDER.reduce((n, key) => n + newBadgeCountFor(key), 0);
+}
+// chamada depois que a pessoa vê o próprio perfil (onde todas as categorias
+// aparecem) — marca o nível atual de cada uma como "visto", até a próxima
+// vez que desbloquear algo novo
+async function markAllBadgesSeen() {
+  if (offline || !currentUser || !myData.nick) return;
+  const seen = {};
+  BADGE_ORDER.forEach(key => { seen[key] = unlockedTier(BADGE_DEFS[key], myData); });
+  myData.badgesSeenTiers = seen; // atualiza local na hora, antes mesmo do Firestore confirmar
+  refreshBadgeNotifDot();
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), { badgesSeenTiers: seen, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) {
+    // não foi possível salvar agora — a marcação fica só localmente até a próxima tentativa
+  }
+}
+function refreshBadgeNotifDot() {
+  const dot = $('user-label-badge');
+  if (!dot) return;
+  const n = totalNewBadgeCount();
+  dot.textContent = n;
+  dot.style.display = n > 0 ? '' : 'none';
+}
+// pill com ícone + nome da ÚNICA medalha escolhida pra aparecer ao lado do
+// nick no ranking (ver setEquippedBadgeTier, no perfil próprio). Sem escolha
+// feita ainda, não mostra nada — só passa a exibir depois que a própria
+// pessoa vai no perfil e equipa uma. Sempre reconfere unlockedTier() contra
+// as stats REAIS, então forjar equippedBadge/equippedBadgeTier não mostra
+// nada que a pessoa não tenha de verdade — equippedBadgeTier escolhe QUAL
+// nível já desbloqueado aparece (não precisa ser o mais alto: alguém que já
+// tem "Imortal" pode preferir mostrar "Lenda"), null cai no comportamento
+// antigo (sempre o mais alto).
+// pill exata que aparece no ranking pra um nível de uma categoria — extraída
+// à parte pra poder reusar a MESMA marcação como prévia no perfil (ver
+// renderBadgeCard), assim a pessoa vê exatamente como vai aparecer antes de
+// equipar.
+function badgePillHtml(def, tier) {
+  const color = TIER_COLORS[tier] || TIER_COLORS[TIER_COLORS.length - 1];
+  const name = def.names[lang][tier];
+  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
+}
+function equippedBadgeLabel(stats) {
+  const key = stats.equippedBadge;
+  if (!key || !BADGE_DEFS[key]) return ''; // ninguém escolheu ainda — não mostra nada até a pessoa ir no perfil e equipar uma
+  const def = BADGE_DEFS[key];
+  const maxTier = unlockedTier(def, stats);
+  if (maxTier < 0) return ''; // reconfere contra as stats reais — se não desbloqueou de verdade, não mostra
+  const chosen = stats.equippedBadgeTier;
+  const t = (typeof chosen === 'number' && chosen >= 0 && chosen <= maxTier) ? chosen : maxTier;
+  return badgePillHtml(def, t);
+}
+// nome da classe de divulgador (ex.: "Viral") com a cor da medalha — usado só no ranking de divulgador
+function sharerTierLabel(stats) {
+  const def = BADGE_DEFS.sharer;
+  const t = unlockedTier(def, stats);
+  if (t < 0) return '';
+  const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
+  const name = def.names[lang][t];
+  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${name}</span>`;
+}
+// monta o conteúdo de uma célula de ranking: nível, nick e conquista/classe
+// tudo numa coluna só (ver .nick-cell no <style>). Usado nas 4 tabelas de
+// ranking (mini-ranking, ranking completo, desafio diário hoje e Salão da
+// Fama) pra não duplicar essa estrutura 4x. badgeHtml já vem pronto de quem
+// chama (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
+function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
+  nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+  const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
+  nickSpan.textContent = r.nick;
+  nickSpan.className = 'nick-click';
+  applyNickFrame(nickSpan, r.stats);
+  nickSpan.onclick = () => openProfileFromRanking(r, backTarget);
+  nickCell.appendChild(nickSpan);
+  if (badgeHtml) nickCell.insertAdjacentHTML('beforeend', badgeHtml); // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
+  return nickSpan;
+}
+function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
+
+// maior pontuação primeiro; empate é desempatado por quem bateu o recorde primeiro
+function compareRankRows(a, b) {
+  if (b.pts !== a.pts) return b.pts - a.pts;
+  const at = a.at ? a.at.toMillis() : Infinity;
+  const bt = b.at ? b.at.toMillis() : Infinity;
+  return at - bt;
+}
+
+let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
+// estado do modo Trio (ver newTrioRound/handleTrioClick): trioColorA/trioColorB
+// são as 2 cores ATIVAS (o par que a pessoa precisa achar nesta rodada — ou
+// já decorado na rodada anterior, ou sorteado do zero na primeira rodada).
+// trioNextPairA/trioNextPairB são os 2 novos valores (tirados dos atributos
+// que NÃO deram o match no quadrado certo desta rodada) que virão a ser o
+// próximo par assim que o clique certo acontecer (ver handleTrioClick)
+let trioColorA, trioColorB, trioNextPairA, trioNextPairB;
+let xpGain = 0; // XP acumulada na partida atual
+// promessas dos sinais de progresso (ver callSyncProgress) desta
+// partida — gameOver() espera todas "assentarem" no servidor antes de
+// mandar o resultado final, senão o envio pode chegar antes de alguns
+// sinais ainda em trânsito (ver conversa sobre a corrida entre os dois)
+let pendingRoundSync = [];
+
+// "filme" da partida atual (modo livre), pra tela de "assistir replay" —
+// só é enviado ao servidor se a partida bater recorde pessoal (ver
+// persistGameResult mais abaixo); senão fica só em memória e some quando a
+// pessoa sai da tela. replayRounds guarda o que apareceu em cada rodada
+// (ver newRound); replayMouse guarda o rastro do mouse (ver o listener de
+// mousemove mais abaixo), em % do tamanho do tabuleiro — assim funciona em
+// qualquer tamanho de tela na hora de reproduzir.
+let replayRounds = [];
+let replayMouse = [];
+let replayStartMs = 0; // referência (performance.now()) pro tempo relativo de cada amostra do rastro
+
+// desafio diário — estado separado do jogo normal (não usa "mode"/"score" etc.
+// acima, pra não arriscar misturar com uma partida solo aberta em paralelo)
+const DAILY_MAX_ATTEMPTS = 3; // tem que bater com DAILY_MAX_ATTEMPTS do servidor
+// dia (fuso de Brasília) em que o desafio diário estreia — até lá o card no
+// menu fica só com título + cronômetro "Inicia em", sem descrição nem dados
+const DAILY_CHALLENGE_LAUNCH_DATE = '2026-07-25';
+function dailyLaunchAtMs() {
+  const [y, m, d] = DAILY_CHALLENGE_LAUNCH_DATE.split('-').map(Number);
+  return Date.UTC(y, m - 1, d, 3, 0, 0, 0); // meia-noite de Brasília desse dia
+}
+function isDailyChallengeLive() { return dailyLocalDateStr() >= DAILY_CHALLENGE_LAUNCH_DATE; }
+// nível mínimo pra jogar o desafio — quem está no nível 1 vê o mesmo
+// tratamento de "ainda bloqueado" (só título + cronômetro) usado antes da
+// estreia, até subir pro nível 2
+const DAILY_MIN_LEVEL = 2;
+function dailyLevelUnlocked() { return myData.admin === true || levelFromXp(myXp()) >= DAILY_MIN_LEVEL; }
+let dailyMode = 'classic';    // modo sorteado do dia (ver dailyModeForToday) — definido ao mostrar a tela de introdução/iniciar tentativa
+let dailyRng = null;          // gerador determinístico da rodada de hoje
+let dailyPlaying = false;
+let dailyPendingRoundSync = []; // mesma ideia de pendingRoundSync (modo livre), mas pra tentativa do
+                                 // desafio diário — também guarda a chamada que recarimba o início real
+                                 // da tentativa depois do "Vai!" (ver callArmDailySession)
+// mesma ideia de replayRounds/replayMouse/replayStartMs (modo livre), mas
+// pra tentativa do desafio diário — só sobe se bater a melhor pontuação do
+// dia (ver dailyGameOver mais abaixo)
+let dailyReplayRounds = [];
+let dailyReplayMouse = [];
+let dailyReplayStartMs = 0;
+let dailyScore = 0;
+let dailyTarget = null, dailyNextTarget = null;
+let dailyDuration = 10000, dailyTimerStart = 0, dailyRafId = null;
+let dailyCountdownTimerId = null; // contagem "3, 2, 1" antes da tentativa começar de vez
+let dailySessionId = null;
+let dailyDateStrCache = null;   // dia (AAAA-MM-DD) da tentativa em andamento
+let dailyClosesAtMs = null;     // quando o desafio de hoje fecha (mesmo instante em que o de amanhã abre)
+let dailyAttemptsUsed = 0;
+let dailyBestScore = 0;
+let dailyRankSubtab = 'today'; // 'today' | 'alltime'
+let dailyTodayRows = [], dailyTodayPage = 0;
+let dailyAlltimeRows = [], dailyAlltimePage = 0;
+
+/* ================== loja (cosméticos comprados com Pigmentos) ==================
+   Catálogo espelha o de functions/index.js (preço/slot são conferidos de novo
+   no servidor — o catálogo aqui é só pra desenhar a tela). "equipped*" abaixo
+   são os cosméticos ativos AGORA nesta sessão — carregados de myData.equipped
+   depois do login e aplicados em applyEquippedCosmetics(). */
+const SHOP_ITEMS = [
+  { id: 'sfx_splash',    slot: 'sfxCorrect', price: 30,  icon: '🎨', name: 'Som de Acerto: Splash de Tinta', desc: 'Troca o bipe de acerto por um "splash" de tinta.' },
+  { id: 'sfx_8bit',      slot: 'sfxCorrect', price: 30,  icon: '👾', name: 'Som de Acerto: Retrô 8-bit',     desc: 'Um bipe estilo fliperama clássico.' },
+  { id: 'sfx_bell',      slot: 'sfxCorrect', price: 30,  icon: '🔔', name: 'Som de Acerto: Sininho',         desc: 'Um "ding" de sino cristalino a cada acerto.' },
+  { id: 'sfx_laser',     slot: 'sfxCorrect', price: 30,  icon: '🔫', name: 'Som de Acerto: Laser',           desc: 'Um tiro de laser sci-fi a cada acerto.' },
+  { id: 'sfx_bubble',    slot: 'sfxCorrect', price: 30,  icon: '🫧', name: 'Som de Acerto: Bolha',           desc: 'Um "blip" de bolha estourando a cada acerto.' },
+  { id: 'sfx_synth',     slot: 'sfxCorrect', price: 30,  icon: '🎹', name: 'Som de Acerto: Sintetizador',    desc: 'Um acorde curto de sintetizador retrô a cada acerto.' },
+  { id: 'frame_gold',    slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Dourada',                desc: 'Uma moldura dourada ao redor do seu nick no ranking e perfil.' },
+  { id: 'frame_rainbow', slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Arco-íris',              desc: 'Uma moldura multicolorida ao redor do seu nick.' },
+  { id: 'confetti_gold', slot: 'confetti',   price: 120, icon: '🎊', name: 'Confete Dourado',                desc: 'Um confete dourado quando você bate um novo recorde.' },
+  { id: 'row_fire',      slot: 'rowTheme',   price: 130, icon: '🔥', name: 'Linha: Fogo',                    desc: 'Fundo temático de fogo na sua linha do ranking.' },
+  { id: 'row_ocean',     slot: 'rowTheme',   price: 130, icon: '🌊', name: 'Linha: Oceano',                  desc: 'Fundo temático de oceano na sua linha do ranking.' },
+  { id: 'row_galaxy',    slot: 'rowTheme',   price: 130, icon: '🌌', name: 'Linha: Galáxia',                 desc: 'Fundo temático de galáxia na sua linha do ranking.' },
+  { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
+  { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
+  { id: 'avatar_ghost',   slot: 'avatar', price: 110, icon: '👻', name: 'Avatar: Fantasma', desc: 'Um fantasma pra representar você no perfil e no duelo.' },
+  { id: 'avatar_cat',     slot: 'avatar', price: 110, icon: '🐱', name: 'Avatar: Gato',     desc: 'Um gato pra representar você no perfil e no duelo.' },
+  { id: 'avatar_alien',   slot: 'avatar', price: 110, icon: '👽', name: 'Avatar: Alien',    desc: 'Um alien pra representar você no perfil e no duelo.' },
+  { id: 'avatar_flame',   slot: 'avatar', price: 110, icon: '🔥', name: 'Avatar: Chama',    desc: 'Uma chama pra representar você no perfil e no duelo.' },
+  { id: 'avatar_crystal', slot: 'avatar', price: 110, icon: '💎', name: 'Avatar: Cristal',  desc: 'Um cristal pra representar você no perfil e no duelo.' },
+  { id: 'avatar_star',    slot: 'avatar', price: 110, icon: '⭐', name: 'Avatar: Estrela',  desc: 'Uma estrela pra representar você no perfil e no duelo.' },
+];
+const SHOP_ITEMS_BY_ID = Object.fromEntries(SHOP_ITEMS.map(it => [it.id, it]));
+const SHOP_SLOTS = [
+  { slot: 'sfxCorrect', label: '🔊 Som de Acerto' },
+  { slot: 'frame',      label: '🖼️ Moldura do Nick' },
+  { slot: 'confetti',   label: '🎊 Confete de Recorde' },
+  { slot: 'rowTheme',   label: '📊 Linha do Ranking' },
+  { slot: 'avatar',     label: '🧑 Avatar' },
+];
+let equippedSfx = null, equippedFrame = null, equippedConfetti = null, equippedAvatar = null;
+function applyEquippedCosmetics() {
+  const eq = (myData && myData.equipped) || {};
+  equippedSfx = eq.sfxCorrect || null;
+  equippedFrame = eq.frame || null;
+  equippedConfetti = eq.confetti || null;
+  equippedAvatar = eq.avatar || null;
+}
+
+let currentUser = null;          // usuário do firebase ou null
+let offline = false;             // jogando sem conta
+let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
+let currentSessionId = null;     // sessão validada pelo servidor pra partida atual
+let myData = {
+  nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
+  gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
+};
+
+const $ = id => document.getElementById(id);
+
+// rodapé com links das redes sociais — mesmo bloquinho HTML colado no fim
+// de CADA tela (não é fixo, é só mais um elemento normal dentro do fluxo de
+// cada .screen), pra dar visibilidade das redes em qualquer lugar do jogo
+// sem competir visualmente com o conteúdo enquanto joga. O índice "i" só
+// existe pra cada cópia ter seu próprio id de gradiente (evita ids
+// duplicados no HTML final, mesmo que o resultado visual seja idêntico).
+function socialLinksHtml(i) {
+  return `
+  <div class="social-links">
+    <a class="social-link" href="https://instagram.com/colorrushsaga" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="igGrad-${i}" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffdb73"/>
+            <stop offset="25%" stop-color="#fd5949"/>
+            <stop offset="55%" stop-color="#d6249f"/>
+            <stop offset="100%" stop-color="#285AEB"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="none" stroke="url(#igGrad-${i})" stroke-width="2"/>
+        <circle cx="12" cy="12" r="4.2" fill="none" stroke="url(#igGrad-${i})" stroke-width="2"/>
+        <circle cx="17.4" cy="6.6" r="1.3" fill="url(#igGrad-${i})"/>
+      </svg>
+      <span>@colorrushsaga</span>
+    </a>
+    <a class="social-link" href="https://x.com/colorrushsaga" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff">
+        <path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.5 22H1.4l8.1-9.3L1 2h7.2l5 6.6L18.9 2zm-1.2 18h1.7L6.4 4H4.6l13.1 16z"/>
+      </svg>
+      <span>@colorrushsaga</span>
+    </a>
+  </div>`;
+}
+document.querySelectorAll('.screen').forEach((screen, i) => {
+  screen.insertAdjacentHTML('beforeend', socialLinksHtml(i));
+});
+
+// ===== proteção global contra clique duplo/muito rápido =====
+// alguns cliques disparam ações com consequência real no servidor (aceitar/
+// recusar duelo, resgatar prêmio, comprar na loja, salvar nick...). Um
+// clique duplo bem rápido (toque acidental, "ghost click" do celular, ou o
+// dedo escorregando) pode disparar a mesma ação duas vezes antes da primeira
+// terminar — já aconteceu de resgatar o mesmo prêmio da caixa de entrada
+// duas vezes clicando rápido demais, precisando corrigir na mão no Firestore
+// depois. Um tempo fixo curto (300ms) não é garantia nenhuma, porque a
+// resposta do servidor pode demorar mais que isso (rede lenta, function fria
+// etc.) — o que resolve de verdade é travar até a resposta chegar.
+// Por isso o travamento aqui combina os dois: (1) um mínimo de 300ms sempre,
+// pra cobrir ações que nem chamam o servidor, e (2) enquanto tiver alguma
+// chamada ao servidor pendente (pendingServerCalls, incrementado/decrementado
+// em `callable()`, ver mais acima), NENHUM clique novo passa — só libera de
+// verdade quando a resposta (sucesso ou erro) chega. Em vez de mexer em cada
+// botão um por um, um único listener no topo (fase de captura, roda ANTES de
+// qualquer onclick) cobre tudo de uma vez.
+// Fica de fora o jogo oficial (os grids de resposta: clássico/reverso/
+// formas/formas reverso, desafio diário e PvP) — ali cada clique já tem sua
+// própria trava (handleClick só aceita um clique por rodada, ver `playing`),
+// e o ritmo do jogo pode exigir cliques bem mais rápidos que 300ms conforme
+// a partida acelera, então esse travamento genérico não se aplica lá.
+const CLICK_LOCK_MS = 300;
+const CLICK_LOCK_EXCLUDE_SELECTOR = '#grid, #daily-grid, #pvp-grid';
+let clickLockedUntil = 0;
+document.addEventListener('click', (e) => {
+  if (e.target.closest(CLICK_LOCK_EXCLUDE_SELECTOR)) return; // jogo oficial: sem travamento genérico
+  const now = Date.now();
+  if (now < clickLockedUntil || pendingServerCalls > 0) {
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+  clickLockedUntil = now + CLICK_LOCK_MS;
+}, true);
+
+const show = id => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  resetScroll(id);
+};
+// depois de trocar o conteúdo de uma tela que já estava aberta (ex.: troca de
+// aba do ranking), houve mais de um relato de tela ficando presa no topo sem
+// rolar. Além de a página inteira ter passado a rolar de verdade (nada mais
+// de overflow-y aninhado dentro de flexbox centralizado — ver comentário
+// junto de .screen no <style>), isso aqui força um reflow e volta pro topo
+// sempre que o conteúdo muda, como reforço extra.
+function resetScroll(screenId) {
+  const el = $(screenId);
+  if (!el) return;
+  void el.offsetHeight; // força o navegador recalcular o layout
+  window.scrollTo(0, 0); // quem rola agora é a página inteira, não mais cada .screen por dentro
+}
+const shuffle = a => a.sort(() => Math.random() - 0.5);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/* ================== RNG determinística (desafio diário) ==================
+   O desafio diário precisa que TODO MUNDO veja exatamente a mesma sequência
+   de cores no mesmo dia — em vez de Math.random(), usamos um gerador
+   determinístico (mulberry32) semeado a partir da data do dia (hashSeed).
+   Toda a lógica de rodada (dailyNewRound) chama seededPick/seededShuffle
+   NA MESMA ORDEM que newRound() chama pick/shuffle, pra garantir que a
+   sequência bate entre as até 3 tentativas de uma mesma pessoa e entre
+   jogadores diferentes. */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return h >>> 0;
+}
+function seededPick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+function seededShuffle(rng, a) {
+  const arr = a.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+// modo sorteado do desafio diário — determinístico por dia (mesmo modo pra
+// TODO MUNDO, e igual nas 3 tentativas), sorteado entre os modos de
+// DAILY_ROTATION_MODES, SEM olhar nível desbloqueado: o desafio diário
+// sempre foi acessível a qualquer um independente do modo normal estar
+// bloqueado ou não pro nível da pessoa.
+// DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
+// sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
+// de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
+// (29/07/2026) é Clássico; amanhã (30/07/2026) também será Clássico, com a
+// paleta trocada pra Azul/Ciano/Verde/Roxo (ver DAILY_PALETTE_OVERRIDE).
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic' };
+function dailyModeForToday(dateStr) {
+  if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
+  return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
+}
+// mesma regra de fuso do servidor (America/Sao_Paulo, sempre UTC-3 — sem
+// horário de verão desde 2019): dia do desafio + horário em que ele fecha
+function dailyLocalDateStr(d = new Date()) {
+  return d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // AAAA-MM-DD
+}
+// mostra a data da mensagem da caixa de entrada como dd/mm/aa (msg.dateStr
+// vem sempre como AAAA-MM-DD, ver dailyLocalDateStr acima)
+function formatDailyDateShort(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}
+function dailyNextMidnightSaoPauloMs(now = new Date()) {
+  const [y, m, d] = dailyLocalDateStr(now).split('-').map(Number);
+  const midnightTodayUtcMs = Date.UTC(y, m - 1, d, 3, 0, 0, 0);
+  return midnightTodayUtcMs + 24 * 60 * 60 * 1000;
+}
+// o desafio de cada dia só abre 5min depois da virada (00:05, não 00:00 em
+// ponto — ver DAILY_START_DELAY_MS/todayStartAtSaoPauloMs no
+// functions/index.js, que é quem realmente barra; isso aqui é só pra saber
+// quando mostrar o cronômetro "Inicia em" em vez de "Termina em")
+const DAILY_START_DELAY_MS = 5 * 60 * 1000;
+function dailyTodayStartsAtMs(now = new Date()) {
+  const [y, m, d] = dailyLocalDateStr(now).split('-').map(Number);
+  const midnightTodayUtcMs = Date.UTC(y, m - 1, d, 3, 0, 0, 0);
+  return midnightTodayUtcMs + DAILY_START_DELAY_MS;
+}
+// true só na janela 00:00–00:05 de Brasília, quando o dia já virou mas o
+// desafio de hoje ainda não abriu
+function isDailyStartDelay(now = new Date()) { return now.getTime() < dailyTodayStartsAtMs(now); }
+
+/* ================== recordes locais (modo sem conta) ================== */
+function getLocalRecord(m) {
+  try { return parseInt(localStorage.getItem('colorRushRecord_' + m)) || 0; } catch { return 0; }
+}
+function setLocalRecord(m, v) {
+  try { localStorage.setItem('colorRushRecord_' + m, v); } catch {}
+}
+function myRecord(m) {
+  return offline ? getLocalRecord(m) : (myData[m] || 0);
+}
+
+/* ================== sons (Web Audio, sem arquivos) ================== */
+let audioCtx = null;
+let muted = false;
+try { muted = localStorage.getItem('colorRushMuted') === '1'; } catch {}
+
+function audioContext() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
+  if (muted) return;
+  try {
+    const c = audioContext();
+    const t = c.currentTime + delay;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur);
+  } catch {}
+}
+// cosmético da loja (equippedSfx) troca o som do acerto — a lógica de "sobe o
+// tom a cada acerto" continua igual, só muda o timbre. "variant" explícito
+// permite reusar pra prévia da loja, tocando um som mesmo sem estar equipado.
+function playCorrectSfxVariant(variant, n) {
+  if (variant === 'sfx_8bit') {
+    const f = 220 + Math.min(n, 24) * 55;
+    tone(f, 0.06, 'square', 0.13);
+    tone(f * 1.5, 0.04, 'square', 0.07, 0.02);
+  } else if (variant === 'sfx_splash') {
+    const f = 500 + Math.min(n, 24) * 20;
+    tone(f, 0.07, 'sine', 0.13);
+    tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
+  } else if (variant === 'sfx_bell') {
+    const f = 600 + Math.min(n, 24) * 25;
+    tone(f, 0.15, 'sine', 0.12);
+    tone(f * 1.5, 0.12, 'sine', 0.07, 0.03);
+  } else if (variant === 'sfx_laser') {
+    const f = 900 + Math.min(n, 24) * 30;
+    tone(f, 0.05, 'sawtooth', 0.11);
+    tone(f * 0.6, 0.08, 'sawtooth', 0.08, 0.03);
+  } else if (variant === 'sfx_bubble') {
+    const f = 350 + Math.min(n, 24) * 25;
+    tone(f, 0.05, 'triangle', 0.12);
+    tone(f * 1.8, 0.06, 'triangle', 0.09, 0.05);
+  } else if (variant === 'sfx_synth') {
+    const f = 300 + Math.min(n, 24) * 35;
+    tone(f, 0.08, 'square', 0.1);
+    tone(f * 1.25, 0.08, 'square', 0.08, 0.04);
+    tone(f * 1.5, 0.1, 'square', 0.06, 0.08);
+  } else {
+    tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
+  }
+}
+const sfx = {
+  correct(n) { playCorrectSfxVariant(equippedSfx, n); },
+  wrong()   { tone(160, 0.3, 'sawtooth', 0.15); tone(110, 0.4, 'sawtooth', 0.15, 0.08); },
+  timeout() { tone(300, 0.2, 'triangle', 0.15); tone(200, 0.3, 'triangle', 0.15, 0.15); tone(120, 0.5, 'triangle', 0.15, 0.3); },
+  record()  { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, 0.4 + i * 0.12)); },
+  tick()    { tone(1000, 0.03, 'sine', 0.05); },
+  levelUp() { [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'square', 0.12, i * 0.09)); },
+  pvpWin()  { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'square', 0.12, i * 0.1)); }, // fanfarra de vitória do duelo
+  pvpLose() { [300, 240, 190, 140].forEach((f, i) => tone(f, 0.22, 'sawtooth', 0.12, i * 0.14)); }, // tom descendente de derrota
+  pvpDraw() { tone(440, 0.18, 'triangle', 0.12); tone(440, 0.18, 'triangle', 0.12, 0.22); }, // dois bipes iguais = empate
+  countdown(isGo) { isGo ? tone(880, 0.2, 'square', 0.16) : tone(660, 0.12, 'square', 0.14); }, // bipe da contagem 3-2-1 (mais agudo/comprido no "Vai!")
+};
+window.toggleMute = () => {
+  muted = !muted;
+  try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
+  $('mute-btn').classList.toggle('on', !muted);
+  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
+};
+
+/* ================== compartilhar ================== */
+// monta o link de compartilhamento — ?ref= só existe pra quem tem conta (conta pro
+// badge Divulgador) e &lang= só é incluído quando o idioma não é o padrão (pt), pra
+// quem clicar já abrir o site traduzido em vez de cair sempre em português
+async function buildShareLink() {
+  let link = `${location.origin}${location.pathname}`;
+  const params = [];
+  if (!offline && currentUser) {
+    const code = await ensureRefCode();
+    if (code) params.push(`ref=${code}`);
+  }
+  if (lang !== 'pt') params.push(`lang=${lang}`);
+  if (params.length) link += `?${params.join('&')}`;
+  return link;
+}
+
+window.shareScore = async () => {
+  track('share', { content_type: 'score', mode });
+  const modeName = modeLabel(mode);
+  const rec = $('new-record').classList.contains('show') ? T[lang].share_new_record_suffix : '';
+  const link = await buildShareLink();
+  const text = T[lang].share_text(score, modeName, rec, link);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  try {
+    if (isMobile && navigator.share) {
+      await navigator.share({ text });
+    } else {
+      await navigator.clipboard.writeText(text);
+      $('share-status').textContent = T[lang].share_copied;
+      setTimeout(() => { $('share-status').textContent = ''; }, 3000);
+    }
+  } catch {}
+};
+
+/* ================== convidar amigos (sem precisar terminar partida) ================== */
+window.inviteFriends = async (statusElId = 'invite-status') => {
+  track('share', { content_type: 'invite' });
+  const link = await buildShareLink();
+  const text = T[lang].invite_text(link);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const statusEl = $(statusElId);
+  try {
+    if (isMobile && navigator.share) {
+      await navigator.share({ text });
+    } else {
+      await navigator.clipboard.writeText(text);
+      if (statusEl) {
+        statusEl.textContent = T[lang].share_copied;
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      }
+    }
+  } catch {}
+};
+
+// copia só o código puro (não o link inteiro) — pra passar de viva voz/
+// WhatsApp e o amigo colar direto no campo de indicação da tela de nick (ver
+// ref-code-input/syncRefCodeField)
+window.copyRefCode = async (statusElId) => {
+  if (!myData.refCode) return;
+  try {
+    await navigator.clipboard.writeText(myData.refCode);
+    const el = $(statusElId);
+    if (el) {
+      el.textContent = T[lang].share_copied;
+      setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+  } catch {}
+};
+
+/* ================== autenticação ================== */
+const AUTH_ERRORS = {
+  pt: {
+    'auth/invalid-email': 'E-mail inválido.',
+    'auth/missing-password': 'Digite a senha.',
+    'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+    'auth/email-already-in-use': 'Este e-mail já tem conta. Use ENTRAR.',
+    'auth/invalid-credential': 'E-mail ou senha incorretos.',
+    'auth/wrong-password': 'E-mail ou senha incorretos.',
+    'auth/user-not-found': 'Conta não encontrada. Use CRIAR CONTA.',
+    'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco.',
+    'auth/popup-closed-by-user': 'Login cancelado.',
+    'auth/popup-blocked': 'Popup bloqueado pelo navegador. Permita popups.',
+  },
+  en: {
+    'auth/invalid-email': 'Invalid email.',
+    'auth/missing-password': 'Enter your password.',
+    'auth/weak-password': 'Password too weak (minimum 6 characters).',
+    'auth/email-already-in-use': 'This email already has an account. Use LOG IN.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/wrong-password': 'Incorrect email or password.',
+    'auth/user-not-found': 'Account not found. Use SIGN UP.',
+    'auth/too-many-requests': 'Too many attempts. Please wait a moment.',
+    'auth/popup-closed-by-user': 'Login canceled.',
+    'auth/popup-blocked': 'Popup blocked by the browser. Please allow popups.',
+  },
+  es: {
+    'auth/invalid-email': 'Correo electrónico inválido.',
+    'auth/missing-password': 'Escribe la contraseña.',
+    'auth/weak-password': 'Contraseña muy débil (mínimo 6 caracteres).',
+    'auth/email-already-in-use': 'Este correo ya tiene una cuenta. Usa INICIAR SESIÓN.',
+    'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+    'auth/wrong-password': 'Correo o contraseña incorrectos.',
+    'auth/user-not-found': 'Cuenta no encontrada. Usa CREAR CUENTA.',
+    'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+    'auth/popup-closed-by-user': 'Inicio de sesión cancelado.',
+    'auth/popup-blocked': 'Popup bloqueado por el navegador. Permite los popups.',
+  },
+};
+const authErrMsg = e => (AUTH_ERRORS[lang][e.code]) || (lang === 'pt' ? 'Erro: ' : 'Error: ') + (e.code || e.message);
+
+window.doLogin = async () => {
+  $('auth-error').textContent = '';
+  try {
+    await signInWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    track('login', { method: 'password' });
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.doSignup = async () => {
+  $('auth-error').textContent = '';
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    await sendEmailVerification(cred.user);
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+window.resendVerification = async () => {
+  $('verify-status').textContent = '';
+  try {
+    await sendEmailVerification(auth.currentUser);
+    $('verify-status').textContent = T[lang].verify_resent;
+  } catch (e) { $('verify-status').textContent = authErrMsg(e); }
+};
+window.checkVerification = async () => {
+  $('verify-status').textContent = '';
+  await auth.currentUser.reload();
+  if (auth.currentUser.emailVerified) {
+    await auth.currentUser.getIdToken(true); // atualiza o token para as regras do banco
+    currentUser = auth.currentUser;
+    await proceedAfterLogin(currentUser);
+  } else {
+    $('verify-status').textContent = T[lang].verify_not_confirmed;
+  }
+};
+// true só quando a página está rodando dentro do app nativo (Capacitor,
+// iOS/Android); no navegador comum (mesmo mobile) window.Capacitor não
+// existe, então isso nunca chega a ser true fora do app publicado nas lojas.
+// (mesma função de index.html — teste.html não tinha nenhum código ciente
+// de Capacitor até agora)
+function isNativeApp() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+// "Sign in with Apple" só aparece dentro do app empacotado — a Apple só
+// exige isso no APP (guideline 4.8), não no site avulso, e no navegador
+// solto o login com Apple não completa (WebKit derruba o resultado do
+// popup/redirect fora do app nativo). Fora do app, só Google/e-mail mesmo.
+if (!isNativeApp()) {
+  const appleBtn = $('btn-apple');
+  if (appleBtn) appleBtn.style.display = 'none';
+}
+// dentro do app nativo (Capacitor) o login precisa ser NATIVO, não WebView —
+// o Google recusa completar OAuth dentro de uma WebView embutida genérica
+// (detecta como "disallowed_useragent") e empurra pro Safari de verdade, que
+// não devolve resultado nenhum pro app (são sessões/contextos separados). O
+// plugin @capacitor-firebase/authentication (window.Capacitor.Plugins.
+// FirebaseAuthentication) usa a tela nativa de verdade do SDK do Google —
+// sem WebView — e devolve um idToken que a gente entrega pro Firebase JS via
+// signInWithCredential. Fora do app, popup no navegador continua funcionando
+// normal (era só dentro do WebView do app que isso quebrava).
+window.doGoogle = async () => {
+  $('auth-error').textContent = '';
+  try {
+    if (isNativeApp()) {
+      const { FirebaseAuthentication } = window.Capacitor.Plugins;
+      const result = await FirebaseAuthentication.signInWithGoogle();
+      await signInWithCredential(auth, GoogleAuthProvider.credential(result.credential.idToken));
+      track('login', { method: 'google' });
+      return;
+    }
+    await signInWithPopup(auth, new GoogleAuthProvider());
+    track('login', { method: 'google' });
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+// exigido pela guideline 4.8 da Apple: como já oferecemos login de terceiro
+// (Google), precisamos oferecer "Sign in with Apple" como opção equivalente
+// — só que aqui SEMPRE é o login nativo (ASAuthorizationController, mesmo
+// mecanismo do doGoogle acima), porque o botão nem aparece fora do app
+// nativo (ver isNativeApp() lá embaixo) — no navegador solto o login com
+// Apple nunca completa (WebKit derruba o resultado do popup/redirect fora
+// do app), então preferimos nem oferecer a opção ali.
+window.doApple = async () => {
+  $('auth-error').textContent = '';
+  try {
+    const { FirebaseAuthentication } = window.Capacitor.Plugins;
+    const result = await FirebaseAuthentication.signInWithApple();
+    const provider = new OAuthProvider('apple.com');
+    const credential = provider.credential({
+      idToken: result.credential.idToken,
+      rawNonce: result.credential.nonce,
+    });
+    await signInWithCredential(auth, credential);
+    registerAppleAuthCodeIfPresent(result.credential.authorizationCode);
+    track('login', { method: 'apple' });
+  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+};
+// a Apple exige (guideline 5.1.1(v)) revogar o token junto a ELES quando a
+// conta é excluída — isso precisa de um refresh token da Apple, que só dá pra
+// conseguir trocando o authorization code (devolvido pelo login nativo acima)
+// pelo token de verdade, no servidor (ver registerAppleAuthCode em
+// functions/index.js — troca feita com client_id = bundle ID do app, sem
+// redirect_uri, por ser um authorization code de login NATIVO, diferente do
+// fluxo web por Services ID). Melhor esforço: se falhar, o login em si já
+// aconteceu normalmente por fora desta função.
+function registerAppleAuthCodeIfPresent(code) {
+  if (!code) return;
+  callRegisterAppleAuthCode({ code, native: true }).catch(() => {});
+}
+window.doLogout = async () => {
+  offline = false;
+  stopPvpListener();
+  await signOut(auth);
+  show('auth-screen');
+};
+// em vez de window.confirm (um "OK" genérico que ninguém lê), a exclusão de
+// conta usa a popup temática #delete-account-modal — o botão de lá tem o
+// texto explícito "Confirmo a exclusão da conta" pra garantir que a pessoa
+// sabe o que está clicando antes da conta ser desativada
+let deleteAccountBtnRef = null;
+window.startDeleteMyAccount = (btn) => {
+  if (offline || !currentUser) return;
+  deleteAccountBtnRef = btn;
+  $('delete-account-modal').style.display = 'flex';
+};
+window.closeDeleteAccountModal = () => {
+  $('delete-account-modal').style.display = 'none';
+};
+window.confirmDeleteAccount = async () => {
+  closeDeleteAccountModal();
+  const btn = deleteAccountBtnRef;
+  const statusEl = $('delete-account-status');
+  if (btn) btn.disabled = true;
+  if (statusEl) statusEl.textContent = T[lang].delete_account_progress;
+  try {
+    await callDeleteMyAccount();
+    stopPvpListener();
+    offline = false;
+    currentUser = null;
+    await signOut(auth);
+    show('auth-screen');
+    alert(T[lang].delete_account_done);
+  } catch (e) {
+    if (btn) btn.disabled = false;
+    if (statusEl) statusEl.textContent = T[lang].delete_account_error;
+  }
+};
+window.playOffline = () => {
+  track('play_offline');
+  stopPvpListener(); // duelo exige conta — não faz sentido continuar ouvindo partidas jogando sem login
+  offline = true;
+  currentUser = null;
+  myData = {
+    nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
+    gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
+  };
+  showMenu();
+};
+
+// "última vez online" — a sessão do Firebase Auth persiste sozinha, então só
+// registrar o momento do login não conta a história toda (alguém pode abrir o
+// jogo, deixar a aba aberta e nunca mais tocar em nada). Por isso, além do
+// toque na hora do login, isso aqui manda um "sinal de vida" periódico
+// enquanto a aba fica visível/em uso — só usado hoje pela ferramenta de admin.
+const ACTIVITY_HEARTBEAT_MS = 5 * 60 * 1000; // a cada 5 minutos
+let activityHeartbeatStarted = false;
+function touchActivityTick() {
+  if (!offline && currentUser) callTouchActivity().catch(() => {});
+}
+function startActivityHeartbeat() {
+  if (activityHeartbeatStarted) return;
+  activityHeartbeatStarted = true;
+  setInterval(touchActivityTick, ACTIVITY_HEARTBEAT_MS);
+  // se a pessoa deixar a aba em segundo plano por horas e voltar, não espera
+  // o próximo tique do intervalo — atualiza na hora que ela volta a olhar
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') touchActivityTick();
+  });
+}
+startActivityHeartbeat();
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    offline = false;
+    currentUser = user;
+    // conta por e-mail/senha precisa confirmar o e-mail (Google já vem verificado)
+    const isPassword = user.providerData.some(p => p.providerId === 'password');
+    if (isPassword && !user.emailVerified) {
+      $('verify-email-label').textContent = user.email;
+      show('verify-screen');
+      return;
+    }
+    await proceedAfterLogin(user);
+  } else {
+    currentUser = null;
+    if (!offline) show('auth-screen');
+  }
+});
+
+const EMPTY_PROFILE = {
+  nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
+  gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
+};
+
+async function proceedAfterLogin(user) {
+  try {
+    const snap = await getDoc(doc(db, 'scores', user.uid));
+    myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
+  } catch { myData = { ...EMPTY_PROFILE }; }
+  applyEquippedCosmetics();
+  if (!myData.nick) { syncRefCodeField(); resetNickConsent(); show('nick-screen'); }
+  else {
+    await backfillTotal();
+    await submitPendingScore();
+    startPvpListener();
+    touchActivityTick(); // atualiza "última vez online" na hora (o heartbeat cuida do resto enquanto a aba ficar aberta)
+    // já tem conta — se chegou (ou já estava logada) com o link de convite de
+    // alguém, sugere amizade em segundo plano, sem travar a entrada no menu
+    // (mesmo caso de quem acabou de criar a conta, ver saveNick/creditReferral)
+    if (referrerCode) {
+      callSuggestFriendFromRef({ refCode: referrerCode }).catch(() => {});
+      referrerCode = null;
+      try { sessionStorage.removeItem('colorRushRef'); } catch {}
+    }
+    showMenu();
+  }
+}
+
+// corrige (silenciosamente) contas antigas que ainda não têm o campo "total" calculado,
+// sem precisar esperar a pessoa bater um novo recorde — roda sozinho ao abrir o jogo
+async function backfillTotal() {
+  if (computeTotal() === (myData.total || 0)) return; // já está correto, nem precisa chamar o servidor
+  // o total agora é sempre recalculado no servidor a partir dos recordes que ELE gravou —
+  // o cliente não manda nenhum valor, só pede pra recalcular
+  try {
+    const res = await callRecomputeTotal();
+    if (res.data && res.data.updated) myData.total = res.data.total;
+  } catch {}
+}
+
+/* ================== nick ================== */
+// sincroniza o campo de código de indicação na tela de nick com referrerCode
+// (capturado de ?ref= na URL). Veio de link: trava o campo (não dá pra
+// "roubar" a indicação de outra pessoa trocando o valor). Não veio de link:
+// deixa livre pra digitar o código de um amigo manualmente.
+function syncRefCodeField() {
+  const row = $('ref-code-row');
+  const input = $('ref-code-input');
+  if (!row || !input) return;
+  // já veio por link de convite: crédito automático (ver saveNick), esconde o
+  // campo de vez — não faz sentido pedir de novo o que já foi capturado
+  row.style.display = referrerCode ? 'none' : 'flex';
+  if (!referrerCode) input.value = '';
+}
+// zera a caixinha de consentimento (guideline 5.1.2) toda vez que a tela de
+// nick é mostrada — precisa ser marcada de novo a cada visita, não fica
+// "lembrada" de uma tentativa anterior
+function resetNickConsent() {
+  const cb = $('nick-consent-checkbox');
+  if (cb) cb.checked = false;
+  const btn = $('nick-confirm-btn');
+  if (btn) btn.disabled = true;
+}
+window.updateNickConfirmState = () => {
+  const cb = $('nick-consent-checkbox');
+  const btn = $('nick-confirm-btn');
+  if (cb && btn) btn.disabled = !cb.checked;
+};
+window.saveNick = async () => {
+  const nick = $('nick-input').value.trim();
+  $('nick-error').textContent = '';
+  // reforço além do botão desabilitado (que já impede o clique via UI) — só
+  // por garantia, caso algo force o clique sem a caixinha marcada
+  if (!$('nick-consent-checkbox').checked) {
+    $('nick-error').textContent = T[lang].err_nick_consent;
+    return;
+  }
+  if (nick.length < 3 || nick.length > 16) {
+    $('nick-error').textContent = T[lang].err_nick_length;
+    return;
+  }
+  if (/\s/.test(nick)) {
+    $('nick-error').textContent = T[lang].err_nick_spaces;
+    return;
+  }
+  const nickKey = nick.toLowerCase(); // "Igor" e "IGOR" contam como o mesmo nick
+  try {
+    const taken = await getDoc(doc(db, 'nicks', nickKey));
+    if (taken.exists()) {
+      $('nick-error').textContent = T[lang].err_nick_taken;
+      return;
+    }
+    const refCode = await generateUniqueRefCode();
+
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'nicks', nickKey), { uid: currentUser.uid });
+    batch.set(doc(db, 'refcodes', refCode), { uid: currentUser.uid });
+    batch.set(doc(db, 'scores', currentUser.uid), {
+      nick,
+      refCode,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    await batch.commit();
+    track('sign_up');
+    myData.nick = nick;
+    myData.refCode = refCode;
+
+    // credita a indicação para quem trouxe esse jogador (feito no servidor,
+    // já que é uma escrita no documento de OUTRO usuário). referrerCode (de um
+    // link ?ref=) tem prioridade; sem link, usa o que a pessoa digitou à mão
+    // no campo — um código inválido/inexistente simplesmente não credita nada
+    // (ver creditReferral em functions/index.js), sem erro pra pessoa.
+    const typedRefCode = ($('ref-code-input').value || '').trim().toUpperCase();
+    const codeToCredit = referrerCode || typedRefCode || null;
+    if (codeToCredit) {
+      try { await callCreditReferral({ refCode: codeToCredit }); } catch {}
+      referrerCode = null;
+      try { sessionStorage.removeItem('colorRushRef'); } catch {}
+    }
+
+    await submitPendingScore();
+    startPvpListener();
+    showMenu();
+  } catch (e) { $('nick-error').textContent = T[lang].err_nick_save(e.message); }
+};
+
+/* ================== menu ================== */
+window.showMenu = () => {
+  $('record-classic').textContent = myRecord('classic');
+  $('record-reverse').textContent = myRecord('reverse');
+  $('record-shapes').textContent = myRecord('shapes');
+  $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
+  $('record-trio').textContent = myRecord('trio');
+  $('mute-btn').classList.toggle('on', !muted);
+  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
+
+  // nível e barra de XP (só aparece pra quem tem conta)
+  $('menu-xp-wrap').style.display = offline ? 'none' : '';
+  const xi = xpInfo(myXp());
+  $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
+  $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
+  $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
+
+  // amigos precisam de conta — botão some jogando sem login; a bolinha
+  // vermelha avisa quando tem pedido de amizade esperando resposta
+  $('menu-quick-friends-btn').style.display = offline ? 'none' : '';
+  if (!offline && currentUser) {
+    fetchMyFriendRequests().then(reqs => {
+      const n = Object.keys(reqs.incoming || {}).length;
+      const badge = $('menu-quick-friends-badge');
+      badge.textContent = n;
+      badge.style.display = n > 0 ? '' : 'none';
+    }).catch(() => {});
+  }
+  refreshInboxBadge();
+  updateDailyMenuCard();
+  renderMenuPigmentosBar();
+  renderUserPigmentos();
+  refreshBadgeNotifDot();
+
+  // bloqueio dos modos por nível
+  for (const [m, minLv] of Object.entries(MODE_UNLOCK)) {
+    const locked = !modeUnlocked(m);
+    $('card-' + m).classList.toggle('locked', locked);
+    const lockEl = $('lock-' + m);
+    lockEl.style.display = locked ? '' : 'none';
+    if (locked) lockEl.textContent = T[lang].unlock_at(minLv);
+  }
+  if (offline) {
+    $('user-label').textContent = T[lang].offline_label;
+    $('menu-logout-btn').textContent = T[lang].entrar_label;
+  } else {
+    // avatar (markup fixo/confiável) vai por innerHTML; o nick sempre por
+    // textContent/createTextNode (pode ter qualquer caractere não-espaço)
+    const labelEl = $('user-label');
+    labelEl.innerHTML = '';
+    labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 32) + ' ');
+    labelEl.appendChild(document.createTextNode(T[lang].user_greeting(myData.nick || '')));
+    $('menu-logout-btn').textContent = T[lang].sair_label;
+  }
+  show('menu-screen');
+};
+
+/* ================== jogo ================== */
+window.playAgain = () => window.startGame(mode);
+
+window.startGame = (m) => {
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
+  if (!modeUnlocked(m)) return; // modo ainda bloqueado pelo nível
+  track('game_start', { mode: m });
+  mode = m;
+  score = 0;
+  xpGain = 0;
+  duration = 10000;
+  playing = true;
+  target = pick(poolFor(mode));
+  $('score').textContent = 0;
+  $('record-hud').textContent = myRecord(mode);
+  replayRounds = [];
+  replayMouse = [];
+  replayStartMs = performance.now();
+  show('game-screen');
+  newRound(true);
+
+  // abre uma sessão no servidor (timestamp confiável) pra poder validar a
+  // pontuação no fim da partida — só quem tem conta precisa disso
+  currentSessionId = null;
+  if (!offline && currentUser && myData.nick) {
+    callStartSession({ mode: m }).then(res => {
+      currentSessionId = res.data.sessionId;
+    }).catch(() => { currentSessionId = null; });
+  }
+};
+
+// rastro do mouse pra tela de replay — throttlado (não grava cada micro-
+// movimento) e guardado em % do tamanho do tabuleiro (não pixel bruto), pra
+// funcionar igual em qualquer tamanho de tela na hora de reproduzir. É só
+// cosmético, nunca entra na validação de pontuação. No celular não existe
+// "mousemove" contínuo (só toque discreto), então esse rastro simplesmente
+// fica vazio lá — o replay
+// mostra os cliques certos, sem cursor se movendo entre eles.
+const REPLAY_MOUSE_SAMPLE_MS = 30; // ~33 amostras/seg
+const REPLAY_MOUSE_CAP = 8000; // mesmo teto do servidor (MAX_REPLAY_MOUSE_SAMPLES) — a ~33/seg dá pra guardar uns 4min de rastro, e o documento final fica bem abaixo do limite de 1MB do Firestore mesmo assim
+let lastReplayMouseSampleAt = 0;
+function recordReplayMouseSample(clientX, clientY) {
+  const now = performance.now();
+  if (now - lastReplayMouseSampleAt < REPLAY_MOUSE_SAMPLE_MS) return;
+  lastReplayMouseSampleAt = now;
+  let gridEl = null, arr = null, startMs = 0;
+  if (playing) { gridEl = $('grid'); arr = replayMouse; startMs = replayStartMs; }
+  else if (dailyPlaying) { gridEl = $('daily-grid'); arr = dailyReplayMouse; startMs = dailyReplayStartMs; }
+  else return;
+  if (!gridEl || arr.length >= REPLAY_MOUSE_CAP) return;
+  const rect = gridEl.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const xPct = (clientX - rect.left) / rect.width;
+  const yPct = (clientY - rect.top) / rect.height;
+  arr.push([Math.round(xPct * 1000) / 1000, Math.round(yPct * 1000) / 1000, Math.round(now - startMs)]);
+}
+window.addEventListener('mousemove', e => recordReplayMouseSample(e.clientX, e.clientY));
+
+// desenha um quadrado do modo Trio (3 cores independentes: fundo, cor da
+// palavra e a própria palavra) — função compartilhada entre a partida de
+// verdade (newTrioRound), o replay (renderReplaySquares) e, no futuro, um
+// tutorial dedicado, pra nunca desenhar esse quadrado especial de 2 jeitos
+// diferentes por engano
+function renderTrioSquare(el, sq) {
+  el.style.background = sq.bg.hex;
+  el.style.boxShadow = `0 0 18px ${sq.bg.hex}99, 0 0 40px ${sq.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+  el.innerHTML = `<span class="word word-trio" style="color:${sq.tc.hex}">${cName(sq.word)}</span>`;
+}
+
+// Modo Trio: cada quadrado tem 3 cores independentes (fundo/bg, cor da
+// palavra/tc, e a palavra em si/word — que também é o nome de uma cor). A
+// pessoa decora um PAR de cores (trioColorA/trioColorB); o quadrado certo é
+// o ÚNICO em que uma dessas 2 cores aparece em QUALQUER uma das 3 partes; os
+// outros 3 quadrados não podem referenciar nenhuma das 2 de jeito nenhum. Ao
+// acertar, o novo par a decorar são os 2 OUTROS atributos (os que não deram
+// o match) do quadrado que acabou de ser clicado — ver handleTrioClick.
+//
+// Viabilidade: como só é preciso excluir 2 cores por vez das 8 existentes
+// (COLORS), sempre sobram 6 cores livres — de sobra pros 2 preenchimentos do
+// quadrado certo (2 de 6) e pras 3 cores distintas de cada quadrado errado (3
+// de 6), incluindo a reserva de até 4 fundos distintos entre si (ver
+// bgAssignment) — então NENHUMA cor nova precisou ser adicionada à paleta.
+function newTrioRound(first) {
+  const pool = COLORS;
+  let colorA, colorB;
+  if (first || !trioColorA || !trioColorB) {
+    // shuffle() ordena IN PLACE (ver "const shuffle = a => a.sort(...)") — nunca
+    // pode receber a constante COLORS direto, ou embaralharia pra sempre a ordem
+    // fixa que o tutorial de outros modos depende (COLORS[0], COLORS[1]...); por
+    // isso passamos uma CÓPIA (.slice()) aqui, igual o resto do arquivo já faz
+    // indiretamente sempre que chama shuffle(pool.filter(...)) (filter também
+    // sempre devolve array novo)
+    const shuffled = shuffle(pool.slice());
+    colorA = shuffled[0];
+    colorB = shuffled[1];
+  } else {
+    colorA = trioColorA;
+    colorB = trioColorB;
+  }
+  trioColorA = colorA;
+  trioColorB = colorB;
+
+  const targetIdx = Math.floor(Math.random() * SQUARES);
+  const matchColor = Math.random() < 0.5 ? colorA : colorB;
+  const SLOTS = ['bg', 'tc', 'word'];
+  const matchSlot = SLOTS[Math.floor(Math.random() * SLOTS.length)];
+  const fillerPool = pool.filter(c => c !== colorA && c !== colorB); // sempre 6 cores
+
+  // fundo NUNCA se repete entre os 4 quadrados da rodada — reserva antes de
+  // tudo uma cor de fundo distinta por quadrado (se o quadrado certo "gastar"
+  // o match no próprio fundo, ele já sai direto com matchColor; os outros 3,
+  // ou os 4, tiram fundos distintos do fillerPool). Isso não muda nenhuma
+  // regra: continua sendo o único jeito de saber qual é o certo (procurar as
+  // 2 cores decoradas nas 3 partes), só deixa o tabuleiro mais legível.
+  const bgShuffled = shuffle(fillerPool.slice());
+  const bgAssignment = [];
+  let bgCursor = 0;
+  for (let i = 0; i < SQUARES; i++) {
+    bgAssignment[i] = (i === targetIdx && matchSlot === 'bg') ? matchColor : bgShuffled[bgCursor++];
+  }
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  const roundSnapshot = [];
+  let newPairA = null, newPairB = null;
+
+  for (let i = 0; i < SQUARES; i++) {
+    const bg = bgAssignment[i];
+    let sq;
+    if (i === targetIdx) {
+      if (matchSlot === 'bg') {
+        // fundo já é matchColor — tc/word são 2 cores distintas entre si (o
+        // fundo nunca entra nessa comparação, já não pode repetir por
+        // construção: matchColor nunca está no fillerPool)
+        const fillers = shuffle(fillerPool.slice()).slice(0, 2);
+        sq = { bg, tc: fillers[0], word: fillers[1], isTarget: true };
+        newPairA = fillers[0];
+        newPairB = fillers[1];
+      } else {
+        // matchSlot é tc OU word — esse vira matchColor; o slot restante
+        // (o outro entre tc/word) fica com mais uma cor do fillerPool,
+        // diferente do fundo já reservado pra esse quadrado
+        const otherSlot = SLOTS.find(s => s !== 'bg' && s !== matchSlot);
+        const otherFiller = shuffle(fillerPool.filter(c => c !== bg))[0];
+        const attrs = { bg };
+        attrs[matchSlot] = matchColor;
+        attrs[otherSlot] = otherFiller;
+        sq = { bg: attrs.bg, tc: attrs.tc, word: attrs.word, isTarget: true };
+        newPairA = bg;
+        newPairB = otherFiller;
+      }
+    } else {
+      const fillers = shuffle(fillerPool.filter(c => c !== bg)).slice(0, 2);
+      sq = { bg, tc: fillers[0], word: fillers[1], isTarget: false };
+    }
+    const el = document.createElement('div');
+    el.className = 'square';
+    renderTrioSquare(el, sq);
+    el.onclick = (e) => handleTrioClick(sq.isTarget, e);
+    grid.appendChild(el);
+    roundSnapshot.push({
+      bg: sq.bg.key, tc: sq.tc.key, word: sq.word.key, isTarget: sq.isTarget,
+      // o par inicial só existe (e só faz sentido gravar) na primeira rodada —
+      // é o que a tela de replay usa pra montar a instrução "decore X e Y"
+      // sem precisar adivinhar a cor que nunca apareceu desenhada em lugar
+      // nenhum (ver renderReplaySquares)
+      ...(first ? { pairA: colorA.key, pairB: colorB.key } : {}),
+    });
+  }
+  if (replayRounds.length < 400) replayRounds.push({ t: Math.round(performance.now() - replayStartMs), sq: roundSnapshot });
+
+  trioNextPairA = newPairA;
+  trioNextPairB = newPairB;
+
+  $('instruction').textContent = first
+    ? T[lang].instr_first_trio(cName(colorA), cName(colorB))
+    : T[lang].instr_next_trio;
+  $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
+
+  startTimer();
+}
+
+function handleTrioClick(isCorrect, e) {
+  if (!playing) return;
+  if (isCorrect) {
+    score++;
+    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
+    const elapsed = (performance.now() - timerStart) / 1000;
+    xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
+    sfx.correct(score);
+    $('score').textContent = score;
+    trioColorA = trioNextPairA;
+    trioColorB = trioNextPairB;
+    duration *= 0.95;
+    newTrioRound(false);
+  } else {
+    sfx.wrong();
+    gameOver(T[lang].reason_wrong);
+  }
+}
+
+function newRound(first) {
+  if (mode === 'trio') return newTrioRound(first);
+  const pool = poolFor(mode);
+  nextTarget = pick(pool);
+  const others = shuffle(pool.filter(c => c !== target)).slice(0, SQUARES - 1);
+  const items = shuffle([target, ...others]); // clássico: fundos | reverso: palavras | formas: ícones
+  const distractors = shuffle(pool.filter(c => c !== nextTarget)).slice(0, SQUARES - 1);
+  let d = 0;
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  // "foto" desta rodada pra tela de replay — cada quadrado na MESMA ordem em
+  // que é exibido (ver poolItemId/replayRounds lá em cima); só isso já basta
+  // pra reconstruir o tabuleiro inteiro depois, sem precisar re-sortear nada
+  const roundSnapshot = [];
+  items.forEach(item => {
+    const paired = (item === target) ? nextTarget : distractors[d++];
+    roundSnapshot.push({ id: poolItemId(item), paired: poolItemId(paired), isTarget: item === target });
+    const el = document.createElement('div');
+    el.className = 'square';
+    if (mode === 'shapes' || mode === 'shapes-reverse') {
+      // formas: shapeSide = qual delas vira a silhueta do azulejo | wordSide = qual delas tem o nome escrito
+      const shapeSide = (mode === 'shapes') ? item : paired;
+      const wordSide  = (mode === 'shapes') ? paired : item;
+      el.classList.add('shape-square', shapeSide.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+    } else {
+      const bg   = (mode === 'classic') ? item : paired;
+      const word = (mode === 'classic') ? paired : item;
+      el.style.background = bg.hex;
+      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(word)}</span>`;
+    }
+    el.onclick = (e) => handleClick(item, e);
+    grid.appendChild(el);
+  });
+  // "t" é o instante (relativo a replayStartMs) em que ESTA rodada apareceu
+  // na tela — é o que a tela de replay usa pra saber quando trocar de
+  // rodada e sincronizar com o rastro do mouse (ver renderReplayFrame)
+  if (replayRounds.length < 400) replayRounds.push({ t: Math.round(performance.now() - replayStartMs), sq: roundSnapshot }); // teto de sanidade — mesma ideia do HARD_SCORE_CAP do servidor
+
+  const INSTR_FIRST = {
+    classic: () => T[lang].instr_first_classic(cName(target)),
+    reverse: () => T[lang].instr_first_reverse(cName(target)),
+    shapes: () => T[lang].instr_first_shapes(cName(target)),
+    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(target)),
+  };
+  const INSTR_NEXT = {
+    classic: T[lang].instr_next_classic,
+    reverse: T[lang].instr_next_reverse,
+    shapes: T[lang].instr_next_shapes,
+    'shapes-reverse': T[lang].instr_next_shapes_reverse,
+  };
+  $('instruction').textContent = first ? INSTR_FIRST[mode]() : INSTR_NEXT[mode];
+  $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
+
+  startTimer();
+}
+
+function startTimer() {
+  cancelAnimationFrame(rafId);
+  timerStart = performance.now();
+  let lastTick = 0;
+  const tick = now => {
+    if (!playing) return;
+    const left = 1 - (now - timerStart) / duration;
+    $('timer-fill').style.width = Math.max(0, left * 100) + '%';
+    if (left <= 0) { sfx.timeout(); return gameOver(T[lang].reason_timeout); }
+    if (left < 0.35 && now - lastTick > 250) { lastTick = now; sfx.tick(); } // tic-tac no fim do tempo
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+
+function handleClick(item, e) {
+  if (!playing) return;
+  if (item === target) {
+    score++;
+    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
+    // XP da rodada: quanto mais rápido acertar, mais ganha — e quanto mais longa a sequência, maior o bônus
+    const elapsed = (performance.now() - timerStart) / 1000;
+    xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
+    sfx.correct(score);
+    $('score').textContent = score;
+    target = nextTarget;
+    duration *= 0.95;
+    newRound(false);
+  } else {
+    sfx.wrong();
+    gameOver(T[lang].reason_wrong);
+  }
+}
+
+// trava (ou destrava) os botões de ação da tela de fim de jogo — usado
+// enquanto o placar ainda está sendo confirmado com o servidor, pra ninguém
+// clicar "jogar de novo"/"menu"/"compartilhar" no meio da conta (ver
+// gameOver abaixo)
+function setOverButtonsEnabled(enabled) {
+  document.querySelectorAll('#over-screen .btn-row button, #signup-cta').forEach(b => { b.disabled = !enabled; });
+}
+
+async function gameOver(reason) {
+  playing = false;
+  cancelAnimationFrame(rafId);
+  const record = myRecord(mode);
+  const isNewRecord = score > record;
+  // XP só pra quem está logado com conta
+  const xpEarned = (!offline && currentUser && myData.nick) ? Math.round(xpGain) : 0;
+  const xpBefore = myXp();
+  const xpAfter = xpBefore + xpEarned;
+  const leveledUp = levelFromXp(xpAfter) > levelFromXp(xpBefore);
+  track('game_over', { mode, score, new_record: isNewRecord, xp_earned: xpEarned });
+
+  $('over-reason').textContent = reason;
+  $('final-score').textContent = score;
+  $('record-over').textContent = Math.max(score, record);
+  $('new-record').classList.toggle('show', isNewRecord);
+  $('sync-status').textContent = '';
+  $('share-status').textContent = '';
+  if (isNewRecord) { sfx.record(); spawnConfetti(); }
+  show('over-screen');
+
+  // trava os botões e espera os sinais de progresso desta partida
+  // "assentarem" no servidor (ver pendingRoundSync/callSyncProgress)
+  // antes de mandar o resultado final — fecha a corrida entre o envio final
+  // chegar antes de algum sinal ainda em trânsito pela rede
+  setOverButtonsEnabled(false);
+  if (!offline && currentUser && myData.nick) $('sync-status').textContent = T[lang].sync_calculating;
+  await Promise.allSettled(pendingRoundSync);
+  pendingRoundSync = [];
+  $('sync-status').textContent = ''; // volta a ficar vazio — persistGameResult decide se mostra sucesso/erro
+
+  // XP ganho + animação da barra subindo
+  if (xpEarned > 0) {
+    $('xp-gain').style.display = '';
+    $('over-xp-wrap').style.display = '';
+    animateXpGain(xpEarned, xpBefore, xpAfter, leveledUp);
+  } else {
+    $('xp-gain').style.display = 'none';
+    $('over-xp-wrap').style.display = 'none';
+  }
+
+  if (offline) {
+    if (isNewRecord) setLocalRecord(mode, score);
+  } else if (currentUser && myData.nick) {
+    await persistGameResult(xpEarned);
+  }
+  setOverButtonsEnabled(true);
+
+  // convite para quem joga sem conta
+  $('signup-cta').style.display = 'none';
+  if (offline && score > 0) {
+    pendingScore = { mode, score };
+    $('signup-cta').style.display = '';
+  }
+
+  renderMiniRankings(mode);
+}
+
+// anima o número de XP subindo e a barra de progresso enchendo (com virada de nível se houver)
+function animateXpGain(earned, before, after, leveledUp) {
+  const durMs = 1100;
+  const start = performance.now();
+  const numEl = $('xp-gain-num');
+  const lvEl = $('over-xp-lv');
+  const numsEl = $('over-xp-nums');
+  const fillEl = $('over-xp-fill');
+  fillEl.style.transition = 'none'; // a animação aqui é frame a frame
+
+  const step = now => {
+    const t = Math.min(1, (now - start) / durMs);
+    const eased = 1 - Math.pow(1 - t, 3); // desacelera no final
+    const xpNow = Math.round(before + (after - before) * eased);
+    const xi = xpInfo(xpNow);
+    numEl.textContent = Math.round(earned * eased);
+    lvEl.textContent = `Lv ${xi.lv}`;
+    numsEl.textContent = `${xi.into}/${xi.need}`;
+    fillEl.style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
+    if (t < 1) requestAnimationFrame(step);
+    else if (leveledUp) showLevelUp(levelFromXp(after));
+  };
+  requestAnimationFrame(step);
+}
+
+function showLevelUp(newLv) {
+  track('level_up', { level: newLv });
+  $('levelup-title').textContent = T[lang].levelup_title;
+  $('levelup-lv').textContent = `Lv ${newLv}`;
+  $('levelup-banner').classList.add('show');
+  sfx.levelUp();
+  setTimeout(() => $('levelup-banner').classList.remove('show'), 3200);
+}
+window.dismissLevelUp = () => $('levelup-banner').classList.remove('show');
+
+async function persistGameResult(xpEarned = 0) {
+  // a pontuação final agora é validada no servidor (Cloud Function), que checa
+  // se o tempo real de jogo é compatível com a pontuação alegada antes de gravar.
+  if (!currentSessionId) {
+    // sem sessão validada (ex.: caiu a internet bem no início da partida) —
+    // não há como confirmar no servidor, então não grava essa partida.
+    $('sync-status').textContent = T[lang].sync_fail;
+    return;
+  }
+  const sessionId = currentSessionId;
+  currentSessionId = null; // cada sessão só pode ser usada uma vez
+
+  try {
+    const res = await callSubmitResult({ sessionId, mode, score, xpGain: xpEarned });
+    const d = res.data || {};
+    myData.lastPlayedDate = todayStr();
+    myData.currentStreak = d.currentStreak;
+    myData.bestStreak = d.bestStreak;
+    myData.gamesPlayed = (myData.gamesPlayed || 0) + 1;
+    myData.totalPoints = (myData.totalPoints || 0) + score;
+    myData.xp = (myData.xp || 0) + xpEarned;
+    myData[PLAYED_FIELD[mode]] = true;
+    if (d.isNewRecord) {
+      myData[mode] = score;
+      // servidor grava [mode]+"At" com serverTimestamp() (ver submitGameResult em
+      // functions/index.js), mas o valor resolvido não volta na resposta — sem
+      // atualizar isso aqui, o ranking de prévia (mini-ranking do fim de jogo)
+      // ordenava o empate usando o carimbo do recorde ANTERIOR (ou nenhum),
+      // não o de agora, e o critério "quem fez primeiro" saía errado bem na
+      // hora que mais importa: logo após bater um recorde novo
+      myData[mode + 'At'] = Timestamp.now();
+      if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); } // mesmo motivo, pro ranking "Geral" (soma dos recordes)
+      $('sync-status').textContent = T[lang].sync_success;
+      // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima)
+      // só agora que virou recorde — em segundo plano, não atrasa a tela de
+      // resultado. myData[mode+'ReplaySessionId'] atualiza na hora, sem
+      // esperar o próximo carregamento do ranking, mesmo motivo do +'At' acima
+      myData[mode + 'ReplaySessionId'] = sessionId;
+      saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
+    }
+  } catch (e) {
+    $('sync-status').textContent = T[lang].sync_fail;
+  }
+}
+
+/* ================== cache de leituras do ranking ================== */
+// Uma única busca da lista de contas serve todos os rankings por 2 minutos,
+// pra não consultar o banco a cada partida (economiza a cota do Firestore).
+// Os dados do PRÓPRIO jogador são sempre mesclados por cima do cache, então o
+// seu recorde aparece na hora — só o dos outros pode demorar até 2 min.
+// cache de 5min alinhado com a cadência do retrato pré-calculado (ver
+// recomputeScoresSnapshot em functions/index.js) — não tem por que checar de
+// novo antes disso, os dados só mudam quando aquela function roda
+const SCORES_CACHE_MS = 5 * 60 * 1000;
+let scoresCache = { rows: null, at: 0 };
+
+// se o retrato não for recalculado há mais que isso, algo parou de funcionar
+// (function quebrada, agendamento removido etc.) — cai pro modo antigo em vez
+// de deixar o ranking eternamente desatualizado ou vazio
+const SCORES_SNAPSHOT_STALE_MS = 30 * 60 * 1000;
+
+// lê o retrato em pedaços (ver recomputeScoresSnapshot) — poucas leituras
+// (1 + nº de pedaços) em vez de até 300. Retorna null se o retrato ainda não
+// existe (ex.: acabou de ser implantado, 1ª rodada da function ainda não
+// rodou) ou parece velho demais — nesses casos fetchAllScores() cai pro modo
+// antigo (ler a coleção "scores" ao vivo) como rede de segurança.
+async function fetchScoresFromSnapshot() {
+  const metaSnap = await getDoc(doc(db, 'scoresSnapshot', 'meta'));
+  if (!metaSnap.exists()) return null;
+  const meta = metaSnap.data();
+  const updatedMs = (meta.updatedAt && typeof meta.updatedAt.toMillis === 'function') ? meta.updatedAt.toMillis() : 0;
+  if (!updatedMs || Date.now() - updatedMs > SCORES_SNAPSHOT_STALE_MS) return null;
+  const chunkCount = meta.chunkCount || 0;
+  if (chunkCount <= 0) return [];
+  const chunkSnaps = await Promise.all(
+    Array.from({ length: chunkCount }, (_, i) => getDoc(doc(db, 'scoresSnapshot', 'chunk_' + i)))
+  );
+  const rows = [];
+  // contas banidas nunca aparecem em ranking nenhum (nem aqui em teste.html,
+  // ao contrário do admin — que fica de fora só em produção pra dar pra
+  // testar com a própria conta admin)
+  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => { if (!r.data || r.data.banned !== true) rows.push(r); }); });
+  return rows;
+}
+
+// leitura AO VIVO da coleção "scores" (sem cache, sem depender do retrato de
+// 5min) — mesmo filtro de admin/banido de sempre. Usada como "modo antigo"
+// de fetchAllScores() (rede de segurança se o retrato falhar) E pelo Salão
+// da Fama (loadDailyAlltimeRanking), que precisa refletir dailyWins/
+// pigmentos na hora — sem esperar o próximo ciclo do retrato nem o cache de
+// 5min que o resto dos rankings continua usando normalmente.
+async function fetchScoresLive() {
+  const snap = await getDocs(query(collection(db, 'scores'), limit(300)));
+  const rows = [];
+  snap.forEach(d => {
+    const data = d.data();
+    // TESTE.HTML: admin aparece normalmente em qualquer ranking aqui de
+    // propósito (pra dar pra testar/depurar com a própria conta) — no
+    // index.html (produção) a exclusão de admin continua valendo. Já
+    // banido fica de fora dos dois: não tem motivo pra aparecer nem em teste
+    if (data.nick && data.banned !== true) rows.push({ uid: d.id, data });
+  });
+  return rows;
+}
+
+async function fetchAllScores() {
+  if (scoresCache.rows && Date.now() - scoresCache.at < SCORES_CACHE_MS) return scoresCache.rows;
+  try {
+    const rows = await fetchScoresFromSnapshot();
+    if (rows) { scoresCache = { rows, at: Date.now() }; return rows; }
+  } catch (e) {
+    console.warn('[scoresSnapshot] falha ao ler retrato, caindo pro modo antigo', e);
+  }
+  // modo antigo: lê a coleção "scores" ao vivo (até 300 leituras) — só
+  // acontece se o retrato ainda não existir, estiver velho, ou a leitura
+  // dele falhar por algum motivo; nunca deixa o ranking aparecer vazio
+  const rows = await fetchScoresLive();
+  scoresCache = { rows, at: Date.now() };
+  return rows;
+}
+// linha de ranking com os dados do próprio jogador sempre frescos
+function rowData(r) {
+  return (!offline && currentUser && r.uid === currentUser.uid) ? { ...r.data, ...myData } : r.data;
+}
+
+async function renderRankPreview(field, bodyElId, myPts) {
+  const body = $(bodyElId);
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  try {
+    const all = await fetchAllScores();
+    const rows = [];
+    for (const r of all) {
+      const data = rowData(r);
+      if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
+    }
+
+    // localiza (ou insere) a linha do jogador — TESTE.HTML: admin também
+    // entra aqui de propósito (ver comentário em fetchAllScores). Já banido
+    // não entra nem aqui: a própria conta banida não deve se ver no ranking
+    const youLabel = lang === 'en' ? 'YOU' : lang === 'es' ? 'TÚ' : 'VOCÊ';
+    let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
+    if (myIndex === -1 && myData.banned !== true) {
+      rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData, replaySessionId: offline ? undefined : myData[field + 'ReplaySessionId'] });
+    }
+
+    rows.sort(compareRankRows);
+    myIndex = rows.findIndex(r => r.uid === (!offline && currentUser ? currentUser.uid : '__me__'));
+
+    // janela: 2 antes e 2 depois (expande pra manter 5 linhas quando possível)
+    let start = Math.max(0, myIndex - 2);
+    let end = Math.min(rows.length, myIndex + 3);
+    while (end - start < 5 && (start > 0 || end < rows.length)) {
+      if (start > 0) start--;
+      else end++;
+    }
+
+    body.innerHTML = '';
+    for (let i = start; i < end; i++) {
+      const r = rows[i];
+      const pos = i + 1;
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + (lang === 'en' ? '' : 'º');
+      const tr = document.createElement('tr');
+      if (i === myIndex) tr.className = 'me';
+      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+      const nickCell = tr.children[1];
+      buildRankRowNick(nickCell, r, r.stats ? equippedBadgeLabel(r.stats) : '', 'over-screen');
+      applyRowTheme(tr, r.stats);
+      if (r.replaySessionId) {
+        const ptsCell = tr.children[2];
+        const replayBtn = document.createElement('button');
+        replayBtn.className = 'replay-btn';
+        replayBtn.textContent = '▶️';
+        replayBtn.title = T[lang].btn_watch_replay;
+        replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
+        ptsCell.appendChild(replayBtn);
+      }
+      body.appendChild(tr);
+    }
+    if (rows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players_mini}</td></tr>`;
+  } catch {
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error_mini}</td></tr>`;
+  }
+}
+
+function renderMiniRankings(m) {
+  $('mini-mode').textContent = modeLabel(m);
+  const myModePts = offline ? score : (myData[m] || 0);
+  renderRankPreview(m, 'mini-ranking-body', myModePts);
+}
+
+window.goSignup = () => {
+  offline = false;
+  show('auth-screen');
+};
+
+/* ================== perfil / conquistas ================== */
+// pra onde o botão "voltar" do perfil deve levar — muda conforme de onde o
+// perfil foi aberto (menu, ranking completo, ou mini-ranking do fim de jogo)
+let profileBackTarget = 'menu-screen';
+window.showProfile = () => {
+  profileBackTarget = 'menu-screen';
+  show('profile-screen');
+  renderProfile();
+};
+window.profileBack = () => show(profileBackTarget);
+
+// abre o perfil ao clicar num nick do ranking (mini ou completo). Se for você
+// mesmo, abre a versão própria de sempre (editável, dados sempre frescos);
+// senão, abre a versão somente-leitura (medalhas + posição no ranking).
+function openProfileFromRanking(r, backTarget) {
+  profileBackTarget = backTarget;
+  show('profile-screen');
+  const isMe = !offline && currentUser && (r.uid === currentUser.uid || r.uid === '__me__');
+  if (isMe) renderProfile();
+  else renderProfile(r.stats, r.nick, r.uid);
+}
+
+// pra cada ranking em que o jogador já pontuou (os 4 modos + geral/nível/
+// divulgador via RANK_FIELDS, mais o Salão da Fama do desafio diário à parte),
+// calcula a posição dele — reaproveita o mesmo cache de fetchAllScores() que já
+// alimenta os rankings normais, então não gera nenhuma consulta nova ao
+// Firestore (a não ser que o cache de 2min já tenha expirado).
+async function computeModeRanks(uid) {
+  const all = await fetchAllScores();
+  const ranks = {};
+  for (const key of Object.keys(RANK_FIELDS)) {
+    const field = RANK_FIELDS[key];
+    const rows = [];
+    for (const r of all) {
+      const data = rowData(r);
+      if ((data[field] || 0) > 0) rows.push({ uid: r.uid, pts: data[field], at: data[field + 'At'] });
+    }
+    rows.sort(compareRankRows);
+    const idx = rows.findIndex(x => x.uid === uid);
+    if (idx !== -1) ranks[key] = idx + 1;
+  }
+  // Salão da Fama (desafio diário) — ranking à parte: ordena por vitórias de
+  // 1º lugar e depois por pigmentos acumulados (mesma lógica de
+  // loadDailyAlltimeRanking), não é um campo simples então fica fora do loop
+  const dailyRows = [];
+  for (const r of all) {
+    const data = rowData(r);
+    const wins = data.dailyWins || 0;
+    const pig = (data.pigmentos || 0) + (data.pendingPigmentos || 0);
+    if (wins > 0 || pig > 0) dailyRows.push({ uid: r.uid, wins, pig });
+  }
+  dailyRows.sort((a, b) => (b.wins - a.wins) || (b.pig - a.pig));
+  const dailyIdx = dailyRows.findIndex(x => x.uid === uid);
+  if (dailyIdx !== -1) ranks.daily = dailyIdx + 1;
+  return ranks;
+}
+
+// perfil de OUTRA pessoa: só a medalha mais atual (mais alta) de cada
+// categoria, com o nome — sem barra de progresso nem os chips de todos os
+// níveis, que só fazem sentido olhando o próprio progresso.
+function renderPublicProfileBadges(stats) {
+  const items = BADGE_ORDER.map(key => {
+    const def = BADGE_DEFS[key];
+    const tier = unlockedTier(def, stats);
+    if (tier < 0) return null;
+    const color = TIER_COLORS[tier];
+    const name = def.names[lang][tier];
+    const val = def.metric(stats).toLocaleString(lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'pt-BR');
+    return `
+      <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; gap:12px; padding:14px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="badge-chip big" style="background:${color}">${def.icon}</span>
+          <div>
+            <div class="name" style="font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.95rem;">${def.label[lang]}</div>
+            <div class="muted" style="text-align:left;">${name}</div>
+          </div>
+        </div>
+        <div style="text-align:right; font-family:'Orbitron',sans-serif; font-weight:800; color:#fff; font-size:1.1rem;">${val}</div>
+      </div>`;
+  }).filter(Boolean);
+  return items.length ? items.join('') : `<div class="muted" style="text-align:center;">${T[lang].profile_no_badges_yet}</div>`;
+}
+
+// posição no ranking de cada modo em que a pessoa já pontuou (medalha pro
+// top 3, número pros demais) — vazio se ela ainda não pontuou em nenhum modo
+function renderPublicProfileRanks(stats, ranks) {
+  const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺' };
+  // cada linha leva pra aba daquele ranking no clique (ver profileRankGoto)
+  const row = (label, pos, key) => {
+    const medal = pos === 1 ? '🥇 ' : pos === 2 ? '🥈 ' : pos === 3 ? '🥉 ' : '';
+    return `
+      <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer;" onclick="profileRankGoto('${key}')">
+        <span>${label}</span>
+        <span style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-orange); font-size:1.1rem;">${medal}#${pos}</span>
+      </div>`;
+  };
+  const items = [];
+  // geral primeiro (visão resumida da pessoa), depois os modos individuais,
+  // nível, divulgador e por último o Salão da Fama
+  if ((stats.total || 0) > 0 && ranks.geral) items.push(row(T[lang].tab_geral, ranks.geral, 'geral'));
+  ALL_MODES.forEach(m => {
+    if (stats[m] > 0 && ranks[m]) items.push(row(`${MODE_ICON[m]} ${modeLabel(m)}`, ranks[m], m));
+  });
+  // rankings gerais — mesmos campos (RANK_FIELDS) e rótulos com emoji já
+  // embutido das <option> da tela de ranking completo, pra ficar consistente
+  [['level', T[lang].tab_level], ['divulgador', T[lang].tab_divulgador]].forEach(([key, label]) => {
+    const field = RANK_FIELDS[key];
+    if ((stats[field] || 0) > 0 && ranks[key]) items.push(row(label, ranks[key], key));
+  });
+  // Salão da Fama do desafio diário — não é um RANK_FIELDS comum (ver
+  // computeModeRanks), por isso checado à parte aqui
+  const dailyPig = (stats.pigmentos || 0) + (stats.pendingPigmentos || 0);
+  if (((stats.dailyWins || 0) > 0 || dailyPig > 0) && ranks.daily) items.push(row(T[lang].daily_subtab_alltime, ranks.daily, 'daily'));
+  return items.join('');
+}
+// clique numa linha de posição no ranking do perfil de outra pessoa — leva
+// direto pra aquela aba do ranking completo. Salão da Fama é tratado à
+// parte porque mora numa sub-aba (ver setDailyRankSubtab) dentro da aba
+// "daily", não é uma aba própria como as outras
+window.profileRankGoto = (key) => {
+  showRanking(key);
+  if (key === 'daily') setDailyRankSubtab('alltime');
+};
+
+function profileSectionLabel(text) {
+  return `<div class="muted" style="text-align:left; font-family:'Orbitron',sans-serif; font-size:0.75rem; letter-spacing:0.5px; text-transform:uppercase; margin-top:4px;">${text}</div>`;
+}
+
+/* ================== painel de admin (perfil de outra pessoa) ================== */
+// texto fixo em português de propósito — essa parte da tela só aparece pra
+// quem tem admin:true (só você), então não precisa dos outros idiomas
+function fmtDateTime(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+async function renderAdminPanel(uid, currentNick, stats) {
+  const box = $('admin-panel-body');
+  if (!box) return;
+
+  let details;
+  try {
+    details = (await callAdminGetUserDetails({ uid })).data;
+  } catch (e) {
+    box.textContent = 'Erro ao carregar dados de admin: ' + (e.message || e);
+    return;
+  }
+
+  box.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'text-align:left; display:flex; flex-direction:column; gap:10px; width:100%;';
+
+  // último login
+  const loginRow = document.createElement('div');
+  loginRow.innerHTML = '<b>Última vez online:</b> ';
+  loginRow.appendChild(document.createTextNode(details.lastActiveAt ? fmtDateTime(details.lastActiveAt) : 'nunca registrado'));
+  wrap.appendChild(loginRow);
+
+  // últimos duelos (PvP) — nick do adversário sempre via textContent (nunca
+  // interpolado no HTML), mesmo cuidado usado no resto da tela de perfil
+  const matchesTitle = document.createElement('div');
+  matchesTitle.innerHTML = '<b>Últimos duelos (PvP):</b>';
+  wrap.appendChild(matchesTitle);
+  const matchesList = document.createElement('div');
+  matchesList.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+  if (!details.matches.length) {
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = 'Nenhum duelo concluído ainda.';
+    matchesList.appendChild(row);
+  } else {
+    details.matches.forEach(m => {
+      const row = document.createElement('div');
+      row.className = 'muted';
+      const resultLabel = m.result === 'win' ? '🏆 Vitória' : m.result === 'loss' ? '💀 Derrota' : '🤝 Empate';
+      row.appendChild(document.createTextNode(fmtDateTime(m.finishedAt) + ' — vs '));
+      const b = document.createElement('b');
+      b.textContent = m.opponentNick || '?';
+      row.appendChild(b);
+      row.appendChild(document.createTextNode(' — ' + resultLabel));
+      matchesList.appendChild(row);
+    });
+  }
+  wrap.appendChild(matchesList);
+
+  // lista de amigos
+  const friendsTitle = document.createElement('div');
+  friendsTitle.innerHTML = `<b>Amigos (${details.friends.length}):</b>`;
+  wrap.appendChild(friendsTitle);
+  const friendsList = document.createElement('div');
+  friendsList.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+  if (!details.friends.length) {
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = 'Sem amigos ainda.';
+    friendsList.appendChild(row);
+  } else {
+    details.friends.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'muted';
+      row.appendChild(document.createTextNode('👤 '));
+      const b = document.createElement('b');
+      b.textContent = f.nick || '?';
+      row.appendChild(b);
+      if (f.since) row.appendChild(document.createTextNode(' — desde ' + fmtDateTime(f.since)));
+      friendsList.appendChild(row);
+    });
+  }
+  wrap.appendChild(friendsList);
+
+  // editar nick + banir/desbanir — ambos validados de novo no servidor
+  // (adminSetNick / adminSetBanned), isso aqui só monta a UI
+  const toolsBox = document.createElement('div');
+  toolsBox.style.cssText = 'border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; flex-direction:column; gap:8px;';
+
+  const nickRow = document.createElement('div');
+  nickRow.style.cssText = 'display:flex; gap:8px;';
+  const nickInput = document.createElement('input');
+  nickInput.type = 'text';
+  nickInput.value = currentNick || '';
+  nickInput.style.flex = '1';
+  nickRow.appendChild(nickInput);
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'secondary';
+  saveBtn.style.flex = 'none';
+  saveBtn.textContent = 'Salvar nick';
+  nickRow.appendChild(saveBtn);
+  toolsBox.appendChild(nickRow);
+  const nickStatus = document.createElement('div');
+  nickStatus.className = 'muted';
+  toolsBox.appendChild(nickStatus);
+
+  saveBtn.onclick = async () => {
+    const nick = nickInput.value.trim();
+    nickStatus.textContent = '';
+    if (nick.length < 3 || nick.length > 16 || /\s/.test(nick)) {
+      nickStatus.textContent = 'Nick inválido (3 a 16 caracteres, sem espaço).';
+      return;
+    }
+    saveBtn.disabled = true;
+    try {
+      await callAdminSetNick({ uid, nick });
+      nickStatus.textContent = '✅ Nick atualizado.';
+      stats.nick = nick;
+      $('profile-nick-text').textContent = T[lang].profile_nick_label(nick);
+      $('profile-nick-lv').innerHTML = ' ' + lvChip(stats.xp || 0);
+    } catch (e) {
+      nickStatus.textContent = '❌ ' + (e.message || 'Erro ao salvar.');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  };
+
+  const banBtn = document.createElement('button');
+  const paintBanBtn = banned => {
+    banBtn.textContent = banned ? '✅ Remover banimento' : '🚫 Banir esta conta';
+    banBtn.style.cssText = banned
+      ? 'border-color:var(--neon-green); color:var(--neon-green); background:#0a0e1e;'
+      : 'border-color:var(--neon-red); color:#ff8bab; background:#0a0e1e;';
+  };
+  paintBanBtn(details.banned);
+  toolsBox.appendChild(banBtn);
+  const banStatus = document.createElement('div');
+  banStatus.className = 'muted';
+  toolsBox.appendChild(banStatus);
+
+  banBtn.onclick = async () => {
+    const next = !details.banned;
+    if (next && !confirm('Banir esta conta? A pessoa não vai mais conseguir gravar pontuação nem jogar PvP.')) return;
+    banBtn.disabled = true;
+    banStatus.textContent = '';
+    try {
+      await callAdminSetBanned({ uid, banned: next });
+      details.banned = next;
+      paintBanBtn(next);
+      banStatus.textContent = next ? '🚫 Conta banida.' : '✅ Banimento removido.';
+    } catch (e) {
+      banStatus.textContent = '❌ ' + (e.message || 'Erro.');
+    } finally {
+      banBtn.disabled = false;
+    }
+  };
+
+  wrap.appendChild(toolsBox);
+  box.appendChild(wrap);
+  // o painel carrega depois do resto do perfil (é uma chamada assíncrona à
+  // parte) e deixa a tela mais alta — sem isso, o mesmo bug de rolagem presa
+  // já corrigido no ranking/amigos podia voltar a acontecer aqui
+  resetScroll('profile-screen');
+}
+
+// botão avulso no PRÓPRIO perfil (não no painel de outra pessoa acima) —
+// dispara o backfill único de pendingPigmentos (ver comentário da function
+// no functions/index.js). Idempotente: pode clicar mais de uma vez à vontade.
+window.runBackfillPendingPigmentos = async (btn) => {
+  const status = $('backfill-status');
+  btn.disabled = true;
+  if (status) status.textContent = 'Rodando...';
+  try {
+    const res = await callBackfillPendingPigmentos();
+    if (status) status.textContent = `✅ Concluído — ${res.data.usersUpdated} conta(s) atualizada(s).`;
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro ao rodar backfill.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// outra ferramenta avulsa só pra admin, mesmo raciocínio da de cima — define
+// o XP da PRÓPRIA conta pro mínimo do nível digitado (ver totalXpForLevel).
+// Só atualiza o essencial na tela (chip de nível no cabeçalho + myData.xp),
+// sem chamar renderProfile() de novo — isso reconstruiria o card inteiro e
+// apagaria a mensagem de status antes da pessoa conseguir ler.
+// força o recálculo do retrato de ranking (scoresSnapshot) na hora, em vez de
+// esperar os até 5min do agendamento — útil pra ver na hora o efeito de uma
+// mudança recém-implantada em functions/index.js (ex.: admin entrar/sair do
+// ranking) sem precisar esperar o próximo ciclo automático
+window.runAdminRecomputeSnapshot = async (btn) => {
+  const status = $('recompute-snapshot-status');
+  btn.disabled = true;
+  if (status) status.textContent = 'Recalculando...';
+  try {
+    const res = await callAdminRecomputeScoresSnapshot();
+    scoresCache = { rows: null, at: 0 }; // invalida o cache local de 2min pra próxima leitura já vir atualizada
+    if (status) status.textContent = `✅ Retrato atualizado — ${res.data.userCount} conta(s), ${res.data.chunkCount} pedaço(s).`;
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro ao recalcular.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+window.runAdminSetOwnLevel = async (btn) => {
+  const input = $('admin-set-level-input');
+  const status = $('admin-set-level-status');
+  const lv = parseInt(input.value, 10);
+  if (status) status.textContent = '';
+  if (!Number.isFinite(lv) || lv < 1 || lv > 500) {
+    if (status) status.textContent = '❌ Nível inválido (1 a 500).';
+    return;
+  }
+  const xp = totalXpForLevel(lv);
+  btn.disabled = true;
+  try {
+    await callAdminSetXp({ uid: currentUser.uid, xp });
+    myData.xp = xp;
+    $('profile-nick-lv').innerHTML = ' ' + lvChip(myXp());
+    if (status) status.textContent = `✅ Nível definido pra ${lv}.`;
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro ao salvar.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+/* ================== amigos ================== */
+// Espelhado em dois documentos por conta (ver functions/index.js):
+//   friends/{uid}        -> { list: { [amigoUid]: { nick, since } } }
+//   friendRequests/{uid} -> { incoming: {...}, outgoing: {...} }
+// Cache local curto só pra não reler o mesmo documento várias vezes seguidas
+// (abrir vários perfis, checar o menu etc.) — qualquer ação de amizade
+// invalida o cache na hora, então nunca fica visivelmente desatualizado.
+let myFriendsCache = null, myFriendsCacheAt = 0;
+let myFriendReqCache = null, myFriendReqCacheAt = 0;
+const FRIENDS_CACHE_MS = 20 * 1000;
+
+async function fetchMyFriends(force) {
+  if (offline || !currentUser) return {};
+  if (!force && myFriendsCache && (Date.now() - myFriendsCacheAt) < FRIENDS_CACHE_MS) return myFriendsCache;
+  const snap = await getDoc(doc(db, 'friends', currentUser.uid));
+  myFriendsCache = (snap.exists() && snap.data().list) || {};
+  myFriendsCacheAt = Date.now();
+  return myFriendsCache;
+}
+
+async function fetchMyFriendRequests(force) {
+  if (offline || !currentUser) return { incoming: {}, outgoing: {} };
+  if (!force && myFriendReqCache && (Date.now() - myFriendReqCacheAt) < FRIENDS_CACHE_MS) return myFriendReqCache;
+  const snap = await getDoc(doc(db, 'friendRequests', currentUser.uid));
+  const data = snap.exists() ? snap.data() : {};
+  myFriendReqCache = { incoming: data.incoming || {}, outgoing: data.outgoing || {} };
+  myFriendReqCacheAt = Date.now();
+  return myFriendReqCache;
+}
+
+function invalidateFriendsCache() {
+  myFriendsCache = null;
+  myFriendReqCache = null;
+}
+
+async function getFriendRelation(theirUid) {
+  const [friends, reqs] = await Promise.all([fetchMyFriends(), fetchMyFriendRequests()]);
+  if (friends[theirUid]) return 'friends';
+  if (reqs.outgoing[theirUid]) return 'sent';
+  if (reqs.incoming[theirUid]) return 'received';
+  return 'none';
+}
+
+// abre o perfil de alguém a partir só do uid (usado na tela de amigos, onde
+// não temos as stats completas em mãos) — reaproveita o cache do ranking
+// geral quando dá, senão busca o documento avulso
+async function openProfileByUid(uid, fallbackNick) {
+  const all = await fetchAllScores();
+  const found = all.find(r => r.uid === uid);
+  if (found) {
+    const data = rowData(found);
+    openProfileFromRanking({ uid, nick: data.nick, stats: data }, 'friends-screen');
+    return;
+  }
+  try {
+    const snap = await getDoc(doc(db, 'scores', uid));
+    const data = snap.exists() ? snap.data() : {};
+    openProfileFromRanking({ uid, nick: data.nick || fallbackNick, stats: data }, 'friends-screen');
+  } catch {
+    openProfileFromRanking({ uid, nick: fallbackNick, stats: {} }, 'friends-screen');
+  }
+}
+
+function showFriendActionError() {
+  [$('profile-friend-status'), $('friends-status')].forEach(el => {
+    if (!el) return;
+    el.textContent = T[lang].friend_action_error;
+    setTimeout(() => { if (el.textContent === T[lang].friend_action_error) el.textContent = ''; }, 3000);
+  });
+}
+
+// botão de ação no perfil de outra pessoa (adicionar / já é amigo / pedido
+// enviado / pedido recebido) — atualizado sempre que o perfil abre e depois
+// de qualquer ação de amizade feita nessa tela
+async function renderProfileFriendAction(theirUid) {
+  const box = $('profile-friend-action');
+  if (!box) return;
+  box.dataset.uid = theirUid;
+  if (offline || !currentUser) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  box.innerHTML = `<span class="muted">${T[lang].loading_text}</span>`;
+  const rel = await getFriendRelation(theirUid);
+  if (box.dataset.uid !== theirUid) return; // perfil trocou enquanto isso carregava
+  box.innerHTML = '';
+  box.appendChild(friendActionNode(rel, theirUid));
+}
+
+function friendActionNode(rel, theirUid) {
+  if (rel === 'friends') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.textContent = T[lang].btn_remove_friend_profile;
+    btn.style.cssText = 'padding:9px 18px; font-size:0.85rem;';
+    btn.onclick = () => uiRemoveFriend(theirUid);
+    return btn;
+  }
+  if (rel === 'sent') {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:6px;';
+    const label = document.createElement('div');
+    label.className = 'muted';
+    label.textContent = T[lang].friend_request_sent_label;
+    wrap.appendChild(label);
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.textContent = T[lang].btn_cancel_request;
+    btn.onclick = () => uiCancelFriendRequest(theirUid);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+  if (rel === 'received') {
+    const wrap = document.createElement('div');
+    wrap.className = 'btn-row';
+    wrap.style.width = '100%';
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = T[lang].btn_accept;
+    acceptBtn.style.cssText = 'flex:1;';
+    acceptBtn.onclick = () => uiRespondFriendRequest(theirUid, true);
+    wrap.appendChild(acceptBtn);
+    const declineBtn = document.createElement('button');
+    declineBtn.className = 'secondary';
+    declineBtn.textContent = T[lang].btn_decline;
+    declineBtn.style.cssText = 'flex:1;';
+    declineBtn.onclick = () => uiRespondFriendRequest(theirUid, false);
+    wrap.appendChild(declineBtn);
+    return wrap;
+  }
+  const btn = document.createElement('button');
+  btn.textContent = T[lang].btn_add_friend;
+  btn.onclick = () => uiSendFriendRequest(theirUid);
+  return btn;
+}
+
+// linha de amigo/pedido montada via DOM (nunca via innerHTML com o nick
+// interpolado — nick é livre em qualquer caractere não-espaço, então precisa
+// ir sempre por textContent, igual já é feito no resto do ranking)
+function friendRow(uid, nick, xp) {
+  const row = document.createElement('div');
+  row.className = 'card';
+  row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
+
+  const left = document.createElement('span');
+  left.style.cssText = 'display:flex; align-items:center; gap:8px;';
+  left.insertAdjacentHTML('beforeend', lvChip(xp || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = nick;
+  nickSpan.className = 'nick-click';
+  nickSpan.onclick = () => openProfileByUid(uid, nick);
+  left.appendChild(nickSpan);
+  row.appendChild(left);
+
+  const actions = document.createElement('span');
+  actions.style.cssText = 'display:flex; gap:5px;';
+
+  const challengeBtn = document.createElement('button');
+  challengeBtn.textContent = T[lang].btn_challenge;
+  challengeBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
+  challengeBtn.onclick = () => uiChallengeFriend(uid);
+  actions.appendChild(challengeBtn);
+
+  const btn = document.createElement('button');
+  btn.className = 'secondary';
+  btn.textContent = T[lang].btn_remove_friend;
+  btn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
+  btn.onclick = () => uiRemoveFriend(uid);
+  actions.appendChild(btn);
+
+  row.appendChild(actions);
+
+  return row;
+}
+
+function friendRequestRow(uid, nick, incoming) {
+  const row = document.createElement('div');
+  row.className = 'card';
+  row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
+
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = nick;
+  nickSpan.className = 'nick-click';
+  nickSpan.onclick = () => openProfileByUid(uid, nick);
+  row.appendChild(nickSpan);
+
+  const actions = document.createElement('span');
+  actions.style.cssText = 'display:flex; gap:5px;';
+
+  if (incoming) {
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = T[lang].btn_accept;
+    acceptBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
+    acceptBtn.onclick = () => uiRespondFriendRequest(uid, true);
+    actions.appendChild(acceptBtn);
+
+    const declineBtn = document.createElement('button');
+    declineBtn.className = 'secondary';
+    declineBtn.textContent = T[lang].btn_decline;
+    declineBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
+    declineBtn.onclick = () => uiRespondFriendRequest(uid, false);
+    actions.appendChild(declineBtn);
+  } else {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'secondary';
+    cancelBtn.textContent = T[lang].btn_cancel_request;
+    cancelBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
+    cancelBtn.onclick = () => uiCancelFriendRequest(uid);
+    actions.appendChild(cancelBtn);
+  }
+
+  row.appendChild(actions);
+  return row;
+}
+
+window.showFriends = () => {
+  show('friends-screen');
+  renderFriendsScreen();
+};
+
+async function renderFriendsScreen(force) {
+  const body = $('friends-body');
+  $('friends-status').textContent = '';
+
+  if (offline || !currentUser) {
+    $('friends-refcode-row').style.display = 'none';
+    body.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <p>${T[lang].profile_offline_msg1}</p>
+        <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+      </div>`;
+    resetScroll('friends-screen');
+    return;
+  }
+
+  const showOwnRefCode = !!myData.refCode;
+  $('friends-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
+  if (showOwnRefCode) $('friends-refcode-value').textContent = myData.refCode;
+
+  body.innerHTML = `<div class="muted" style="text-align:center;">${T[lang].loading_text}</div>`;
+  const [friends, reqs] = await Promise.all([fetchMyFriends(force), fetchMyFriendRequests(force)]);
+  body.innerHTML = '';
+
+  const incomingEntries = Object.entries(reqs.incoming || {});
+  if (incomingEntries.length) {
+    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_incoming_title));
+    incomingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', true)));
+  }
+
+  body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_list_title));
+  const friendEntries = Object.entries(friends);
+  if (!friendEntries.length) {
+    body.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[lang].friends_empty}</div>`);
+  } else {
+    // nível de cada amigo vem do cache geral de pontuações (mesmo já usado
+    // pelo ranking), pra não precisar de uma leitura extra por amigo
+    const all = await fetchAllScores();
+    const xpByUid = {};
+    all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
+    friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid])));
+  }
+
+  // pedidos ENVIADOS (aguardando resposta do outro lado) ficam por último —
+  // são o caso menos comum de olhar, então não empurram pra baixo a lista de
+  // amigos de verdade nem os pedidos RECEBIDOS (que pedem uma ação da pessoa)
+  const outgoingEntries = Object.entries(reqs.outgoing || {});
+  if (outgoingEntries.length) {
+    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_outgoing_title));
+    outgoingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', false)));
+  }
+  resetScroll('friends-screen');
+}
+
+// depois de qualquer ação de amizade, atualiza a tela de amigos (se estiver
+// aberta) e o botão de ação no perfil da pessoa envolvida (se estiver aberto)
+async function refreshFriendUiFor(uid) {
+  if ($('friends-screen').classList.contains('active')) {
+    await renderFriendsScreen(true);
+  }
+  const box = $('profile-friend-action');
+  if ($('profile-screen').classList.contains('active') && box && box.dataset.uid === uid) {
+    await renderProfileFriendAction(uid);
+  }
+}
+
+window.uiSendFriendRequest = async (toUid) => {
+  try {
+    await callSendFriendRequest({ toUid });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(toUid);
+};
+
+window.uiCancelFriendRequest = async (toUid) => {
+  try {
+    await callCancelFriendRequest({ toUid });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(toUid);
+};
+
+window.uiRespondFriendRequest = async (fromUid, accept) => {
+  try {
+    await callRespondFriendRequest({ fromUid, accept });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(fromUid);
+};
+
+window.uiRemoveFriend = async (friendUid) => {
+  try {
+    await callRemoveFriend({ friendUid });
+  } catch {
+    showFriendActionError();
+  }
+  invalidateFriendsCache();
+  await refreshFriendUiFor(friendUid);
+};
+
+// sem argumentos: perfil PRÓPRIO (editável, lê de myData ao vivo, badges
+// completos com progresso). Com viewStats/viewNick/viewUid: perfil de OUTRO
+// jogador — somente leitura, medalha atual de cada categoria + posição no
+// ranking em cada modo (ver openProfileFromRanking acima).
+async function renderProfile(viewStats, viewNick, viewUid) {
+  const isOther = !!viewStats;
+  const stats = isOther ? viewStats : myData;
+
+  $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
+  const showOwnRefCode = !isOther && !offline && !!myData.refCode;
+  $('profile-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
+  if (showOwnRefCode) $('profile-refcode-value').textContent = myData.refCode;
+
+  if (!isOther && offline) {
+    $('profile-nick-avatar').innerHTML = '';
+    $('profile-nick-text').textContent = T[lang].profile_offline_label;
+    $('profile-nick-lv').innerHTML = '';
+    $('profile-summary').textContent = '';
+    $('profile-friend-action').style.display = 'none';
+    $('profile-friend-action').innerHTML = '';
+    $('profile-friend-status').textContent = '';
+    $('profile-body').innerHTML = `
+      <div class="card" style="text-align:center;">
+        <p>${T[lang].profile_offline_msg1}</p>
+        <p class="muted">${T[lang].profile_offline_msg2}</p>
+        <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+      </div>`;
+    resetScroll('profile-screen');
+    return;
+  }
+
+  // avatar e nível são markup fixo/confiável (innerHTML tudo bem); o nick
+  // sempre via textContent (nunca innerHTML) pra não abrir brecha de injeção.
+  // Cada pedaço tem seu próprio <span> dedicado (profile-nick-avatar/-text/-lv)
+  // e é sempre SUBSTITUÍDO (nunca acrescentado) — antes usava insertAdjacentHTML
+  // direto no #profile-nick, o que podia deixar ícone duplicado se essa função
+  // rodasse mais de uma vez em sequência (ex.: ao trocar a medalha equipada).
+  $('profile-nick-avatar').innerHTML = avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 42) + ' ';
+  $('profile-nick-text').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
+  applyNickFrame($('profile-nick'), stats);
+
+  if (isOther) {
+    $('profile-summary').textContent = '';
+    renderProfileFriendAction(viewUid);
+    const ranks = await computeModeRanks(viewUid);
+    const ranksHtml = renderPublicProfileRanks(stats, ranks);
+    let html = '';
+    if (ranksHtml) html += profileSectionLabel(T[lang].profile_ranks_section) + ranksHtml;
+    html += profileSectionLabel(T[lang].profile_badges_section) + renderPublicProfileBadges(stats);
+    // painel só pra admin (myData.admin, setado à mão no Firebase Console) —
+    // último login, últimos duelos e amigos de QUALQUER jogador, com opção de
+    // editar o nick e banir a conta, tudo validado de novo no servidor (ver
+    // requireAdmin em functions/index.js — o cliente decidir mostrar isso aqui
+    // é só conveniência de UI, não é o que garante a permissão)
+    if (myData.admin === true) {
+      html += profileSectionLabel('🛠️ Admin') + `<div class="card" id="admin-panel-body"><div class="muted" style="text-align:center;">Carregando dados de admin...</div></div>`;
+    }
+    $('profile-body').innerHTML = html;
+    resetScroll('profile-screen');
+    if (myData.admin === true) renderAdminPanel(viewUid, viewNick || '', stats);
+    return;
+  }
+
+  $('profile-friend-action').style.display = 'none';
+  $('profile-friend-action').innerHTML = '';
+  $('profile-friend-status').textContent = '';
+
+  // conta cada NÍVEL desbloqueado dentro de cada categoria (não só se a categoria
+  // foi iniciada) — cada categoria tem 6 níveis, então o total é 4×6 = 24
+  const unlockedCount = BADGE_ORDER.reduce((n, k) => {
+    const t = unlockedTier(BADGE_DEFS[k], stats);
+    return n + (t >= 0 ? t + 1 : 0);
+  }, 0);
+  const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
+  $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
+  $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(key, BADGE_DEFS[key], stats)).join('');
+  // ferramenta avulsa só pra admin (myData.admin, setado à mão no Firebase
+  // Console) — corrige pendingPigmentos de quem já tinha prêmio parado na
+  // caixa de entrada de antes desse campo existir (ver comentário da
+  // function backfillPendingPigmentos em functions/index.js). Idempotente:
+  // pode rodar mais de uma vez sem risco.
+  if (myData.admin === true) {
+    $('profile-body').insertAdjacentHTML('beforeend', `
+      <div class="card" style="text-align:left;">
+        <b>🛠️ Admin — ferramentas gerais</b>
+        <p class="muted" style="margin-top:6px;">Recalcula pendingPigmentos de todo mundo a partir do que ainda está na caixa de entrada de cada um. Seguro rodar mais de uma vez.</p>
+        <button class="secondary" onclick="runBackfillPendingPigmentos(this)">Rodar backfill de pigmentos pendentes</button>
+        <div class="muted" id="backfill-status" style="margin-top:6px;"></div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <b>🛠️ Admin — atualizar ranking agora</b>
+        <p class="muted" style="margin-top:6px;">Recalcula o retrato do ranking (scoresSnapshot) na hora, em vez de esperar até 5min pelo agendamento automático. Útil pra testar mudanças recém-implantadas nas functions.</p>
+        <button class="secondary" onclick="runAdminRecomputeSnapshot(this)">Recalcular ranking agora</button>
+        <div class="muted" id="recompute-snapshot-status" style="margin-top:6px;"></div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <b>🛠️ Admin — editar meu nível</b>
+        <p class="muted" style="margin-top:6px;">Define seu XP direto pro mínimo do nível escolhido. Só afeta a sua própria conta — validado de novo no servidor (ver adminSetXp em functions/index.js).</p>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <input type="number" id="admin-set-level-input" min="1" max="500" step="1" value="${levelFromXp(myXp())}" style="flex:1;">
+          <button class="secondary" style="flex:none;" onclick="runAdminSetOwnLevel(this)">Definir nível</button>
+        </div>
+        <div class="muted" id="admin-set-level-status" style="margin-top:6px;"></div>
+      </div>`);
+  }
+  $('profile-body').insertAdjacentHTML('beforeend', `
+    <div class="card" style="text-align:left;">
+      <b data-i18n="delete_account_title">⚠️ Excluir conta</b>
+      <p class="muted" style="margin-top:6px;" data-i18n="delete_account_desc">Apaga permanentemente sua conta e todos os dados vinculados a ela (pontuações, XP, amigos, medalhas, Pigmentos). Essa ação não pode ser desfeita.</p>
+      <button class="secondary" style="border-color:var(--neon-red,#ff2d6b); color:var(--neon-red,#ff2d6b); margin-top:6px;" onclick="startDeleteMyAccount(this)" data-i18n="delete_account_btn">Excluir minha conta</button>
+      <div class="muted" id="delete-account-status" style="margin-top:6px;"></div>
+    </div>`);
+  resetScroll('profile-screen');
+  // agora que a pessoa viu o próprio perfil (com todas as categorias e a
+  // bolinha mostrando qual tinha novidade), marca tudo como visto — some a
+  // bolinha do nick até desbloquear algo novo de novo
+  markAllBadgesSeen();
+}
+
+function renderBadgeCard(key, def, stats) {
+  const tier = unlockedTier(def, stats);
+  const val = def.metric(stats);
+  const maxed = tier === def.tiers.length - 1;
+  const color = tier >= 0 ? TIER_COLORS[tier] : '#0f3460';
+  const currentName = tier >= 0 ? def.names[lang][tier] : T[lang].badge_not_unlocked;
+  const newCount = newBadgeCountFor(key); // quantos níveis novos essa categoria tem ainda não vistos
+
+  let progressHtml;
+  if (maxed) {
+    progressHtml = `<div class="muted" style="text-align:left;">${T[lang].badge_maxed}</div>`;
+  } else {
+    const nextThreshold = def.tiers[tier + 1];
+    if (def.inverse) {
+      const posText = (val === Infinity) ? T[lang].badge_rank_unknown : T[lang].badge_rank_current(val);
+      progressHtml = `<div class="muted" style="text-align:left;">${posText}<br>${T[lang].badge_next_goal(def.desc(nextThreshold))}</div>`;
+    } else {
+      const pct = Math.min(100, Math.max(0, (val / nextThreshold) * 100));
+      progressHtml = `
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="muted" style="text-align:left;">${val} / ${nextThreshold} — ${def.desc(nextThreshold)}</div>`;
+    }
+  }
+
+  // qual nível desta categoria está sendo exibido no ranking agora (-1 se a
+  // categoria nem está equipada) — não precisa ser o mais alto desbloqueado,
+  // ver setEquippedBadgeTier/equippedBadgeLabel
+  const equippedTier = (myData.equippedBadge === key)
+    ? ((typeof myData.equippedBadgeTier === 'number' && myData.equippedBadgeTier <= tier) ? myData.equippedBadgeTier : tier)
+    : -1;
+
+  // cada chip DESBLOQUEADO é clicável — escolhe direto aquele nível pra
+  // exibir no ranking (não precisa ser o mais alto). Clicar no que já está
+  // sendo exibido desequipa a categoria inteira.
+  const chips = def.tiers.map((th, i) => {
+    const unlocked = i <= tier;
+    const lockOverlay = unlocked ? '' : '<span class="chip-lock">🔒</span>';
+    const isShown = i === equippedTier;
+    const clickAttr = unlocked ? ` onclick="setEquippedBadgeTier('${key}', ${i})"` : '';
+    const cursorStyle = unlocked ? 'cursor:pointer;' : '';
+    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}${isShown ? ' equipped' : ''}" style="background:${TIER_COLORS[i]};${cursorStyle}" title="${def.names[lang][i]}"${clickAttr}>${def.icon}</span>${lockOverlay}</span>`;
+  }).join('');
+
+  // legenda embaixo dos chips — só existe pra medalha já desbloqueada (tier >= 0)
+  let equipHtml = '';
+  if (tier >= 0) {
+    equipHtml = (equippedTier >= 0)
+      ? `<div class="muted" style="text-align:left; margin-top:6px;">${T[lang].profile_badge_equipped_btn}: ${badgePillHtml(def, equippedTier)}</div>`
+      : `<div class="muted" style="text-align:left; margin-top:6px;">${T[lang].profile_badge_equip_btn}</div>`;
+  }
+
+  return `
+    <div class="card badge-card">
+      <div class="badge-card-head">
+        <span class="badge-chip big" style="background:${color}; position:relative;">${def.icon}${newCount > 0 ? `<span class="notif-dot">${newCount}</span>` : ''}</span>
+        <div>
+          <div class="name">${def.label[lang]}</div>
+          <div class="muted" style="text-align:left;">${currentName}</div>
+        </div>
+      </div>
+      ${progressHtml}
+      <div class="chip-row">${chips}</div>
+      ${equipHtml}
+    </div>`;
+}
+
+// escolhe qual medalha (já desbloqueada) E QUAL NÍVEL dela aparece ao lado do
+// próprio nick no ranking — não precisa ser o nível mais alto desbloqueado
+// (ex.: já tem "Imortal" mas prefere mostrar "Lenda"). Grava direto em
+// scores/{uid} (permitido pelas regras, ver isValidEquippedBadge/
+// isValidEquippedBadgeTier no firestore.rules); é seguro sem Cloud Function
+// porque equippedBadgeLabel() sempre reconfere unlockedTier() contra as
+// stats reais antes de mostrar qualquer coisa (clicar num nível não
+// desbloqueado de verdade nunca chega a acontecer pela UI, mas mesmo que
+// alguém forje isso direto no Firestore, não muda o que aparece pra ninguém).
+window.setEquippedBadgeTier = async (key, tierIdx) => {
+  if (offline || !currentUser || !myData.nick) return;
+  // clicar no nível que já está sendo exibido desequipa a categoria inteira
+  // (volta a não mostrar nada); clicar em outro nível (da mesma categoria ou
+  // de outra) troca na hora, sem precisar desequipar antes
+  const alreadyShown = myData.equippedBadge === key
+    && ((typeof myData.equippedBadgeTier === 'number' ? myData.equippedBadgeTier : unlockedTier(BADGE_DEFS[key], myData)) === tierIdx);
+  const nextKey = alreadyShown ? null : key;
+  const nextTier = alreadyShown ? null : tierIdx;
+  myData.equippedBadge = nextKey;
+  myData.equippedBadgeTier = nextTier;
+  // renderProfile() sempre chama resetScroll('profile-screen') no final, que
+  // joga a página pro topo — é o certo ao ENTRAR na tela, mas aqui a pessoa já
+  // está nela só trocando a medalha, então guarda a posição e restaura logo
+  // depois, pra não pular a tela pra cima.
+  const scrollY = window.scrollY;
+  renderProfile(); // atualiza o chip/legenda na hora, antes mesmo do Firestore confirmar
+  window.scrollTo(0, scrollY);
+  try {
+    await setDoc(doc(db, 'scores', currentUser.uid), { equippedBadge: nextKey, equippedBadgeTier: nextTier, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) {
+    // não foi possível salvar agora — a escolha fica só localmente até a próxima tentativa
+  }
+};
+
+async function submitPendingScore() {
+  if (!pendingScore || !currentUser || !myData.nick) return;
+  const { mode: m, score: s, xp: pendingXp = 0 } = pendingScore;
+  pendingScore = null;
+
+  // pontuação feita antes de ter conta — não existe sessão de servidor pra validar
+  // o tempo (foi jogada offline), mas o servidor ainda valida o valor e só ele grava
+  try {
+    const res = await callClaimPendingScore({ mode: m, score: s, xpGain: pendingXp });
+    const d = res.data || {};
+    if (d.xpEarned) myData.xp = (myData.xp || 0) + d.xpEarned;
+    if (d.isNewRecord) {
+      myData[m] = s;
+      myData[m + 'At'] = Timestamp.now(); // mesmo motivo do persistGameResult() acima
+      if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); }
+    }
+  } catch {}
+}
+
+/* ================== ranking ================== */
+window.showRanking = (tab) => {
+  show('ranking-screen');
+  loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
+};
+
+const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', level: 'xp', geral: 'total', divulgador: 'referrals' };
+
+const RANKING_PAGE_SIZE = 20;
+let rankingRows = [];
+let rankingPage = 0;
+let rankingTab = 'geral';
+let rankingScope = 'geral'; // 'geral' = todo mundo (como já era), 'amigos' = só quem está na sua lista de amigos (+ você)
+
+window.setRankingScope = (scope) => {
+  rankingScope = scope;
+  loadRanking(rankingTab);
+};
+
+window.loadRanking = async (m) => {
+  rankingTab = m;
+  $('ranking-select').value = m;
+
+  // desafio diário tem sua própria estrutura (2 abas, sem escopo amigos/todos
+  // — ver loadDailyTodayRanking/loadDailyAlltimeRanking mais abaixo)
+  $('daily-subtabs').style.display = (m === 'daily') ? '' : 'none';
+  $('scope-tabs-row').style.display = (m === 'daily') ? 'none' : '';
+  $('daily-prizes-legend').style.display = (m === 'daily') ? '' : 'none';
+  if (m === 'daily') {
+    renderDailyPrizesLegend();
+    $('ranking-pagination').innerHTML = '';
+    $('ranking-explain').textContent = ''; // sem frase explicativa no ranking do desafio diário
+    dailyRankSubtab = 'today';
+    $('daily-subtab-today-btn').classList.add('active');
+    $('daily-subtab-alltime-btn').classList.remove('active');
+    $('ranking-table-card').style.display = '';
+    $('daily-alltime-card').style.display = 'none';
+    loadDailyTodayRanking();
+    return;
+  }
+
+  // saindo do desafio diário — "ranking-table-card" é compartilhado com o
+  // daily-today, e "daily-alltime-card" (Salão da Fama) só é escondido no
+  // ramo acima; sem isso, sair do Salão da Fama pra outro ranking deixa a
+  // lista escondida mesmo com os dados carregados certinho
+  $('ranking-table-card').style.display = '';
+  $('daily-alltime-card').style.display = 'none';
+
+  $('scope-geral-btn').classList.toggle('active', rankingScope === 'geral');
+  $('scope-amigos-btn').classList.toggle('active', rankingScope === 'amigos');
+  $('ranking-explain').textContent = (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
+  $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : (m === 'level') ? T[lang].points_header_level : T[lang].points_header;
+  const field = RANK_FIELDS[m];
+  const body = $('ranking-body');
+  $('ranking-pagination').innerHTML = '';
+
+  // ranking de amigos exige conta (não dá pra ter amigos jogando sem login)
+  if (rankingScope === 'amigos' && (offline || !currentUser)) {
+    body.innerHTML = `
+      <tr><td colspan="3">
+        <div class="card" style="text-align:center;">
+          <p>${T[lang].profile_offline_msg1}</p>
+          <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+        </div>
+      </td></tr>`;
+    rankingRows = [];
+    resetScroll('ranking-screen');
+    return;
+  }
+
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  try {
+    const all = await fetchAllScores();
+    // filtro de amigos usa o mesmo cache já lido pra tela de amigos — sem leitura extra
+    const friendUids = (rankingScope === 'amigos') ? new Set(Object.keys(await fetchMyFriends())) : null;
+    const rows = [];
+    for (const r of all) {
+      if (friendUids && r.uid !== currentUser.uid && !friendUids.has(r.uid)) continue;
+      const data = rowData(r);
+      // no ranking de nível todo mundo entra (mesmo com 0 XP)
+      if (m === 'level') {
+        rows.push({ uid: r.uid, nick: data.nick, pts: data.xp || 0, at: null, stats: data });
+      } else if (data[field] > 0) {
+        rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
+      }
+    }
+    // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
+    // TESTE.HTML: admin também entra aqui de propósito (ver fetchAllScores).
+    // Banido não entra nem aqui.
+    if (!offline && currentUser && myData.nick && myData.banned !== true && !rows.some(r => r.uid === currentUser.uid)) {
+      if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
+      else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData, replaySessionId: myData[field + 'ReplaySessionId'] });
+    }
+    rows.sort(compareRankRows);
+    rankingRows = rows;
+    rankingPage = 0;
+    renderRankingPage();
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error}</td></tr>`;
+  }
+};
+
+function renderRankingPage() {
+  const body = $('ranking-body');
+  const start = rankingPage * RANKING_PAGE_SIZE;
+  const pageRows = rankingRows.slice(start, start + RANKING_PAGE_SIZE);
+
+  body.innerHTML = '';
+  pageRows.forEach((r, i) => {
+    const pos = start + i + 1;
+    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const ptsDisplay = r.pts;
+    const tr = document.createElement('tr');
+    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
+    const nickCell = tr.children[1];
+    const rankingBadgeHtml = (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats);
+    buildRankRowNick(nickCell, r, rankingBadgeHtml, 'ranking-screen');
+    applyRowTheme(tr, r.stats);
+    if (r.replaySessionId) {
+      const ptsCell = tr.children[2];
+      const replayBtn = document.createElement('button');
+      replayBtn.className = 'replay-btn';
+      replayBtn.textContent = '▶️';
+      replayBtn.title = T[lang].btn_watch_replay;
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
+      ptsCell.appendChild(replayBtn);
+    }
+    body.appendChild(tr);
+  });
+  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[lang].ranking_no_friends : T[lang].ranking_no_players}</td></tr>`;
+
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  const pag = $('ranking-pagination');
+  if (totalPages <= 1) {
+    pag.innerHTML = '';
+  } else {
+    pag.innerHTML = `
+      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_prev}</button>
+      <span class="muted">${T[lang].pagination_page(rankingPage + 1, totalPages)}</span>
+      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
+  }
+  resetScroll('ranking-screen');
+}
+
+window.rankingGoPage = (p) => {
+  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
+  rankingPage = Math.max(0, Math.min(p, totalPages - 1));
+  renderRankingPage();
+};
+
+/* ================== ranking do desafio diário ==================
+   "Hoje": lê dailyScores filtrando por dateStr==hoje (índice simples, sem
+   precisar de índice composto) e ordena no JS pela melhor pontuação.
+   "Salão da Fama": reaproveita o mesmo fetchAllScores() (coleção scores) que
+   já alimenta os outros rankings — dailyWins/pigmentos são só mais dois
+   campos daquele mesmo documento. */
+async function loadDailyTodayRanking() {
+  const body = $('ranking-body');
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  try {
+    const dateStr = dailyLocalDateStr();
+    const snap = await getDocs(query(collection(db, 'dailyScores'), where('dateStr', '==', dateStr)));
+    const all = await fetchAllScores(); // só pra enriquecer com nível/chip de quem já está no cache (2 min)
+    const statsByUid = {};
+    all.forEach(r => { statsByUid[r.uid] = rowData(r); });
+    const rows = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if ((data.attempts || 0) <= 0 || !data.nick) return;
+      const isMe = currentUser && data.uid === currentUser.uid;
+      // aproveita que a própria linha já vem nesse mesmo snap (é só mais um
+      // documento de dailyScores) pra atualizar dailyAttemptsUsed com dado
+      // fresco direto do servidor — usado logo abaixo em renderDailyTodayPage
+      // pra decidir se os botões de replay já podem aparecer (ver comentário lá)
+      if (isMe) dailyAttemptsUsed = data.attempts || 0;
+      // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
+      // testar/depurar o ranking do desafio diário com a própria conta) — no
+      // index.html (produção) a exclusão de admin continua valendo
+      const stats = statsByUid[data.uid] || (isMe ? myData : null);
+      // banido não aparece nem no próprio ranking dele: statsByUid já veio
+      // filtrado (fetchAllScores exclui banned), então isso só cobre o caso
+      // isMe acima, que usa myData direto e não passa por esse filtro
+      if (!stats || stats.banned === true) return;
+      // bestScoreAt só avança no servidor quando a tentativa bate um recorde
+      // novo do dia (ver submitDailyResult em functions/index.js) — não é só
+      // "última tentativa enviada", então dá pra usar de verdade pra
+      // desempatar por "quem pontuou primeiro", igual já é feito nos outros
+      // rankings (compareRankRows)
+      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, stats, replaySessionId: data.bestScoreSessionId });
+    });
+    rows.sort(compareRankRows);
+    dailyTodayRows = rows;
+    dailyTodayPage = 0;
+    renderDailyTodayPage();
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error}</td></tr>`;
+  }
+}
+function renderDailyTodayPage() {
+  const body = $('ranking-body');
+  const start = dailyTodayPage * RANKING_PAGE_SIZE;
+  const pageRows = dailyTodayRows.slice(start, start + RANKING_PAGE_SIZE);
+  body.innerHTML = '';
+  pageRows.forEach((r, i) => {
+    const pos = start + i + 1;
+    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const tr = document.createElement('tr');
+    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
+    const nickCell = tr.children[1];
+    buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
+    applyRowTheme(tr, r.stats);
+    // botão de replay só aparece depois que VOCÊ (quem está olhando) já usou
+    // as 3 tentativas de hoje — a rodada do desafio diário é igual pra todo
+    // mundo, então assistir o replay de alguém ANTES de terminar suas
+    // próprias tentativas seria colar (você veria o tabuleiro inteiro de
+    // antemão). Não depende de quantas tentativas o DONO da linha usou, só
+    // das suas.
+    if (r.replaySessionId && dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
+      const ptsCell = tr.children[2];
+      const replayBtn = document.createElement('button');
+      replayBtn.className = 'replay-btn';
+      replayBtn.textContent = '▶️';
+      replayBtn.title = T[lang].btn_watch_replay;
+      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
+      ptsCell.appendChild(replayBtn);
+    }
+    body.appendChild(tr);
+  });
+  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
+  const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
+  const pag = $('ranking-pagination');
+  pag.innerHTML = totalPages <= 1 ? '' : `
+    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage - 1})" ${dailyTodayPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_prev}</button>
+    <span class="muted">${T[lang].pagination_page(dailyTodayPage + 1, totalPages)}</span>
+    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage + 1})" ${dailyTodayPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
+  resetScroll('ranking-screen');
+}
+window.dailyTodayGoPage = (p) => {
+  const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
+  dailyTodayPage = Math.max(0, Math.min(p, totalPages - 1));
+  renderDailyTodayPage();
+};
+
+/* ================== tela de replay ==================
+   reconstrói uma partida gravada (ver replayRounds/replayMouse lá em cima e
+   saveMatchReplay no servidor) — não recalcula nem valida nada, só lê de
+   volta o que já está salvo em replays/{sessionId} e desenha de novo.
+   Rodada: cada round.sq já traz o tabuleiro inteiro resolvido (ver
+   poolItemId/poolItemById), então basta reconstruir os quadrados igual o
+   newRound de verdade fez na hora — sem precisar re-sortear nada. Cursor:
+   anda por interpolação linear entre as duas amostras do rastro do mouse
+   que cercam o instante atual (ponteiro pra frente amortizado O(1); só
+   reseta e escaneia de novo se o tempo "voltar", ao arrastar a barra). */
+let replayData = null;      // documento cru de replays/{sessionId}
+let replayPlaying = false;
+let replayAnimId = null;
+let replayClockMs = 0;      // relógio de reprodução, em ms desde o início da partida gravada
+let replayLastFrameAt = 0;  // performance.now() do último frame processado
+let replayRoundIdx = -1;    // índice da rodada desenhada agora (evita redesenhar à toa)
+let replayMouseIdx = 0;     // ponteiro pra frente no rastro do mouse
+let replayTotalMs = 0;      // duração total da reprodução
+let replayTargetSquareEl = null; // elemento do quadrado certo da rodada atual — usado pra disparar o flash de clique
+let replayLastFlashIdx = -1;     // índice da última rodada que já disparou o flash de clique (evita repetir ao redesenhar)
+const REPLAY_CLICK_FLASH_MS = 300; // janela, antes da rodada trocar, em que o "clique" é simulado (visual + som)
+
+function renderReplaySquares(round, idx) {
+  const rmode = replayData.mode;
+  // replay do desafio diário (kind:'daily', ver saveMatchReplay em
+  // functions/index.js) usa a paleta estendida do desafio diário nos modos
+  // Clássico/Reverso — mesmo "mode" que o jogo livre usa, então só dá pra
+  // saber qual paleta reconstruir checando esse flag à parte. Usa a paleta
+  // DO DIA em que a partida foi jogada (createdAt), não a de hoje — senão um
+  // dia com DAILY_PALETTE_OVERRIDE (ver dailyPoolFor) faz o replay tentar
+  // achar chaves tipo 'blue'/'cyan' numa paleta que não tem essas chaves,
+  // caindo todo no pool[0] (era isso que deixava tudo amarelo).
+  const replayDateStr = (replayData.createdAt && typeof replayData.createdAt.toMillis === 'function')
+    ? dailyLocalDateStr(new Date(replayData.createdAt.toMillis()))
+    : dailyLocalDateStr();
+  const pool = (replayData.kind === 'daily' && (rmode === 'classic' || rmode === 'reverse'))
+    ? (DAILY_PALETTE_OVERRIDE[replayDateStr] || DAILY_COLORS)
+    : poolFor(rmode);
+  const grid = $('replay-grid');
+  grid.innerHTML = '';
+  replayTargetSquareEl = null;
+  let targetItem = null;
+  let pairA = null, pairB = null; // só usados no modo Trio (ver abaixo)
+  round.sq.forEach(cell => {
+    const el = document.createElement('div');
+    el.className = 'square';
+    if (rmode === 'trio') {
+      const sq = { bg: poolItemById(pool, cell.bg), tc: poolItemById(pool, cell.tc), word: poolItemById(pool, cell.word) };
+      renderTrioSquare(el, sq);
+      if (cell.pairA) { pairA = poolItemById(pool, cell.pairA); pairB = poolItemById(pool, cell.pairB); }
+    } else {
+      const item = poolItemById(pool, cell.id);
+      const paired = poolItemById(pool, cell.paired);
+      if (rmode === 'shapes' || rmode === 'shapes-reverse') {
+        const shapeSide = (rmode === 'shapes') ? item : paired;
+        const wordSide  = (rmode === 'shapes') ? paired : item;
+        el.classList.add('shape-square', shapeSide.shapeClass);
+        el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+      } else {
+        const bg   = (rmode === 'classic') ? item : paired;
+        const word = (rmode === 'classic') ? paired : item;
+        el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
+        el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+        el.innerHTML = `<span class="word">${cName(word)}</span>`;
+      }
+      if (cell.isTarget) targetItem = item;
+    }
+    // não marca mais o quadrado certo o tempo todo (era um contorno
+    // tracejado fixo) — agora o quadrado certo só se destaca no instante
+    // exato do clique, via triggerReplayClickFlash abaixo
+    if (cell.isTarget) replayTargetSquareEl = el;
+    grid.appendChild(el);
+  });
+  // instrução igual à da partida de verdade (ver newRound/newTrioRound): na
+  // primeira rodada (idx 0) nomeia o alvo (INSTR_FIRST — ainda não tem o que
+  // memorizar); nas seguintes é genérica (INSTR_NEXT — supõe que quem jogou
+  // memorizou o alvo no fim da rodada anterior), mesmo texto/i18n de sempre
+  const INSTR_FIRST = {
+    classic: () => T[lang].instr_first_classic(cName(targetItem)),
+    reverse: () => T[lang].instr_first_reverse(cName(targetItem)),
+    shapes: () => T[lang].instr_first_shapes(cName(targetItem)),
+    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(targetItem)),
+    // fallback pra replays gravados antes do fix do sanitizeReplayRounds no
+    // servidor (pairA/pairB descartados por engano) — em vez de travar toda
+    // a tela com cName(null), cai pra instrução genérica do modo Trio
+    trio: () => (pairA && pairB) ? T[lang].instr_first_trio(cName(pairA), cName(pairB)) : T[lang].instr_next_trio,
+  };
+  const INSTR_NEXT = {
+    classic: T[lang].instr_next_classic,
+    reverse: T[lang].instr_next_reverse,
+    shapes: T[lang].instr_next_shapes,
+    'shapes-reverse': T[lang].instr_next_shapes_reverse,
+    trio: T[lang].instr_next_trio,
+  };
+  $('replay-instruction').textContent = (idx === 0) ? INSTR_FIRST[rmode]() : INSTR_NEXT[rmode];
+}
+
+// dispara o "efeito de clique" (flash verde + som) no quadrado certo da
+// rodada idx, no instante em que ela é sincronizada com o clique de verdade
+// que a encerrou — ver chamada em renderReplayFrame
+function triggerReplayClickFlash(idx) {
+  if (replayTargetSquareEl) {
+    replayTargetSquareEl.classList.remove('replay-click-flash');
+    void replayTargetSquareEl.offsetWidth; // força reflow pra poder retriggerar a animação se o elemento ainda tiver a classe de uma execução anterior
+    replayTargetSquareEl.classList.add('replay-click-flash');
+  }
+  sfx.correct(idx + 1); // idx é a rodada que terminou; idx+1 é o placar resultante do clique — mesmo valor usado na partida real (ver handleClick)
+}
+
+function updateReplayCursor(ms) {
+  const cursor = $('replay-cursor');
+  const trail = replayData.mouseTrail;
+  if (!trail || trail.length === 0) { cursor.style.display = 'none'; return; }
+  cursor.style.display = '';
+  // amostras vêm do Firestore como objetos {x,y,t} (arrays-de-array não são
+  // permitidos como valor de campo — ver sanitizeReplayMouseTrail no servidor)
+  if (replayMouseIdx > 0 && trail[replayMouseIdx].t > ms) replayMouseIdx = 0; // tempo voltou (arrastou a barra) — reescaneia
+  while (replayMouseIdx < trail.length - 1 && trail[replayMouseIdx + 1].t <= ms) replayMouseIdx++;
+  const a = trail[replayMouseIdx];
+  const b = trail[Math.min(replayMouseIdx + 1, trail.length - 1)];
+  let xPct = a.x, yPct = a.y;
+  if (b !== a && b.t > a.t) {
+    const frac = Math.max(0, Math.min(1, (ms - a.t) / (b.t - a.t)));
+    xPct = a.x + (b.x - a.x) * frac;
+    yPct = a.y + (b.y - a.y) * frac;
+  }
+  const grid = $('replay-grid');
+  cursor.style.left = (xPct * grid.offsetWidth) + 'px';
+  cursor.style.top = (yPct * grid.offsetHeight) + 'px';
+}
+
+function formatReplayTime(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// duração do cronômetro da rodada idx — não foi gravada em lugar nenhum,
+// mas não precisa: é sempre 10s na primeira rodada e encolhe 5% a cada
+// acerto (ver "duration *= 0.95" em handleClick/dailyHandleClick), uma regra
+// fixa do jogo, então dá pra recalcular só a partir do índice da rodada
+function replayRoundDuration(idx) {
+  return 10000 * Math.pow(0.95, idx);
+}
+
+// ▶️ pausado no meio | ⏸️ tocando | 🔁 chegou ao fim (clicar recomeça do zero)
+function updateReplayPlayIcon() {
+  $('replay-play-btn').textContent = replayPlaying ? '⏸️' : (replayClockMs >= replayTotalMs ? '🔁' : '▶️');
+}
+
+function renderReplayFrame(ms) {
+  if (!replayData) return;
+  const rounds = replayData.rounds;
+  let idx = 0;
+  for (let i = 0; i < rounds.length; i++) { if (rounds[i].t <= ms) idx = i; else break; }
+  if (idx !== replayRoundIdx) {
+    renderReplaySquares(rounds[idx], idx);
+    replayRoundIdx = idx;
+  }
+  // simula o clique (flash + som) perto do fim da rodada idx, no instante em
+  // que a rodada seguinte de verdade começou (rounds[idx+1].t) — só existe
+  // pra rodadas que realmente tiveram um acerto (a última rodada gravada
+  // nunca teve, já que terminou em erro/tempo esgotado, sem gerar próxima)
+  const nextRoundT = (idx + 1 < rounds.length) ? rounds[idx + 1].t : null;
+  if (nextRoundT !== null && replayLastFlashIdx !== idx && ms >= nextRoundT - REPLAY_CLICK_FLASH_MS) {
+    triggerReplayClickFlash(idx);
+    replayLastFlashIdx = idx;
+  }
+  // barra de tempo da rodada — mesma lógica visual do jogo de verdade
+  // (timer-fill encolhendo de 100% a 0%), só que aqui é 100% calculada a
+  // partir do relógio da reprodução em vez de um requestAnimationFrame
+  // próprio, pra ficar sempre sincronizada com o resto da tela
+  const elapsedInRound = ms - rounds[idx].t;
+  const roundPct = Math.max(0, 1 - elapsedInRound / replayRoundDuration(idx)) * 100;
+  $('replay-timer-fill').style.width = roundPct + '%';
+  $('replay-score').textContent = idx;
+  $('replay-time-label').textContent = `${formatReplayTime(ms)} / ${formatReplayTime(replayTotalMs)}`;
+  $('replay-scrub').value = String(Math.round(ms));
+  updateReplayCursor(ms);
+}
+
+function replayTick(now) {
+  if (!replayPlaying) return;
+  const dt = now - replayLastFrameAt;
+  replayLastFrameAt = now;
+  replayClockMs += dt;
+  if (replayClockMs >= replayTotalMs) {
+    replayClockMs = replayTotalMs;
+    renderReplayFrame(replayClockMs);
+    replayPlaying = false;
+    cancelAnimationFrame(replayAnimId);
+    updateReplayPlayIcon(); // chegou ao fim — vira 🔁 (recomeçar)
+    return;
+  }
+  renderReplayFrame(replayClockMs);
+  replayAnimId = requestAnimationFrame(replayTick);
+}
+
+function startReplayClock() {
+  replayPlaying = true;
+  updateReplayPlayIcon();
+  replayLastFrameAt = performance.now();
+  replayAnimId = requestAnimationFrame(replayTick);
+}
+function stopReplayClock() {
+  replayPlaying = false;
+  cancelAnimationFrame(replayAnimId);
+}
+
+// "27/07/2026, 14:32" no idioma atual — mesmo padrão de fmtDateTime (painel
+// de admin), mas com locale certo pra cada idioma (essa tela é pública, não
+// só pra você) e sem depender de admin:true
+function formatReplayDateTime(ts) {
+  if (!ts || typeof ts.toMillis !== 'function') return '';
+  const loc = lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'pt-BR';
+  return new Date(ts.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+window.openReplay = async (sessionId, nick, stats) => {
+  show('replay-screen');
+  $('replay-meta').innerHTML = '';
+  $('replay-loading').style.display = '';
+  $('replay-error').style.display = 'none';
+  $('replay-content').style.display = 'none';
+  stopReplayClock();
+  replayData = null;
+  try {
+    const snap = await getDoc(doc(db, 'replays', sessionId));
+    if (!snap.exists()) throw new Error('not found');
+    const data = snap.data();
+    if (!Array.isArray(data.rounds) || data.rounds.length === 0) throw new Error('empty');
+    replayData = data;
+    // nick, nível, modo e data/hora tudo na mesma linha — nick clicável (igual
+    // aos outros nicks de ranking) abre o perfil de quem jogou, e volta pra
+    // esta mesma tela de replay ao fechar. "stats" vem da própria linha do
+    // ranking que abriu o replay (ver rowData nos call sites), sem precisar
+    // de leitura extra — e é o mesmo objeto que openProfileFromRanking espera
+    const metaEl = $('replay-meta');
+    const nickSpan = document.createElement('span');
+    nickSpan.textContent = nick || '';
+    nickSpan.className = 'nick-click';
+    nickSpan.style.color = '#cfd8ff';
+    nickSpan.style.fontWeight = '700';
+    nickSpan.onclick = () => openProfileFromRanking({ uid: data.uid, nick, stats }, 'replay-screen');
+    metaEl.appendChild(nickSpan);
+    const rest = [lvChip(stats && stats.xp), modeLabel(data.mode), formatReplayDateTime(data.createdAt)].filter(Boolean);
+    if (rest.length) {
+      metaEl.appendChild(document.createTextNode(' · '));
+      const restSpan = document.createElement('span');
+      restSpan.innerHTML = rest.join(' · ');
+      metaEl.appendChild(restSpan);
+    }
+    replayTotalMs = data.rounds[data.rounds.length - 1].t + 3000; // segura a última rodada na tela por mais um instante
+    replayRoundIdx = -1;
+    replayMouseIdx = 0;
+    replayLastFlashIdx = -1;
+    replayClockMs = 0;
+    $('replay-scrub').max = String(Math.round(replayTotalMs));
+    $('replay-scrub').value = '0';
+    $('replay-loading').style.display = 'none';
+    $('replay-content').style.display = 'flex';
+    renderReplayFrame(0);
+    startReplayClock();
+  } catch (e) {
+    console.error('[replay] falha ao carregar', e); // log temporário pra diagnóstico — remover depois
+    $('replay-loading').style.display = 'none';
+    $('replay-error').style.display = '';
+  }
+};
+
+window.closeReplay = () => {
+  stopReplayClock();
+  replayData = null;
+  show('ranking-screen');
+};
+
+window.toggleReplayPlayback = () => {
+  if (!replayData) return;
+  if (replayPlaying) {
+    stopReplayClock();
+    updateReplayPlayIcon();
+  } else {
+    if (replayClockMs >= replayTotalMs) replayClockMs = 0; // no fim, ▶️/🔁 sempre recomeça do zero
+    startReplayClock();
+  }
+};
+
+window.scrubReplay = (val) => {
+  if (!replayData) return;
+  stopReplayClock();
+  replayClockMs = Math.max(0, Math.min(Number(val), replayTotalMs));
+  updateReplayPlayIcon();
+  replayRoundIdx = -1; // força redesenho mesmo se cair na mesma rodada de antes
+  replayLastFlashIdx = -1; // permite o flash de clique disparar de novo se arrastar de volta pra essa janela
+  renderReplayFrame(replayClockMs);
+};
+
+async function loadDailyAlltimeRanking() {
+  const body = $('daily-alltime-body');
+  body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].loading_text}</td></tr>`;
+  try {
+    // Salão da Fama sempre lê AO VIVO (fetchScoresLive), não o retrato de
+    // 5min nem o cache de fetchAllScores — é o único ranking que precisa
+    // refletir dailyWins/pigmentos na hora, logo depois do resolveDailyChallenge
+    const all = await fetchScoresLive();
+    const rows = [];
+    for (const r of all) {
+      const data = rowData(r);
+      const wins = data.dailyWins || 0;
+      // pigmentos (gastável na loja) só é creditado no resgate da caixa de
+      // entrada; pendingPigmentos é creditado na hora (junto com dailyWins,
+      // ver resolveDailyChallenge) e representa o que ainda está esperando
+      // ser resgatado — somando os dois, o ranking mostra o total certo
+      // independente de a pessoa já ter aberto a caixa de entrada ou não.
+      const pig = (data.pigmentos || 0) + (data.pendingPigmentos || 0);
+      if (wins > 0 || pig > 0) rows.push({ uid: r.uid, nick: data.nick, wins, pig, stats: data });
+    }
+    // mais colunas => a ordenação mais importante é o nº de vitórias de 1º lugar
+    rows.sort((a, b) => (b.wins - a.wins) || (b.pig - a.pig));
+    dailyAlltimeRows = rows;
+    dailyAlltimePage = 0;
+    renderDailyAlltimePage();
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].ranking_error}</td></tr>`;
+  }
+}
+function renderDailyAlltimePage() {
+  const body = $('daily-alltime-body');
+  const start = dailyAlltimePage * RANKING_PAGE_SIZE;
+  const pageRows = dailyAlltimeRows.slice(start, start + RANKING_PAGE_SIZE);
+  body.innerHTML = '';
+  pageRows.forEach((r, i) => {
+    const pos = start + i + 1;
+    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+    const tr = document.createElement('tr');
+    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.wins}</td><td class="pts">${r.pig}</td>`;
+    const nickCell = tr.children[1];
+    buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
+    applyRowTheme(tr, r.stats);
+    body.appendChild(tr);
+  });
+  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].daily_no_wins_yet}</td></tr>`;
+  const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
+  const pag = $('ranking-pagination');
+  pag.innerHTML = totalPages <= 1 ? '' : `
+    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage - 1})" ${dailyAlltimePage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_prev}</button>
+    <span class="muted">${T[lang].pagination_page(dailyAlltimePage + 1, totalPages)}</span>
+    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage + 1})" ${dailyAlltimePage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
+  resetScroll('ranking-screen');
+}
+window.dailyAlltimeGoPage = (p) => {
+  const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
+  dailyAlltimePage = Math.max(0, Math.min(p, totalPages - 1));
+  renderDailyAlltimePage();
+};
+window.setDailyRankSubtab = (tab) => {
+  dailyRankSubtab = tab;
+  $('daily-subtab-today-btn').classList.toggle('active', tab === 'today');
+  $('daily-subtab-alltime-btn').classList.toggle('active', tab === 'alltime');
+  $('ranking-table-card').style.display = (tab === 'today') ? '' : 'none';
+  $('daily-alltime-card').style.display = (tab === 'alltime') ? '' : 'none';
+  if (tab === 'today') loadDailyTodayRanking(); else loadDailyAlltimeRanking();
+};
+
+/* ================== desafio diário — tela, cronômetro, jogo, caixa de entrada ==================
+   Mesmo esquema de validação do resto do jogo (sessão emitida pelo servidor,
+   validada no fim contra o tempo decorrido), mas com uma diferença central:
+   as cores de cada rodada saem de um gerador DETERMINÍSTICO (seededPick/
+   seededShuffle, semeado pela data do dia — ver hashSeed/mulberry32 lá em
+   cima), então todo mundo joga exatamente a mesma sequência no mesmo dia. */
+
+// cronômetro do desafio — mora no CARD do menu (não numa tela separada). Roda
+// pra sempre em segundo plano (mesmo padrão do heartbeat de atividade), só
+// atualiza um texto pequeno a cada segundo — não pesa nada ficar rodando
+// mesmo fora do menu.
+let dailyCardTicker = null;
+function startDailyCardTicker() {
+  if (dailyCardTicker) return;
+  renderDailyCardCountdown();
+  dailyCardTicker = setInterval(renderDailyCardCountdown, 1000);
+}
+function renderDailyCardCountdown() {
+  const live = isDailyChallengeLive();
+  // dentro da janela 00:00–00:05 (ver isDailyStartDelay), o desafio de hoje
+  // ainda não abriu mesmo já tendo estreado — mostra "Inicia em" contando
+  // pra dailyTodayStartsAtMs() em vez de "Termina em"
+  const startDelay = live && isDailyStartDelay();
+  const targetMs = !live ? dailyLaunchAtMs() : startDelay ? dailyTodayStartsAtMs() : dailyNextMidnightSaoPauloMs();
+  let msLeft = targetMs - Date.now();
+  const rolledOver = msLeft <= 0;
+  if (rolledOver) msLeft = 0;
+  const h = Math.floor(msLeft / 3600000);
+  const m = Math.floor((msLeft % 3600000) / 60000);
+  const s = Math.floor((msLeft % 60000) / 1000);
+  const label = (!live || startDelay) ? T[lang].daily_starts_in : T[lang].daily_ends_in;
+  const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+  // atualiza os DOIS lugares que mostram esse cronômetro (card do menu e a
+  // tela de introdução do desafio) — mesma informação nos dois, só muda
+  // onde está visível na hora
+  [['daily-card-countdown', 'daily-card-countdown-label'], ['daily-intro-countdown', 'daily-intro-countdown-label']].forEach(([elId, labelId]) => {
+    const el = $(elId);
+    const labelEl = $(labelId);
+    const timeEl = el && el.querySelector('.daily-badge-time');
+    if (!el || !timeEl || !labelEl) return;
+    labelEl.textContent = label;
+    timeEl.textContent = timeStr;
+  });
+
+  // virou o dia (fechou o desafio de hoje, ou estreou o desafio) — atualiza o
+  // resto do card sozinho, se o menu estiver aberto
+  if (rolledOver && $('menu-screen').classList.contains('active')) updateDailyMenuCard();
+}
+startDailyCardTicker();
+
+// clique no card do menu: antes da estreia não faz nada (o card fica só de
+// enfeite/curiosidade); depois, se ainda sobra tentativa vai direto pro jogo
+// (sem tela intermediária); se já usou as 3, manda pra caixa de entrada/
+// ranking do desafio, que é a informação útil nesse caso
+window.dailyCardClick = () => {
+  if (!isDailyChallengeLive() || isDailyStartDelay() || !dailyLevelUnlocked()) return;
+  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
+  if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
+    $('daily-blocked-msg').textContent = T[lang].daily_blocked_msg;
+    $('daily-intro').style.display = 'none';
+    $('daily-play').style.display = 'none';
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'flex';
+    show('daily-screen');
+    return;
+  }
+  showDailyIntro();
+};
+
+// tela de introdução: mostra qual modo foi sorteado pra hoje (mesmo se a
+// pessoa não tiver nível pra jogar esse modo no menu normal — o desafio
+// diário sempre valeu pra qualquer nível) + as instruções de como jogar +
+// atalho pro tutorial passo a passo. O botão de tutorial e o de "iniciar"
+// aqui usam handlers atribuídos na hora (não inline no HTML) porque este é
+// um <script type="module"> — atributos onclick inline só enxergam
+// identificadores expostos em window, e dailyMode/startTutorial/etc. não
+// precisam virar globais só por causa disso.
+window.showDailyIntro = () => {
+  dailyMode = dailyModeForToday(dailyLocalDateStr());
+  // as chaves de i18n usam "_" (mode_shapes_reverse_title), não "-" como o id
+  // do modo (shapes-reverse) — só o "shapes-reverse" precisa dessa troca
+  const modeKey = dailyMode.replace(/-/g, '_');
+  $('daily-intro-mode-title').innerHTML = T[lang][`mode_${modeKey}_title`];
+  $('daily-intro-mode-desc').innerHTML = T[lang][`mode_${modeKey}_desc`];
+  $('daily-intro-attempts').textContent = T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+  $('daily-intro-best').textContent = dailyBestScore;
+  renderDailyCardCountdown(); // atualiza o cronômetro na hora, sem esperar o próximo tique do segundo
+  $('daily-intro-tut-btn').onclick = () => startTutorial(dailyMode, { fromDaily: true });
+  $('daily-intro-start-btn').onclick = () => startDailyChallenge();
+  $('daily-countdown').style.display = 'none';
+  $('daily-play').style.display = 'none';
+  $('daily-result').style.display = 'none';
+  $('daily-blocked').style.display = 'none';
+  $('daily-intro').style.display = 'flex';
+  show('daily-screen');
+};
+
+/* -------- caixa de entrada (comunicados do jogo) --------
+   Por enquanto só existe um tipo de mensagem (prêmio do desafio diário, salvo
+   em dailyInbox/{uid}/messages), mas o ícone/popup já são genéricos pra caber
+   qualquer aviso futuro do jogo, não só do desafio diário. */
+window.showInbox = async () => {
+  if (offline || !currentUser) return;
+  $('inbox-modal').style.display = 'flex';
+  await loadInbox();
+};
+window.closeInbox = () => {
+  $('inbox-modal').style.display = 'none';
+};
+async function loadInbox() {
+  if (offline || !currentUser) return;
+  try {
+    const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
+    const msgs = [];
+    snap.forEach(d => msgs.push({ id: d.id, ...d.data() }));
+    msgs.sort((a, b) => (b.dateStr || '').localeCompare(a.dateStr || ''));
+    renderInboxList(msgs);
+  } catch {
+    renderInboxList([]);
+  }
+}
+function renderInboxList(msgs) {
+  const list = $('inbox-list');
+  const allBtn = $('inbox-claim-all-btn');
+  $('inbox-status').textContent = '';
+  if (msgs.length === 0) {
+    list.innerHTML = `<div class="muted" style="text-align:center;">${T[lang].inbox_empty}</div>`;
+    allBtn.style.display = 'none';
+    return;
+  }
+  // mensagens já resgatadas continuam na lista como histórico — o botão
+  // "resgatar todas" só deve contar quem ainda está pendente
+  const pendingCount = msgs.filter(m => !m.claimed).length;
+  allBtn.style.display = pendingCount > 1 ? '' : 'none';
+  list.innerHTML = '';
+  msgs.forEach(msg => {
+    const pos = msg.position;
+    const posLabel = pos === 1 ? T[lang].daily_pos_1 : pos === 2 ? T[lang].daily_pos_2 : pos === 3 ? T[lang].daily_pos_3 : T[lang].daily_pos_n(pos);
+    const box = document.createElement('div');
+    box.className = 'daily-inbox-msg';
+    if (msg.claimed) box.style.opacity = '0.6';
+
+    const posLine = document.createElement('div');
+    posLine.className = 'pos-line';
+    posLine.textContent = T[lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
+    box.appendChild(posLine);
+
+    const claimRow = document.createElement('div');
+    claimRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px;';
+    const coinsSpan = document.createElement('span');
+    coinsSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700;';
+    coinsSpan.insertAdjacentHTML('beforeend', pigmentIconSvg(16));
+    const coinsNum = document.createElement('span');
+    coinsNum.textContent = `+${msg.coins}`;
+    coinsSpan.appendChild(coinsNum);
+    claimRow.appendChild(coinsSpan);
+
+    if (msg.claimed) {
+      const claimedLabel = document.createElement('span');
+      claimedLabel.className = 'muted';
+      claimedLabel.style.fontWeight = '700';
+      claimedLabel.textContent = T[lang].daily_reward_claimed_label;
+      claimRow.appendChild(claimedLabel);
+    } else {
+      const claimBtn = document.createElement('button');
+      claimBtn.className = 'secondary';
+      claimBtn.textContent = T[lang].btn_claim;
+      claimBtn.onclick = () => claimOneDailyReward(msg.dateStr);
+      claimRow.appendChild(claimBtn);
+    }
+
+    box.appendChild(claimRow);
+    list.appendChild(box);
+  });
+}
+// bolinha de notificação no ícone 📬 do menu — mesma ideia da de pedido de
+// amizade pendente (menu-quick-friends-badge); conta quantas mensagens ainda
+// não foram resgatadas
+async function refreshInboxBadge() {
+  const btn = $('inbox-btn');
+  if (offline || !currentUser || !myData.nick) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  try {
+    // só conta o que ainda não foi resgatado — mensagens já lidas continuam
+    // na caixa de entrada como histórico, mas não devem inflar a bolinha
+    const snap = await getDocs(query(collection(db, 'dailyInbox', currentUser.uid, 'messages'), where('claimed', '==', false)));
+    const badge = $('inbox-badge');
+    badge.textContent = snap.size;
+    badge.style.display = snap.size > 0 ? '' : 'none';
+  } catch {}
+}
+window.claimOneDailyReward = async (dateStr) => {
+  try {
+    const res = await callClaimDailyReward({ dateStr });
+    const coins = (res.data && res.data.coins) || 0;
+    if (coins > 0) myData.pigmentos = (myData.pigmentos || 0) + coins;
+    await loadInbox();
+    refreshInboxBadge();
+    updateDailyMenuCard();
+    renderMenuPigmentosBar();
+    renderUserPigmentos();
+  } catch (e) {
+    $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
+  }
+};
+window.claimAllDailyRewards = async () => {
+  try {
+    const res = await callClaimDailyReward({});
+    const coins = (res.data && res.data.coins) || 0;
+    if (coins > 0) myData.pigmentos = (myData.pigmentos || 0) + coins;
+    await loadInbox();
+    refreshInboxBadge();
+    updateDailyMenuCard();
+    renderMenuPigmentosBar();
+    renderUserPigmentos();
+  } catch (e) {
+    $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
+  }
+};
+
+// atualiza o card do menu — melhor pontuação, tentativas restantes e aviso de
+// prêmio pendente na caixa de entrada (chamado pelo showMenu())
+async function updateDailyMenuCard() {
+  const card = $('card-daily');
+  if (!card) return;
+  if (offline || !currentUser || !myData.nick) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  renderDailyCardCountdown(); // atualiza o rótulo (Inicia em/Termina em) na hora, sem esperar o próximo tique
+
+  // antes da estreia (ou pra quem ainda tá no nível 1): só título + cronômetro,
+  // sem descrição nem dados — deixa a curiosidade no ar em vez de mostrar tudo.
+  // Quando o motivo for nível baixo (não a estreia ainda não ter chegado),
+  // mostra o mesmo aviso de "🔒 Desbloqueia no nível N" que os modos
+  // Reverso/Formas/Formas Reverso já usam (ver lock-reverse/lock-shapes).
+  const lockEl = $('lock-daily');
+  if (!isDailyChallengeLive() || isDailyStartDelay() || !dailyLevelUnlocked()) {
+    card.classList.add('coming-soon');
+    $('daily-card-desc').style.display = 'none';
+    $('daily-card-footer').style.display = 'none';
+    const showLock = !dailyLevelUnlocked();
+    card.classList.toggle('level-locked', showLock);
+    if (lockEl) {
+      lockEl.style.display = showLock ? '' : 'none';
+      if (showLock) lockEl.textContent = T[lang].unlock_at(DAILY_MIN_LEVEL);
+    }
+    return;
+  }
+  card.classList.remove('coming-soon', 'level-locked');
+  if (lockEl) lockEl.style.display = 'none';
+  $('daily-card-desc').style.display = '';
+  $('daily-card-footer').style.display = '';
+  try {
+    const dateStr = dailyLocalDateStr();
+    const snap = await getDoc(doc(db, 'dailyScores', `${dateStr}_${currentUser.uid}`));
+    const data = snap.exists() ? snap.data() : {};
+    dailyAttemptsUsed = data.attempts || 0;
+    dailyBestScore = data.bestScore || 0;
+  } catch {
+    dailyAttemptsUsed = 0;
+    dailyBestScore = 0;
+  }
+  $('daily-card-best').textContent = T[lang].daily_card_best(dailyBestScore);
+  $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
+    ? T[lang].daily_card_already_played
+    : T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+}
+
+/* -------- jogo do desafio (mesmo modo Clássico, RNG determinística) -------- */
+window.startDailyChallenge = async () => {
+  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  if (!(await isDailyClientUpToDate())) {
+    $('daily-blocked-msg').textContent = T[lang].daily_update_required;
+    $('daily-intro').style.display = 'none';
+    $('daily-play').style.display = 'none';
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'flex';
+    show('daily-screen');
+    return;
+  }
+  try {
+    const res = await callStartDailyAttempt();
+    const d = res.data || {};
+    dailySessionId = d.sessionId;
+    dailyDateStrCache = d.dateStr;
+    dailyClosesAtMs = d.closesAt;
+    dailyAttemptsUsed = d.attemptNumber;
+    // o modo já foi sorteado (e mostrado) na tela de introdução, mas recalcula
+    // aqui de novo (mesma conta determinística — ver dailyModeForToday) pro
+    // caso de "jogar de novo" a 2ª/3ª tentativa direto do resultado, sem
+    // passar pela introdução de novo
+    dailyMode = dailyModeForToday(d.dateStr);
+    track('daily_start', { attempt: d.attemptNumber, mode: dailyMode });
+
+    dailyRng = mulberry32(hashSeed(d.dateStr + '|daily-v2|' + dailyMode + '|attempt' + d.attemptNumber + '|salt' + (d.seedSalt || '')));
+    dailyScore = 0;
+    dailyDuration = 10000;
+    dailyPlaying = true;
+    dailyTarget = seededPick(dailyRng, dailyPoolFor(dailyMode));
+    $('daily-score').textContent = 0;
+    $('daily-intro').style.display = 'none';
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'none';
+    $('daily-play').style.display = 'none';
+    show('daily-screen');
+    startDailyCountdown(() => {
+      $('daily-play').style.display = 'flex';
+      // o tabuleiro libera AGORA — a contagem regressiva não deve entrar na
+      // conta de tempo de jogo, então recarimba o início real da tentativa
+      // neste instante (dispara e esquece, não atrasa a rodada em nada; ver
+      // dailyPendingRoundSync/callArmDailySession)
+      if (dailySessionId) dailyPendingRoundSync.push(callArmDailySession({ sessionId: dailySessionId }).catch(() => {}));
+      // o replay também começa a contar só a partir daqui (mesmo motivo do
+      // recarimbo acima) — ver dailyReplayRounds/dailyReplayMouse lá em cima
+      dailyReplayRounds = [];
+      dailyReplayMouse = [];
+      dailyReplayStartMs = performance.now();
+      dailyNewRound(true);
+    });
+  } catch (e) {
+    // sem tentativas hoje (ou outro erro) — não tem uma tela de lobby pra
+    // mostrar a mensagem, então manda pra tela de "sem tentativas", que já
+    // tem o link pro ranking do desafio
+    $('daily-blocked-msg').textContent = e.message || T[lang].daily_start_error;
+    $('daily-intro').style.display = 'none';
+    $('daily-play').style.display = 'none';
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'flex';
+    show('daily-screen');
+  }
+};
+
+// mostra "3, 2, 1, Vai!" antes de liberar o tabuleiro pra pessoa se preparar
+// (mesma ideia visual/sonora do duelo PvP). Diferente do PvP, aqui não tem
+// servidor pra sincronizar dois jogadores — é uma pessoa só, então a
+// contagem em si roda 100% local (performance.now/requestAnimationFrame).
+// Só no fim, quando o tabuleiro libera de vez, é que dispara a chamada pro
+// servidor recarimbar o início real da tentativa (ver callArmDailySession
+// no onDone do startDailyCountdown, mais abaixo).
+const DAILY_COUNTDOWN_MS = 3000;
+function startDailyCountdown(onDone) {
+  stopDailyCountdown();
+  const startedMs = performance.now();
+  let lastNum = null;
+  $('daily-countdown').style.display = '';
+  function tick() {
+    const remaining = DAILY_COUNTDOWN_MS - (performance.now() - startedMs);
+    if (remaining <= 0) {
+      $('daily-countdown-num').textContent = T[lang].pvp_go;
+      if (lastNum !== 'go') { lastNum = 'go'; sfx.countdown(true); }
+      dailyCountdownTimerId = setTimeout(() => {
+        $('daily-countdown').style.display = 'none';
+        dailyCountdownTimerId = null;
+        onDone();
+      }, 400);
+      return;
+    }
+    const num = Math.max(1, Math.ceil(remaining / 1000));
+    $('daily-countdown-num').textContent = String(num);
+    if (lastNum !== num) { lastNum = num; sfx.countdown(false); }
+    dailyCountdownTimerId = requestAnimationFrame(tick);
+  }
+  dailyCountdownTimerId = requestAnimationFrame(tick);
+}
+function stopDailyCountdown() {
+  if (dailyCountdownTimerId) {
+    cancelAnimationFrame(dailyCountdownTimerId);
+    clearTimeout(dailyCountdownTimerId);
+    dailyCountdownTimerId = null;
+  }
+  $('daily-countdown').style.display = 'none';
+}
+
+function dailyNewRound(first) {
+  const pool = dailyPoolFor(dailyMode);
+  dailyNextTarget = seededPick(dailyRng, pool);
+  const others = seededShuffle(dailyRng, pool.filter(c => c !== dailyTarget)).slice(0, SQUARES - 1);
+  const items = seededShuffle(dailyRng, [dailyTarget, ...others]); // clássico: fundos | reverso: palavras | formas: ícones
+  const distractors = seededShuffle(dailyRng, pool.filter(c => c !== dailyNextTarget)).slice(0, SQUARES - 1);
+  let d = 0;
+
+  const grid = $('daily-grid');
+  grid.innerHTML = '';
+  // mesma ideia de "foto" da rodada que newRound() grava (ver comentário lá)
+  const roundSnapshot = [];
+  items.forEach(item => {
+    const paired = (item === dailyTarget) ? dailyNextTarget : distractors[d++];
+    roundSnapshot.push({ id: poolItemId(item), paired: poolItemId(paired), isTarget: item === dailyTarget });
+    const el = document.createElement('div');
+    el.className = 'square';
+    if (dailyMode === 'shapes' || dailyMode === 'shapes-reverse') {
+      const shapeSide = (dailyMode === 'shapes') ? item : paired;
+      const wordSide  = (dailyMode === 'shapes') ? paired : item;
+      el.classList.add('shape-square', shapeSide.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+    } else {
+      const bg   = (dailyMode === 'classic') ? item : paired;
+      const word = (dailyMode === 'classic') ? paired : item;
+      el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
+      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(word)}</span>`;
+    }
+    el.onclick = (e) => dailyHandleClick(item, e);
+    grid.appendChild(el);
+  });
+  if (dailyReplayRounds.length < 400) dailyReplayRounds.push({ t: Math.round(performance.now() - dailyReplayStartMs), sq: roundSnapshot });
+
+  const INSTR_FIRST = {
+    classic: () => T[lang].instr_first_classic(cName(dailyTarget)),
+    reverse: () => T[lang].instr_first_reverse(cName(dailyTarget)),
+    shapes: () => T[lang].instr_first_shapes(cName(dailyTarget)),
+    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(dailyTarget)),
+  };
+  const INSTR_NEXT = {
+    classic: T[lang].instr_next_classic,
+    reverse: T[lang].instr_next_reverse,
+    shapes: T[lang].instr_next_shapes,
+    'shapes-reverse': T[lang].instr_next_shapes_reverse,
+  };
+  $('daily-instruction').textContent = first ? INSTR_FIRST[dailyMode]() : INSTR_NEXT[dailyMode];
+  $('daily-speed').textContent = `⏱️ ${(dailyDuration / 1000).toFixed(1)}s`;
+  startDailyTimer();
+}
+
+function startDailyTimer() {
+  cancelAnimationFrame(dailyRafId);
+  dailyTimerStart = performance.now();
+  let lastTick = 0;
+  const tick = now => {
+    if (!dailyPlaying) return;
+    const left = 1 - (now - dailyTimerStart) / dailyDuration;
+    $('daily-timer-fill').style.width = Math.max(0, left * 100) + '%';
+    if (left <= 0) { sfx.timeout(); return dailyGameOver(T[lang].reason_timeout); }
+    if (left < 0.35 && now - lastTick > 250) { lastTick = now; sfx.tick(); }
+    dailyRafId = requestAnimationFrame(tick);
+  };
+  dailyRafId = requestAnimationFrame(tick);
+}
+
+function dailyHandleClick(item, e) {
+  if (!dailyPlaying) return;
+  if (item === dailyTarget) {
+    dailyScore++;
+    if (dailySessionId) dailyPendingRoundSync.push(callSyncProgress({ sessionId: dailySessionId, trusted: !e || e.isTrusted }).catch(() => {}));
+    sfx.correct(dailyScore);
+    $('daily-score').textContent = dailyScore;
+    dailyTarget = dailyNextTarget;
+    dailyDuration *= 0.95;
+    dailyNewRound(false);
+  } else {
+    sfx.wrong();
+    dailyGameOver(T[lang].reason_wrong);
+  }
+}
+
+// mesma ideia de setOverButtonsEnabled (modo livre), pros botões da tela de
+// resultado do desafio diário
+function setDailyResultButtonsEnabled(enabled) {
+  document.querySelectorAll('#daily-result .btn-row button').forEach(b => { b.disabled = !enabled; });
+}
+
+async function dailyGameOver(reason) {
+  dailyPlaying = false;
+  cancelAnimationFrame(dailyRafId);
+  track('daily_over', { score: dailyScore });
+
+  $('daily-result-reason').textContent = reason;
+  $('daily-result-score').textContent = dailyScore;
+  $('daily-play').style.display = 'none';
+  $('daily-result').style.display = 'flex';
+  $('daily-result-xp').style.display = 'none';
+  resetScroll('daily-screen');
+
+  // trava os botões e espera os sinais de progresso desta tentativa
+  // "assentarem" no servidor antes de mandar o resultado final (mesma ideia
+  // de gameOver no modo livre — ver comentário lá)
+  setDailyResultButtonsEnabled(false);
+  $('daily-result-attempts').textContent = T[lang].sync_calculating;
+  await Promise.allSettled(dailyPendingRoundSync);
+  dailyPendingRoundSync = [];
+
+  let bestScore = Math.max(dailyScore, dailyBestScore);
+  const lvBefore = levelFromXp(myXp());
+  try {
+    const res = await callSubmitDailyResult({ sessionId: dailySessionId, score: dailyScore });
+    if (res.data && typeof res.data.bestScore === 'number') bestScore = res.data.bestScore;
+    if (res.data && typeof res.data.xpEarned === 'number' && res.data.xpEarned > 0) {
+      myData.xp = (myData.xp || 0) + res.data.xpEarned;
+      $('daily-result-xp').textContent = T[lang].daily_xp_bonus(res.data.xpEarned);
+      $('daily-result-xp').style.display = '';
+      if (levelFromXp(myXp()) > lvBefore) sfx.levelUp();
+    }
+  } catch (e) {
+    // não foi possível confirmar com o servidor — o placar oficial (ranking)
+    // só considera o que o servidor validou; a tela ainda mostra o resultado local
+  }
+  if (dailyScore >= bestScore && dailyScore > 0 && dailyScore > dailyBestScore) {
+    sfx.record(); spawnConfetti();
+    // mesma ideia do modo livre (ver persistGameResult) — só sobe o "filme"
+    // da tentativa quando ela vira a melhor pontuação do dia, em segundo
+    // plano, sem atrasar a tela de resultado
+    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, kind: 'daily', rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
+  }
+  dailyBestScore = bestScore;
+  $('daily-result-best').textContent = dailyBestScore;
+
+  const left = Math.max(0, DAILY_MAX_ATTEMPTS - dailyAttemptsUsed);
+  $('daily-result-attempts').textContent = left > 0
+    ? T[lang].daily_attempts_left_msg(left)
+    : T[lang].daily_attempts_used_msg;
+  $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
+  setDailyResultButtonsEnabled(true);
+
+  refreshInboxBadge(); // atualiza a bolinha do 📬 caso esse resultado tenha desbloqueado algo pendente
+}
+
+window.dailyExitScreen = () => {
+  dailyPlaying = false;
+  cancelAnimationFrame(dailyRafId);
+  stopDailyCountdown();
+  showMenu();
+};
+
+/* ================== loja (cosméticos comprados com Pigmentos) ==================
+   Catálogo/preço são só pra desenhar a tela — quem manda de verdade é o
+   servidor (buyShopItem/setEquippedItem em functions/index.js), que confere
+   saldo e posse de novo antes de gravar. O cliente só reflete o que já sabe
+   (myData.pigmentos/ownedItems/equipped) e atualiza otimisticamente depois
+   de cada resposta bem-sucedida. */
+
+// botão "🛍️ LOJA" do menu — a loja ainda tá em teste, então o botão fica
+// oculto pra todo mundo, menos pra quem loga como admin
+function renderMenuPigmentosBar() {
+  const shopBtn = $('menu-quick-shop-btn');
+  if (!shopBtn) return;
+  shopBtn.style.display = (!offline && currentUser && myData.nick && myData.admin === true) ? '' : 'none';
+}
+// saldo de Pigmentos no topo da tela, entre o nick e a caixa de entrada — só
+// o número + ícone colorido, sem texto/link (o acesso à loja continua sendo
+// só pela barra do menu, acima)
+function renderUserPigmentos() {
+  const el = $('user-pigmentos-bar');
+  if (!el) return;
+  if (offline || !currentUser || !myData.nick) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'inline-flex';
+  $('user-pigmentos-num').textContent = myData.pigmentos || 0;
+  $('user-pigmentos-icon').innerHTML = pigmentIconSvg(16);
+}
+
+window.showShop = () => {
+  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  track('shop_open');
+  $('shop-status').textContent = '';
+  show('shop-screen');
+  renderShop();
+};
+
+function renderShop() {
+  $('shop-balance-icon').innerHTML = pigmentIconSvg(20);
+  $('shop-balance-num').textContent = myData.pigmentos || 0;
+  const owned = new Set(myData.ownedItems || []);
+  const equipped = myData.equipped || {};
+
+  const body = $('shop-body');
+  body.innerHTML = '';
+  SHOP_SLOTS.forEach(({ slot, label }) => {
+    const section = document.createElement('div');
+    section.className = 'card';
+    section.style.textAlign = 'left';
+
+    const title = document.createElement('h2');
+    title.style.cssText = "font-family:'Orbitron',sans-serif; font-size:0.95rem; margin-bottom:2px;";
+    title.textContent = label;
+    section.appendChild(title);
+
+    section.appendChild(shopDefaultRow(slot, equipped[slot]));
+    SHOP_ITEMS.filter(it => it.slot === slot).forEach(item => {
+      section.appendChild(shopItemRow(item, owned.has(item.id), equipped[slot] === item.id));
+    });
+
+    body.appendChild(section);
+  });
+  resetScroll('shop-screen');
+}
+
+// opção "padrão" de cada slot — sempre disponível, sem custo, volta o visual original
+function shopDefaultRow(slot, currentEquipped) {
+  const row = document.createElement('div');
+  row.className = 'shop-item-row';
+
+  const info = document.createElement('div');
+  info.className = 'shop-item-info';
+  const name = document.createElement('div');
+  name.className = 'shop-item-name';
+  name.textContent = '— Padrão —';
+  const desc = document.createElement('div');
+  desc.className = 'muted';
+  desc.style.textAlign = 'left';
+  desc.textContent = 'Visual original, sem cosmético.';
+  info.appendChild(name);
+  info.appendChild(desc);
+  row.appendChild(info);
+
+  const isActive = !currentEquipped;
+  const btn = document.createElement('button');
+  btn.style.cssText = 'padding:8px 16px; font-size:0.8rem; white-space:nowrap;';
+  if (isActive) {
+    btn.textContent = 'EQUIPADO';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+  } else {
+    btn.className = 'secondary';
+    btn.textContent = 'USAR';
+    btn.onclick = () => equipShopItem(slot, null);
+  }
+  row.appendChild(btn);
+  return row;
+}
+
+// prévia de cada item, direto na linha da loja — funciona mesmo sem
+// comprar/equipar nada, pra pessoa decidir se vale a pena antes de gastar
+// Pigmentos. Som chama a variante direto (bypassa o que estiver equipado
+// agora); moldura monta um nick de exemplo com a moldura aplicada; confete
+// dispara a mesma explosão que aparece ao bater recorde.
+function shopItemPreview(item) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:6px;';
+  if (item.slot === 'sfxCorrect') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.style.cssText = 'padding:4px 12px; font-size:0.72rem;';
+    btn.textContent = '🔊 Ouvir';
+    btn.onclick = (e) => { e.stopPropagation(); playCorrectSfxVariant(item.id, 5); };
+    wrap.appendChild(btn);
+  } else if (item.slot === 'frame') {
+    const sample = document.createElement('span');
+    sample.textContent = 'SeuNick';
+    sample.style.cssText = 'font-weight:700; font-size:0.85rem;';
+    applyNickFrame(sample, { equipped: { frame: item.id } });
+    wrap.appendChild(sample);
+  } else if (item.slot === 'confetti') {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.style.cssText = 'padding:4px 12px; font-size:0.72rem;';
+    btn.textContent = '🎉 Testar';
+    btn.onclick = (e) => { e.stopPropagation(); spawnConfettiVariant(item.id); };
+    wrap.appendChild(btn);
+  } else if (item.slot === 'rowTheme') {
+    // mini tabela real (não só uma div) pra reaproveitar exatamente o mesmo
+    // seletor CSS "tbody tr.row-theme-x" usado na tabela de ranking de verdade
+    const mini = document.createElement('table');
+    mini.style.cssText = 'width:100%; border-collapse:collapse; margin-top:2px;';
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    applyRowTheme(tr, { equipped: { rowTheme: item.id } });
+    tr.innerHTML = '<td class="pos" style="padding:6px 8px;">1</td><td style="padding:6px 8px; font-weight:700;">SeuNick</td><td class="pts" style="padding:6px 8px;">1234</td>';
+    tbody.appendChild(tr);
+    mini.appendChild(tbody);
+    wrap.appendChild(mini);
+  } else if (item.slot === 'avatar') {
+    // sempre visível (não precisa clicar em nada pra "testar" um desenho fixo)
+    wrap.innerHTML = avatarSvg(item.id, 100); // 2.5x o tamanho antigo (40), só na prévia da loja
+  }
+  return wrap;
+}
+
+function shopItemRow(item, isOwned, isEquipped) {
+  const row = document.createElement('div');
+  row.className = 'shop-item-row';
+
+  const info = document.createElement('div');
+  info.className = 'shop-item-info';
+  const name = document.createElement('div');
+  name.className = 'shop-item-name';
+  name.textContent = `${item.icon} ${item.name}`;
+  const desc = document.createElement('div');
+  desc.className = 'muted';
+  desc.style.textAlign = 'left';
+  desc.textContent = item.desc;
+  info.appendChild(name);
+  info.appendChild(desc);
+  info.appendChild(shopItemPreview(item));
+  row.appendChild(info);
+
+  const btn = document.createElement('button');
+  btn.style.cssText = 'padding:8px 16px; font-size:0.8rem; white-space:nowrap;';
+  if (isEquipped) {
+    btn.textContent = 'EQUIPADO';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+  } else if (isOwned) {
+    btn.className = 'secondary';
+    btn.textContent = 'USAR';
+    btn.onclick = () => equipShopItem(item.slot, item.id);
+  } else {
+    btn.className = 'secondary';
+    btn.insertAdjacentHTML('beforeend', pigmentIconSvg(14));
+    const priceSpan = document.createElement('span');
+    priceSpan.textContent = ' ' + item.price;
+    btn.appendChild(priceSpan);
+    if ((myData.pigmentos || 0) < item.price) btn.style.opacity = '0.55';
+    btn.onclick = () => buyShopItemUi(item.id);
+  }
+  row.appendChild(btn);
+  return row;
+}
+
+window.buyShopItemUi = async (itemId) => {
+  $('shop-status').textContent = '';
+  try {
+    const res = await callBuyShopItem({ itemId });
+    if (res.data && typeof res.data.pigmentos === 'number') myData.pigmentos = res.data.pigmentos;
+    myData.ownedItems = [...(myData.ownedItems || []), itemId];
+    renderShop();
+    renderMenuPigmentosBar();
+    renderUserPigmentos();
+  } catch (e) {
+    $('shop-status').textContent = e.message || 'Não foi possível comprar agora.';
+  }
+};
+
+window.equipShopItem = async (slot, itemId) => {
+  $('shop-status').textContent = '';
+  try {
+    await callSetEquippedItem({ slot, itemId: itemId || null });
+    if (!myData.equipped) myData.equipped = {};
+    if (itemId) myData.equipped[slot] = itemId; else delete myData.equipped[slot];
+    applyEquippedCosmetics();
+    renderShop();
+  } catch (e) {
+    $('shop-status').textContent = e.message || 'Não foi possível trocar agora.';
+  }
+};
+
+/* ================== PvP (duelo ao vivo) ================== */
+// Diferente do resto do jogo: aqui quem manda é sempre o servidor. O cliente
+// nunca decide sozinho "eu acertei" ou "o tempo acabou" — ele só chama a
+// function e espera o documento da partida em matches/{matchId} mudar (via
+// onSnapshot, ao vivo) pra saber o que realmente aconteceu. Ver
+// functions/index.js pra entender a autoridade do servidor sobre isso.
+const PVP_TURN_BANK_MS = 20000; // tem que bater com o servidor
+const PVP_COUNTDOWN_MS = 3000;  // idem — contagem "3, 2, 1" antes do duelo começar de vez
+
+let pvpMatchesUnsub = null;   // cancela o listener (chamado no logout)
+let pvpMatchesById = {};      // cache local: matchId -> dados do match
+let pvpCurrentMatchId = null; // qual partida está aberta na tela de duelo agora
+let pvpAnimFrame = null;      // rAF que desenha as barras de tempo
+let pvpClaimedForTurn = null; // turnStartedAt (ms) da tentativa pra qual já tentamos reivindicar timeout (evita repetir)
+let pvpLastBonusAt = null;    // overtimeBonusAt (ms) do último bônus de +5s que já mostramos na tela
+let pvpBonusToastTimer = null;
+let pvpLastAttemptAt = null;  // lastAttempt.at (ms) da última tentativa pra qual já tocamos som
+let pvpClockOffsetMs = 0;     // diferença entre o relógio do navegador e o do servidor (ver updatePvpClockOffset)
+let pvpCountdownAnimFrame = null; // rAF da contagem "3, 2, 1" antes do duelo começar
+let pvpCountdownLastNum = null;   // último número (3, 2 ou 1) que já tocamos o beep, pra não repetir
+let pvpResultSoundPlayed = false; // evita tocar o som de vitória/derrota/empate mais de uma vez pra mesma partida
+let pvpOppXpCache = {};       // uid do adversário -> xp já buscado (pra mostrar o level dele na tela de duelo)
+let pvpOppEquippedCache = {}; // uid do adversário -> equipped já buscado (pra mostrar o avatar dele na tela de duelo) — vem do MESMO getDoc de cima, sem leitura extra
+
+// busca o XP (e o equipped, pro avatar) do adversário em scores/{uid}
+// (público) só uma vez por uid, e reaproveita entre partidas/reaberturas da
+// tela. Enquanto ainda não chegou, devolve undefined (o chip de nível some
+// até a busca terminar).
+function getPvpOppXp(uid) {
+  const cached = pvpOppXpCache[uid];
+  if (cached === undefined) ensurePvpOppXp(uid);
+  return cached === null ? undefined : cached;
+}
+function getPvpOppEquipped(uid) {
+  return pvpOppEquippedCache[uid] || {};
+}
+async function ensurePvpOppXp(uid) {
+  if (uid in pvpOppXpCache) return; // já tem (ou já está buscando)
+  pvpOppXpCache[uid] = null; // marca como "buscando" pra não disparar duas buscas
+  let xp = 0;
+  let equipped = {};
+  try {
+    const snap = await getDoc(doc(db, 'scores', uid));
+    xp = (snap.exists() && snap.data().xp) || 0;
+    equipped = (snap.exists() && snap.data().equipped) || {};
+  } catch {}
+  pvpOppXpCache[uid] = xp;
+  pvpOppEquippedCache[uid] = equipped;
+  // agora que já temos o nível, atualiza a tela de duelo se ainda for a
+  // mesma partida aberta
+  const cur = pvpMatchesById[pvpCurrentMatchId];
+  if (cur) renderPvpScreen(cur);
+}
+
+// nick do participante + avatar e chip de nível ao lado — nick sempre via
+// textContent/createTextNode (nunca interpolado em innerHTML, pode ter
+// qualquer caractere), avatar e chip são HTML fixo/confiável
+function setPvpNameWithLevel(el, labelText, xp, avatarId) {
+  el.innerHTML = '';
+  el.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(avatarId, 32) + ' ');
+  el.appendChild(document.createTextNode(labelText));
+  if (xp !== undefined) el.insertAdjacentHTML('beforeend', ' ' + lvChip(xp));
+}
+
+function startPvpListener() {
+  stopPvpListener();
+  if (offline || !currentUser) return;
+  const q = query(collection(db, 'matches'), where('players', 'array-contains', currentUser.uid));
+  pvpMatchesUnsub = onSnapshot(q, snapshot => {
+    pvpMatchesById = {};
+    snapshot.forEach(d => { pvpMatchesById[d.id] = { id: d.id, ...d.data() }; });
+    updatePvpClockOffset();
+    handlePvpMatchesUpdate();
+  }, () => {}); // erro de rede etc.: o próprio listener tenta de novo sozinho
+}
+
+// o relógio do navegador pode estar um pouco adiantado ou atrasado em relação
+// ao do servidor (comum principalmente em celulares) — sem corrigir isso, a
+// barra de tempo de quem está na vez podia mostrar um valor errado logo no
+// início do turno (ex: 15s em vez de 10s, se o relógio local estiver ~5s
+// atrasado). Estimamos a diferença comparando "agora" no navegador com o
+// carimbo de tempo do servidor (updatedAt) que acabou de chegar numa partida
+// ativa, e usamos essa correção em vez do relógio local puro pra calcular
+// quanto tempo já passou no turno atual.
+function updatePvpClockOffset() {
+  const ref = Object.values(pvpMatchesById).find(m => (m.status === 'active' || m.status === 'starting') && m.updatedAt);
+  if (!ref) return;
+  pvpClockOffsetMs = Date.now() - ref.updatedAt.toMillis();
+}
+
+function stopPvpListener() {
+  if (pvpMatchesUnsub) { pvpMatchesUnsub(); pvpMatchesUnsub = null; }
+  pvpMatchesById = {};
+  pvpCurrentMatchId = null;
+  pvpLastBonusAt = null;
+  pvpLastAttemptAt = null;
+  pvpOppXpCache = {};
+  clearTimeout(pvpBonusToastTimer);
+  stopPvpTicker();
+  stopPvpCountdownTicker();
+  const banner = $('pvp-challenge-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function handlePvpMatchesUpdate() {
+  if (!currentUser) return;
+  const all = Object.values(pvpMatchesById);
+  const myUid = currentUser.uid;
+
+  // desafio recebido (alguém me desafiou, ainda não respondi)
+  const incoming = all.find(m => m.status === 'pending' && m.challengerUid !== myUid);
+  renderPvpChallengeBanner(incoming);
+
+  // partida ativa em que eu participo — se eu ainda não estiver vendo ela e
+  // não estiver no meio de um jogo solo/tutorial (pra não interromper uma
+  // partida em andamento), abre a tela de duelo sozinho
+  const active = all.find(m => m.status === 'active' || m.status === 'starting');
+  const safeToInterrupt = ['menu-screen', 'friends-screen', 'ranking-screen', 'pvp-screen'].some(id => $(id).classList.contains('active'));
+  if (active && safeToInterrupt && pvpCurrentMatchId !== active.id) {
+    openPvpScreen(active.id);
+  }
+
+  // mantém a tela de duelo aberta sempre sincronizada com o próprio match
+  if (pvpCurrentMatchId && pvpMatchesById[pvpCurrentMatchId]) {
+    renderPvpScreen(pvpMatchesById[pvpCurrentMatchId]);
+  }
+}
+
+function renderPvpChallengeBanner(m) {
+  const box = $('pvp-challenge-banner');
+  if (!box) return;
+  if (!m) { box.style.display = 'none'; box.dataset.matchId = ''; return; }
+  const fromNick = (m.nicks && m.nicks[m.challengerUid]) || '';
+  box.style.display = '';
+  box.dataset.matchId = m.id;
+  $('pvp-challenge-text').textContent = T[lang].pvp_challenge_received(fromNick);
+}
+
+window.uiAcceptChallenge = async () => {
+  const matchId = $('pvp-challenge-banner').dataset.matchId;
+  if (!matchId) return;
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
+  $('pvp-challenge-banner').style.display = 'none';
+  try {
+    await callRespondChallenge({ matchId, accept: true });
+    openPvpScreen(matchId);
+  } catch {}
+};
+
+window.uiDeclineChallenge = async () => {
+  const matchId = $('pvp-challenge-banner').dataset.matchId;
+  if (!matchId) return;
+  $('pvp-challenge-banner').style.display = 'none';
+  try { await callRespondChallenge({ matchId, accept: false }); } catch {}
+};
+
+window.uiChallengeFriend = async (toUid) => {
+  if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
+  try {
+    const res = await callChallengeFriend({ toUid });
+    const data = res.data || {};
+    if (data.matchId) { openPvpScreen(data.matchId); return; }
+  } catch {}
+  showFriendActionError(); // "já existe um desafio" ou erro genérico — mesmo aviso da tela de amigos
+};
+
+window.uiCancelChallenge = async () => {
+  if (!pvpCurrentMatchId) return;
+  try { await callCancelChallenge({ matchId: pvpCurrentMatchId }); } catch {}
+  pvpBackToMenu();
+};
+
+window.uiForfeitMatch = async () => {
+  if (!pvpCurrentMatchId) return;
+  try { await callForfeitMatch({ matchId: pvpCurrentMatchId }); } catch {}
+  // não navega ainda — o onSnapshot traz o status 'finished' e a tela mostra o resultado sozinha
+};
+
+window.uiSubmitPvpAnswer = async (squareIndex) => {
+  if (!pvpCurrentMatchId) return;
+  // desabilita o grid na hora, pra não dar pra clicar duas vezes enquanto espera o servidor
+  Array.from($('pvp-grid').children).forEach(el => { el.onclick = null; el.style.opacity = '0.5'; });
+  try {
+    await callSubmitPvpAnswer({ matchId: pvpCurrentMatchId, squareIndex });
+  } catch {}
+  // o resultado de verdade vem pelo onSnapshot, não por essa resposta
+};
+
+window.pvpBackToMenu = () => {
+  pvpCurrentMatchId = null;
+  stopPvpTicker();
+  showMenu();
+};
+
+function openPvpScreen(matchId) {
+  pvpCurrentMatchId = matchId;
+  pvpLastBonusAt = null;      // partida nova (ou reaberta) — ainda não mostramos nenhum aviso de bônus dela
+  pvpLastAttemptAt = null;    // idem pro som — evita tocar som de uma tentativa antiga ao reabrir a tela
+  pvpResultSoundPlayed = false; // idem pro som de vitória/derrota/empate
+  show('pvp-screen');
+  const m = pvpMatchesById[matchId];
+  if (m) renderPvpScreen(m);
+}
+
+// toca o som de acerto/erro/tempo esgotado assim que uma tentativa nova é
+// resolvida no servidor (ver lastAttempt) — os dois jogadores ouvem o mesmo
+// som no mesmo instante, sincronizados pelo próprio documento da partida,
+// não por cada cliente decidindo sozinho o que aconteceu
+function checkPvpAttemptSound(m) {
+  const la = m.lastAttempt;
+  if (!la || !la.at) return;
+  const at = la.at.toMillis();
+  if (at === pvpLastAttemptAt) return;
+  pvpLastAttemptAt = at;
+  if (la.success) sfx.correct(0);
+  else if (la.reason === 'timeout') sfx.timeout();
+  else sfx.wrong();
+}
+
+function renderPvpScreen(m) {
+  checkPvpAttemptSound(m);
+  const myUid = currentUser.uid;
+  const oppUid = m.players.find(p => p !== myUid);
+
+  $('pvp-waiting').style.display = 'none';
+  $('pvp-countdown').style.display = 'none';
+  $('pvp-active').style.display = 'none';
+  $('pvp-result').style.display = 'none';
+
+  if (m.status === 'pending') {
+    stopPvpTicker();
+    stopPvpCountdownTicker();
+    $('pvp-waiting').style.display = '';
+    $('pvp-waiting-text').textContent = T[lang].pvp_waiting_text((m.nicks && m.nicks[oppUid]) || '');
+    return;
+  }
+
+  if (m.status === 'starting') {
+    stopPvpTicker();
+    $('pvp-countdown').style.display = '';
+    if (!pvpCountdownAnimFrame) startPvpCountdownTicker();
+    return;
+  }
+
+  if (m.status === 'active') {
+    stopPvpCountdownTicker();
+    $('pvp-active').style.display = 'flex';
+    setPvpNameWithLevel($('pvp-my-name'), T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp(), equippedAvatar);
+    setPvpNameWithLevel($('pvp-opp-name'), (m.nicks && m.nicks[oppUid]) || '', getPvpOppXp(oppUid), getPvpOppEquipped(oppUid).avatar);
+    $('pvp-turn-label').textContent = (m.turnUid === myUid) ? T[lang].pvp_your_turn : T[lang].pvp_opp_turn((m.nicks && m.nicks[oppUid]) || '');
+    checkPvpBonusToast(m);
+    renderPvpBoard(m, myUid);
+    if (!pvpAnimFrame) startPvpTicker();
+    return;
+  }
+
+  // finished / declined / cancelled / draw
+  stopPvpTicker();
+  stopPvpCountdownTicker();
+  $('pvp-result').style.display = '';
+  renderPvpResult(m, myUid, oppUid);
+}
+
+// mostra rapidamente "+5 segundos adicionados" quando o servidor concede o
+// bônus de desempate (os dois falharam no mesmo ciclo) — overtimeBonusAt só
+// muda de valor quando isso realmente acontece de novo, então comparar com
+// o último valor já visto evita mostrar o aviso repetido à toa
+function checkPvpBonusToast(m) {
+  if (!m.overtimeBonusAt) return;
+  const at = m.overtimeBonusAt.toMillis();
+  if (at === pvpLastBonusAt) return;
+  pvpLastBonusAt = at;
+  const el = $('pvp-bonus-toast');
+  if (!el) return;
+  el.style.display = '';
+  clearTimeout(pvpBonusToastTimer);
+  pvpBonusToastTimer = setTimeout(() => { el.style.display = 'none'; }, 2800);
+}
+
+function renderPvpBoard(m, myUid) {
+  const round = m.round;
+  if (!round) return;
+  // a cor do RETÂNGULO é só distração — o que vale é a cor que a PALAVRA diz
+  const boxColor = COLORS[round.promptColorIdx] || COLORS[0];
+  const targetColor = COLORS[round.promptWordIdx] || COLORS[0];
+  const box = $('pvp-prompt-box');
+  box.textContent = targetColor.name[lang]; // conteúdo fixo (tabela COLORS), sem dado de usuário
+  box.style.background = boxColor.hex;
+  box.style.boxShadow = `0 0 18px ${boxColor.hex}99, 0 0 40px ${boxColor.hex}55, inset 0 0 14px rgba(255,255,255,0.15)`;
+
+  const myTurn = m.turnUid === myUid;
+  const grid = $('pvp-grid');
+  grid.innerHTML = '';
+  round.squares.forEach((sq, i) => {
+    const bg = COLORS[sq.bgIdx] || COLORS[0];
+    const word = COLORS[sq.wordIdx] || COLORS[0];
+    const el = document.createElement('div');
+    el.className = 'square';
+    el.style.background = bg.hex;
+    el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+    el.innerHTML = `<span class="word">${word.name[lang]}</span>`; // conteúdo fixo (tabela COLORS), sem dado de usuário
+    if (myTurn) {
+      el.onclick = () => uiSubmitPvpAnswer(i);
+    } else {
+      el.style.cursor = 'default';
+      el.style.opacity = '0.75';
+    }
+    grid.appendChild(el);
+  });
+}
+
+// toca o som de vitória/derrota/empate uma única vez por partida (o
+// resultado pode ser renderizado de novo por outros motivos — ex: reabrir a
+// tela — e não queremos repetir o som toda vez)
+function playPvpResultSound(kind) {
+  if (pvpResultSoundPlayed) return;
+  pvpResultSoundPlayed = true;
+  if (kind === 'win') sfx.pvpWin();
+  else if (kind === 'lose') sfx.pvpLose();
+  else sfx.pvpDraw();
+}
+
+function renderPvpResult(m, myUid, oppUid) {
+  const titleEl = $('pvp-result-title');
+  const subEl = $('pvp-result-sub');
+  const playersEl = $('pvp-result-players');
+  const roundsEl = $('pvp-result-rounds');
+  const oppNick = (m.nicks && m.nicks[oppUid]) || '';
+  const myNick = (m.nicks && m.nicks[myUid]) || '';
+  playersEl.innerHTML = '';
+  roundsEl.textContent = '';
+
+  if (m.status === 'declined') {
+    titleEl.textContent = T[lang].pvp_declined_title;
+    subEl.textContent = '';
+    return;
+  }
+  if (m.status === 'cancelled') {
+    titleEl.textContent = T[lang].pvp_cancelled_title;
+    subEl.textContent = '';
+    return;
+  }
+  if (m.status === 'draw') {
+    playPvpResultSound('draw');
+    titleEl.textContent = T[lang].pvp_draw_title;
+    subEl.textContent = T[lang].pvp_draw_sub;
+    const finalBank = m.finalBank || m.bank || {};
+    playersEl.appendChild(pvpPlayerRow(myNick, finalBank[myUid] || 0, null));
+    playersEl.appendChild(pvpPlayerRow(oppNick, finalBank[oppUid] || 0, null));
+    roundsEl.textContent = T[lang].pvp_rounds_played(m.cycleNumber || 1);
+    return;
+  }
+
+  const won = m.winnerUid === myUid;
+  playPvpResultSound(won ? 'win' : 'lose');
+  titleEl.textContent = won ? T[lang].pvp_win_title : T[lang].pvp_lose_title;
+  const reasonFn = { timeout: T[lang].pvp_reason_timeout, wrong_click: T[lang].pvp_reason_wrong, forfeit: T[lang].pvp_reason_forfeit }[m.loseReason];
+  subEl.textContent = reasonFn ? reasonFn(won, oppNick) : '';
+
+  // placar final: os dois participantes, com quanto tempo sobrou no banco
+  // de cada um no instante em que o duelo acabou (ver finalBank no servidor)
+  const finalBank = m.finalBank || m.bank || {};
+  const winnerNick = (m.winnerUid === myUid) ? myNick : oppNick;
+  const loserNick = (m.loseUid === myUid) ? myNick : oppNick;
+  playersEl.appendChild(pvpPlayerRow(winnerNick, finalBank[m.winnerUid] || 0, true));
+  playersEl.appendChild(pvpPlayerRow(loserNick, finalBank[m.loseUid] || 0, false));
+
+  roundsEl.textContent = T[lang].pvp_rounds_played(m.cycleNumber || 1);
+}
+
+// linha do placar final — nick sempre via textContent (nunca innerHTML),
+// mesmo cuidado de sempre com dado de jogador. isWinner: true (venceu),
+// false (perdeu) ou null (empate — estilo neutro, sem cor de vitória/derrota)
+function pvpPlayerRow(nick, remainingMs, isWinner) {
+  const row = document.createElement('div');
+  const bg = isWinner === null ? 'rgba(255,255,255,0.06)' : (isWinner ? 'rgba(33,230,161,0.12)' : 'rgba(255,45,107,0.10)');
+  const border = isWinner === null ? 'rgba(255,255,255,0.18)' : (isWinner ? 'rgba(33,230,161,0.4)' : 'rgba(255,45,107,0.35)');
+  row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:${bg}; border:1px solid ${border};`;
+
+  const left = document.createElement('span');
+  left.style.cssText = "display:flex; align-items:center; gap:8px; font-family:'Orbitron',sans-serif; font-weight:700;";
+  const icon = document.createElement('span');
+  icon.textContent = isWinner === null ? '🤝' : (isWinner ? '🏆' : '💀');
+  left.appendChild(icon);
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = nick;
+  if (isWinner === true) nickSpan.classList.add('pvp-winner-nick');
+  left.appendChild(nickSpan);
+  row.appendChild(left);
+
+  const timeSpan = document.createElement('span');
+  timeSpan.style.cssText = "font-family:'Orbitron',sans-serif; font-weight:800; color:#fff;";
+  timeSpan.textContent = (remainingMs / 1000).toFixed(1) + 's';
+  row.appendChild(timeSpan);
+
+  return row;
+}
+
+function startPvpTicker() {
+  stopPvpTicker();
+  pvpClaimedForTurn = null;
+  function tick() {
+    const cur = pvpMatchesById[pvpCurrentMatchId];
+    if (!cur || cur.status !== 'active') { pvpAnimFrame = null; return; }
+    renderPvpBars(cur);
+    pvpAnimFrame = requestAnimationFrame(tick);
+  }
+  tick();
+}
+function stopPvpTicker() {
+  if (pvpAnimFrame) cancelAnimationFrame(pvpAnimFrame);
+  pvpAnimFrame = null;
+}
+
+// contagem "3, 2, 1" mostrada assim que o desafio é aceito, antes do
+// cronômetro de verdade ligar (o servidor só começa a descontar tempo depois
+// desse período — ver countdownStartedAt/PVP_COUNTDOWN_MS em respondChallenge)
+function startPvpCountdownTicker() {
+  stopPvpCountdownTicker();
+  pvpCountdownLastNum = null;
+  function tick() {
+    const cur = pvpMatchesById[pvpCurrentMatchId];
+    if (!cur || cur.status !== 'starting') { pvpCountdownAnimFrame = null; return; }
+    renderPvpCountdown(cur);
+    pvpCountdownAnimFrame = requestAnimationFrame(tick);
+  }
+  tick();
+}
+function stopPvpCountdownTicker() {
+  if (pvpCountdownAnimFrame) cancelAnimationFrame(pvpCountdownAnimFrame);
+  pvpCountdownAnimFrame = null;
+}
+function renderPvpCountdown(m) {
+  const startedMs = m.countdownStartedAt ? m.countdownStartedAt.toMillis() : Date.now();
+  const elapsed = Math.max(0, (Date.now() - pvpClockOffsetMs) - startedMs);
+  const remaining = PVP_COUNTDOWN_MS - elapsed;
+  const num = Math.max(1, Math.ceil(remaining / 1000));
+
+  if (remaining <= 0) {
+    $('pvp-countdown-num').textContent = T[lang].pvp_go;
+    if (pvpCountdownLastNum !== 'go') { pvpCountdownLastNum = 'go'; sfx.countdown(true); }
+  } else {
+    $('pvp-countdown-num').textContent = String(num);
+    if (pvpCountdownLastNum !== num) { pvpCountdownLastNum = num; sfx.countdown(false); }
+  }
+}
+
+function renderPvpBars(m) {
+  const myUid = currentUser.uid;
+  const oppUid = m.players.find(p => p !== myUid);
+  const turnStartedMs = m.turnStartedAt ? m.turnStartedAt.toMillis() : Date.now();
+  const elapsed = Math.max(0, (Date.now() - pvpClockOffsetMs) - turnStartedMs);
+
+  const myBank = (m.bank && m.bank[myUid]) || 0;
+  const oppBank = (m.bank && m.bank[oppUid]) || 0;
+  const myRemaining = (m.turnUid === myUid) ? Math.max(0, myBank - elapsed) : myBank;
+  const oppRemaining = (m.turnUid === oppUid) ? Math.max(0, oppBank - elapsed) : oppBank;
+
+  // depois de ciclos com bônus de +5s, o banco pode passar de 10s — a barra
+  // usa o maior valor em jogo como referência, senão ficaria sempre "cheia"
+  const maxBank = Math.max(PVP_TURN_BANK_MS, myBank, oppBank);
+
+  $('pvp-my-bar').style.width = Math.max(0, Math.min(100, myRemaining / maxBank * 100)) + '%';
+  $('pvp-opp-bar').style.width = Math.max(0, Math.min(100, oppRemaining / maxBank * 100)) + '%';
+  $('pvp-my-time').textContent = (myRemaining / 1000).toFixed(1) + 's';
+  $('pvp-opp-time').textContent = (oppRemaining / 1000).toFixed(1) + 's';
+
+  // ninguém autodeclara "acabou o tempo" — só pede pro servidor conferir de
+  // novo com o próprio relógio dele (claimTimeout) antes de aceitar. Usa o
+  // instante em que a tentativa atual começou como identidade (cada
+  // tentativa tem um turnStartedAt novo), pra não repetir a reivindicação
+  // várias vezes seguidas pra mesma tentativa.
+  if (pvpClaimedForTurn !== turnStartedMs && (myRemaining <= 0 || oppRemaining <= 0)) {
+    pvpClaimedForTurn = turnStartedMs;
+    // se o servidor recusar (relógio dele ainda não concorda que acabou —
+    // possível defasagem entre o relógio do navegador e o do servidor),
+    // libera pra tentar de novo no próximo tick em vez de travar pra sempre
+    callClaimTimeout({ matchId: m.id }).catch(() => { pvpClaimedForTurn = null; });
+  }
+}
+
+/* ================== tutorial passo a passo (modo clássico) ================== */
+// dados fixos (não aleatórios) pra ensinar o mecanismo com previsibilidade.
+// rodada A: pedem VERMELHO, quadrado certo tem a palavra VERDE (a memorizar).
+// rodada B: pedem VERDE (a cor memorizada), quadrado certo tem a palavra AMARELO.
+// clássico: o alvo é uma COR (fundo do quadrado certo) — o que se memoriza é a PALAVRA escrita nele.
+// reverso: o alvo é uma PALAVRA (escrita no quadrado certo) — o que se memoriza é a COR DE FUNDO dele.
+const TUT_DATA = {
+  classic: [
+    {
+      target: COLORS[1], // vermelho
+      squares: [
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[1], word: COLORS[2], correct: true }, // fundo vermelho / palavra verde
+        { bg: COLORS[3], word: COLORS[6] },
+        { bg: COLORS[4], word: COLORS[7] },
+      ],
+    },
+    {
+      target: COLORS[2], // verde (o que foi memorizado na rodada A)
+      squares: [
+        { bg: COLORS[6], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[0] },
+        { bg: COLORS[2], word: COLORS[3], correct: true }, // fundo verde / palavra amarela (posição diferente da rodada A)
+        { bg: COLORS[0], word: COLORS[4] },
+      ],
+    },
+    {
+      target: COLORS[3], // amarelo (o que foi memorizado na rodada B)
+      squares: [
+        { bg: COLORS[5], word: COLORS[6] },
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[2], word: COLORS[5] },
+        { bg: COLORS[3], word: COLORS[7], correct: true }, // fundo amarelo / palavra ciano (posição diferente das anteriores)
+      ],
+    },
+  ],
+  reverse: [
+    {
+      target: COLORS[1], // pedem a palavra "vermelho"
+      squares: [
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[6], word: COLORS[1], correct: true }, // palavra vermelho / fundo rosa (o que se memoriza) — evita verde, que brigava com o brilho do destaque
+        { bg: COLORS[3], word: COLORS[6] },
+        { bg: COLORS[4], word: COLORS[7] },
+      ],
+    },
+    {
+      target: COLORS[6], // pedem a palavra "rosa" (cor memorizada na rodada A)
+      squares: [
+        { bg: COLORS[6], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[0] },
+        { bg: COLORS[3], word: COLORS[6], correct: true }, // palavra rosa / fundo amarelo (posição diferente da rodada A)
+        { bg: COLORS[0], word: COLORS[4] },
+      ],
+    },
+    {
+      target: COLORS[3], // pedem a palavra "amarelo" (cor memorizada na rodada B)
+      squares: [
+        { bg: COLORS[5], word: COLORS[6] },
+        { bg: COLORS[0], word: COLORS[4] },
+        { bg: COLORS[2], word: COLORS[5] },
+        { bg: COLORS[7], word: COLORS[3], correct: true }, // palavra amarelo / fundo ciano (posição diferente das anteriores)
+      ],
+    },
+  ],
+  // formas: funciona igual ao clássico — o alvo é a FORMA desenhada no quadrado certo,
+  // o que se memoriza é a PALAVRA (nome de outra forma) escrita nele
+  shapes: [
+    {
+      target: SHAPES[0], // círculo
+      squares: [
+        { shape: SHAPES[3], word: SHAPES[4] },
+        { shape: SHAPES[0], word: SHAPES[1], correct: true }, // silhueta círculo / palavra quadrado (a memorizar)
+        { shape: SHAPES[2], word: SHAPES[5] },
+        { shape: SHAPES[4], word: SHAPES[3] },
+      ],
+    },
+    {
+      target: SHAPES[1], // quadrado (o que foi memorizado na rodada A)
+      squares: [
+        { shape: SHAPES[5], word: SHAPES[0] },
+        { shape: SHAPES[4], word: SHAPES[3] },
+        { shape: SHAPES[1], word: SHAPES[2], correct: true }, // silhueta quadrado / palavra triângulo (posição diferente da rodada A)
+        { shape: SHAPES[3], word: SHAPES[4] },
+      ],
+    },
+    {
+      target: SHAPES[2], // triângulo (o que foi memorizado na rodada B)
+      squares: [
+        { shape: SHAPES[4], word: SHAPES[5] },
+        { shape: SHAPES[0], word: SHAPES[3] },
+        { shape: SHAPES[3], word: SHAPES[0] },
+        { shape: SHAPES[2], word: SHAPES[4], correct: true }, // silhueta triângulo / palavra estrela (posição diferente das anteriores)
+      ],
+    },
+  ],
+  // formas reverso: funciona igual ao reverso — o alvo é a PALAVRA pedida (nome de
+  // uma forma), o que se memoriza é a FORMA que envolve o quadrado onde essa
+  // palavra está escrita (não a forma desenhada nele, essa é só distração)
+  'shapes-reverse': [
+    {
+      target: SHAPES[1], // pedem a palavra "quadrado"
+      squares: [
+        { shape: SHAPES[0], word: SHAPES[3] },
+        { shape: SHAPES[4], word: SHAPES[1], correct: true }, // palavra quadrado / forma estrela (o que se memoriza)
+        { shape: SHAPES[2], word: SHAPES[5] },
+        { shape: SHAPES[5], word: SHAPES[0] },
+      ],
+    },
+    {
+      target: SHAPES[4], // pedem a palavra "estrela" (forma memorizada na rodada A)
+      squares: [
+        { shape: SHAPES[5], word: SHAPES[3] },
+        { shape: SHAPES[0], word: SHAPES[2] },
+        { shape: SHAPES[2], word: SHAPES[4], correct: true }, // palavra estrela / forma triângulo (posição diferente da rodada A)
+        { shape: SHAPES[3], word: SHAPES[0] },
+      ],
+    },
+    {
+      target: SHAPES[2], // pedem a palavra "triângulo" (forma memorizada na rodada B)
+      squares: [
+        { shape: SHAPES[0], word: SHAPES[3] },
+        { shape: SHAPES[1], word: SHAPES[4] },
+        { shape: SHAPES[3], word: SHAPES[0] },
+        { shape: SHAPES[5], word: SHAPES[2], correct: true }, // palavra triângulo / forma cruz (posição diferente das anteriores)
+      ],
+    },
+  ],
+  // trio: cada quadrado tem 3 cores independentes (bg/tc/word — mesmo shape
+  // que renderTrioSquare espera). Pedem-se 2 cores (targetA/targetB); o
+  // quadrado certo é o único em que UMA delas aparece em QUALQUER das 3
+  // partes; o que se memoriza pra rodada seguinte são as OUTRAS 2 cores
+  // desse quadrado. As 3 rodadas de exemplo variam de propósito ONDE a cor
+  // pedida bate (fundo → cor da palavra → a própria palavra), pra ensinar
+  // que vale qualquer uma das 3 partes, não só o fundo.
+  trio: [
+    {
+      targetA: COLORS[1], targetB: COLORS[2], // vermelho e verde
+      squares: [
+        { bg: COLORS[0], tc: COLORS[6], word: COLORS[7] },
+        { bg: COLORS[1], tc: COLORS[5], word: COLORS[4], correct: true }, // bate no FUNDO (vermelho) — memoriza tc=laranja e word=roxo
+        { bg: COLORS[3], tc: COLORS[7], word: COLORS[6] },
+        { bg: COLORS[7], tc: COLORS[4], word: COLORS[5] },
+      ],
+    },
+    {
+      // par memorizado na rodada A: laranja (tc) + roxo (word)
+      squares: [
+        { bg: COLORS[0], tc: COLORS[7], word: COLORS[1] },
+        { bg: COLORS[1], tc: COLORS[6], word: COLORS[7] },
+        { bg: COLORS[2], tc: COLORS[5], word: COLORS[3], correct: true }, // bate na COR DA PALAVRA (laranja) — memoriza bg=verde e word=amarelo
+        { bg: COLORS[6], tc: COLORS[1], word: COLORS[0] },
+      ],
+    },
+    {
+      // par memorizado na rodada B: verde (bg) + amarelo (word)
+      squares: [
+        { bg: COLORS[0], tc: COLORS[5], word: COLORS[1] },
+        { bg: COLORS[1], tc: COLORS[4], word: COLORS[5] },
+        { bg: COLORS[4], tc: COLORS[0], word: COLORS[5] },
+        { bg: COLORS[7], tc: COLORS[6], word: COLORS[2], correct: true }, // bate na PRÓPRIA PALAVRA (verde) — posição diferente das anteriores
+      ],
+    },
+  ],
+};
+const TUT_TOTAL = 7;
+let tutMode = 'classic';
+let tutStep = 1;
+// quando o tutorial é aberto a partir da tela de introdução do desafio diário
+// (botão "Como jogar" ali), "pular"/"terminar" o tutorial deve voltar pra
+// essa tela (e terminar deve já iniciar a tentativa), em vez do fluxo normal
+// (voltar pro menu / ir pro modo livre) — ver startTutorial/tutBack/tutPlay
+let tutFromDaily = false;
+let tutTimers = [];
+function tutClearTimers() { tutTimers.forEach(clearTimeout); tutTimers = []; }
+function tutAfter(ms, fn) { const id = setTimeout(fn, ms); tutTimers.push(id); return id; }
+
+function tutRenderRound(roundIdx, instrText) {
+  const round = TUT_DATA[tutMode][roundIdx];
+  const grid = $('tut-grid');
+  grid.innerHTML = '';
+  round.squares.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'square';
+    el.dataset.i = i;
+    if (tutMode === 'shapes' || tutMode === 'shapes-reverse') {
+      el.classList.add('shape-square', s.shape.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${s.shape.shapeClass}"></span><span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    } else if (tutMode === 'trio') {
+      // mesmo visual de renderTrioSquare (jogo/replay), só acrescentando o
+      // check verde que só o tutorial usa
+      el.style.background = s.bg.hex;
+      el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word word-trio" style="color:${s.tc.hex}">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    } else {
+      el.style.background = s.bg.hex;
+      el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    }
+    grid.appendChild(el);
+  });
+  $('tut-instruction').textContent = instrText;
+}
+
+function tutClearHighlights() {
+  $('tut-instruction').classList.remove('tut-glow');
+  document.querySelectorAll('#tut-grid .square').forEach(sq => {
+    sq.classList.remove('tut-glow', 'tut-correct-flash', 'tut-dim');
+    sq.querySelector('.tut-check')?.classList.remove('show');
+    sq.querySelector('.word')?.classList.remove('tut-word-glow');
+  });
+  const ptrEl = $('tut-pointer');
+  ptrEl.classList.remove('visible', 'tapping', 'tut-pointer-up');
+  ptrEl.textContent = '👉';
+  const staticEl = $('tut-pointer-static');
+  staticEl.classList.remove('visible', 'tut-pointer-up');
+  staticEl.textContent = '👉';
+  $('tut-pointer-next').classList.remove('visible');
+  $('tut-brain').classList.remove('visible', 'pulsing');
+}
+
+function tutPointAt(targetEl, opts = {}) {
+  const stage = $('tut-stage');
+  const stageRect = stage.getBoundingClientRect();
+  const r = targetEl.getBoundingClientRect();
+  const el = opts.brain ? $('tut-brain') : opts.static ? $('tut-pointer-static') : $('tut-pointer');
+  const xr = opts.xr ?? 0.5, yr = opts.yr ?? 0.42;
+  el.style.left = (r.left + r.width * xr - stageRect.left) + 'px';
+  el.style.top = (r.top + r.height * yr - stageRect.top) + 'px';
+  el.classList.add('visible');
+  if (opts.brain) el.classList.add('pulsing');
+  return el;
+}
+
+function tutCorrectSquare(roundIdx) {
+  const idx = TUT_DATA[tutMode][roundIdx].squares.findIndex(s => s.correct);
+  return document.querySelectorAll('#tut-grid .square')[idx];
+}
+
+function tutSetDots() {
+  const wrap = $('tut-dots');
+  wrap.innerHTML = '';
+  for (let i = 1; i <= TUT_TOTAL; i++) {
+    const d = document.createElement('span');
+    d.className = 'tut-dot' + (i === tutStep ? ' active' : i < tutStep ? ' done' : '');
+    wrap.appendChild(d);
+  }
+}
+
+function tutSetNav() {
+  $('tut-prev-btn').style.visibility = tutStep === 1 ? 'hidden' : 'visible';
+  const nextBtn = $('tut-next-btn');
+  if (tutStep === TUT_TOTAL) {
+    nextBtn.textContent = tutFromDaily ? T[lang].tut_play_btn_daily : T[lang].tut_play_btn[tutMode];
+    nextBtn.onclick = tutPlay;
+  } else {
+    nextBtn.textContent = T[lang].tut_next;
+    nextBtn.onclick = tutNext;
+  }
+}
+
+function showTutStep(n) {
+  tutClearTimers();
+  tutClearHighlights();
+  tutStep = n;
+  tutSetDots();
+  tutSetNav();
+  $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
+
+  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes, 'shapes-reverse': T[lang].instr_first_shapes_reverse, trio: T[lang].instr_first_trio };
+  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes, 'shapes-reverse': T[lang].instr_next_shapes_reverse, trio: T[lang].instr_next_trio };
+  const instrFirst = INSTR_FIRST_BY_TUT_MODE[tutMode];
+  const instrNext = INSTR_NEXT_BY_TUT_MODE[tutMode];
+  // trio pede 2 cores (targetA/targetB) — instrFirst recebe os 2 nomes; os
+  // outros modos pedem só 1 (target)
+  const round0 = () => tutRenderRound(0, (tutMode === 'trio')
+    ? instrFirst(cName(TUT_DATA.trio[0].targetA), cName(TUT_DATA.trio[0].targetB))
+    : instrFirst(cName(TUT_DATA[tutMode][0].target)));
+  const round1 = () => tutRenderRound(1, instrNext);
+  const round2 = () => tutRenderRound(2, instrNext);
+  // destaca (pisca) o(s) nome(s) da(s) cor(es)/palavra(s) dentro da instrução no
+  // topo — aceita mais de um nome (trio pede 2 cores de uma vez só)
+  const tutHighlightInstrWord = (...names) => {
+    const el = $('tut-instruction');
+    const raw = el.textContent;
+    const found = names
+      .map(name => ({ name, idx: raw.indexOf(name) }))
+      .filter(m => m.idx !== -1)
+      .sort((a, b) => a.idx - b.idx);
+    if (!found.length) return;
+    let out = '', cursor = 0;
+    found.forEach(({ name, idx }) => {
+      out += raw.slice(cursor, idx) + `<span class="tut-instr-color">${name}</span>`;
+      cursor = idx + name.length;
+    });
+    out += raw.slice(cursor);
+    el.innerHTML = out;
+  };
+  // escurece os outros quadrados do grid aos poucos (~2s), deixando só o "sq" em
+  // destaque — força um reflow antes de aplicar a classe, senão o navegador pula
+  // direto pro estado final sem animar (mesmo problema de sempre com transições)
+  const tutFocusSquare = (sq) => {
+    const squares = document.querySelectorAll('#tut-grid .square');
+    squares.forEach(el => el.classList.remove('tut-dim'));
+    void $('tut-grid').offsetWidth;
+    squares.forEach(el => { if (el !== sq) el.classList.add('tut-dim'); });
+  };
+  // mostra o cérebro sobre o que precisa ser memorizado (a palavra no clássico, a cor no reverso)
+  const tutShowMemorize = (sq) => {
+    tutFocusSquare(sq);
+    sq.classList.add('tut-glow');
+    if (tutMode === 'reverse' || tutMode === 'shapes-reverse') {
+      // no reverso (e no formas reverso) memoriza-se a COR DE FUNDO (ou a FORMA) do quadrado, não a
+      // palavra escrita nele — por isso o cérebro fica num canto, longe da palavra centralizada,
+      // pra não parecer que é ela
+      tutPointAt(sq, { brain: true, xr: 0.8, yr: 0.2 });
+    } else {
+      sq.querySelector('.word').classList.add('tut-word-glow');
+      tutPointAt(sq.querySelector('.word'), { brain: true, yr: 0.32 });
+    }
+  };
+  // mãozinha apontando pra palavra escrita no meio do quadrado, parada logo abaixo dela sem sobrepor
+  // (usada no reverso pra deixar claro que é o texto que está sendo procurado, não a cor de fundo)
+  const tutPointAtWord = (sq, opts = {}) => {
+    const el = opts.static ? $('tut-pointer-static') : $('tut-pointer');
+    el.textContent = '👆';
+    el.classList.add('tut-pointer-up');
+    sq.querySelector('.word').classList.add('tut-word-glow');
+    tutPointAt(sq.querySelector('.word'), { static: !!opts.static, xr: opts.xr ?? 0.5, yr: opts.yr ?? 1.35 });
+  };
+  // mãozinha "chega" deslizando pela esquerda e para bem na borda do alvo, sem entrar no texto
+  const tutSlideInFromLeft = (targetEl, opts = {}) => {
+    const stage = $('tut-stage');
+    const stageRect = stage.getBoundingClientRect();
+    const r = targetEl.getBoundingClientRect();
+    const el = $('tut-pointer');
+    const yr = opts.yr ?? 0.5;
+    const gap = opts.gap ?? 0; // px de folga extra entre a ponta do dedo e a borda esquerda do alvo
+    // o transform da mãozinha (translate(-38%,...)) desloca o emoji ~62% do seu tamanho pra direita
+    // do ponto de ancoragem — compensamos isso aqui pra ponta do dedo parar exatamente na borda
+    const rightExtent = el.offsetWidth * 0.62;
+    const finalLeft = r.left - stageRect.left - rightExtent - gap;
+    const finalTop = r.top + r.height * yr - stageRect.top;
+    el.style.left = '-160px';
+    el.style.top = finalTop + 'px';
+    el.classList.add('visible');
+    void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
+    el.style.left = finalLeft + 'px';
+  };
+  // mãozinha "chega" deslizando pela direita e para na borda do alvo (usada pra apontar o botão Próximo)
+  const tutSlideInFromRight = (targetEl, opts = {}) => {
+    const stage = $('tut-stage');
+    const stageRect = stage.getBoundingClientRect();
+    const r = targetEl.getBoundingClientRect();
+    const el = $('tut-pointer-next');
+    const yr = opts.yr ?? 0.5;
+    const gap = opts.gap ?? 26; // px de folga antes da borda direita do alvo (evita sobrepor o texto/botão)
+    const finalLeft = r.right - stageRect.left + gap;
+    const finalTop = r.top + r.height * yr - stageRect.top;
+    el.style.left = (stageRect.width + 120) + 'px';
+    el.style.top = finalTop + 'px';
+    el.classList.add('visible');
+    void el.offsetWidth; // força o navegador a registrar a posição inicial antes de animar
+    el.style.left = finalLeft + 'px';
+  };
+  // mãozinha tocando o quadrado (lateralizada, embaixo) + flash verde — sem checkmark, a animação da mão já basta
+  const tutShowClick = (sq, delay = 500) => {
+    tutFocusSquare(sq);
+    sq.classList.add('tut-glow');
+    tutPointAt(sq, { xr: 0.24, yr: 0.84 });
+    tutAfter(delay, () => {
+      $('tut-pointer').classList.add('tapping');
+      sq.classList.add('tut-correct-flash');
+    });
+  };
+
+  if (n === 1) {
+    // destaca a cor pedida na instrução (piscando) + o quadrado certo, e a mãozinha desliza pela
+    // esquerda até chegar na caixa de texto embaixo (reforça que é ali que se deve ler primeiro)
+    round0();
+    const sq = tutCorrectSquare(0);
+    tutFocusSquare(sq);
+    if (tutMode === 'trio') {
+      tutHighlightInstrWord(cName(TUT_DATA.trio[0].targetA), cName(TUT_DATA.trio[0].targetB));
+    } else {
+      tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
+    }
+    if (tutMode === 'reverse' || tutMode === 'shapes-reverse') {
+      tutPointAtWord(sq, { static: true }); // no reverso (e no formas reverso), destaca só a palavra (é ela que se procura)
+    } else {
+      sq.classList.add('tut-glow');
+      tutPointAt(sq, { static: true, yr: 0.78 });
+    }
+    tutSlideInFromLeft($('tut-caption'), { yr: 0.4 });
+  } else if (n === 2) {
+    // memorize a palavra do meio (clássico) ou a cor de fundo (reverso) do quadrado certo
+    round0();
+    tutShowMemorize(tutCorrectSquare(0));
+  } else if (n === 3) {
+    // agora clica, depois de já ter memorizado (mãozinha lateralizada embaixo, sem check)
+    round0();
+    tutShowClick(tutCorrectSquare(0));
+  } else if (n === 4) {
+    // rodada 2: destaca o quadrado certo + mãozinha (aponta pra palavra no reverso, pro quadrado no clássico)
+    round1();
+    const sq = tutCorrectSquare(1);
+    tutFocusSquare(sq);
+    if (tutMode === 'reverse' || tutMode === 'shapes-reverse') {
+      tutPointAtWord(sq); // destaca só a palavra, sem piscar o quadrado inteiro
+    } else if (tutMode === 'trio') {
+      // aqui o match é na COR da palavra — aponta pra ela, mas deslocada pra
+      // esquerda (xr baixo) pra não sobrepor o texto no meio do quadrado
+      sq.classList.add('tut-glow');
+      tutPointAtWord(sq, { xr: 0.2 });
+    } else {
+      sq.classList.add('tut-glow');
+      tutPointAt(sq, { yr: 0.42 });
+    }
+  } else if (n === 5) {
+    // memoriza a nova palavra (sem clicar ainda)
+    round1();
+    tutShowMemorize(tutCorrectSquare(1));
+  } else if (n === 6) {
+    // igual ao passo 3: clica depois de memorizar, sem check
+    round1();
+    tutShowClick(tutCorrectSquare(1));
+  } else if (n === 7) {
+    // recapitulação final: destaca o quadrado amarelo (rodada 3), memoriza e clica, sem check
+    round2();
+    const sq = tutCorrectSquare(2);
+    tutShowMemorize(sq);
+    tutShowClick(sq);
+  }
+
+  // depois de 4s, uma mãozinha vindo da direita aponta pro botão de avançar;
+  // se for a mãozinha que chegou pela esquerda (passo 1), ela some pra não poluir a tela
+  // (no último passo o botão vira "jogar", não precisa da dica)
+  if (n < TUT_TOTAL) {
+    tutAfter(4000, () => {
+      tutSlideInFromRight($('tut-next-btn'), { gap: -10 });
+      if (n === 1) $('tut-pointer').classList.remove('visible');
+    });
+  }
+}
+
+window.startTutorial = (mode = 'classic', opts = {}) => {
+  tutMode = mode;
+  tutFromDaily = !!opts.fromDaily;
+  track('tutorial_start', { mode, fromDaily: tutFromDaily });
+  show('tutorial-screen');
+  $('tut-title-el').textContent = T[lang].tut_title[tutMode];
+  showTutStep(1);
+  $('tut-intro-banner').classList.add('show');
+  setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1500);
+};
+window.tutNext = () => { if (tutStep < TUT_TOTAL) showTutStep(tutStep + 1); };
+window.tutPrev = () => { if (tutStep > 1) showTutStep(tutStep - 1); };
+window.tutBack = () => {
+  tutClearTimers();
+  track('tutorial_skip', { step: tutStep, fromDaily: tutFromDaily });
+  if (tutFromDaily) { tutFromDaily = false; showDailyIntro(); } else { showMenu(); }
+};
+window.tutPlay = () => {
+  tutClearTimers();
+  track('tutorial_complete', { mode: tutMode, fromDaily: tutFromDaily });
+  if (tutFromDaily) { tutFromDaily = false; startDailyChallenge(); } else { startGame(tutMode); }
+};
+
+applyLanguage();
