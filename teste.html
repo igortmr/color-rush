@@ -2852,40 +2852,41 @@ function blockIfBanned() {
   return true;
 }
 
-// cor do emblema de nível muda a cada faixa de 5 níveis: até o nível 29 usa
-// uma paleta fixa de 6 cores só (1-4 verde, 5-9 azul, 10-14 roxo, ...); da
-// faixa 30 em diante (nível 30, 35, 40...) gera um degradê de três cores por
-// faixa (ver lvBandGradient), pra nunca mais "flatlinar" numa cor só de tanto
-// subir; e o nível 100 vira "master" — arco-íris animado, igual (mesmo ciclo
-// de cores e duração) a moldura arco-íris da loja (ver .lv-chip-master no CSS)
-const LV_COLORS = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffe93c', '#ff9f1c', '#ff2d6b'];
-// só existem 14 faixas de degradê de verdade (banda 6 = nível 30, até banda
-// 19 = nível 95 — nível 100 já vira "master" antes de chegar aqui, ver
-// lvChip), então dá pra espalhar 14 matizes IGUALMENTE nos 360° em vez de
-// girar por um ângulo fixo (ângulo dourado): geometricamente impossível duas
-// faixas caírem parecidas, mesmo bem distantes uma da outra — o problema que
-// tinha antes (nível 30 parecido com 55/80/95 etc.), já que o ângulo dourado
-// só evita repetição perceptível numa sequência LONGA, não numa janela fixa
-// de 14 valores. Três cores por faixa (não duas) pra ficar ainda mais fácil
-// de diferenciar visualmente uma faixa da outra.
-function lvBandGradient(band) {
-  const idx = ((band - 6) % 14 + 14) % 14; // 0 = nível 30, 13 = nível 95
-  const hue = Math.round((idx * 360) / 14);
-  const h1 = (hue + 330) % 360; // -30°
-  const h2 = hue;
-  const h3 = (hue + 30) % 360;
-  return [`hsl(${h1}, 90%, 62%)`, `hsl(${h2}, 90%, 62%)`, `hsl(${h3}, 90%, 62%)`, hue];
+// cor do emblema de nível é um único degradê contínuo por toda a subida: começa
+// verde no nível 5, passa por azul, roxo, branco, amarelo e laranja, e termina
+// vermelho no nível 95 (ver LV_SPECTRUM/lvSpectrumColor — interpolação linear
+// de RGB entre os "stops" da paleta da marca); cada chip mostra 3 tons vizinhos
+// desse degradê centrados na sua própria faixa de 5 níveis (ver lvChipGradient),
+// então a cor muda suave e continuamente de faixa pra faixa sem nunca repetir; e
+// o nível 100 vira "master" — arco-íris animado, igual (mesmo ciclo de cores e
+// duração) a moldura arco-íris da loja (ver .lv-chip-master no CSS)
+const LV_SPECTRUM = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffffff', '#ffe93c', '#ff9f1c', '#ff2d6b'];
+const LV_MAX_BAND = 19; // faixa do nível 95-99, o último degrau antes do "master" no nível 100
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function mixHex(hexA, hexB, f) {
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * f).toString(16).padStart(2, '0')).join('');
+}
+function lvSpectrumColor(t) {
+  const segs = LV_SPECTRUM.length - 1;
+  const scaled = Math.min(Math.max(t, 0), 1) * segs;
+  const i = Math.min(Math.floor(scaled), segs - 1);
+  return mixHex(LV_SPECTRUM[i], LV_SPECTRUM[i + 1], scaled - i);
+}
+function lvChipGradient(band) {
+  const t = Math.min(Math.max(band / LV_MAX_BAND, 0), 1);
+  const d = 0.035;
+  return [lvSpectrumColor(Math.max(0, t - d)), lvSpectrumColor(t), lvSpectrumColor(Math.min(1, t + d))];
 }
 function lvChip(xp) {
   const lv = levelFromXp(xp || 0);
   if (lv >= 100) return `<span class="lv-chip lv-chip-master">Lv ${lv}</span>`;
   const band = Math.floor(lv / 5);
-  if (band < LV_COLORS.length) {
-    const c = LV_COLORS[band];
-    return `<span class="lv-chip" style="color:${c}; border-color:${c}88; text-shadow:0 0 6px ${c}80">Lv ${lv}</span>`;
-  }
-  const [c1, c2, c3, hue] = lvBandGradient(band);
-  return `<span class="lv-chip" style="background:linear-gradient(90deg, ${c1}, ${c2}, ${c3}); -webkit-background-clip:text; background-clip:text; color:transparent; border-color:hsla(${hue},90%,62%,0.53); text-shadow:0 0 6px hsla(${hue},90%,62%,0.5)">Lv ${lv}</span>`;
+  const [c1, c2, c3] = lvChipGradient(band);
+  return `<span class="lv-chip" style="background:linear-gradient(90deg, ${c1}, ${c2}, ${c3}); -webkit-background-clip:text; background-clip:text; color:transparent; border-color:${c2}88; text-shadow:0 0 6px ${c2}80">Lv ${lv}</span>`;
 }
 // moldura da loja ao redor do nick — "equipped" é público (mesmo doc de
 // scores/{uid} que já alimenta o ranking), então aparece pra QUALQUER um que
