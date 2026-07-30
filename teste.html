@@ -705,6 +705,10 @@
   .badge-chip.big { width: 46px; height: 46px; font-size: 1.5rem; }
   .badge-chip.small { width: 19px; height: 19px; font-size: 0.68rem; }
   .badge-chip.locked { opacity: 0.45; filter: grayscale(0.6); box-shadow: none; }
+  /* anel branco em volta do nível que a pessoa escolheu pra exibir no ranking
+     (ver setEquippedBadgeTier) — pode ser qualquer nível já desbloqueado, não
+     necessariamente o mais alto */
+  .badge-chip.equipped { box-shadow: 0 0 0 3px #fff, 0 0 10px 2px rgba(255,255,255,0.6); }
   /* bolinha de "medalha nova, ainda não vista" — usada no nick da tela
      principal (aviso de que tem algo novo pra conferir) e no ícone grande do
      card da medalha no perfil (qual categoria tem a novidade) */
@@ -3041,17 +3045,22 @@ function refreshBadgeNotifDot() {
   dot.style.display = n > 0 ? '' : 'none';
 }
 // pill com ícone + nome da ÚNICA medalha escolhida pra aparecer ao lado do
-// nick no ranking (ver toggleEquippedBadge, no perfil próprio). Sem escolha
+// nick no ranking (ver setEquippedBadgeTier, no perfil próprio). Sem escolha
 // feita ainda, não mostra nada — só passa a exibir depois que a própria
 // pessoa vai no perfil e equipa uma. Sempre reconfere unlockedTier() contra
-// as stats REAIS, então forjar equippedBadge não mostra nada que a pessoa
-// não tenha de verdade.
+// as stats REAIS, então forjar equippedBadge/equippedBadgeTier não mostra
+// nada que a pessoa não tenha de verdade — equippedBadgeTier escolhe QUAL
+// nível já desbloqueado aparece (não precisa ser o mais alto: alguém que já
+// tem "Imortal" pode preferir mostrar "Lenda"), null cai no comportamento
+// antigo (sempre o mais alto).
 function equippedBadgeLabel(stats) {
   const key = stats.equippedBadge;
   if (!key || !BADGE_DEFS[key]) return ''; // ninguém escolheu ainda — não mostra nada até a pessoa ir no perfil e equipar uma
   const def = BADGE_DEFS[key];
-  const t = unlockedTier(def, stats);
-  if (t < 0) return ''; // reconfere contra as stats reais — se não desbloqueou de verdade, não mostra
+  const maxTier = unlockedTier(def, stats);
+  if (maxTier < 0) return ''; // reconfere contra as stats reais — se não desbloqueou de verdade, não mostra
+  const chosen = stats.equippedBadgeTier;
+  const t = (typeof chosen === 'number' && chosen >= 0 && chosen <= maxTier) ? chosen : maxTier;
   const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
   const name = def.names[lang][t];
   return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
@@ -3209,7 +3218,7 @@ let currentSessionId = null;     // sessão validada pelo servidor pra partida a
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, badgesSeenTiers: {},
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
 };
 
 const $ = id => document.getElementById(id);
@@ -3722,7 +3731,7 @@ window.playOffline = () => {
   myData = {
     nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, badgesSeenTiers: {},
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
   };
   showMenu();
 };
@@ -3770,7 +3779,7 @@ onAuthStateChanged(auth, async user => {
 const EMPTY_PROFILE = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, badgesSeenTiers: {},
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
 };
 
 async function proceedAfterLogin(user) {
@@ -5314,21 +5323,31 @@ function renderBadgeCard(key, def, stats) {
     }
   }
 
+  // qual nível desta categoria está sendo exibido no ranking agora (-1 se a
+  // categoria nem está equipada) — não precisa ser o mais alto desbloqueado,
+  // ver setEquippedBadgeTier/equippedBadgeLabel
+  const equippedTier = (myData.equippedBadge === key)
+    ? ((typeof myData.equippedBadgeTier === 'number' && myData.equippedBadgeTier <= tier) ? myData.equippedBadgeTier : tier)
+    : -1;
+
+  // cada chip DESBLOQUEADO é clicável — escolhe direto aquele nível pra
+  // exibir no ranking (não precisa ser o mais alto). Clicar no que já está
+  // sendo exibido desequipa a categoria inteira.
   const chips = def.tiers.map((th, i) => {
     const unlocked = i <= tier;
     const lockOverlay = unlocked ? '' : '<span class="chip-lock">🔒</span>';
-    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}" style="background:${TIER_COLORS[i]}" title="${def.names[lang][i]}">${def.icon}</span>${lockOverlay}</span>`;
+    const isShown = i === equippedTier;
+    const clickAttr = unlocked ? ` onclick="setEquippedBadgeTier('${key}', ${i})"` : '';
+    const cursorStyle = unlocked ? 'cursor:pointer;' : '';
+    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}${isShown ? ' equipped' : ''}" style="background:${TIER_COLORS[i]};${cursorStyle}" title="${def.names[lang][i]}"${clickAttr}>${def.icon}</span>${lockOverlay}</span>`;
   }).join('');
 
-  // botão de "equipar no ranking" — só faz sentido pra medalha já desbloqueada
-  // (tier >= 0); limita a 3 escolhidas por vez (mesmo limite de ícones que
-  // sempre coube nas colunas do ranking)
+  // legenda embaixo dos chips — só existe pra medalha já desbloqueada (tier >= 0)
   let equipHtml = '';
   if (tier >= 0) {
-    const isEquipped = myData.equippedBadge === key;
-    const btnLabel = isEquipped ? T[lang].profile_badge_equipped_btn : T[lang].profile_badge_equip_btn;
-    equipHtml = `
-      <button class="secondary" style="padding:7px 14px; font-size:0.8rem; ${isEquipped ? 'border-color:var(--neon-green); color:var(--neon-green);' : ''}" onclick="toggleEquippedBadge('${key}')">${btnLabel}</button>`;
+    equipHtml = (equippedTier >= 0)
+      ? `<div class="muted" style="text-align:left; margin-top:6px; color:var(--neon-green);">${T[lang].profile_badge_equipped_btn}: ${def.names[lang][equippedTier]}</div>`
+      : `<div class="muted" style="text-align:left; margin-top:6px;">${T[lang].profile_badge_equip_btn}</div>`;
   }
 
   return `
@@ -5346,26 +5365,35 @@ function renderBadgeCard(key, def, stats) {
     </div>`;
 }
 
-// alterna qual medalha (já desbloqueada) aparece ao lado do próprio nick no
-// ranking — grava direto em scores/{uid} (permitido pelas regras, ver
-// isValidEquippedBadge no firestore.rules); é seguro sem Cloud Function
+// escolhe qual medalha (já desbloqueada) E QUAL NÍVEL dela aparece ao lado do
+// próprio nick no ranking — não precisa ser o nível mais alto desbloqueado
+// (ex.: já tem "Imortal" mas prefere mostrar "Lenda"). Grava direto em
+// scores/{uid} (permitido pelas regras, ver isValidEquippedBadge/
+// isValidEquippedBadgeTier no firestore.rules); é seguro sem Cloud Function
 // porque equippedBadgeLabel() sempre reconfere unlockedTier() contra as
-// stats reais antes de mostrar qualquer coisa
-window.toggleEquippedBadge = async (key) => {
+// stats reais antes de mostrar qualquer coisa (clicar num nível não
+// desbloqueado de verdade nunca chega a acontecer pela UI, mas mesmo que
+// alguém forje isso direto no Firestore, não muda o que aparece pra ninguém).
+window.setEquippedBadgeTier = async (key, tierIdx) => {
   if (offline || !currentUser || !myData.nick) return;
-  // só uma medalha por vez: clicar na já equipada desequipa (volta pro padrão
-  // automático); clicar em outra troca na hora, sem precisar desmarcar antes
-  const next = (myData.equippedBadge === key) ? null : key;
-  myData.equippedBadge = next;
+  // clicar no nível que já está sendo exibido desequipa a categoria inteira
+  // (volta a não mostrar nada); clicar em outro nível (da mesma categoria ou
+  // de outra) troca na hora, sem precisar desequipar antes
+  const alreadyShown = myData.equippedBadge === key
+    && ((typeof myData.equippedBadgeTier === 'number' ? myData.equippedBadgeTier : unlockedTier(BADGE_DEFS[key], myData)) === tierIdx);
+  const nextKey = alreadyShown ? null : key;
+  const nextTier = alreadyShown ? null : tierIdx;
+  myData.equippedBadge = nextKey;
+  myData.equippedBadgeTier = nextTier;
   // renderProfile() sempre chama resetScroll('profile-screen') no final, que
   // joga a página pro topo — é o certo ao ENTRAR na tela, mas aqui a pessoa já
   // está nela só trocando a medalha, então guarda a posição e restaura logo
   // depois, pra não pular a tela pra cima.
   const scrollY = window.scrollY;
-  renderProfile(); // atualiza o botão na hora, antes mesmo do Firestore confirmar
+  renderProfile(); // atualiza o chip/legenda na hora, antes mesmo do Firestore confirmar
   window.scrollTo(0, scrollY);
   try {
-    await setDoc(doc(db, 'scores', currentUser.uid), { equippedBadge: next, updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, 'scores', currentUser.uid), { equippedBadge: nextKey, equippedBadgeTier: nextTier, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {
     // não foi possível salvar agora — a escolha fica só localmente até a próxima tentativa
   }
