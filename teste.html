@@ -2729,11 +2729,28 @@ const DAILY_COLORS = [
   { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',   es: 'MARRÓN'     }, hex: '#73421c' },
   { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',     es: 'ROJO'       }, hex: '#ff3c3c' },
 ];
+// DAILY_PALETTE_OVERRIDE: mesma ideia do DAILY_MODE_OVERRIDE (ver mais
+// abaixo) só que pra paleta — força um dia específico a usar outras 4 cores
+// em vez da paleta padrão do desafio diário (DAILY_COLORS), sem mexer no
+// sorteio de verdade dos outros dias. Sempre precisa ter EXATAMENTE 4 cores
+// (== SQUARES) pra continuar garantindo que nunca repete cor de fundo na
+// mesma rodada (ver dailyNewRound).
+const DAILY_PALETTE_OVERRIDE = {
+  '2026-07-30': [
+    { key: 'blue',   name: { pt: 'AZUL',  en: 'BLUE',   es: 'AZUL'   }, hex: '#1e90ff' },
+    { key: 'cyan',   name: { pt: 'CIANO', en: 'CYAN',   es: 'CIAN'   }, hex: '#00d2d3' },
+    { key: 'green',  name: { pt: 'VERDE', en: 'GREEN',  es: 'VERDE'  }, hex: '#2ed573' },
+    { key: 'purple', name: { pt: 'ROXO',  en: 'PURPLE', es: 'MORADO' }, hex: '#a55eea' },
+  ],
+};
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
-// paleta estendida (DAILY_COLORS); qualquer outro valor cai no poolFor normal
+// paleta estendida (DAILY_COLORS, ou o override do dia — ver
+// DAILY_PALETTE_OVERRIDE acima); qualquer outro valor cai no poolFor normal
 // (dead code hoje, já que DAILY_ROTATION_MODES só tem esses 2, mas mantém a
 // função segura se um modo de forma voltar a entrar no sorteio um dia)
-const dailyPoolFor = m => (m === 'classic' || m === 'reverse') ? DAILY_COLORS : poolFor(m);
+const dailyPoolFor = m => (m === 'classic' || m === 'reverse')
+  ? (DAILY_PALETTE_OVERRIDE[dailyLocalDateStr()] || DAILY_COLORS)
+  : poolFor(m);
 // Geral = soma dos recordes em TODOS os modos (conta 0 pro modo ainda não jogado)
 const computeTotal = (overrideMode, overrideScore) =>
   ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (myData[k] || 0)), 0);
@@ -3329,8 +3346,9 @@ function seededShuffle(rng, a) {
 // DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
 // sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
 // de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
-// (28/07/2026) caiu Reverso; amanhã (29/07/2026) é Clássico.
-const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic' };
+// (29/07/2026) é Clássico; amanhã (30/07/2026) também será Clássico, com a
+// paleta trocada pra Azul/Ciano/Verde/Roxo (ver DAILY_PALETTE_OVERRIDE).
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic' };
 function dailyModeForToday(dateStr) {
   if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
