@@ -3594,13 +3594,22 @@ function isNativeApp() {
 // nativo — aqui só estende a mesma checagem pro Chrome/Safari mobile comum
 // (ver doGoogle/doApple).
 function shouldUseRedirect() {
-  return isNativeApp() || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  // Só o app nativo (Capacitor) usa redirect. Chegamos a estender isso pro
+  // navegador mobile comum também (achando que popup era o problema geral),
+  // mas o Google sempre funcionou de popup no Safari/Chrome iOS — quem
+  // quebrou no mobile foi justamente o redirect (getRedirectResult sempre
+  // volta null lá, mesmo com authDomain próprio + persistência forçada).
+  // Voltando ao escopo original: só native app.
+  return isNativeApp();
 }
 // dentro do app nativo (Capacitor/WKWebView) window.open não funciona como
-// popup de verdade, e em navegador MOBILE o popup perde a referência da
-// janela original ao trocar de aba pro OAuth — nos dois casos
-// signInWithRedirect resolve (ver shouldUseRedirect acima). Só no desktop
-// continua usando popup (não recarrega a página à toa).
+// popup de verdade — signInWithRedirect resolve (ver shouldUseRedirect
+// acima). Fora do app nativo (navegador comum, celular incluso) continua
+// usando popup: signInWithRedirect chegou a ser testado ali também, mas
+// getRedirectResult sempre voltava null no Safari/Chrome iOS mesmo com
+// authDomain próprio e persistência forçada — e o popup do Google sempre
+// funcionou bem nesses navegadores, então não vale a pena arriscar quebrar
+// isso de novo.
 window.doGoogle = async () => {
   $('auth-error').textContent = '';
   try {
@@ -3647,15 +3656,8 @@ function registerAppleAuthCodeIfPresent(result) {
 // for o caso) — o restante do login em si já é pego pelo onAuthStateChanged
 // normal logo abaixo, então não precisa duplicar track('login', ...) aqui.
 getRedirectResult(auth)
-  .then(result => {
-    // DEBUG TEMPORÁRIO — investigando falha de login por redirect no
-    // Safari/Chrome iOS. Remover depois de confirmar a causa.
-    $('auth-error').textContent = result
-      ? ('DEBUG: getRedirectResult OK, uid=' + result.user.uid)
-      : 'DEBUG: getRedirectResult voltou null (sem redirect pendente)';
-    registerAppleAuthCodeIfPresent(result);
-  })
-  .catch(e => { $('auth-error').textContent = 'DEBUG ERRO: ' + (e && e.code) + ' | ' + (e && e.message); });
+  .then(result => registerAppleAuthCodeIfPresent(result))
+  .catch(e => { $('auth-error').textContent = authErrMsg(e); });
 window.doLogout = async () => {
   offline = false;
   stopPvpListener();
