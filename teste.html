@@ -1236,6 +1236,11 @@
   <div class="card">
     <p style="text-align:center;" data-i18n-html="nick_prompt">Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
     <input type="text" id="nick-input" maxlength="16" data-i18n-placeholder="nick_ph" placeholder="Seu nick (3 a 16 caracteres)">
+    <!-- código de quem indicou — vem travado se a pessoa chegou por um link de
+         convite (?ref=, ver referrerCode/syncRefCodeField); senão fica livre
+         pra digitar manualmente o código de um amigo -->
+    <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase;" data-i18n-placeholder="ref_code_ph" placeholder="Código de quem te indicou (opcional)">
+    <div class="muted" id="ref-code-locked-note" style="display:none; text-align:center; margin-top:-6px;" data-i18n="ref_code_locked_note">Preenchido automaticamente pelo link de convite</div>
     <div class="error" id="nick-error"></div>
     <button onclick="saveNick()" data-i18n="btn_confirm">CONFIRMAR</button>
   </div>
@@ -1851,6 +1856,8 @@ const T = {
     delete_account_modal_confirm_btn: 'Confirmo a exclusão da conta',
     nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
+    ref_code_ph: 'Código de quem te indicou (opcional)',
+    ref_code_locked_note: 'Preenchido automaticamente pelo link de convite',
     mode_classic_title: '🎨 Clássico',
     mode_classic_desc: 'Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.',
     mode_reverse_title: '🔄 Reverso',
@@ -2082,6 +2089,8 @@ const T = {
     delete_account_modal_confirm_btn: 'I confirm account deletion',
     nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
+    ref_code_ph: "Friend's referral code (optional)",
+    ref_code_locked_note: 'Auto-filled from the invite link',
     mode_classic_title: '🎨 Classic',
     mode_classic_desc: "Click the square with the <b>requested color</b> and memorize the <b>word</b> inside it. Next round, click the square whose color matches the memorized word.",
     mode_reverse_title: '🔄 Reverse',
@@ -2313,6 +2322,8 @@ const T = {
     delete_account_modal_confirm_btn: 'Confirmo la eliminación de la cuenta',
     nick_prompt: 'Elige tu apodo para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu apodo (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
+    ref_code_ph: 'Código de quien te invitó (opcional)',
+    ref_code_locked_note: 'Completado automáticamente por el enlace de invitación',
     mode_classic_title: '🎨 Clásico',
     mode_classic_desc: 'Haz clic en el cuadrado del <b>color pedido</b> y memoriza la <b>palabra</b> dentro de él. En la siguiente ronda, haz clic en el cuadrado del color de la palabra memorizada.',
     mode_reverse_title: '🔄 Reverso',
@@ -3788,7 +3799,7 @@ async function proceedAfterLogin(user) {
     myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
   } catch { myData = { ...EMPTY_PROFILE }; }
   applyEquippedCosmetics();
-  if (!myData.nick) show('nick-screen');
+  if (!myData.nick) { syncRefCodeField(); show('nick-screen'); }
   else {
     await backfillTotal();
     await submitPendingScore();
@@ -3819,6 +3830,24 @@ async function backfillTotal() {
 }
 
 /* ================== nick ================== */
+// sincroniza o campo de código de indicação na tela de nick com referrerCode
+// (capturado de ?ref= na URL). Veio de link: trava o campo (não dá pra
+// "roubar" a indicação de outra pessoa trocando o valor). Não veio de link:
+// deixa livre pra digitar o código de um amigo manualmente.
+function syncRefCodeField() {
+  const input = $('ref-code-input');
+  const note = $('ref-code-locked-note');
+  if (!input) return;
+  if (referrerCode) {
+    input.value = referrerCode;
+    input.disabled = true;
+    if (note) note.style.display = '';
+  } else {
+    input.value = '';
+    input.disabled = false;
+    if (note) note.style.display = 'none';
+  }
+}
 window.saveNick = async () => {
   const nick = $('nick-input').value.trim();
   $('nick-error').textContent = '';
@@ -3853,9 +3882,14 @@ window.saveNick = async () => {
     myData.refCode = refCode;
 
     // credita a indicação para quem trouxe esse jogador (feito no servidor,
-    // já que é uma escrita no documento de OUTRO usuário)
-    if (referrerCode) {
-      try { await callCreditReferral({ refCode: referrerCode }); } catch {}
+    // já que é uma escrita no documento de OUTRO usuário). referrerCode (de um
+    // link ?ref=) tem prioridade; sem link, usa o que a pessoa digitou à mão
+    // no campo — um código inválido/inexistente simplesmente não credita nada
+    // (ver creditReferral em functions/index.js), sem erro pra pessoa.
+    const typedRefCode = ($('ref-code-input').value || '').trim().toUpperCase();
+    const codeToCredit = referrerCode || typedRefCode || null;
+    if (codeToCredit) {
+      try { await callCreditReferral({ refCode: codeToCredit }); } catch {}
       referrerCode = null;
       try { sessionStorage.removeItem('colorRushRef'); } catch {}
     }
