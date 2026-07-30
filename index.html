@@ -5715,10 +5715,19 @@ const REPLAY_CLICK_FLASH_MS = 300; // janela, antes da rodada trocar, em que o "
 function renderReplaySquares(round, idx) {
   const rmode = replayData.mode;
   // replay do desafio diário (kind:'daily', ver saveMatchReplay em
-  // functions/index.js) usa a paleta estendida (Marrom/Cinza) nos modos
+  // functions/index.js) usa a paleta estendida do desafio diário nos modos
   // Clássico/Reverso — mesmo "mode" que o jogo livre usa, então só dá pra
-  // saber qual paleta reconstruir checando esse flag à parte
-  const pool = (replayData.kind === 'daily' && (rmode === 'classic' || rmode === 'reverse')) ? DAILY_COLORS : poolFor(rmode);
+  // saber qual paleta reconstruir checando esse flag à parte. Usa a paleta
+  // DO DIA em que a partida foi jogada (createdAt), não a de hoje — senão um
+  // dia com DAILY_PALETTE_OVERRIDE (ver dailyPoolFor) faz o replay tentar
+  // achar chaves tipo 'blue'/'cyan' numa paleta que não tem essas chaves,
+  // caindo todo no pool[0] (era isso que deixava tudo amarelo).
+  const replayDateStr = (replayData.createdAt && typeof replayData.createdAt.toMillis === 'function')
+    ? dailyLocalDateStr(new Date(replayData.createdAt.toMillis()))
+    : dailyLocalDateStr();
+  const pool = (replayData.kind === 'daily' && (rmode === 'classic' || rmode === 'reverse'))
+    ? (DAILY_PALETTE_OVERRIDE[replayDateStr] || DAILY_COLORS)
+    : poolFor(rmode);
   const grid = $('replay-grid');
   grid.innerHTML = '';
   replayTargetSquareEl = null;
