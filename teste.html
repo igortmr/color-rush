@@ -1240,8 +1240,11 @@
          de convite (?ref=, ver referrerCode/syncRefCodeField); se já veio por
          link, o crédito já é automático (ver saveNick), não faz sentido
          mostrar/pedir de novo -->
-    <div id="ref-code-row" style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:-6px;">
-      <label for="ref-code-input" class="muted" style="font-size:0.85rem; white-space:nowrap;" data-i18n="ref_code_label_short">Cód. de indicação</label>
+    <div id="ref-code-row" style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:-6px; width:100%;">
+      <div style="width:78px; flex:none; text-align:center; line-height:1.2;">
+        <label for="ref-code-input" class="muted" style="display:block; font-size:0.7rem;" data-i18n="ref_code_label_short">Cód. de indicação</label>
+        <span class="muted" style="display:block; font-size:0.6rem;" data-i18n="ref_code_optional_note">(opcional)</span>
+      </div>
       <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase; width:78px; flex:none; text-align:center;" placeholder="AB12">
     </div>
     <div class="error" id="nick-error"></div>
@@ -1860,6 +1863,7 @@ const T = {
     nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     ref_code_label_short: 'Cód. de indicação',
+    ref_code_optional_note: '(opcional)',
     mode_classic_title: '🎨 Clássico',
     mode_classic_desc: 'Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.',
     mode_reverse_title: '🔄 Reverso',
@@ -2092,6 +2096,7 @@ const T = {
     nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
     ref_code_label_short: 'Referral code',
+    ref_code_optional_note: '(optional)',
     mode_classic_title: '🎨 Classic',
     mode_classic_desc: "Click the square with the <b>requested color</b> and memorize the <b>word</b> inside it. Next round, click the square whose color matches the memorized word.",
     mode_reverse_title: '🔄 Reverse',
@@ -2324,6 +2329,7 @@ const T = {
     nick_prompt: 'Elige tu apodo para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu apodo (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     ref_code_label_short: 'Cód. de invitación',
+    ref_code_optional_note: '(opcional)',
     mode_classic_title: '🎨 Clásico',
     mode_classic_desc: 'Haz clic en el cuadrado del <b>color pedido</b> y memoriza la <b>palabra</b> dentro de él. En la siguiente ronda, haz clic en el cuadrado del color de la palabra memorizada.',
     mode_reverse_title: '🔄 Reverso',
