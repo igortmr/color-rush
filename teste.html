@@ -3053,6 +3053,15 @@ function refreshBadgeNotifDot() {
 // nível já desbloqueado aparece (não precisa ser o mais alto: alguém que já
 // tem "Imortal" pode preferir mostrar "Lenda"), null cai no comportamento
 // antigo (sempre o mais alto).
+// pill exata que aparece no ranking pra um nível de uma categoria — extraída
+// à parte pra poder reusar a MESMA marcação como prévia no perfil (ver
+// renderBadgeCard), assim a pessoa vê exatamente como vai aparecer antes de
+// equipar.
+function badgePillHtml(def, tier) {
+  const color = TIER_COLORS[tier] || TIER_COLORS[TIER_COLORS.length - 1];
+  const name = def.names[lang][tier];
+  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
+}
 function equippedBadgeLabel(stats) {
   const key = stats.equippedBadge;
   if (!key || !BADGE_DEFS[key]) return ''; // ninguém escolheu ainda — não mostra nada até a pessoa ir no perfil e equipar uma
@@ -3061,9 +3070,7 @@ function equippedBadgeLabel(stats) {
   if (maxTier < 0) return ''; // reconfere contra as stats reais — se não desbloqueou de verdade, não mostra
   const chosen = stats.equippedBadgeTier;
   const t = (typeof chosen === 'number' && chosen >= 0 && chosen <= maxTier) ? chosen : maxTier;
-  const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
-  const name = def.names[lang][t];
-  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
+  return badgePillHtml(def, t);
 }
 // nome da classe de divulgador (ex.: "Viral") com a cor da medalha — usado só no ranking de divulgador
 function sharerTierLabel(stats) {
@@ -5346,7 +5353,7 @@ function renderBadgeCard(key, def, stats) {
   let equipHtml = '';
   if (tier >= 0) {
     equipHtml = (equippedTier >= 0)
-      ? `<div class="muted" style="text-align:left; margin-top:6px; color:var(--neon-green);">${T[lang].profile_badge_equipped_btn}: ${def.names[lang][equippedTier]}</div>`
+      ? `<div class="muted" style="text-align:left; margin-top:6px;">${T[lang].profile_badge_equipped_btn}: ${badgePillHtml(def, equippedTier)}</div>`
       : `<div class="muted" style="text-align:left; margin-top:6px;">${T[lang].profile_badge_equip_btn}</div>`;
   }
 
