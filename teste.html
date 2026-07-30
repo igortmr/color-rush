@@ -1661,7 +1661,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithPopup, signInWithRedirect,
-  getRedirectResult, signOut, sendEmailVerification
+  getRedirectResult, signOut, sendEmailVerification, setPersistence, browserLocalPersistence
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
@@ -1702,6 +1702,12 @@ if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== 'COLOQUE_SUA_SITE_KEY_AQUI') {
 }
 
 const auth = getAuth(app);
+// força persistência via localStorage em vez de deixar o Firebase escolher
+// sozinho (IndexedDB por padrão) — suspeita confirmada por debug: no Safari/
+// Chrome iOS, getRedirectResult() volta null depois do login com Apple/Google
+// (mesmo com authDomain próprio já configurado), o que bate com o IndexedDB
+// não sobrevivendo à navegação de ida e volta pro OAuth nesses navegadores.
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 const db = getFirestore(app);
 const functions = getFunctions(app);
 // contador de chamadas ao servidor em andamento — o travamento global de
