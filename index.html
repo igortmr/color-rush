@@ -169,6 +169,7 @@
   }
   input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
   input::placeholder { color: #6b76a8; }
+  input:disabled { color: #6b76a8; border-color: rgba(45,214,255,0.15); cursor: not-allowed; }
   button {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-size: 0.95rem;
@@ -1887,7 +1888,7 @@ const T = {
     nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     ref_code_tooltip_empty: 'Tem o código de indicação de um amigo (4 dígitos)? Digite aqui (opcional).',
-    ref_code_tooltip_locked: 'Código de indicação de quem te convidou.',
+    ref_code_tooltip_locked: 'Código de indicação',
     mode_classic_title: '🎨 Clássico',
     mode_classic_desc: 'Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.',
     mode_reverse_title: '🔄 Reverso',
@@ -2120,7 +2121,7 @@ const T = {
     nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
     ref_code_tooltip_empty: "Got a friend's referral code (4 characters)? Enter it here (optional).",
-    ref_code_tooltip_locked: 'Referral code from whoever invited you.',
+    ref_code_tooltip_locked: 'Referral code',
     mode_classic_title: '🎨 Classic',
     mode_classic_desc: "Click the square with the <b>requested color</b> and memorize the <b>word</b> inside it. Next round, click the square whose color matches the memorized word.",
     mode_reverse_title: '🔄 Reverse',
@@ -2353,7 +2354,7 @@ const T = {
     nick_prompt: 'Elige tu apodo para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu apodo (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     ref_code_tooltip_empty: '¿Tienes el código de invitación de un amigo (4 caracteres)? Escríbelo aquí (opcional).',
-    ref_code_tooltip_locked: 'Código de invitación de quien te invitó.',
+    ref_code_tooltip_locked: 'Código de invitación',
     mode_classic_title: '🎨 Clásico',
     mode_classic_desc: 'Haz clic en el cuadrado del <b>color pedido</b> y memoriza la <b>palabra</b> dentro de él. En la siguiente ronda, haz clic en el cuadrado del color de la palabra memorizada.',
     mode_reverse_title: '🔄 Reverso',
