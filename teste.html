@@ -148,7 +148,6 @@
   }
   input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
   input::placeholder { color: #6b76a8; }
-  input:disabled { color: #6b76a8; border-color: rgba(45,214,255,0.15); cursor: not-allowed; }
   button {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-size: 0.95rem;
@@ -1237,15 +1236,13 @@
   <div class="card">
     <p style="text-align:center;" data-i18n-html="nick_prompt">Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
     <input type="text" id="nick-input" maxlength="16" data-i18n-placeholder="nick_ph" placeholder="Seu nick (3 a 16 caracteres)">
-    <!-- código de quem indicou — vem travado se a pessoa chegou por um link de
-         convite (?ref=, ver referrerCode/syncRefCodeField); senão fica livre
-         pra digitar manualmente o código de um amigo. Ícone de tooltip (título
-         muda conforme o estado, ver syncRefCodeField) em vez de label/texto
-         fixo — ocupava espaço demais e ficava estranho quando já vinha
-         preenchido/travado. -->
-    <div style="position:relative;">
-      <span id="ref-code-tooltip" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:help; font-size:1.15rem; z-index:1; filter:drop-shadow(0 0 4px rgba(255,159,28,0.6));">🎁</span>
-      <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase; padding-right:36px;" placeholder="AB12">
+    <!-- código de quem indicou — só aparece se a pessoa NÃO chegou por um link
+         de convite (?ref=, ver referrerCode/syncRefCodeField); se já veio por
+         link, o crédito já é automático (ver saveNick), não faz sentido
+         mostrar/pedir de novo -->
+    <div id="ref-code-row" style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:-6px;">
+      <label for="ref-code-input" class="muted" style="font-size:0.85rem; white-space:nowrap;" data-i18n="ref_code_label_short">Cód. de indicação</label>
+      <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase; width:78px; flex:none; text-align:center;" placeholder="AB12">
     </div>
     <div class="error" id="nick-error"></div>
     <button onclick="saveNick()" data-i18n="btn_confirm">CONFIRMAR</button>
@@ -1862,8 +1859,7 @@ const T = {
     delete_account_modal_confirm_btn: 'Confirmo a exclusão da conta',
     nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
-    ref_code_tooltip_empty: 'Tem o código de indicação de um amigo (4 dígitos)? Digite aqui (opcional).',
-    ref_code_tooltip_locked: 'Código de indicação',
+    ref_code_label_short: 'Cód. de indicação',
     mode_classic_title: '🎨 Clássico',
     mode_classic_desc: 'Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.',
     mode_reverse_title: '🔄 Reverso',
@@ -2095,8 +2091,7 @@ const T = {
     delete_account_modal_confirm_btn: 'I confirm account deletion',
     nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
-    ref_code_tooltip_empty: "Got a friend's referral code (4 characters)? Enter it here (optional).",
-    ref_code_tooltip_locked: 'Referral code',
+    ref_code_label_short: 'Referral code',
     mode_classic_title: '🎨 Classic',
     mode_classic_desc: "Click the square with the <b>requested color</b> and memorize the <b>word</b> inside it. Next round, click the square whose color matches the memorized word.",
     mode_reverse_title: '🔄 Reverse',
@@ -2328,8 +2323,7 @@ const T = {
     delete_account_modal_confirm_btn: 'Confirmo la eliminación de la cuenta',
     nick_prompt: 'Elige tu apodo para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu apodo (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
-    ref_code_tooltip_empty: '¿Tienes el código de invitación de un amigo (4 caracteres)? Escríbelo aquí (opcional).',
-    ref_code_tooltip_locked: 'Código de invitación',
+    ref_code_label_short: 'Cód. de invitación',
     mode_classic_title: '🎨 Clásico',
     mode_classic_desc: 'Haz clic en el cuadrado del <b>color pedido</b> y memoriza la <b>palabra</b> dentro de él. En la siguiente ronda, haz clic en el cuadrado del color de la palabra memorizada.',
     mode_reverse_title: '🔄 Reverso',
@@ -3841,18 +3835,13 @@ async function backfillTotal() {
 // "roubar" a indicação de outra pessoa trocando o valor). Não veio de link:
 // deixa livre pra digitar o código de um amigo manualmente.
 function syncRefCodeField() {
+  const row = $('ref-code-row');
   const input = $('ref-code-input');
-  const tooltip = $('ref-code-tooltip');
-  if (!input) return;
-  if (referrerCode) {
-    input.value = referrerCode;
-    input.disabled = true;
-    if (tooltip) tooltip.title = T[lang].ref_code_tooltip_locked;
-  } else {
-    input.value = '';
-    input.disabled = false;
-    if (tooltip) tooltip.title = T[lang].ref_code_tooltip_empty;
-  }
+  if (!row || !input) return;
+  // já veio por link de convite: crédito automático (ver saveNick), esconde o
+  // campo de vez — não faz sentido pedir de novo o que já foi capturado
+  row.style.display = referrerCode ? 'none' : '';
+  if (!referrerCode) input.value = '';
 }
 window.saveNick = async () => {
   const nick = $('nick-input').value.trim();
