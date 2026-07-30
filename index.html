@@ -3896,7 +3896,7 @@ function syncRefCodeField() {
   if (!row || !input) return;
   // já veio por link de convite: crédito automático (ver saveNick), esconde o
   // campo de vez — não faz sentido pedir de novo o que já foi capturado
-  row.style.display = referrerCode ? 'none' : '';
+  row.style.display = referrerCode ? 'none' : 'flex';
   if (!referrerCode) input.value = '';
 }
 window.saveNick = async () => {
@@ -7771,4 +7771,3 @@ applyLanguage();
 </script>
 </body>
 </html>
-
