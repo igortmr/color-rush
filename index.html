@@ -1261,7 +1261,8 @@
     <!-- código de quem indicou — vem travado se a pessoa chegou por um link de
          convite (?ref=, ver referrerCode/syncRefCodeField); senão fica livre
          pra digitar manualmente o código de um amigo -->
-    <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase;" data-i18n-placeholder="ref_code_ph" placeholder="Código de quem te indicou (opcional)">
+    <p class="muted" style="text-align:center; margin-bottom:2px;" data-i18n="ref_code_label">Código de indicação (opcional)</p>
+    <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase;" data-i18n-placeholder="ref_code_ph" placeholder="Ex: AB12">
     <div class="muted" id="ref-code-locked-note" style="display:none; text-align:center; margin-top:-6px;" data-i18n="ref_code_locked_note">Preenchido automaticamente pelo link de convite</div>
     <div class="error" id="nick-error"></div>
     <button onclick="saveNick()" data-i18n="btn_confirm">CONFIRMAR</button>
@@ -1881,7 +1882,8 @@ const T = {
     delete_account_modal_confirm_btn: 'Confirmo a exclusão da conta',
     nick_prompt: 'Escolha seu nick para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nick (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
-    ref_code_ph: 'Código de quem te indicou (opcional)',
+    ref_code_label: 'Código de indicação (opcional)',
+    ref_code_ph: 'Ex: AB12',
     ref_code_locked_note: 'Preenchido automaticamente pelo link de convite',
     mode_classic_title: '🎨 Clássico',
     mode_classic_desc: 'Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.',
@@ -2114,7 +2116,8 @@ const T = {
     delete_account_modal_confirm_btn: 'I confirm account deletion',
     nick_prompt: 'Choose your nickname for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your nickname (3 to 16 characters)', btn_confirm: 'CONFIRM',
-    ref_code_ph: "Friend's referral code (optional)",
+    ref_code_label: 'Referral code (optional)',
+    ref_code_ph: 'E.g.: AB12',
     ref_code_locked_note: 'Auto-filled from the invite link',
     mode_classic_title: '🎨 Classic',
     mode_classic_desc: "Click the square with the <b>requested color</b> and memorize the <b>word</b> inside it. Next round, click the square whose color matches the memorized word.",
@@ -2347,7 +2350,8 @@ const T = {
     delete_account_modal_confirm_btn: 'Confirmo la eliminación de la cuenta',
     nick_prompt: 'Elige tu apodo para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu apodo (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
-    ref_code_ph: 'Código de quien te invitó (opcional)',
+    ref_code_label: 'Código de invitación (opcional)',
+    ref_code_ph: 'Ej: AB12',
     ref_code_locked_note: 'Completado automáticamente por el enlace de invitación',
     mode_classic_title: '🎨 Clásico',
     mode_classic_desc: 'Haz clic en el cuadrado del <b>color pedido</b> y memoriza la <b>palabra</b> dentro de él. En la siguiente ronda, haz clic en el cuadrado del color de la palabra memorizada.',
