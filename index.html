@@ -3650,8 +3650,15 @@ function registerAppleAuthCodeIfPresent(result) {
 // for o caso) — o restante do login em si já é pego pelo onAuthStateChanged
 // normal logo abaixo, então não precisa duplicar track('login', ...) aqui.
 getRedirectResult(auth)
-  .then(result => registerAppleAuthCodeIfPresent(result))
-  .catch(e => { $('auth-error').textContent = authErrMsg(e); });
+  .then(result => {
+    // DEBUG TEMPORÁRIO — investigando falha de login por redirect no
+    // Safari/Chrome iOS. Remover depois de confirmar a causa.
+    $('auth-error').textContent = result
+      ? ('DEBUG: getRedirectResult OK, uid=' + result.user.uid)
+      : 'DEBUG: getRedirectResult voltou null (sem redirect pendente)';
+    registerAppleAuthCodeIfPresent(result);
+  })
+  .catch(e => { $('auth-error').textContent = 'DEBUG ERRO: ' + (e && e.code) + ' | ' + (e && e.message); });
 window.doLogout = async () => {
   offline = false;
   stopPvpListener();
