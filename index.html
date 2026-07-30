@@ -169,6 +169,10 @@
   }
   input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
   input::placeholder { color: #6b76a8; }
+  /* o text-transform:uppercase do #ref-code-input (tela de nick) também
+     forçava o placeholder pra maiúsculo, deixando o "ex:" errado — o
+     ::placeholder é o único jeito de excluir só ele da transformação */
+  #ref-code-input::placeholder { text-transform: none; }
   button {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-size: 0.95rem;
@@ -1263,11 +1267,11 @@
          link, o crédito já é automático (ver saveNick), não faz sentido
          mostrar/pedir de novo -->
     <div id="ref-code-row" style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:-6px; width:100%;">
-      <div style="width:78px; flex:none; text-align:center; line-height:1.2;">
+      <div style="width:108px; flex:none; text-align:center; line-height:1.2;">
         <label for="ref-code-input" class="muted" style="display:block; font-size:0.7rem;" data-i18n="ref_code_label_short">Cód. de indicação</label>
         <span class="muted" style="display:block; font-size:0.6rem;" data-i18n="ref_code_optional_note">(opcional)</span>
       </div>
-      <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase; width:78px; flex:none; text-align:center;" placeholder="ex: AB12">
+      <input type="text" id="ref-code-input" maxlength="4" style="text-transform:uppercase; width:108px; flex:none; text-align:center;" placeholder="ex: AB12">
     </div>
     <div class="error" id="nick-error"></div>
     <button onclick="saveNick()" data-i18n="btn_confirm">CONFIRMAR</button>
@@ -1630,6 +1634,15 @@
   </div>
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
   <div class="muted" id="profile-invite-status"></div>
+  <!-- código de indicação da própria pessoa, pra passar direto (de viva voz,
+       WhatsApp, etc.) sem precisar mandar o link inteiro — ver ref-code-input
+       na tela de nick, que é onde um amigo cola esse código -->
+  <div id="profile-refcode-row" style="display:none; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
+    <span class="muted" data-i18n="your_refcode_label">Seu código de indicação:</span>
+    <b id="profile-refcode-value" style="font-family:'Orbitron',sans-serif; letter-spacing:1px; color:var(--neon-yellow);"></b>
+    <button class="secondary" style="padding:4px 10px; font-size:0.8rem;" onclick="copyRefCode('profile-refcode-status')">📋</button>
+  </div>
+  <div class="muted" id="profile-refcode-status"></div>
   <div id="profile-friend-action" style="display:none;"></div>
   <div class="muted" id="profile-friend-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
@@ -1642,6 +1655,14 @@
     <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="muted" id="friends-status"></div>
+  <!-- mesma ideia do profile-refcode-row no perfil — código pra passar direto
+       pra um amigo colar na tela de nick dele -->
+  <div id="friends-refcode-row" style="display:none; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
+    <span class="muted" data-i18n="your_refcode_label">Seu código de indicação:</span>
+    <b id="friends-refcode-value" style="font-family:'Orbitron',sans-serif; letter-spacing:1px; color:var(--neon-yellow);"></b>
+    <button class="secondary" style="padding:4px 10px; font-size:0.8rem;" onclick="copyRefCode('friends-refcode-status')">📋</button>
+  </div>
+  <div class="muted" id="friends-refcode-status"></div>
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
   <div class="muted" id="friends-invite-status"></div>
   <button class="secondary" style="width:100%;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR AMIGO</button>
@@ -1918,6 +1939,7 @@ const T = {
     sync_fail: '⚠️ Não foi possível salvar sua partida.',
     sync_calculating: '⏳ Calculando pontuação...',
     share_copied: '✅ Copiado para a área de transferência!',
+    your_refcode_label: 'Seu código de indicação:',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 Novo recorde pessoal!',
     invite_text: link => `🎨 Bora jogar Color Rush comigo? Teste seus reflexos e sua memória! 👉 ${link}`,
@@ -2151,6 +2173,7 @@ const T = {
     sync_fail: '⚠️ Could not save your game.',
     sync_calculating: '⏳ Calculating score...',
     share_copied: '✅ Copied to clipboard!',
+    your_refcode_label: 'Your referral code:',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — I scored ${score} point${score === 1 ? '' : 's'} in ${modeName} mode!${rec}\nCan you beat me? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 New personal record!',
     invite_text: link => `🎨 Wanna play Color Rush with me? Test your reflexes and memory! 👉 ${link}`,
@@ -2384,6 +2407,7 @@ const T = {
     sync_fail: '⚠️ No se pudo guardar tu partida.',
     sync_calculating: '⏳ Calculando puntuación...',
     share_copied: '✅ ¡Copiado al portapapeles!',
+    your_refcode_label: 'Tu código de invitación:',
     share_text: (score, modeName, rec, link) => `🎨 Color Rush — ¡hice ${score} punto${score === 1 ? '' : 's'} en el modo ${modeName}!${rec}\n¿Puedes superarme? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 ¡Nuevo récord personal!',
     invite_text: link => `🎨 ¿Jugamos Color Rush? ¡Prueba tus reflejos y tu memoria! 👉 ${link}`,
@@ -3577,6 +3601,21 @@ window.inviteFriends = async (statusElId = 'invite-status') => {
         statusEl.textContent = T[lang].share_copied;
         setTimeout(() => { statusEl.textContent = ''; }, 3000);
       }
+    }
+  } catch {}
+};
+
+// copia só o código puro (não o link inteiro) — pra passar de viva voz/
+// WhatsApp e o amigo colar direto no campo de indicação da tela de nick (ver
+// ref-code-input/syncRefCodeField)
+window.copyRefCode = async (statusElId) => {
+  if (!myData.refCode) return;
+  try {
+    await navigator.clipboard.writeText(myData.refCode);
+    const el = $(statusElId);
+    if (el) {
+      el.textContent = T[lang].share_copied;
+      setTimeout(() => { el.textContent = ''; }, 3000);
     }
   } catch {}
 };
@@ -5153,6 +5192,7 @@ async function renderFriendsScreen(force) {
   $('friends-status').textContent = '';
 
   if (offline || !currentUser) {
+    $('friends-refcode-row').style.display = 'none';
     body.innerHTML = `
       <div class="card" style="text-align:center;">
         <p>${T[lang].profile_offline_msg1}</p>
@@ -5161,6 +5201,10 @@ async function renderFriendsScreen(force) {
     resetScroll('friends-screen');
     return;
   }
+
+  const showOwnRefCode = !!myData.refCode;
+  $('friends-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
+  if (showOwnRefCode) $('friends-refcode-value').textContent = myData.refCode;
 
   body.innerHTML = `<div class="muted" style="text-align:center;">${T[lang].loading_text}</div>`;
   const [friends, reqs] = await Promise.all([fetchMyFriends(force), fetchMyFriendRequests(force)]);
@@ -5254,6 +5298,9 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   const stats = isOther ? viewStats : myData;
 
   $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
+  const showOwnRefCode = !isOther && !offline && !!myData.refCode;
+  $('profile-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
+  if (showOwnRefCode) $('profile-refcode-value').textContent = myData.refCode;
 
   if (!isOther && offline) {
     $('profile-nick-avatar').innerHTML = '';
