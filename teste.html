@@ -1238,7 +1238,7 @@
 <div class="screen" id="nick-screen">
   <h1>COLOR RUSH</h1>
   <div class="card">
-    <p style="text-align:center;" data-i18n-html="nick_prompt">Escolha seu nome de usuário:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
+    <p style="text-align:center;" data-i18n-html="nick_prompt">Escolha seu nome de usuário para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small></p>
     <input type="text" id="nick-input" maxlength="16" data-i18n-placeholder="nick_ph" placeholder="Seu nome de usuário (3 a 16 caracteres)">
     <!-- código de quem indicou — só aparece se a pessoa NÃO chegou por um link
          de convite (?ref=, ver referrerCode/syncRefCodeField); se já veio por
@@ -1890,7 +1890,7 @@ const T = {
     delete_account_error: 'Não foi possível excluir a conta agora. Tente novamente.',
     delete_account_modal_cancel_btn: 'Cancelar',
     delete_account_modal_confirm_btn: 'Confirmo a exclusão da conta',
-    nick_prompt: 'Escolha seu nome de usuário:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
+    nick_prompt: 'Escolha seu nome de usuário para o ranking:<br><small class="muted">(só precisa fazer isso uma vez)</small>',
     nick_ph: 'Seu nome de usuário (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     ref_code_label_short: 'Cód. de indicação',
     ref_code_optional_note: '(opcional)',
@@ -2126,7 +2126,7 @@ const T = {
     delete_account_error: "Couldn't delete your account right now. Please try again.",
     delete_account_modal_cancel_btn: 'Cancel',
     delete_account_modal_confirm_btn: 'I confirm account deletion',
-    nick_prompt: 'Choose your username:<br><small class="muted">(you only need to do this once)</small>',
+    nick_prompt: 'Choose your username for the leaderboard:<br><small class="muted">(you only need to do this once)</small>',
     nick_ph: 'Your username (3 to 16 characters)', btn_confirm: 'CONFIRM',
     ref_code_label_short: 'Referral code',
     ref_code_optional_note: '(optional)',
@@ -2362,7 +2362,7 @@ const T = {
     delete_account_error: 'No se pudo eliminar la cuenta ahora. Inténtalo de nuevo.',
     delete_account_modal_cancel_btn: 'Cancelar',
     delete_account_modal_confirm_btn: 'Confirmo la eliminación de la cuenta',
-    nick_prompt: 'Elige tu nombre de usuario:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
+    nick_prompt: 'Elige tu nombre de usuario para el ranking:<br><small class="muted">(solo necesitas hacerlo una vez)</small>',
     nick_ph: 'Tu nombre de usuario (3 a 16 caracteres)', btn_confirm: 'CONFIRMAR',
     ref_code_label_short: 'Cód. de invitación',
     ref_code_optional_note: '(opcional)',
@@ -2854,19 +2854,27 @@ function blockIfBanned() {
 
 // cor do emblema de nível muda a cada faixa de 5 níveis: até o nível 29 usa
 // uma paleta fixa de 6 cores só (1-4 verde, 5-9 azul, 10-14 roxo, ...); da
-// faixa 30 em diante (nível 30, 35, 40...) gera um degradê de duas cores por
+// faixa 30 em diante (nível 30, 35, 40...) gera um degradê de três cores por
 // faixa (ver lvBandGradient), pra nunca mais "flatlinar" numa cor só de tanto
 // subir; e o nível 100 vira "master" — arco-íris animado, igual (mesmo ciclo
 // de cores e duração) a moldura arco-íris da loja (ver .lv-chip-master no CSS)
 const LV_COLORS = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffe93c', '#ff9f1c', '#ff2d6b'];
-// gera as duas cores da faixa `band` (band 6 = nível 30-34, 7 = 35-39, ...) em
-// HSL, girando o matiz pelo "golden angle" (137.5°) a cada faixa — garante que
-// a cor nunca se repete de forma perceptível por muitas faixas seguidas, sem
-// precisar cadastrar uma paleta enorme à mão
+// só existem 14 faixas de degradê de verdade (banda 6 = nível 30, até banda
+// 19 = nível 95 — nível 100 já vira "master" antes de chegar aqui, ver
+// lvChip), então dá pra espalhar 14 matizes IGUALMENTE nos 360° em vez de
+// girar por um ângulo fixo (ângulo dourado): geometricamente impossível duas
+// faixas caírem parecidas, mesmo bem distantes uma da outra — o problema que
+// tinha antes (nível 30 parecido com 55/80/95 etc.), já que o ângulo dourado
+// só evita repetição perceptível numa sequência LONGA, não numa janela fixa
+// de 14 valores. Três cores por faixa (não duas) pra ficar ainda mais fácil
+// de diferenciar visualmente uma faixa da outra.
 function lvBandGradient(band) {
-  const hue1 = Math.round((band * 137.5) % 360);
-  const hue2 = Math.round((hue1 + 110) % 360);
-  return [`hsl(${hue1}, 90%, 62%)`, `hsl(${hue2}, 90%, 62%)`, hue1];
+  const idx = ((band - 6) % 14 + 14) % 14; // 0 = nível 30, 13 = nível 95
+  const hue = Math.round((idx * 360) / 14);
+  const h1 = (hue + 330) % 360; // -30°
+  const h2 = hue;
+  const h3 = (hue + 30) % 360;
+  return [`hsl(${h1}, 90%, 62%)`, `hsl(${h2}, 90%, 62%)`, `hsl(${h3}, 90%, 62%)`, hue];
 }
 function lvChip(xp) {
   const lv = levelFromXp(xp || 0);
@@ -2876,8 +2884,8 @@ function lvChip(xp) {
     const c = LV_COLORS[band];
     return `<span class="lv-chip" style="color:${c}; border-color:${c}88; text-shadow:0 0 6px ${c}80">Lv ${lv}</span>`;
   }
-  const [c1, c2, hue1] = lvBandGradient(band);
-  return `<span class="lv-chip" style="background:linear-gradient(90deg, ${c1}, ${c2}); -webkit-background-clip:text; background-clip:text; color:transparent; border-color:hsla(${hue1},90%,62%,0.53); text-shadow:0 0 6px hsla(${hue1},90%,62%,0.5)">Lv ${lv}</span>`;
+  const [c1, c2, c3, hue] = lvBandGradient(band);
+  return `<span class="lv-chip" style="background:linear-gradient(90deg, ${c1}, ${c2}, ${c3}); -webkit-background-clip:text; background-clip:text; color:transparent; border-color:hsla(${hue},90%,62%,0.53); text-shadow:0 0 6px hsla(${hue},90%,62%,0.5)">Lv ${lv}</span>`;
 }
 // moldura da loja ao redor do nick — "equipped" é público (mesmo doc de
 // scores/{uid} que já alimenta o ranking), então aparece pra QUALQUER um que
