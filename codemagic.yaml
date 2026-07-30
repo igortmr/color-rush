@@ -50,6 +50,12 @@ workflows:
             },
             "ios": {
               "contentInset": "always"
+            },
+            "plugins": {
+              "FirebaseAuthentication": {
+                "skipNativeAuth": true,
+                "providers": ["apple.com", "google.com"]
+              }
             }
           }
           EOF
@@ -162,6 +168,143 @@ workflows:
               if fn:
                   shutil.copyfile("appicon-1024.png", os.path.join(iconset, fn))
                   print("ícone aplicado em", fn)
+          PYEOF
+      - name: Configurar login nativo (Google + Apple Sign-In via @capacitor-firebase/authentication)
+        script: |
+          # Login com Google/Apple dentro do app precisa ser NATIVO (não
+          # WebView) — o Google recusa completar OAuth dentro de uma WebView
+          # genérica embutida (é reconhecida como "disallowed_useragent") e
+          # empurra pro Safari de verdade, que não devolve o resultado pro
+          # app (são contextos/sessões separados). O plugin
+          # @capacitor-firebase/authentication usa as telas nativas de
+          # verdade (ASAuthorizationController da Apple / SDK nativo do
+          # Google), sem passar por WebView nenhuma.
+          #
+          # GoogleService-Info.plist não é segredo (config pública do app,
+          # baixado do Firebase Console) — diferente do .p8 da Apple, por
+          # isso pode ficar direto aqui no script, sem precisar de secret.
+          set -e
+          cd app
+          cat > ios/App/App/GoogleService-Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+          	<key>CLIENT_ID</key>
+          	<string>988545815222-h08gpkp7bmc2usii6040d62eh9qlqq4r.apps.googleusercontent.com</string>
+          	<key>REVERSED_CLIENT_ID</key>
+          	<string>com.googleusercontent.apps.988545815222-h08gpkp7bmc2usii6040d62eh9qlqq4r</string>
+          	<key>API_KEY</key>
+          	<string>AIzaSyCYy5ca6m8vo4e9rZ6hyjb4ABBWBVCxgKU</string>
+          	<key>GCM_SENDER_ID</key>
+          	<string>988545815222</string>
+          	<key>PLIST_VERSION</key>
+          	<string>1</string>
+          	<key>BUNDLE_ID</key>
+          	<string>br.com.colorrush.app</string>
+          	<key>PROJECT_ID</key>
+          	<string>color-rush-474ee</string>
+          	<key>STORAGE_BUCKET</key>
+          	<string>color-rush-474ee.firebasestorage.app</string>
+          	<key>IS_ADS_ENABLED</key>
+          	<false></false>
+          	<key>IS_ANALYTICS_ENABLED</key>
+          	<false></false>
+          	<key>IS_APPINVITE_ENABLED</key>
+          	<true></true>
+          	<key>IS_GCM_ENABLED</key>
+          	<true></true>
+          	<key>IS_SIGNIN_ENABLED</key>
+          	<true></true>
+          	<key>GOOGLE_APP_ID</key>
+          	<string>1:988545815222:ios:b47b1487610ec7f2a60c17</string>
+          </dict>
+          </plist>
+          EOF
+
+          # entitlement "Sign in with Apple" — exigido pra usar
+          # ASAuthorizationController nativo (sem isso o app crasha/recusa na
+          # hora de pedir o login com Apple)
+          cat > ios/App/App/App.entitlements << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+          	<key>com.apple.developer.applesignin</key>
+          	<array>
+          		<string>Default</string>
+          	</array>
+          </dict>
+          </plist>
+          EOF
+
+          # URL scheme (REVERSED_CLIENT_ID) no Info.plist — o SDK nativo do
+          # Google usa isso internamente. plistlib em vez de PlistBuddy
+          # encadeado, pra não dar erro se CFBundleURLTypes já existir com
+          # outra entrada (o cap add ios às vezes já cria uma pro próprio
+          # esquema do app).
+          python3 << 'PYEOF'
+          import plistlib
+          path = "ios/App/App/Info.plist"
+          with open(path, "rb") as f:
+              data = plistlib.load(f)
+          url_types = data.get("CFBundleURLTypes", [])
+          url_types.append({
+              "CFBundleURLSchemes": ["com.googleusercontent.apps.988545815222-h08gpkp7bmc2usii6040d62eh9qlqq4r"]
+          })
+          data["CFBundleURLTypes"] = url_types
+          with open(path, "wb") as f:
+              plistlib.dump(data, f)
+          print("URL scheme do Google adicionado ao Info.plist")
+          PYEOF
+
+          # referencia os dois arquivos acima dentro do projeto Xcode — só
+          # existir no disco não basta, o Xcode precisa saber que o
+          # GoogleService-Info.plist é um recurso a empacotar e que
+          # App.entitlements é o arquivo de entitlements do target. O
+          # projeto nasce do zero a cada build (rm -rf ios lá em cima), então
+          # não tem risco de duplicar referência de uma tentativa anterior.
+          gem list -i xcodeproj > /dev/null 2>&1 || gem install xcodeproj --no-document
+          ruby << 'RUBYEOF'
+          require 'xcodeproj'
+
+          project = Xcodeproj::Project.open('ios/App/App.xcodeproj')
+          target = project.targets.find { |t| t.name == 'App' }
+          raise 'target App não encontrado no projeto Xcode' unless target
+
+          app_group = project.main_group.find_subpath('App', true)
+
+          plist_ref = app_group.new_reference('GoogleService-Info.plist')
+          target.add_resources([plist_ref])
+
+          app_group.new_reference('App.entitlements')
+          target.build_configurations.each do |config|
+            config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
+          end
+
+          project.save
+          puts 'Projeto Xcode atualizado: GoogleService-Info.plist (recurso) + App.entitlements (CODE_SIGN_ENTITLEMENTS)'
+          RUBYEOF
+
+          # confere se o AppDelegate encaminha URLs abertas pro Capacitor —
+          # exigido pelo plugin pro fluxo nativo do Google (usa URL scheme
+          # por baixo). O template padrão do Capacitor já inclui isso, mas
+          # como o AppDelegate também nasce do zero em todo build, checa e
+          # insere se por acaso faltar (não custa nada garantir).
+          grep -q "ApplicationDelegateProxy.shared.application(app, open: url" ios/App/App/AppDelegate.swift || python3 << 'PYEOF'
+          path = "ios/App/App/AppDelegate.swift"
+          with open(path) as f:
+              content = f.read()
+          insertion = """
+              func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+                  return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
+              }
+          """
+          idx = content.rfind('}')
+          content = content[:idx] + insertion + content[idx:]
+          with open(path, 'w') as f:
+              f.write(content)
+          print('AppDelegate.swift: função de abertura de URL adicionada')
           PYEOF
       - name: Declarar isenção de criptografia (evita a pergunta manual a cada envio)
         script: |
