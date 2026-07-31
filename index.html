@@ -86,7 +86,7 @@
 <div class="version-tag" id="version-tag">carregando versão...</div>
 
 <!-- LOADING -->
-<div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><p class="muted" data-i18n="loading_text">Carregando...</p></div>
+<div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><div class="loading-wrap"><div class="loading-squares" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p class="muted" data-i18n="loading_text">Carregando...</p></div></div>
 
 <!-- AUTH -->
 <div class="screen" id="auth-screen">
@@ -470,14 +470,14 @@
     <table>
       <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
       <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th id="ranking-points-header" style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
-      <tbody id="ranking-body"><tr><td colspan="3" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
+      <tbody id="ranking-body"><tr><td colspan="3" class="muted"><div class="loading-wrap inline"><div class="loading-squares small" aria-hidden="true"><span></span><span></span><span></span><span></span></div><span data-i18n="loading_text">Carregando...</span></div></td></tr></tbody>
     </table>
   </div>
   <div class="card" style="padding:10px; display:none;" id="daily-alltime-card">
     <table>
       <colgroup><col style="width:32px;"><col><col style="width:100px;"><col style="width:118px;"></colgroup>
       <thead><tr><th>#</th><th data-i18n="nick_header">Nick</th><th style="text-align:right;" data-i18n="daily_col_wins">Vitórias</th><th style="text-align:right;" data-i18n-html="daily_col_pigmentos">💧 Pigmentos</th></tr></thead>
-      <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted" data-i18n="loading_text">Carregando...</td></tr></tbody>
+      <tbody id="daily-alltime-body"><tr><td colspan="4" class="muted"><div class="loading-wrap inline"><div class="loading-squares small" aria-hidden="true"><span></span><span></span><span></span><span></span></div><span data-i18n="loading_text">Carregando...</span></div></td></tr></tbody>
     </table>
   </div>
   <div class="muted" id="daily-prizes-legend" style="display:none; font-size:0.8rem; text-align:center; margin-top:6px;"></div>
@@ -491,7 +491,7 @@
     <button class="pill-btn" onclick="closeReplay()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div id="replay-meta" style="font-size:1rem; text-align:center;"></div>
-  <div class="muted" id="replay-loading" data-i18n="loading_text">Carregando...</div>
+  <div class="muted" id="replay-loading"><div class="loading-wrap inline"><div class="loading-squares small" aria-hidden="true"><span></span><span></span><span></span><span></span></div><span data-i18n="loading_text">Carregando...</span></div></div>
   <div class="muted" id="replay-error" style="display:none;" data-i18n="replay_error">Não foi possível carregar este replay.</div>
   <div id="replay-content" style="display:none; width:100%; flex-direction:column; align-items:center; gap:14px;">
     <div class="hud">

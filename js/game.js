@@ -1690,6 +1690,11 @@ function socialLinksHtml(i) {
   </div>`;
 }
 document.querySelectorAll('.screen').forEach((screen, i) => {
+  // loading-screen nunca tem conteúdo de verdade (só "Carregando..." antes do
+  // Firebase resolver quem é a pessoa) — não faz sentido mostrar as redes
+  // sociais junto de um esqueleto vazio, então essa é a única tela que fica
+  // de fora
+  if (screen.id === 'loading-screen') return;
   screen.insertAdjacentHTML('beforeend', socialLinksHtml(i));
 });
 

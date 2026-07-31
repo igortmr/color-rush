@@ -51,11 +51,11 @@
     align-items: center;
     gap: 20px;
     padding: 24px;
-    padding-top: 52px;
+    padding-top: 34px;
     padding-bottom: 48px;
     width: 100%;
     max-width: 520px;
-    margin-top: 24px;
+    margin-top: 12px;
     overflow-x: hidden;
   }
   .screen.active { display: flex; }
@@ -73,6 +73,38 @@
     text-align: center;
     filter: drop-shadow(0 0 6px rgba(177,77,255,0.55)) drop-shadow(0 0 16px rgba(45,214,255,0.35));
   }
+
+  /* indicador de "carregando" temático — 4 quadradinhos (o mesmo número de
+     SQUARES do tabuleiro de verdade, ver js/game.js) pulsando em cores neon
+     defasadas, no lugar de um texto genérico sozinho. ".small" é a versão
+     compacta usada dentro de linhas de tabela (ranking/Salão da Fama) e do
+     aviso de replay carregando, onde o efeito cheio ficaria grande demais. */
+  .loading-squares {
+    display: flex;
+    gap: 9px;
+    justify-content: center;
+    align-items: center;
+  }
+  .loading-squares span {
+    width: 13px;
+    height: 13px;
+    border-radius: 4px;
+    display: inline-block;
+    animation: loadingSquaresPulse 1.1s ease-in-out infinite;
+  }
+  .loading-squares span:nth-child(1) { background: var(--neon-red);    box-shadow: 0 0 9px var(--neon-red);    animation-delay: 0s; }
+  .loading-squares span:nth-child(2) { background: var(--neon-orange); box-shadow: 0 0 9px var(--neon-orange); animation-delay: 0.13s; }
+  .loading-squares span:nth-child(3) { background: var(--neon-blue);   box-shadow: 0 0 9px var(--neon-blue);   animation-delay: 0.26s; }
+  .loading-squares span:nth-child(4) { background: var(--neon-purple); box-shadow: 0 0 9px var(--neon-purple); animation-delay: 0.39s; }
+  @keyframes loadingSquaresPulse {
+    0%, 100% { transform: scale(0.55); opacity: 0.45; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+  .loading-squares.small { gap: 6px; }
+  .loading-squares.small span { width: 8px; height: 8px; border-radius: 3px; box-shadow: none; }
+  .loading-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .loading-wrap.inline { flex-direction: row; justify-content: center; gap: 8px; }
+
   .card {
     width: 100%;
     background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
