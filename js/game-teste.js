@@ -113,6 +113,7 @@ async function saveMatchReplayWithRetry(payload, attemptsLeft = 3) {
 // chamar recebe permission-denied do servidor)
 const callAdminGetUserDetails = callable('adminGetUserDetails');
 const callAdminSetBanned = callable('adminSetBanned');
+const callAdminResetScores = callable('adminResetScores');
 const callAdminSetNick = callable('adminSetNick');
 const callAdminSetXp = callable('adminSetXp');
 const callBackfillPendingPigmentos = callable('backfillPendingPigmentos');
@@ -1896,6 +1897,35 @@ async function renderAdminPanel(uid, currentNick, stats) {
       banStatus.textContent = '❌ ' + (e.message || 'Erro.');
     } finally {
       banBtn.disabled = false;
+    }
+  };
+
+  // zera só a pontuação dos 6 modos de jogo (e o total geral, que é a soma
+  // deles) — não mexe em XP/nível, indicações, Pigmentos nem itens da loja.
+  // Sem "desfazer" (ao contrário do banimento): a confirmação é sempre
+  // exigida, já que não tem como voltar atrás depois.
+  const resetScoresBtn = document.createElement('button');
+  resetScoresBtn.className = 'secondary';
+  resetScoresBtn.style.cssText = 'border-color:var(--neon-red); color:#ff8bab; background:#0a0e1e;';
+  resetScoresBtn.textContent = '🗑️ Zerar pontuações desta conta';
+  toolsBox.appendChild(resetScoresBtn);
+  const resetScoresStatus = document.createElement('div');
+  resetScoresStatus.className = 'muted';
+  toolsBox.appendChild(resetScoresStatus);
+
+  resetScoresBtn.onclick = async () => {
+    if (!confirm(`Zerar as pontuações de ${currentNick || 'esta conta'} nos 6 modos de jogo (Clássico, Reverso, Formas, Formas Reverso, Trio, Caos)? Isso NÃO afeta XP/nível, indicações, Pigmentos ou itens da loja. Não pode ser desfeito.`)) return;
+    resetScoresBtn.disabled = true;
+    resetScoresStatus.textContent = '';
+    try {
+      await callAdminResetScores({ uid });
+      ALL_MODES.forEach(m => { stats[m] = 0; });
+      stats.total = 0;
+      resetScoresStatus.textContent = '✅ Pontuações zeradas nos 6 modos.';
+    } catch (e) {
+      resetScoresStatus.textContent = '❌ ' + (e.message || 'Erro.');
+    } finally {
+      resetScoresBtn.disabled = false;
     }
   };
 
