@@ -4680,6 +4680,10 @@ function startDailyCardTicker() {
   renderDailyCardCountdown();
   dailyCardTicker = setInterval(renderDailyCardCountdown, 1000);
 }
+// detecta a TROCA DE FASE do desafio (não só "o relógio chegou em zero") —
+// ver comentário dentro de renderDailyCardCountdown pra entender por que
+// isso importa mais do que parece
+let dailyCardLastPhaseKey = null;
 function renderDailyCardCountdown() {
   const live = isDailyChallengeLive();
   // dentro da janela 00:00–00:05 (ver isDailyStartDelay), o desafio de hoje
@@ -4688,8 +4692,7 @@ function renderDailyCardCountdown() {
   const startDelay = live && isDailyStartDelay();
   const targetMs = !live ? dailyLaunchAtMs() : startDelay ? dailyTodayStartsAtMs() : dailyNextMidnightSaoPauloMs();
   let msLeft = targetMs - Date.now();
-  const rolledOver = msLeft <= 0;
-  if (rolledOver) msLeft = 0;
+  if (msLeft < 0) msLeft = 0;
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
@@ -4708,11 +4711,41 @@ function renderDailyCardCountdown() {
     timeEl.textContent = timeStr;
   });
 
-  // virou o dia (fechou o desafio de hoje, ou estreou o desafio) — atualiza o
-  // resto do card sozinho, se o menu estiver aberto
-  if (rolledOver && $('menu-screen').classList.contains('active')) updateDailyMenuCard();
+  // antes, o refresh do resto do card (coming-soon/lock/descrição — ver
+  // updateDailyMenuCard) só disparava quando msLeft cruzava 0. Isso só pega
+  // a virada das 00:00 (fim de "hoje" -> começo do atraso de 5min do dia
+  // seguinte): targetMs conta até ali e realmente zera nesse instante. Já a
+  // virada das 00:05 (fim do atraso -> desafio libera de vez) NUNCA zera
+  // esse cálculo — assim que isDailyStartDelay() vira false, targetMs pula
+  // direto pra "próxima meia-noite" (um número bem maior), então msLeft
+  // nunca passa por 0 ali. Resultado: o card ficava "congelado" parecendo
+  // bloqueado mesmo já liberado, até a pessoa sair do menu e voltar (só aí
+  // showMenu() força um updateDailyMenuCard() por fora). Comparando a fase
+  // inteira (live+startDelay) em vez de só "zerou", as duas viradas passam a
+  // disparar o refresh igual.
+  const phaseKey = `${live}|${startDelay}`;
+  const phaseChanged = dailyCardLastPhaseKey !== null && dailyCardLastPhaseKey !== phaseKey;
+  dailyCardLastPhaseKey = phaseKey;
+  if (phaseChanged && $('menu-screen').classList.contains('active')) updateDailyMenuCard();
 }
 startDailyCardTicker();
+
+// resiliência contra o navegador/app pausar o setInterval acima quando a aba
+// fica em segundo plano ou a tela é bloqueada — comportamento padrão de todo
+// navegador moderno (inclusive dentro do WebView do app nativo iOS/Android,
+// que suspende timers JS pra economizar bateria). Sem isso, quem atravessa
+// 00:00 ou 00:05 com o app em segundo plano só via o card se corrigir
+// quando/se o setInterval decidisse tiquetar de novo por conta própria — o
+// que podia demorar bastante (ou nunca acontecer sozinho enquanto a aba não
+// voltasse ao primeiro plano). Ao voltar — trocar de aba, desbloquear a
+// tela, alternar de app e voltar — força um recálculo na hora, sem precisar
+// recarregar a página nem reiniciar o app: visibilitychange/focus cobrem o
+// caso normal, pageshow cobre a página voltando do cache de navegação
+// (botão voltar/avançar do histórico).
+function refreshDailyCardOnResume() { renderDailyCardCountdown(); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshDailyCardOnResume(); });
+window.addEventListener('focus', refreshDailyCardOnResume);
+window.addEventListener('pageshow', refreshDailyCardOnResume);
 
 // clique no card do menu: antes da estreia não faz nada (o card fica só de
 // enfeite/curiosidade); depois, se ainda sobra tentativa vai direto pro jogo
