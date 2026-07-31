@@ -1,3 +1,5 @@
+import { state } from './state.js';
+
 export const T = {
   pt: {
     btn_login: 'ENTRAR', btn_signup: 'CRIAR CONTA', btn_google: 'Entrar com Google',
@@ -741,3 +743,7 @@ export const T = {
     tut_caption_caos_7: 'Eso es todo — el ciclo siempre será: <b>encuentra una de las 2 características memorizadas (forma, color o palabra) → memoriza las otras 2 informaciones en esa figura → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
   },
 };
+
+// nome traduzido de um item de cor/forma (ver COLORS/SHAPES em constants.js)
+// no idioma atual
+export const cName = c => c.name[state.lang];

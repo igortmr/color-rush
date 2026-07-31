@@ -1,6 +1,9 @@
 export const shuffle = a => a.sort(() => Math.random() - 0.5);
 export const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
+// eventos pro Google Analytics (se o gtag não estiver na página, vira um no-op silencioso)
+export const track = (name, params) => { try { if (window.gtag) window.gtag('event', name, params || {}); } catch {} };
+
 /* ================== RNG determinística (desafio diário) ==================
    O desafio diário precisa que TODO MUNDO veja exatamente a mesma sequência
    de cores no mesmo dia — em vez de Math.random(), usamos um gerador
