@@ -3291,7 +3291,7 @@ function renderPublicProfileRanks(stats, ranks) {
 // parte porque mora numa sub-aba (ver setDailyRankSubtab) dentro da aba
 // "daily", não é uma aba própria como as outras
 window.profileRankGoto = (key) => {
-  showRanking(key);
+  showRanking(key, 'profile-screen');
   if (key === 'daily') setDailyRankSubtab('alltime');
 };
 
@@ -4063,10 +4063,19 @@ async function submitPendingScore() {
 }
 
 /* ================== ranking ================== */
-window.showRanking = (tab) => {
+// mesma ideia do profileBackTarget (ver openProfileFromRanking/profileBack):
+// guarda de onde a tela de ranking foi aberta, pra "VOLTAR" saber pra onde
+// voltar de verdade em vez de sempre cair no menu. Default 'menu-screen'
+// preserva o comportamento de sempre pra quem abre ranking direto do menu
+// (cards de modo, atalho "🏆 RANKING" etc.) — só quem passa um backTarget
+// explícito (hoje, só profileRankGoto) muda esse padrão.
+let rankingBackTarget = 'menu-screen';
+window.showRanking = (tab, backTarget) => {
+  rankingBackTarget = backTarget || 'menu-screen';
   show('ranking-screen');
   loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
 };
+window.rankingBack = () => show(rankingBackTarget);
 
 const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', caos: 'caos', level: 'xp', geral: 'total', divulgador: 'referrals' };
 
