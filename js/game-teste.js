@@ -1900,10 +1900,11 @@ async function renderAdminPanel(uid, currentNick, stats) {
     }
   };
 
-  // zera só a pontuação dos 6 modos de jogo (e o total geral, que é a soma
-  // deles) — não mexe em XP/nível, indicações, Pigmentos nem itens da loja.
-  // Sem "desfazer" (ao contrário do banimento): a confirmação é sempre
-  // exigida, já que não tem como voltar atrás depois.
+  // zera a pontuação dos 6 modos de jogo (e o total geral, que é a soma
+  // deles) mais o desafio diário (Salão da Fama + tentativa de hoje) — não
+  // mexe em XP/nível, indicações, Pigmentos nem itens da loja. Sem
+  // "desfazer" (ao contrário do banimento): a confirmação é sempre exigida,
+  // já que não tem como voltar atrás depois.
   const resetScoresBtn = document.createElement('button');
   resetScoresBtn.className = 'secondary';
   resetScoresBtn.style.cssText = 'border-color:var(--neon-red); color:#ff8bab; background:#0a0e1e;';
@@ -1914,14 +1915,15 @@ async function renderAdminPanel(uid, currentNick, stats) {
   toolsBox.appendChild(resetScoresStatus);
 
   resetScoresBtn.onclick = async () => {
-    if (!confirm(`Zerar as pontuações de ${currentNick || 'esta conta'} nos 6 modos de jogo (Clássico, Reverso, Formas, Formas Reverso, Trio, Caos)? Isso NÃO afeta XP/nível, indicações, Pigmentos ou itens da loja. Não pode ser desfeito.`)) return;
+    if (!confirm(`Zerar as pontuações de ${currentNick || 'esta conta'} nos 6 modos de jogo (Clássico, Reverso, Formas, Formas Reverso, Trio, Caos) e no desafio diário (Salão da Fama + tentativa de hoje)? Isso NÃO afeta XP/nível, indicações, Pigmentos ou itens da loja. Não pode ser desfeito.`)) return;
     resetScoresBtn.disabled = true;
     resetScoresStatus.textContent = '';
     try {
       await callAdminResetScores({ uid });
       ALL_MODES.forEach(m => { stats[m] = 0; });
       stats.total = 0;
-      resetScoresStatus.textContent = '✅ Pontuações zeradas nos 6 modos.';
+      stats.dailyWins = 0;
+      resetScoresStatus.textContent = '✅ Pontuações zeradas nos 6 modos e no desafio diário.';
     } catch (e) {
       resetScoresStatus.textContent = '❌ ' + (e.message || 'Erro.');
     } finally {
