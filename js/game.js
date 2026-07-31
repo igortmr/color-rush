@@ -4174,7 +4174,14 @@ function renderRankingPage() {
     const rankingBadgeHtml = (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats);
     buildRankRowNick(nickCell, r, rankingBadgeHtml, 'ranking-screen');
     applyRowTheme(tr, r.stats);
-    if (r.replaySessionId) {
+    // botão de replay só aparece se o MODO desse ranking (rankingTab) já
+    // estiver desbloqueado pro nível de quem está olhando — dá pra ver
+    // ranking/pontuação de um modo ainda travado (curiosidade/motivação pra
+    // subir de nível), só não libera espiar o replay de um modo que a pessoa
+    // ainda nem pode jogar. modeUnlocked() já cobre sozinho os casos sem
+    // trava (classic) e as abas que não são modo (geral/level/divulgador —
+    // essas nem chegam a ter replaySessionId, ver loadRanking).
+    if (r.replaySessionId && modeUnlocked(rankingTab)) {
       const ptsCell = tr.children[2];
       const replayBtn = document.createElement('button');
       replayBtn.className = 'replay-btn';
