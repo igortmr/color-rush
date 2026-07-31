@@ -1761,7 +1761,7 @@ async function fetchAllScores() {
 }
 // linha de ranking com os dados do próprio jogador sempre frescos
 function rowData(r) {
-  return (!state.offline && state.currentUser && r.uid === state.currentUser.uid) ? { ...r.data, ...myData } : r.data;
+  return (!state.offline && state.currentUser && r.uid === state.currentUser.uid) ? { ...r.data, ...state.myData } : r.data;
 }
 
 async function renderRankPreview(field, bodyElId, myPts) {
