@@ -28,4 +28,21 @@ export const state = {
   // renderização (T[state.lang]), por isso vive aqui e não num módulo de
   // domínio específico.
   lang: detectInitialLang(),
+  // usuário logado no Firebase (ou null offline/deslogado) e se está no
+  // modo "jogar sem conta" — lidos por quase todo módulo de feature
+  // (perfil, amigos, ranking, loja, pvp...), por isso vivem aqui também
+  currentUser: null,
+  offline: false,
+  // pontuação feita sem conta, aguardando cadastro pra ser reivindicada
+  // (ver claimPendingScore em functions/index.js)
+  pendingScore: null,
+  // sessão validada pelo servidor pra partida em andamento
+  currentSessionId: null,
+  // perfil completo da conta logada (scores/{uid} no Firestore) — o mesmo
+  // objeto que alimenta ranking, badges, loja, perfil etc.
+  myData: {
+    nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
+    gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, playedCaos: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
+  },
 };

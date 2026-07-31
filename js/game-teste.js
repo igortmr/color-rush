@@ -1,19 +1,14 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
-  getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+  onAuthStateChanged, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithPopup,
-  signInWithCredential, signOut, sendEmailVerification, setPersistence, browserLocalPersistence
+  signInWithCredential, signOut, sendEmailVerification
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
+  doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs,
   serverTimestamp, writeBatch, where, onSnapshot, Timestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import {
-  getFunctions, httpsCallable
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
-import {
-  initializeAppCheck, ReCaptchaV3Provider
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+import { app, auth, db, functions, callable } from './firebase.js';
 import {
   COLORS, CONFETTI_COLORS, SQUARES, SHAPES, poolFor, CAOS_POOL, isColorItem,
   poolItemId, poolItemById, PLAYED_FIELD, ALL_MODES, DAILY_ROTATION_MODES,
@@ -41,55 +36,6 @@ import {
 } from './badges.js';
 import { tutMode, tutStep, showTutStep } from './tutorial.js';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
-  authDomain: "auth.colorrush.com.br",
-  projectId: "color-rush-474ee",
-  storageBucket: "color-rush-474ee.firebasestorage.app",
-  messagingSenderId: "988545815222",
-  appId: "1:988545815222:web:f0cae8432b04550ca60c17"
-};
-
-const app = initializeApp(firebaseConfig);
-
-// App Check: prova pro backend que a chamada vem mesmo do site oficial, não
-// de um script externo batendo direto na API. Preencha com a site key
-// gerada em Firebase Console > App Check > reCAPTCHA v3. Enquanto ficar com
-// o valor de exemplo, isso fica desligado (não faz nada, não quebra nada).
-// Só ative "Enforce" nas Cloud Functions DEPOIS de confirmar no Console que
-// as chamadas estão chegando "verified" — senão o jogo para pra todo mundo.
-const APP_CHECK_SITE_KEY = '6Lfa3GAtAAAAABb7d8QcGR41xZ8gmhoKbQS1elkd';
-if (APP_CHECK_SITE_KEY && APP_CHECK_SITE_KEY !== 'COLOQUE_SUA_SITE_KEY_AQUI') {
-  try {
-    initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),
-      isTokenAutoRefreshEnabled: true,
-    });
-  } catch {}
-}
-
-const auth = getAuth(app);
-// localStorage em vez de deixar o Firebase escolher sozinho (IndexedDB por
-// padrão) — mais previsível entre navegadores; sem isso alguns fluxos de
-// sessão já se mostraram frágeis em Safari/Chrome iOS.
-setPersistence(auth, browserLocalPersistence).catch(() => {});
-const db = getFirestore(app);
-const functions = getFunctions(app);
-// contador de chamadas ao servidor em andamento — o travamento global de
-// clique mais abaixo usa isso pra travar QUALQUER clique novo enquanto uma
-// chamada ainda não recebeu resposta do servidor (em vez de só um tempo fixo
-// — ver o comentário perto do listener de clique pra entender por quê:
-// clicar duas vezes rápido no "resgatar" da caixa de entrada, por exemplo,
-// já chegou a resgatar o mesmo prêmio duas vezes). touchActivity fica de
-// fora de propósito: é um "batimento" de presença automático, não vem de
-// clique do usuário, não deve travar nada.
-function callable(name) {
-  const fn = httpsCallable(functions, name);
-  return (...args) => {
-    state.pendingServerCalls++;
-    return fn(...args).finally(() => { state.pendingServerCalls--; });
-  };
-}
 // chamadas ao servidor: a pontuação final agora é validada lá,
 // não é mais um simples write direto no Firestore vindo do navegador.
 const callStartSession = callable('startGameSession');
@@ -296,14 +242,14 @@ async function generateUniqueRefCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase(); // fallback improvável
 }
 async function ensureRefCode() {
-  if (myData.refCode) return myData.refCode;
+  if (state.myData.refCode) return state.myData.refCode;
   try {
     const code = await generateUniqueRefCode();
-    await setDoc(doc(db, 'refcodes', code), { uid: currentUser.uid });
-    await setDoc(doc(db, 'scores', currentUser.uid), { refCode: code, updatedAt: serverTimestamp() }, { merge: true });
-    myData.refCode = code;
+    await setDoc(doc(db, 'refcodes', code), { uid: state.currentUser.uid });
+    await setDoc(doc(db, 'scores', state.currentUser.uid), { refCode: code, updatedAt: serverTimestamp() }, { merge: true });
+    state.myData.refCode = code;
   } catch {}
-  return myData.refCode;
+  return state.myData.refCode;
 }
 
 /* ================== state ================== */
@@ -341,7 +287,7 @@ const dailyPoolFor = m => (m === 'classic' || m === 'reverse')
   : poolFor(m);
 // Geral = soma dos recordes em TODOS os modos (conta 0 pro modo ainda não jogado)
 const computeTotal = (overrideMode, overrideScore) =>
-  ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (myData[k] || 0)), 0);
+  ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (state.myData[k] || 0)), 0);
 
 /* ================== níveis / XP ================== */
 // XP por rodada certa: (3 - 0,2 * segundos gastos) * multiplicador de sequência
@@ -349,15 +295,15 @@ const computeTotal = (overrideMode, overrideScore) =>
 // Nível N -> N+1 custa N * 100 de XP (100, 200, 300, ...)
 // bônus de sequência: recompensa acertos mais avançados no run, já que ficam mais difíceis
 // (o tempo por rodada encolhe 5% a cada acerto)
-function myXp() { return offline ? 0 : (myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
-function modeUnlocked(m) { return myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+function myXp() { return state.offline ? 0 : (state.myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
+function modeUnlocked(m) { return state.myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
 // conta banida (campo "banned" setado à mão no Firebase Console, ver
 // checkNotBanned em functions/index.js) não pode jogar NENHUM modo — isso
 // aqui é só a trava do client (mensagem amigável antes de nem tentar); o
 // servidor já rejeitaria qualquer sessão/pontuação de uma conta banida de
 // qualquer forma, isso aqui só evita deixar a pessoa jogar a partida
 // inteira só pra descobrir no fim que não vai valer nada
-function isBanned() { return myData.banned === true; }
+function isBanned() { return state.myData.banned === true; }
 function blockIfBanned() {
   if (!isBanned()) return false;
   alert(T[state.lang].banned_msg);
@@ -383,10 +329,10 @@ function hasNewBadgeFor(key) {
 // níveis de uma vez sem abrir o perfil) — usado pra mostrar o número dentro
 // da bolinha de notificação, em vez de só um sinal de "tem novidade"
 function newBadgeCountFor(key) {
-  if (offline || !currentUser || !myData.nick) return 0;
-  const tier = unlockedTier(BADGE_DEFS[key], myData);
+  if (state.offline || !state.currentUser || !state.myData.nick) return 0;
+  const tier = unlockedTier(BADGE_DEFS[key], state.myData);
   if (tier < 0) return 0;
-  const seen = myData.badgesSeenTiers || {};
+  const seen = state.myData.badgesSeenTiers || {};
   const seenTier = seen[key] != null ? seen[key] : -1;
   return Math.max(0, tier - seenTier);
 }
@@ -402,13 +348,13 @@ function totalNewBadgeCount() {
 // aparecem) — marca o nível atual de cada uma como "visto", até a próxima
 // vez que desbloquear algo novo
 async function markAllBadgesSeen() {
-  if (offline || !currentUser || !myData.nick) return;
+  if (state.offline || !state.currentUser || !state.myData.nick) return;
   const seen = {};
-  BADGE_ORDER.forEach(key => { seen[key] = unlockedTier(BADGE_DEFS[key], myData); });
-  myData.badgesSeenTiers = seen; // atualiza local na hora, antes mesmo do Firestore confirmar
+  BADGE_ORDER.forEach(key => { seen[key] = unlockedTier(BADGE_DEFS[key], state.myData); });
+  state.myData.badgesSeenTiers = seen; // atualiza local na hora, antes mesmo do Firestore confirmar
   refreshBadgeNotifDot();
   try {
-    await setDoc(doc(db, 'scores', currentUser.uid), { badgesSeenTiers: seen, updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, 'scores', state.currentUser.uid), { badgesSeenTiers: seen, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {
     // não foi possível salvar agora — a marcação fica só localmente até a próxima tentativa
   }
@@ -513,7 +459,7 @@ function isDailyChallengeLive() { return dailyLocalDateStr() >= DAILY_CHALLENGE_
 // tratamento de "ainda bloqueado" (só título + cronômetro) usado antes da
 // estreia, até subir pro nível 2
 const DAILY_MIN_LEVEL = 2;
-function dailyLevelUnlocked() { return myData.admin === true || levelFromXp(myXp()) >= DAILY_MIN_LEVEL; }
+function dailyLevelUnlocked() { return state.myData.admin === true || levelFromXp(myXp()) >= DAILY_MIN_LEVEL; }
 let dailyMode = 'classic';    // modo sorteado do dia (ver dailyModeForToday) — definido ao mostrar a tela de introdução/iniciar tentativa
 let dailyRng = null;          // gerador determinístico da rodada de hoje
 let dailyPlaying = false;
@@ -542,7 +488,7 @@ let dailyAlltimeRows = [], dailyAlltimePage = 0;
 /* ================== loja (cosméticos comprados com Pigmentos) ==================
    Catálogo espelha o de functions/index.js (preço/slot são conferidos de novo
    no servidor — o catálogo aqui é só pra desenhar a tela). "equipped*" abaixo
-   são os cosméticos ativos AGORA nesta sessão — carregados de myData.equipped
+   são os cosméticos ativos AGORA nesta sessão — carregados de state.myData.equipped
    depois do login e aplicados em applyEquippedCosmetics(). */
 const SHOP_ITEMS = [
   { id: 'sfx_splash',    slot: 'sfxCorrect', price: 30,  icon: '🎨', name: 'Som de Acerto: Splash de Tinta', desc: 'Troca o bipe de acerto por um "splash" de tinta.' },
@@ -576,22 +522,12 @@ const SHOP_SLOTS = [
 ];
 let equippedSfx = null, equippedFrame = null, equippedConfetti = null, equippedAvatar = null;
 function applyEquippedCosmetics() {
-  const eq = (myData && myData.equipped) || {};
+  const eq = (state.myData && state.myData.equipped) || {};
   equippedSfx = eq.sfxCorrect || null;
   equippedFrame = eq.frame || null;
   equippedConfetti = eq.confetti || null;
   equippedAvatar = eq.avatar || null;
 }
-
-let currentUser = null;          // usuário do firebase ou null
-let offline = false;             // jogando sem conta
-let pendingScore = null;         // pontuação feita sem conta, aguardando cadastro
-let currentSessionId = null;     // sessão validada pelo servidor pra partida atual
-let myData = {
-  nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
-  gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, playedCaos: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
-};
 
 // modo sorteado do desafio diário — determinístico por dia (mesmo modo pra
 // TODO MUNDO, e igual nas 3 tentativas), sorteado entre os modos de
@@ -641,7 +577,7 @@ function isDailyStartDelay(now = new Date()) { return now.getTime() < dailyToday
 
 /* ================== recordes locais (modo sem conta) ================== */
 function myRecord(m) {
-  return offline ? getLocalRecord(m) : (myData[m] || 0);
+  return state.offline ? getLocalRecord(m) : (state.myData[m] || 0);
 }
 
 /* ================== sons (Web Audio, sem arquivos) ================== */
@@ -670,7 +606,7 @@ window.toggleMute = () => {
 async function buildShareLink() {
   let link = `${location.origin}${location.pathname}`;
   const params = [];
-  if (!offline && currentUser) {
+  if (!state.offline && state.currentUser) {
     const code = await ensureRefCode();
     if (code) params.push(`ref=${code}`);
   }
@@ -726,9 +662,9 @@ window.inviteFriends = async (statusElId = 'invite-status') => {
 // WhatsApp e o amigo colar direto no campo de indicação da tela de nick (ver
 // ref-code-input/syncRefCodeField)
 window.copyRefCode = async (statusElId) => {
-  if (!myData.refCode) return;
+  if (!state.myData.refCode) return;
   try {
-    await navigator.clipboard.writeText(myData.refCode);
+    await navigator.clipboard.writeText(state.myData.refCode);
     const el = $(statusElId);
     if (el) {
       el.style.display = ''; // ver comentário equivalente em inviteFriends
@@ -805,8 +741,8 @@ window.checkVerification = async () => {
   await auth.currentUser.reload();
   if (auth.currentUser.emailVerified) {
     await auth.currentUser.getIdToken(true); // atualiza o token para as regras do banco
-    currentUser = auth.currentUser;
-    await proceedAfterLogin(currentUser);
+    state.currentUser = auth.currentUser;
+    await proceedAfterLogin(state.currentUser);
   } else {
     $('verify-status').textContent = T[state.lang].verify_not_confirmed;
   }
@@ -885,7 +821,7 @@ function registerAppleAuthCodeIfPresent(code) {
   callRegisterAppleAuthCode({ code, native: true }).catch(() => {});
 }
 window.doLogout = async () => {
-  offline = false;
+  state.offline = false;
   stopPvpListener();
   await signOut(auth);
   show('auth-screen');
@@ -896,7 +832,7 @@ window.doLogout = async () => {
 // sabe o que está clicando antes da conta ser desativada
 let deleteAccountBtnRef = null;
 window.startDeleteMyAccount = (btn) => {
-  if (offline || !currentUser) return;
+  if (state.offline || !state.currentUser) return;
   deleteAccountBtnRef = btn;
   $('delete-account-modal').style.display = 'flex';
 };
@@ -912,8 +848,8 @@ window.confirmDeleteAccount = async () => {
   try {
     await callDeleteMyAccount();
     stopPvpListener();
-    offline = false;
-    currentUser = null;
+    state.offline = false;
+    state.currentUser = null;
     await signOut(auth);
     show('auth-screen');
     alert(T[state.lang].delete_account_done);
@@ -925,9 +861,9 @@ window.confirmDeleteAccount = async () => {
 window.playOffline = () => {
   track('play_offline');
   stopPvpListener(); // duelo exige conta — não faz sentido continuar ouvindo partidas jogando sem login
-  offline = true;
-  currentUser = null;
-  myData = {
+  state.offline = true;
+  state.currentUser = null;
+  state.myData = {
     nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
     playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, playedCaos: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
@@ -943,7 +879,7 @@ window.playOffline = () => {
 const ACTIVITY_HEARTBEAT_MS = 5 * 60 * 1000; // a cada 5 minutos
 let activityHeartbeatStarted = false;
 function touchActivityTick() {
-  if (!offline && currentUser) callTouchActivity().catch(() => {});
+  if (!state.offline && state.currentUser) callTouchActivity().catch(() => {});
 }
 function startActivityHeartbeat() {
   if (activityHeartbeatStarted) return;
@@ -959,8 +895,8 @@ startActivityHeartbeat();
 
 onAuthStateChanged(auth, async user => {
   if (user) {
-    offline = false;
-    currentUser = user;
+    state.offline = false;
+    state.currentUser = user;
     // conta por e-mail/senha precisa confirmar o e-mail (Google já vem verificado)
     const isPassword = user.providerData.some(p => p.providerId === 'password');
     if (isPassword && !user.emailVerified) {
@@ -970,8 +906,8 @@ onAuthStateChanged(auth, async user => {
     }
     await proceedAfterLogin(user);
   } else {
-    currentUser = null;
-    if (!offline) show('auth-screen');
+    state.currentUser = null;
+    if (!state.offline) show('auth-screen');
   }
 });
 
@@ -984,10 +920,10 @@ const EMPTY_PROFILE = {
 async function proceedAfterLogin(user) {
   try {
     const snap = await getDoc(doc(db, 'scores', user.uid));
-    myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
-  } catch { myData = { ...EMPTY_PROFILE }; }
+    state.myData = snap.exists() ? { ...EMPTY_PROFILE, ...snap.data() } : { ...EMPTY_PROFILE };
+  } catch { state.myData = { ...EMPTY_PROFILE }; }
   applyEquippedCosmetics();
-  if (!myData.nick) { syncRefCodeField(); resetNickConsent(); show('nick-screen'); }
+  if (!state.myData.nick) { syncRefCodeField(); resetNickConsent(); show('nick-screen'); }
   else {
     await backfillTotal();
     await submitPendingScore();
@@ -1008,12 +944,12 @@ async function proceedAfterLogin(user) {
 // corrige (silenciosamente) contas antigas que ainda não têm o campo "total" calculado,
 // sem precisar esperar a pessoa bater um novo recorde — roda sozinho ao abrir o jogo
 async function backfillTotal() {
-  if (computeTotal() === (myData.total || 0)) return; // já está correto, nem precisa chamar o servidor
+  if (computeTotal() === (state.myData.total || 0)) return; // já está correto, nem precisa chamar o servidor
   // o total agora é sempre recalculado no servidor a partir dos recordes que ELE gravou —
   // o cliente não manda nenhum valor, só pede pra recalcular
   try {
     const res = await callRecomputeTotal();
-    if (res.data && res.data.updated) myData.total = res.data.total;
+    if (res.data && res.data.updated) state.myData.total = res.data.total;
   } catch {}
 }
 
@@ -1072,17 +1008,17 @@ window.saveNick = async () => {
     const refCode = await generateUniqueRefCode();
 
     const batch = writeBatch(db);
-    batch.set(doc(db, 'nicks', nickKey), { uid: currentUser.uid });
-    batch.set(doc(db, 'refcodes', refCode), { uid: currentUser.uid });
-    batch.set(doc(db, 'scores', currentUser.uid), {
+    batch.set(doc(db, 'nicks', nickKey), { uid: state.currentUser.uid });
+    batch.set(doc(db, 'refcodes', refCode), { uid: state.currentUser.uid });
+    batch.set(doc(db, 'scores', state.currentUser.uid), {
       nick,
       refCode,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     await batch.commit();
     track('sign_up');
-    myData.nick = nick;
-    myData.refCode = refCode;
+    state.myData.nick = nick;
+    state.myData.refCode = refCode;
 
     // credita a indicação para quem trouxe esse jogador (feito no servidor,
     // já que é uma escrita no documento de OUTRO usuário). referrerCode (de um
@@ -1115,7 +1051,7 @@ window.showMenu = () => {
   $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
 
   // nível e barra de XP (só aparece pra quem tem conta)
-  $('menu-xp-wrap').style.display = offline ? 'none' : '';
+  $('menu-xp-wrap').style.display = state.offline ? 'none' : '';
   const xi = xpInfo(myXp());
   $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
   $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
@@ -1123,8 +1059,8 @@ window.showMenu = () => {
 
   // amigos precisam de conta — botão some jogando sem login; a bolinha
   // vermelha avisa quando tem pedido de amizade esperando resposta
-  $('menu-quick-friends-btn').style.display = offline ? 'none' : '';
-  if (!offline && currentUser) {
+  $('menu-quick-friends-btn').style.display = state.offline ? 'none' : '';
+  if (!state.offline && state.currentUser) {
     fetchMyFriendRequests().then(reqs => {
       const n = Object.keys(reqs.incoming || {}).length;
       const badge = $('menu-quick-friends-badge');
@@ -1146,7 +1082,7 @@ window.showMenu = () => {
     lockEl.style.display = locked ? '' : 'none';
     if (locked) lockEl.textContent = T[state.lang].unlock_at(minLv);
   }
-  if (offline) {
+  if (state.offline) {
     $('user-label').textContent = T[state.lang].offline_label;
     $('menu-logout-btn').textContent = T[state.lang].entrar_label;
   } else {
@@ -1155,7 +1091,7 @@ window.showMenu = () => {
     const labelEl = $('user-label');
     labelEl.innerHTML = '';
     labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 32) + ' ');
-    labelEl.appendChild(document.createTextNode(T[state.lang].user_greeting(myData.nick || '')));
+    labelEl.appendChild(document.createTextNode(T[state.lang].user_greeting(state.myData.nick || '')));
     $('menu-logout-btn').textContent = T[state.lang].sair_label;
   }
   // menu é a "raiz" da navegação — zera a pilha de "voltar" (ver
@@ -1189,11 +1125,11 @@ window.startGame = (m) => {
 
   // abre uma sessão no servidor (timestamp confiável) pra poder validar a
   // pontuação no fim da partida — só quem tem conta precisa disso
-  currentSessionId = null;
-  if (!offline && currentUser && myData.nick) {
+  state.currentSessionId = null;
+  if (!state.offline && state.currentUser && state.myData.nick) {
     callStartSession({ mode: m }).then(res => {
-      currentSessionId = res.data.sessionId;
-    }).catch(() => { currentSessionId = null; });
+      state.currentSessionId = res.data.sessionId;
+    }).catch(() => { state.currentSessionId = null; });
   }
 };
 
@@ -1363,7 +1299,7 @@ function handleTrioClick(isCorrect, e) {
   if (!playing) return;
   if (isCorrect) {
     score++;
-    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
+    if (state.currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: state.currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
     sfx.correct(score);
@@ -1493,7 +1429,7 @@ function handleCaosClick(isCorrect, e) {
   if (!playing) return;
   if (isCorrect) {
     score++;
-    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
+    if (state.currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: state.currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
     sfx.correct(score);
@@ -1587,7 +1523,7 @@ function handleClick(item, e) {
   if (!playing) return;
   if (item === target) {
     score++;
-    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
+    if (state.currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: state.currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
     // XP da rodada: quanto mais rápido acertar, mais ganha — e quanto mais longa a sequência, maior o bônus
     const elapsed = (performance.now() - timerStart) / 1000;
     xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
@@ -1616,7 +1552,7 @@ async function gameOver(reason) {
   const record = myRecord(mode);
   const isNewRecord = score > record;
   // XP só pra quem está logado com conta
-  const xpEarned = (!offline && currentUser && myData.nick) ? Math.round(xpGain) : 0;
+  const xpEarned = (!state.offline && state.currentUser && state.myData.nick) ? Math.round(xpGain) : 0;
   const xpBefore = myXp();
   const xpAfter = xpBefore + xpEarned;
   const leveledUp = levelFromXp(xpAfter) > levelFromXp(xpBefore);
@@ -1636,7 +1572,7 @@ async function gameOver(reason) {
   // antes de mandar o resultado final — fecha a corrida entre o envio final
   // chegar antes de algum sinal ainda em trânsito pela rede
   setOverButtonsEnabled(false);
-  if (!offline && currentUser && myData.nick) $('sync-status').textContent = T[state.lang].sync_calculating;
+  if (!state.offline && state.currentUser && state.myData.nick) $('sync-status').textContent = T[state.lang].sync_calculating;
   await Promise.allSettled(pendingRoundSync);
   pendingRoundSync = [];
   $('sync-status').textContent = ''; // volta a ficar vazio — persistGameResult decide se mostra sucesso/erro
@@ -1651,17 +1587,17 @@ async function gameOver(reason) {
     $('over-xp-wrap').style.display = 'none';
   }
 
-  if (offline) {
+  if (state.offline) {
     if (isNewRecord) setLocalRecord(mode, score);
-  } else if (currentUser && myData.nick) {
+  } else if (state.currentUser && state.myData.nick) {
     await persistGameResult(xpEarned);
   }
   setOverButtonsEnabled(true);
 
   // convite para quem joga sem conta
   $('signup-cta').style.display = 'none';
-  if (offline && score > 0) {
-    pendingScore = { mode, score };
+  if (state.offline && score > 0) {
+    state.pendingScore = { mode, score };
     $('signup-cta').style.display = '';
   }
 
@@ -1706,41 +1642,41 @@ window.dismissLevelUp = () => $('levelup-banner').classList.remove('show');
 async function persistGameResult(xpEarned = 0) {
   // a pontuação final agora é validada no servidor (Cloud Function), que checa
   // se o tempo real de jogo é compatível com a pontuação alegada antes de gravar.
-  if (!currentSessionId) {
+  if (!state.currentSessionId) {
     // sem sessão validada (ex.: caiu a internet bem no início da partida) —
     // não há como confirmar no servidor, então não grava essa partida.
     $('sync-status').textContent = T[state.lang].sync_fail;
     return;
   }
-  const sessionId = currentSessionId;
-  currentSessionId = null; // cada sessão só pode ser usada uma vez
+  const sessionId = state.currentSessionId;
+  state.currentSessionId = null; // cada sessão só pode ser usada uma vez
 
   try {
     const res = await callSubmitResult({ sessionId, mode, score, xpGain: xpEarned });
     const d = res.data || {};
-    myData.lastPlayedDate = todayStr();
-    myData.currentStreak = d.currentStreak;
-    myData.bestStreak = d.bestStreak;
-    myData.gamesPlayed = (myData.gamesPlayed || 0) + 1;
-    myData.totalPoints = (myData.totalPoints || 0) + score;
-    myData.xp = (myData.xp || 0) + xpEarned;
-    myData[PLAYED_FIELD[mode]] = true;
+    state.myData.lastPlayedDate = todayStr();
+    state.myData.currentStreak = d.currentStreak;
+    state.myData.bestStreak = d.bestStreak;
+    state.myData.gamesPlayed = (state.myData.gamesPlayed || 0) + 1;
+    state.myData.totalPoints = (state.myData.totalPoints || 0) + score;
+    state.myData.xp = (state.myData.xp || 0) + xpEarned;
+    state.myData[PLAYED_FIELD[mode]] = true;
     if (d.isNewRecord) {
-      myData[mode] = score;
+      state.myData[mode] = score;
       // servidor grava [mode]+"At" com serverTimestamp() (ver submitGameResult em
       // functions/index.js), mas o valor resolvido não volta na resposta — sem
       // atualizar isso aqui, o ranking de prévia (mini-ranking do fim de jogo)
       // ordenava o empate usando o carimbo do recorde ANTERIOR (ou nenhum),
       // não o de agora, e o critério "quem fez primeiro" saía errado bem na
       // hora que mais importa: logo após bater um recorde novo
-      myData[mode + 'At'] = Timestamp.now();
-      if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); } // mesmo motivo, pro ranking "Geral" (soma dos recordes)
+      state.myData[mode + 'At'] = Timestamp.now();
+      if (d.total !== undefined) { state.myData.total = d.total; state.myData.totalAt = Timestamp.now(); } // mesmo motivo, pro ranking "Geral" (soma dos recordes)
       $('sync-status').textContent = T[state.lang].sync_success;
       // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima)
       // só agora que virou recorde — em segundo plano, não atrasa a tela de
-      // resultado. myData[mode+'ReplaySessionId'] atualiza na hora, sem
+      // resultado. state.myData[mode+'ReplaySessionId'] atualiza na hora, sem
       // esperar o próximo carregamento do ranking, mesmo motivo do +'At' acima
-      myData[mode + 'ReplaySessionId'] = sessionId;
+      state.myData[mode + 'ReplaySessionId'] = sessionId;
       saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
   } catch (e) {
@@ -1825,7 +1761,7 @@ async function fetchAllScores() {
 }
 // linha de ranking com os dados do próprio jogador sempre frescos
 function rowData(r) {
-  return (!offline && currentUser && r.uid === currentUser.uid) ? { ...r.data, ...myData } : r.data;
+  return (!state.offline && state.currentUser && r.uid === state.currentUser.uid) ? { ...r.data, ...myData } : r.data;
 }
 
 async function renderRankPreview(field, bodyElId, myPts) {
@@ -1843,13 +1779,13 @@ async function renderRankPreview(field, bodyElId, myPts) {
     // entra aqui de propósito (ver comentário em fetchAllScores). Já banido
     // não entra nem aqui: a própria conta banida não deve se ver no ranking
     const youLabel = state.lang === 'en' ? 'YOU' : state.lang === 'es' ? 'TÚ' : 'VOCÊ';
-    let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
-    if (myIndex === -1 && myData.banned !== true) {
-      rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, durationMs: offline ? undefined : myData[field + 'DurationMs'], stats: offline ? null : myData, replaySessionId: offline ? undefined : myData[field + 'ReplaySessionId'] });
+    let myIndex = (!state.offline && state.currentUser) ? rows.findIndex(r => r.uid === state.currentUser.uid) : -1;
+    if (myIndex === -1 && state.myData.banned !== true) {
+      rows.push({ uid: '__me__', nick: state.offline ? youLabel : (state.myData.nick || youLabel), pts: myPts, at: null, durationMs: state.offline ? undefined : state.myData[field + 'DurationMs'], stats: state.offline ? null : state.myData, replaySessionId: state.offline ? undefined : state.myData[field + 'ReplaySessionId'] });
     }
 
     rows.sort(compareRankRows);
-    myIndex = rows.findIndex(r => r.uid === (!offline && currentUser ? currentUser.uid : '__me__'));
+    myIndex = rows.findIndex(r => r.uid === (!state.offline && state.currentUser ? state.currentUser.uid : '__me__'));
 
     // janela: 2 antes e 2 depois (expande pra manter 5 linhas quando possível)
     let start = Math.max(0, myIndex - 2);
@@ -1889,12 +1825,12 @@ async function renderRankPreview(field, bodyElId, myPts) {
 
 function renderMiniRankings(m) {
   $('mini-mode').textContent = modeLabel(m);
-  const myModePts = offline ? score : (myData[m] || 0);
+  const myModePts = state.offline ? score : (state.myData[m] || 0);
   renderRankPreview(m, 'mini-ranking-body', myModePts);
 }
 
 window.goSignup = () => {
-  offline = false;
+  state.offline = false;
   show('auth-screen');
 };
 
@@ -1910,7 +1846,7 @@ window.profileBack = () => popScreenBack();
 // senão, abre a versão somente-leitura (medalhas + posição no ranking).
 function openProfileFromRanking(r, backTarget) {
   pushScreenAndShow('profile-screen', backTarget);
-  const isMe = !offline && currentUser && (r.uid === currentUser.uid || r.uid === '__me__');
+  const isMe = !state.offline && state.currentUser && (r.uid === state.currentUser.uid || r.uid === '__me__');
   if (isMe) renderProfile();
   else renderProfile(r.stats, r.nick, r.uid);
 }
@@ -2222,7 +2158,7 @@ window.runBackfillReplayDurations = async (btn) => {
 
 // outra ferramenta avulsa só pra admin, mesmo raciocínio da de cima — define
 // o XP da PRÓPRIA conta pro mínimo do nível digitado (ver totalXpForLevel).
-// Só atualiza o essencial na tela (chip de nível no cabeçalho + myData.xp),
+// Só atualiza o essencial na tela (chip de nível no cabeçalho + state.myData.xp),
 // sem chamar renderProfile() de novo — isso reconstruiria o card inteiro e
 // apagaria a mensagem de status antes da pessoa conseguir ler.
 // força o recálculo do retrato de ranking (scoresSnapshot) na hora, em vez de
@@ -2256,8 +2192,8 @@ window.runAdminSetOwnLevel = async (btn) => {
   const xp = totalXpForLevel(lv);
   btn.disabled = true;
   try {
-    await callAdminSetXp({ uid: currentUser.uid, xp });
-    myData.xp = xp;
+    await callAdminSetXp({ uid: state.currentUser.uid, xp });
+    state.myData.xp = xp;
     $('profile-nick-lv').innerHTML = ' ' + lvChip(myXp());
     if (status) status.textContent = `✅ Nível definido pra ${lv}.`;
   } catch (e) {
@@ -2279,18 +2215,18 @@ let myFriendReqCache = null, myFriendReqCacheAt = 0;
 const FRIENDS_CACHE_MS = 20 * 1000;
 
 async function fetchMyFriends(force) {
-  if (offline || !currentUser) return {};
+  if (state.offline || !state.currentUser) return {};
   if (!force && myFriendsCache && (Date.now() - myFriendsCacheAt) < FRIENDS_CACHE_MS) return myFriendsCache;
-  const snap = await getDoc(doc(db, 'friends', currentUser.uid));
+  const snap = await getDoc(doc(db, 'friends', state.currentUser.uid));
   myFriendsCache = (snap.exists() && snap.data().list) || {};
   myFriendsCacheAt = Date.now();
   return myFriendsCache;
 }
 
 async function fetchMyFriendRequests(force) {
-  if (offline || !currentUser) return { incoming: {}, outgoing: {} };
+  if (state.offline || !state.currentUser) return { incoming: {}, outgoing: {} };
   if (!force && myFriendReqCache && (Date.now() - myFriendReqCacheAt) < FRIENDS_CACHE_MS) return myFriendReqCache;
-  const snap = await getDoc(doc(db, 'friendRequests', currentUser.uid));
+  const snap = await getDoc(doc(db, 'friendRequests', state.currentUser.uid));
   const data = snap.exists() ? snap.data() : {};
   myFriendReqCache = { incoming: data.incoming || {}, outgoing: data.outgoing || {} };
   myFriendReqCacheAt = Date.now();
@@ -2345,7 +2281,7 @@ async function renderProfileFriendAction(theirUid) {
   const box = $('profile-friend-action');
   if (!box) return;
   box.dataset.uid = theirUid;
-  if (offline || !currentUser) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  if (state.offline || !state.currentUser) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
   box.innerHTML = `<span class="muted">${T[state.lang].loading_text}</span>`;
   const rel = await getFriendRelation(theirUid);
@@ -2488,7 +2424,7 @@ async function renderFriendsScreen(force) {
   const body = $('friends-body');
   $('friends-status').textContent = '';
 
-  if (offline || !currentUser) {
+  if (state.offline || !state.currentUser) {
     $('friends-refcode-row').style.display = 'none';
     body.innerHTML = `
       <div class="card" style="text-align:center;">
@@ -2499,9 +2435,9 @@ async function renderFriendsScreen(force) {
     return;
   }
 
-  const showOwnRefCode = !!myData.refCode;
+  const showOwnRefCode = !!state.myData.refCode;
   $('friends-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
-  if (showOwnRefCode) $('friends-refcode-value').textContent = myData.refCode;
+  if (showOwnRefCode) $('friends-refcode-value').textContent = state.myData.refCode;
 
   body.innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].loading_text}</div>`;
   const [friends, reqs] = await Promise.all([fetchMyFriends(force), fetchMyFriendRequests(force)]);
@@ -2589,20 +2525,20 @@ window.uiRemoveFriend = async (friendUid) => {
   await refreshFriendUiFor(friendUid);
 };
 
-// sem argumentos: perfil PRÓPRIO (editável, lê de myData ao vivo, badges
+// sem argumentos: perfil PRÓPRIO (editável, lê de state.myData ao vivo, badges
 // completos com progresso). Com viewStats/viewNick/viewUid: perfil de OUTRO
 // jogador — somente leitura, medalha atual de cada categoria + posição no
 // ranking em cada modo (ver openProfileFromRanking acima).
 async function renderProfile(viewStats, viewNick, viewUid) {
   const isOther = !!viewStats;
-  const stats = isOther ? viewStats : myData;
+  const stats = isOther ? viewStats : state.myData;
 
-  $('profile-invite-btn').style.display = (!isOther && !offline) ? '' : 'none';
-  const showOwnRefCode = !isOther && !offline && !!myData.refCode;
+  $('profile-invite-btn').style.display = (!isOther && !state.offline) ? '' : 'none';
+  const showOwnRefCode = !isOther && !state.offline && !!state.myData.refCode;
   $('profile-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
-  if (showOwnRefCode) $('profile-refcode-value').textContent = myData.refCode;
+  if (showOwnRefCode) $('profile-refcode-value').textContent = state.myData.refCode;
 
-  if (!isOther && offline) {
+  if (!isOther && state.offline) {
     $('profile-nick-avatar').innerHTML = '';
     $('profile-nick-text').textContent = T[state.lang].profile_offline_label;
     $('profile-nick-lv').innerHTML = '';
@@ -2627,7 +2563,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   // direto no #profile-nick, o que podia deixar ícone duplicado se essa função
   // rodasse mais de uma vez em sequência (ex.: ao trocar a medalha equipada).
   $('profile-nick-avatar').innerHTML = avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 42) + ' ';
-  $('profile-nick-text').textContent = T[state.lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick-text').textContent = T[state.lang].profile_nick_label(isOther ? (viewNick || '') : (state.myData.nick || ''));
   $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
 
@@ -2639,17 +2575,17 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     let html = '';
     if (ranksHtml) html += profileSectionLabel(T[state.lang].profile_ranks_section) + ranksHtml;
     html += profileSectionLabel(T[state.lang].profile_badges_section) + renderPublicProfileBadges(stats);
-    // painel só pra admin (myData.admin, setado à mão no Firebase Console) —
+    // painel só pra admin (state.myData.admin, setado à mão no Firebase Console) —
     // último login, últimos duelos e amigos de QUALQUER jogador, com opção de
     // editar o nick e banir a conta, tudo validado de novo no servidor (ver
     // requireAdmin em functions/index.js — o cliente decidir mostrar isso aqui
     // é só conveniência de UI, não é o que garante a permissão)
-    if (myData.admin === true) {
+    if (state.myData.admin === true) {
       html += profileSectionLabel('🛠️ Admin') + `<div class="card" id="admin-panel-body"><div class="muted" style="text-align:center;">Carregando dados de admin...</div></div>`;
     }
     $('profile-body').innerHTML = html;
     resetScroll('profile-screen');
-    if (myData.admin === true) renderAdminPanel(viewUid, viewNick || '', stats);
+    if (state.myData.admin === true) renderAdminPanel(viewUid, viewNick || '', stats);
     return;
   }
 
@@ -2666,12 +2602,12 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
   $('profile-summary').textContent = T[state.lang].profile_summary(unlockedCount, totalLevels);
   $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(key, BADGE_DEFS[key], stats)).join('');
-  // ferramenta avulsa só pra admin (myData.admin, setado à mão no Firebase
+  // ferramenta avulsa só pra admin (state.myData.admin, setado à mão no Firebase
   // Console) — corrige pendingPigmentos de quem já tinha prêmio parado na
   // caixa de entrada de antes desse campo existir (ver comentário da
   // function backfillPendingPigmentos em functions/index.js). Idempotente:
   // pode rodar mais de uma vez sem risco.
-  if (myData.admin === true) {
+  if (state.myData.admin === true) {
     $('profile-body').insertAdjacentHTML('beforeend', `
       <div class="card" style="text-align:left;">
         <b>🛠️ Admin — ferramentas gerais</b>
@@ -2742,8 +2678,8 @@ function renderBadgeCard(key, def, stats) {
   // qual nível desta categoria está sendo exibido no ranking agora (-1 se a
   // categoria nem está equipada) — não precisa ser o mais alto desbloqueado,
   // ver setEquippedBadgeTier/equippedBadgeLabel
-  const equippedTier = (myData.equippedBadge === key)
-    ? ((typeof myData.equippedBadgeTier === 'number' && myData.equippedBadgeTier <= tier) ? myData.equippedBadgeTier : tier)
+  const equippedTier = (state.myData.equippedBadge === key)
+    ? ((typeof state.myData.equippedBadgeTier === 'number' && state.myData.equippedBadgeTier <= tier) ? state.myData.equippedBadgeTier : tier)
     : -1;
 
   // cada chip DESBLOQUEADO é clicável — escolhe direto aquele nível pra
@@ -2791,16 +2727,16 @@ function renderBadgeCard(key, def, stats) {
 // desbloqueado de verdade nunca chega a acontecer pela UI, mas mesmo que
 // alguém forje isso direto no Firestore, não muda o que aparece pra ninguém).
 window.setEquippedBadgeTier = async (key, tierIdx) => {
-  if (offline || !currentUser || !myData.nick) return;
+  if (state.offline || !state.currentUser || !state.myData.nick) return;
   // clicar no nível que já está sendo exibido desequipa a categoria inteira
   // (volta a não mostrar nada); clicar em outro nível (da mesma categoria ou
   // de outra) troca na hora, sem precisar desequipar antes
-  const alreadyShown = myData.equippedBadge === key
-    && ((typeof myData.equippedBadgeTier === 'number' ? myData.equippedBadgeTier : unlockedTier(BADGE_DEFS[key], myData)) === tierIdx);
+  const alreadyShown = state.myData.equippedBadge === key
+    && ((typeof state.myData.equippedBadgeTier === 'number' ? state.myData.equippedBadgeTier : unlockedTier(BADGE_DEFS[key], state.myData)) === tierIdx);
   const nextKey = alreadyShown ? null : key;
   const nextTier = alreadyShown ? null : tierIdx;
-  myData.equippedBadge = nextKey;
-  myData.equippedBadgeTier = nextTier;
+  state.myData.equippedBadge = nextKey;
+  state.myData.equippedBadgeTier = nextTier;
   // renderProfile() sempre chama resetScroll('profile-screen') no final, que
   // joga a página pro topo — é o certo ao ENTRAR na tela, mas aqui a pessoa já
   // está nela só trocando a medalha, então guarda a posição e restaura logo
@@ -2809,27 +2745,27 @@ window.setEquippedBadgeTier = async (key, tierIdx) => {
   renderProfile(); // atualiza o chip/legenda na hora, antes mesmo do Firestore confirmar
   window.scrollTo(0, scrollY);
   try {
-    await setDoc(doc(db, 'scores', currentUser.uid), { equippedBadge: nextKey, equippedBadgeTier: nextTier, updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, 'scores', state.currentUser.uid), { equippedBadge: nextKey, equippedBadgeTier: nextTier, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {
     // não foi possível salvar agora — a escolha fica só localmente até a próxima tentativa
   }
 };
 
 async function submitPendingScore() {
-  if (!pendingScore || !currentUser || !myData.nick) return;
-  const { mode: m, score: s, xp: pendingXp = 0 } = pendingScore;
-  pendingScore = null;
+  if (!state.pendingScore || !state.currentUser || !state.myData.nick) return;
+  const { mode: m, score: s, xp: pendingXp = 0 } = state.pendingScore;
+  state.pendingScore = null;
 
   // pontuação feita antes de ter conta — não existe sessão de servidor pra validar
-  // o tempo (foi jogada offline), mas o servidor ainda valida o valor e só ele grava
+  // o tempo (foi jogada state.offline), mas o servidor ainda valida o valor e só ele grava
   try {
     const res = await callClaimPendingScore({ mode: m, score: s, xpGain: pendingXp });
     const d = res.data || {};
-    if (d.xpEarned) myData.xp = (myData.xp || 0) + d.xpEarned;
+    if (d.xpEarned) state.myData.xp = (state.myData.xp || 0) + d.xpEarned;
     if (d.isNewRecord) {
-      myData[m] = s;
-      myData[m + 'At'] = Timestamp.now(); // mesmo motivo do persistGameResult() acima
-      if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); }
+      state.myData[m] = s;
+      state.myData[m + 'At'] = Timestamp.now(); // mesmo motivo do persistGameResult() acima
+      if (d.total !== undefined) { state.myData.total = d.total; state.myData.totalAt = Timestamp.now(); }
     }
   } catch {}
 }
@@ -2896,7 +2832,7 @@ window.loadRanking = async (m) => {
   $('ranking-pagination').innerHTML = '';
 
   // ranking de amigos exige conta (não dá pra ter amigos jogando sem login)
-  if (rankingScope === 'amigos' && (offline || !currentUser)) {
+  if (rankingScope === 'amigos' && (state.offline || !state.currentUser)) {
     body.innerHTML = `
       <tr><td colspan="3">
         <div class="card" style="text-align:center;">
@@ -2916,7 +2852,7 @@ window.loadRanking = async (m) => {
     const friendUids = (rankingScope === 'amigos') ? new Set(Object.keys(await fetchMyFriends())) : null;
     const rows = [];
     for (const r of all) {
-      if (friendUids && r.uid !== currentUser.uid && !friendUids.has(r.uid)) continue;
+      if (friendUids && r.uid !== state.currentUser.uid && !friendUids.has(r.uid)) continue;
       const data = rowData(r);
       // no ranking de nível todo mundo entra (mesmo com 0 XP)
       if (m === 'level') {
@@ -2928,9 +2864,9 @@ window.loadRanking = async (m) => {
     // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
     // TESTE.HTML: admin também entra aqui de propósito (ver fetchAllScores).
     // Banido não entra nem aqui.
-    if (!offline && currentUser && myData.nick && myData.banned !== true && !rows.some(r => r.uid === currentUser.uid)) {
-      if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
-      else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], durationMs: myData[field + 'DurationMs'], stats: myData, replaySessionId: myData[field + 'ReplaySessionId'] });
+    if (!state.offline && state.currentUser && state.myData.nick && state.myData.banned !== true && !rows.some(r => r.uid === state.currentUser.uid)) {
+      if (m === 'level') rows.push({ uid: state.currentUser.uid, nick: state.myData.nick, pts: state.myData.xp || 0, at: null, stats: state.myData });
+      else if ((state.myData[field] || 0) > 0) rows.push({ uid: state.currentUser.uid, nick: state.myData.nick, pts: state.myData[field], at: state.myData[field + 'At'], durationMs: state.myData[field + 'DurationMs'], stats: state.myData, replaySessionId: state.myData[field + 'ReplaySessionId'] });
     }
     rows.sort(compareRankRows);
     rankingRows = rows;
@@ -2952,7 +2888,7 @@ function renderRankingPage() {
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
     const ptsDisplay = r.pts;
     const tr = document.createElement('tr');
-    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    if (state.currentUser && r.uid === state.currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
     const nickCell = tr.children[1];
     const rankingBadgeHtml = (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats);
@@ -3016,7 +2952,7 @@ async function loadDailyTodayRanking() {
     snap.forEach(d => {
       const data = d.data();
       if ((data.attempts || 0) <= 0 || !data.nick) return;
-      const isMe = currentUser && data.uid === currentUser.uid;
+      const isMe = state.currentUser && data.uid === state.currentUser.uid;
       // aproveita que a própria linha já vem nesse mesmo snap (é só mais um
       // documento de dailyScores) pra atualizar dailyAttemptsUsed com dado
       // fresco direto do servidor — usado logo abaixo em renderDailyTodayPage
@@ -3025,10 +2961,10 @@ async function loadDailyTodayRanking() {
       // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
       // testar/depurar o ranking do desafio diário com a própria conta) — no
       // index.html (produção) a exclusão de admin continua valendo
-      const stats = statsByUid[data.uid] || (isMe ? myData : null);
+      const stats = statsByUid[data.uid] || (isMe ? state.myData : null);
       // banido não aparece nem no próprio ranking dele: statsByUid já veio
       // filtrado (fetchAllScores exclui banned), então isso só cobre o caso
-      // isMe acima, que usa myData direto e não passa por esse filtro
+      // isMe acima, que usa state.myData direto e não passa por esse filtro
       if (!stats || stats.banned === true) return;
       // bestScoreAt/bestScoreDurationMs só avançam no servidor quando a
       // tentativa bate um recorde novo do dia (ver submitDailyResult em
@@ -3054,7 +2990,7 @@ function renderDailyTodayPage() {
     const pos = start + i + 1;
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
     const tr = document.createElement('tr');
-    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    if (state.currentUser && r.uid === state.currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
     const nickCell = tr.children[1];
     buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
@@ -3431,7 +3367,7 @@ function renderDailyAlltimePage() {
     const pos = start + i + 1;
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
     const tr = document.createElement('tr');
-    if (currentUser && r.uid === currentUser.uid) tr.className = 'me';
+    if (state.currentUser && r.uid === state.currentUser.uid) tr.className = 'me';
     tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.wins}</td><td class="pts">${r.pig}</td>`;
     const nickCell = tr.children[1];
     buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
@@ -3551,7 +3487,7 @@ window.addEventListener('pageshow', refreshDailyCardOnResume);
 // ranking do desafio, que é a informação útil nesse caso
 window.dailyCardClick = () => {
   if (!isDailyChallengeLive() || isDailyStartDelay() || !dailyLevelUnlocked()) return;
-  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  if (state.offline || !state.currentUser || !state.myData.nick) { goSignup(); return; }
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
     $('daily-blocked-msg').textContent = T[state.lang].daily_blocked_msg;
@@ -3598,7 +3534,7 @@ window.showDailyIntro = () => {
    em dailyInbox/{uid}/messages), mas o ícone/popup já são genéricos pra caber
    qualquer aviso futuro do jogo, não só do desafio diário. */
 window.showInbox = async () => {
-  if (offline || !currentUser) return;
+  if (state.offline || !state.currentUser) return;
   $('inbox-modal').style.display = 'flex';
   await loadInbox();
 };
@@ -3606,9 +3542,9 @@ window.closeInbox = () => {
   $('inbox-modal').style.display = 'none';
 };
 async function loadInbox() {
-  if (offline || !currentUser) return;
+  if (state.offline || !state.currentUser) return;
   try {
-    const snap = await getDocs(collection(db, 'dailyInbox', currentUser.uid, 'messages'));
+    const snap = await getDocs(collection(db, 'dailyInbox', state.currentUser.uid, 'messages'));
     const msgs = [];
     snap.forEach(d => msgs.push({ id: d.id, ...d.data() }));
     msgs.sort((a, b) => (b.dateStr || '').localeCompare(a.dateStr || ''));
@@ -3676,12 +3612,12 @@ function renderInboxList(msgs) {
 // não foram resgatadas
 async function refreshInboxBadge() {
   const btn = $('inbox-btn');
-  if (offline || !currentUser || !myData.nick) { btn.style.display = 'none'; return; }
+  if (state.offline || !state.currentUser || !state.myData.nick) { btn.style.display = 'none'; return; }
   btn.style.display = '';
   try {
     // só conta o que ainda não foi resgatado — mensagens já lidas continuam
     // na caixa de entrada como histórico, mas não devem inflar a bolinha
-    const snap = await getDocs(query(collection(db, 'dailyInbox', currentUser.uid, 'messages'), where('claimed', '==', false)));
+    const snap = await getDocs(query(collection(db, 'dailyInbox', state.currentUser.uid, 'messages'), where('claimed', '==', false)));
     const badge = $('inbox-badge');
     badge.textContent = snap.size;
     badge.style.display = snap.size > 0 ? '' : 'none';
@@ -3691,7 +3627,7 @@ window.claimOneDailyReward = async (dateStr) => {
   try {
     const res = await callClaimDailyReward({ dateStr });
     const coins = (res.data && res.data.coins) || 0;
-    if (coins > 0) myData.pigmentos = (myData.pigmentos || 0) + coins;
+    if (coins > 0) state.myData.pigmentos = (state.myData.pigmentos || 0) + coins;
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();
@@ -3705,7 +3641,7 @@ window.claimAllDailyRewards = async () => {
   try {
     const res = await callClaimDailyReward({});
     const coins = (res.data && res.data.coins) || 0;
-    if (coins > 0) myData.pigmentos = (myData.pigmentos || 0) + coins;
+    if (coins > 0) state.myData.pigmentos = (state.myData.pigmentos || 0) + coins;
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();
@@ -3721,7 +3657,7 @@ window.claimAllDailyRewards = async () => {
 async function updateDailyMenuCard() {
   const card = $('card-daily');
   if (!card) return;
-  if (offline || !currentUser || !myData.nick) { card.style.display = 'none'; return; }
+  if (state.offline || !state.currentUser || !state.myData.nick) { card.style.display = 'none'; return; }
   card.style.display = '';
   renderDailyCardCountdown(); // atualiza o rótulo (Inicia em/Termina em) na hora, sem esperar o próximo tique
 
@@ -3749,7 +3685,7 @@ async function updateDailyMenuCard() {
   $('daily-card-footer').style.display = '';
   try {
     const dateStr = dailyLocalDateStr();
-    const snap = await getDoc(doc(db, 'dailyScores', `${dateStr}_${currentUser.uid}`));
+    const snap = await getDoc(doc(db, 'dailyScores', `${dateStr}_${state.currentUser.uid}`));
     const data = snap.exists() ? snap.data() : {};
     dailyAttemptsUsed = data.attempts || 0;
     dailyBestScore = data.bestScore || 0;
@@ -3765,7 +3701,7 @@ async function updateDailyMenuCard() {
 
 /* -------- jogo do desafio (mesmo modo Clássico, RNG determinística) -------- */
 window.startDailyChallenge = async () => {
-  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  if (state.offline || !state.currentUser || !state.myData.nick) { goSignup(); return; }
   if (!(await isDailyClientUpToDate())) {
     $('daily-blocked-msg').textContent = T[state.lang].daily_update_required;
     $('daily-intro').style.display = 'none';
@@ -3982,7 +3918,7 @@ async function dailyGameOver(reason) {
     const res = await callSubmitDailyResult({ sessionId: dailySessionId, score: dailyScore });
     if (res.data && typeof res.data.bestScore === 'number') bestScore = res.data.bestScore;
     if (res.data && typeof res.data.xpEarned === 'number' && res.data.xpEarned > 0) {
-      myData.xp = (myData.xp || 0) + res.data.xpEarned;
+      state.myData.xp = (state.myData.xp || 0) + res.data.xpEarned;
       $('daily-result-xp').textContent = T[state.lang].daily_xp_bonus(res.data.xpEarned);
       $('daily-result-xp').style.display = '';
       if (levelFromXp(myXp()) > lvBefore) sfx.levelUp();
@@ -4022,7 +3958,7 @@ window.dailyExitScreen = () => {
    Catálogo/preço são só pra desenhar a tela — quem manda de verdade é o
    servidor (buyShopItem/setEquippedItem em functions/index.js), que confere
    saldo e posse de novo antes de gravar. O cliente só reflete o que já sabe
-   (myData.pigmentos/ownedItems/equipped) e atualiza otimisticamente depois
+   (state.myData.pigmentos/ownedItems/equipped) e atualiza otimisticamente depois
    de cada resposta bem-sucedida. */
 
 // botão "🛍️ LOJA" do menu — a loja ainda tá em teste, então o botão fica
@@ -4030,7 +3966,7 @@ window.dailyExitScreen = () => {
 function renderMenuPigmentosBar() {
   const shopBtn = $('menu-quick-shop-btn');
   if (!shopBtn) return;
-  shopBtn.style.display = (!offline && currentUser && myData.nick && myData.admin === true) ? '' : 'none';
+  shopBtn.style.display = (!state.offline && state.currentUser && state.myData.nick && state.myData.admin === true) ? '' : 'none';
 }
 // saldo de Pigmentos no topo da tela, entre o nick e a caixa de entrada — só
 // o número + ícone colorido, sem texto/link (o acesso à loja continua sendo
@@ -4038,17 +3974,17 @@ function renderMenuPigmentosBar() {
 function renderUserPigmentos() {
   const el = $('user-pigmentos-bar');
   if (!el) return;
-  if (offline || !currentUser || !myData.nick) {
+  if (state.offline || !state.currentUser || !state.myData.nick) {
     el.style.display = 'none';
     return;
   }
   el.style.display = 'inline-flex';
-  $('user-pigmentos-num').textContent = myData.pigmentos || 0;
+  $('user-pigmentos-num').textContent = state.myData.pigmentos || 0;
   $('user-pigmentos-icon').innerHTML = pigmentIconSvg(16);
 }
 
 window.showShop = () => {
-  if (offline || !currentUser || !myData.nick) { goSignup(); return; }
+  if (state.offline || !state.currentUser || !state.myData.nick) { goSignup(); return; }
   track('shop_open');
   $('shop-status').textContent = '';
   show('shop-screen');
@@ -4057,9 +3993,9 @@ window.showShop = () => {
 
 function renderShop() {
   $('shop-balance-icon').innerHTML = pigmentIconSvg(20);
-  $('shop-balance-num').textContent = myData.pigmentos || 0;
-  const owned = new Set(myData.ownedItems || []);
-  const equipped = myData.equipped || {};
+  $('shop-balance-num').textContent = state.myData.pigmentos || 0;
+  const owned = new Set(state.myData.ownedItems || []);
+  const equipped = state.myData.equipped || {};
 
   const body = $('shop-body');
   body.innerHTML = '';
@@ -4198,7 +4134,7 @@ function shopItemRow(item, isOwned, isEquipped) {
     const priceSpan = document.createElement('span');
     priceSpan.textContent = ' ' + item.price;
     btn.appendChild(priceSpan);
-    if ((myData.pigmentos || 0) < item.price) btn.style.opacity = '0.55';
+    if ((state.myData.pigmentos || 0) < item.price) btn.style.opacity = '0.55';
     btn.onclick = () => buyShopItemUi(item.id);
   }
   row.appendChild(btn);
@@ -4209,8 +4145,8 @@ window.buyShopItemUi = async (itemId) => {
   $('shop-status').textContent = '';
   try {
     const res = await callBuyShopItem({ itemId });
-    if (res.data && typeof res.data.pigmentos === 'number') myData.pigmentos = res.data.pigmentos;
-    myData.ownedItems = [...(myData.ownedItems || []), itemId];
+    if (res.data && typeof res.data.pigmentos === 'number') state.myData.pigmentos = res.data.pigmentos;
+    state.myData.ownedItems = [...(state.myData.ownedItems || []), itemId];
     renderShop();
     renderMenuPigmentosBar();
     renderUserPigmentos();
@@ -4223,8 +4159,8 @@ window.equipShopItem = async (slot, itemId) => {
   $('shop-status').textContent = '';
   try {
     await callSetEquippedItem({ slot, itemId: itemId || null });
-    if (!myData.equipped) myData.equipped = {};
-    if (itemId) myData.equipped[slot] = itemId; else delete myData.equipped[slot];
+    if (!state.myData.equipped) state.myData.equipped = {};
+    if (itemId) state.myData.equipped[slot] = itemId; else delete state.myData.equipped[slot];
     applyEquippedCosmetics();
     renderShop();
   } catch (e) {
@@ -4298,8 +4234,8 @@ function setPvpNameWithLevel(el, labelText, xp, avatarId) {
 
 function startPvpListener() {
   stopPvpListener();
-  if (offline || !currentUser) return;
-  const q = query(collection(db, 'matches'), where('players', 'array-contains', currentUser.uid));
+  if (state.offline || !state.currentUser) return;
+  const q = query(collection(db, 'matches'), where('players', 'array-contains', state.currentUser.uid));
   pvpMatchesUnsub = onSnapshot(q, snapshot => {
     pvpMatchesById = {};
     snapshot.forEach(d => { pvpMatchesById[d.id] = { id: d.id, ...d.data() }; });
@@ -4337,9 +4273,9 @@ function stopPvpListener() {
 }
 
 function handlePvpMatchesUpdate() {
-  if (!currentUser) return;
+  if (!state.currentUser) return;
   const all = Object.values(pvpMatchesById);
-  const myUid = currentUser.uid;
+  const myUid = state.currentUser.uid;
 
   // desafio recebido (alguém me desafiou, ainda não respondi)
   const incoming = all.find(m => m.status === 'pending' && m.challengerUid !== myUid);
@@ -4453,7 +4389,7 @@ function checkPvpAttemptSound(m) {
 
 function renderPvpScreen(m) {
   checkPvpAttemptSound(m);
-  const myUid = currentUser.uid;
+  const myUid = state.currentUser.uid;
   const oppUid = m.players.find(p => p !== myUid);
 
   $('pvp-waiting').style.display = 'none';
@@ -4680,7 +4616,7 @@ function renderPvpCountdown(m) {
 }
 
 function renderPvpBars(m) {
-  const myUid = currentUser.uid;
+  const myUid = state.currentUser.uid;
   const oppUid = m.players.find(p => p !== myUid);
   const turnStartedMs = m.turnStartedAt ? m.turnStartedAt.toMillis() : Date.now();
   const elapsed = Math.max(0, (Date.now() - pvpClockOffsetMs) - turnStartedMs);
