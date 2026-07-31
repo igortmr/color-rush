@@ -1,3 +1,6 @@
+// tem que bater com DAILY_MAX_ATTEMPTS do servidor (functions/index.js)
+export const DAILY_MAX_ATTEMPTS = 3;
+
 export const COLORS = [
   { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'      }, hex: '#1e90ff' },
   { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'      }, hex: '#ff3c3c' }, // um pouco mais puro/forte que antes (#ff4757), pra diferenciar melhor do rosa (#ff6b9d) — hue quase idêntico ao original antes puxava pro lado do rosa

@@ -12,7 +12,7 @@ import { app, auth, db, functions, callable } from './firebase.js';
 import {
   COLORS, CONFETTI_COLORS, SQUARES, SHAPES, poolFor, CAOS_POOL, isColorItem,
   poolItemId, poolItemById, PLAYED_FIELD, ALL_MODES, DAILY_ROTATION_MODES,
-  DAILY_COLORS, DAILY_PALETTE_OVERRIDE
+  DAILY_COLORS, DAILY_PALETTE_OVERRIDE, DAILY_MAX_ATTEMPTS
 } from './constants.js';
 import {
   shuffle, pick, mulberry32, hashSeed, seededPick, seededShuffle,
@@ -37,6 +37,10 @@ import {
   hasAnyNewBadge, totalNewBadgeCount, markAllBadgesSeen, refreshBadgeNotifDot
 } from './badges.js';
 import { tutMode, tutStep, showTutStep } from './tutorial.js';
+import {
+  fetchAllScores, rowData, compareRankRows, invalidateScoresCache
+} from './ranking-cache.js';
+import { RANK_FIELDS } from './ranking.js';
 
 // chamadas ao servidor: a pontuação final agora é validada lá,
 // não é mais um simples write direto no Firestore vindo do navegador.
@@ -148,7 +152,7 @@ function applyLanguage() {
   // re-renderiza a tela dinâmica que já estava aberta, se aplicável
   if ($('menu-screen').classList.contains('active')) showMenu();
   if ($('profile-screen').classList.contains('active')) renderProfile();
-  if ($('ranking-screen').classList.contains('active')) loadRanking(rankingTab || 'geral');
+  if ($('ranking-screen').classList.contains('active')) window.loadRanking(window.getRankingTab() || 'geral');
   if ($('tutorial-screen').classList.contains('active')) {
     $('tut-title-el').textContent = T[state.lang].tut_title[tutMode];
     showTutStep(tutStep);
@@ -305,41 +309,7 @@ const computeTotal = (overrideMode, overrideScore) =>
 // à parte pra poder reusar a MESMA marcação como prévia no perfil (ver
 // renderBadgeCard), assim a pessoa vê exatamente como vai aparecer antes de
 // equipar.
-// monta o conteúdo de uma célula de ranking: nível, nick e conquista/classe
-// tudo numa coluna só (ver .nick-cell no <style>). Usado nas 4 tabelas de
-// ranking (mini-ranking, ranking completo, desafio diário hoje e Salão da
-// Fama) pra não duplicar essa estrutura 4x. badgeHtml já vem pronto de quem
-// chama (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
-function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
-  nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
-  const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
-  nickSpan.textContent = r.nick;
-  nickSpan.className = 'nick-click';
-  applyNickFrame(nickSpan, r.stats);
-  nickSpan.onclick = () => openProfileFromRanking(r, backTarget);
-  nickCell.appendChild(nickSpan);
-  if (badgeHtml) nickCell.insertAdjacentHTML('beforeend', badgeHtml); // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
-  return nickSpan;
-}
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
-
-// maior pontuação primeiro; empate é desempatado por quem bateu o recorde primeiro
-// desempate por MENOS TEMPO gasto na partida que gerou a pontuação (não mais
-// "quem fez primeiro"). durationMs vem de <modo>DurationMs (ou
-// bestScoreDurationMs no desafio diário — ver submitGameResult/
-// submitDailyResult em functions/index.js), gravado a partir do mesmo
-// elapsedMs que o anti-cheat já calculava, só quando aquela tentativa bate
-// um recorde novo. Registros de antes dessa mudança (ou pontuação feita sem
-// conta, sem sessão de servidor pra medir tempo — ver claimPendingScore) não
-// têm esse campo; só nesse caso os dois lados caem de volta pro critério
-// antigo (quem pontuou primeiro).
-function compareRankRows(a, b) {
-  if (b.pts !== a.pts) return b.pts - a.pts;
-  if (a.durationMs != null && b.durationMs != null) return a.durationMs - b.durationMs;
-  const at = a.at ? a.at.toMillis() : Infinity;
-  const bt = b.at ? b.at.toMillis() : Infinity;
-  return at - bt;
-}
 
 let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
 // estado do modo Trio (ver newTrioRound/handleTrioClick): trioColorA/trioColorB
@@ -372,7 +342,6 @@ let replayStartMs = 0; // referência (performance.now()) pro tempo relativo de 
 
 // desafio diário — estado separado do jogo normal (não usa "mode"/"score" etc.
 // acima, pra não arriscar misturar com uma partida solo aberta em paralelo)
-const DAILY_MAX_ATTEMPTS = 3; // tem que bater com DAILY_MAX_ATTEMPTS do servidor
 // dia (fuso de Brasília) em que o desafio diário estreia — até lá o card no
 // menu fica só com título + cronômetro "Inicia em", sem descrição nem dados
 const DAILY_CHALLENGE_LAUNCH_DATE = '2026-07-25';
@@ -405,11 +374,16 @@ let dailyCountdownTimerId = null; // contagem "3, 2, 1" antes da tentativa come�
 let dailySessionId = null;
 let dailyDateStrCache = null;   // dia (AAAA-MM-DD) da tentativa em andamento
 let dailyClosesAtMs = null;     // quando o desafio de hoje fecha (mesmo instante em que o de amanhã abre)
+// tentativas usadas do desafio diário hoje — precisa ser lido/escrito tanto
+// pelo desafio diário em si quanto por js/daily-ranking.js (mostra/esconde
+// botão de replay conforme já usou as 3 tentativas), então tem um getter/
+// setter em vez de exportado direto (ver comentário equivalente em
+// screenBackStack, js/nav.js, sobre por que reassign direto de import não
+// funciona em ES modules)
 let dailyAttemptsUsed = 0;
+window.getDailyAttemptsUsed = () => dailyAttemptsUsed;
+window.setDailyAttemptsUsed = (n) => { dailyAttemptsUsed = n; };
 let dailyBestScore = 0;
-let dailyRankSubtab = 'today'; // 'today' | 'alltime'
-let dailyTodayRows = [], dailyTodayPage = 0;
-let dailyAlltimeRows = [], dailyAlltimePage = 0;
 
 /* ================== loja (cosméticos comprados com Pigmentos) ==================
    Catálogo espelha o de functions/index.js (preço/slot são conferidos de novo
@@ -476,6 +450,9 @@ function dailyModeForToday(dateStr) {
 function dailyLocalDateStr(d = new Date()) {
   return d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // AAAA-MM-DD
 }
+// exposta em window pra js/daily-ranking.js poder usar sem esperar o
+// desafio diário inteiro ganhar seu próprio módulo (fase futura)
+window.dailyLocalDateStr = dailyLocalDateStr;
 // mostra a data da mensagem da caixa de entrada como dd/mm/aa (msg.dateStr
 // vem sempre como AAAA-MM-DD, ver dailyLocalDateStr acima)
 function formatDailyDateShort(dateStr) {
@@ -1527,7 +1504,7 @@ async function gameOver(reason) {
     $('signup-cta').style.display = '';
   }
 
-  renderMiniRankings(mode);
+  renderMiniRankings(mode, score);
 }
 
 // anima o número de XP subindo e a barra de progresso enchendo (com virada de nível se houver)
@@ -1610,151 +1587,6 @@ async function persistGameResult(xpEarned = 0) {
   }
 }
 
-/* ================== cache de leituras do ranking ================== */
-// Uma única busca da lista de contas serve todos os rankings por 2 minutos,
-// pra não consultar o banco a cada partida (economiza a cota do Firestore).
-// Os dados do PRÓPRIO jogador são sempre mesclados por cima do cache, então o
-// seu recorde aparece na hora — só o dos outros pode demorar até 2 min.
-// cache de 5min alinhado com a cadência do retrato pré-calculado (ver
-// recomputeScoresSnapshot em functions/index.js) — não tem por que checar de
-// novo antes disso, os dados só mudam quando aquela function roda
-const SCORES_CACHE_MS = 5 * 60 * 1000;
-let scoresCache = { rows: null, at: 0 };
-
-// se o retrato não for recalculado há mais que isso, algo parou de funcionar
-// (function quebrada, agendamento removido etc.) — cai pro modo antigo em vez
-// de deixar o ranking eternamente desatualizado ou vazio
-const SCORES_SNAPSHOT_STALE_MS = 30 * 60 * 1000;
-
-// lê o retrato em pedaços (ver recomputeScoresSnapshot) — poucas leituras
-// (1 + nº de pedaços) em vez de até 300. Retorna null se o retrato ainda não
-// existe (ex.: acabou de ser implantado, 1ª rodada da function ainda não
-// rodou) ou parece velho demais — nesses casos fetchAllScores() cai pro modo
-// antigo (ler a coleção "scores" ao vivo) como rede de segurança.
-async function fetchScoresFromSnapshot() {
-  const metaSnap = await getDoc(doc(db, 'scoresSnapshot', 'meta'));
-  if (!metaSnap.exists()) return null;
-  const meta = metaSnap.data();
-  const updatedMs = (meta.updatedAt && typeof meta.updatedAt.toMillis === 'function') ? meta.updatedAt.toMillis() : 0;
-  if (!updatedMs || Date.now() - updatedMs > SCORES_SNAPSHOT_STALE_MS) return null;
-  const chunkCount = meta.chunkCount || 0;
-  if (chunkCount <= 0) return [];
-  const chunkSnaps = await Promise.all(
-    Array.from({ length: chunkCount }, (_, i) => getDoc(doc(db, 'scoresSnapshot', 'chunk_' + i)))
-  );
-  const rows = [];
-  // contas banidas nunca aparecem em ranking nenhum (nem aqui em teste.html,
-  // ao contrário do admin — que fica de fora só em produção pra dar pra
-  // testar com a própria conta admin)
-  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => { if (!r.data || r.data.banned !== true) rows.push(r); }); });
-  return rows;
-}
-
-// leitura AO VIVO da coleção "scores" (sem cache, sem depender do retrato de
-// 5min) — mesmo filtro de admin/banido de sempre. Usada como "modo antigo"
-// de fetchAllScores() (rede de segurança se o retrato falhar) E pelo Salão
-// da Fama (loadDailyAlltimeRanking), que precisa refletir dailyWins/
-// pigmentos na hora — sem esperar o próximo ciclo do retrato nem o cache de
-// 5min que o resto dos rankings continua usando normalmente.
-async function fetchScoresLive() {
-  const snap = await getDocs(query(collection(db, 'scores'), limit(300)));
-  const rows = [];
-  snap.forEach(d => {
-    const data = d.data();
-    // TESTE.HTML: admin aparece normalmente em qualquer ranking aqui de
-    // propósito (pra dar pra testar/depurar com a própria conta) — no
-    // index.html (produção) a exclusão de admin continua valendo. Já
-    // banido fica de fora dos dois: não tem motivo pra aparecer nem em teste
-    if (data.nick && data.banned !== true) rows.push({ uid: d.id, data });
-  });
-  return rows;
-}
-
-async function fetchAllScores() {
-  if (scoresCache.rows && Date.now() - scoresCache.at < SCORES_CACHE_MS) return scoresCache.rows;
-  try {
-    const rows = await fetchScoresFromSnapshot();
-    if (rows) { scoresCache = { rows, at: Date.now() }; return rows; }
-  } catch (e) {
-    console.warn('[scoresSnapshot] falha ao ler retrato, caindo pro modo antigo', e);
-  }
-  // modo antigo: lê a coleção "scores" ao vivo (até 300 leituras) — só
-  // acontece se o retrato ainda não existir, estiver velho, ou a leitura
-  // dele falhar por algum motivo; nunca deixa o ranking aparecer vazio
-  const rows = await fetchScoresLive();
-  scoresCache = { rows, at: Date.now() };
-  return rows;
-}
-// linha de ranking com os dados do próprio jogador sempre frescos
-function rowData(r) {
-  return (!state.offline && state.currentUser && r.uid === state.currentUser.uid) ? { ...r.data, ...state.myData } : r.data;
-}
-
-async function renderRankPreview(field, bodyElId, myPts) {
-  const body = $(bodyElId);
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
-  try {
-    const all = await fetchAllScores();
-    const rows = [];
-    for (const r of all) {
-      const data = rowData(r);
-      if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], durationMs: data[field + 'DurationMs'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
-    }
-
-    // localiza (ou insere) a linha do jogador — TESTE.HTML: admin também
-    // entra aqui de propósito (ver comentário em fetchAllScores). Já banido
-    // não entra nem aqui: a própria conta banida não deve se ver no ranking
-    const youLabel = state.lang === 'en' ? 'YOU' : state.lang === 'es' ? 'TÚ' : 'VOCÊ';
-    let myIndex = (!state.offline && state.currentUser) ? rows.findIndex(r => r.uid === state.currentUser.uid) : -1;
-    if (myIndex === -1 && state.myData.banned !== true) {
-      rows.push({ uid: '__me__', nick: state.offline ? youLabel : (state.myData.nick || youLabel), pts: myPts, at: null, durationMs: state.offline ? undefined : state.myData[field + 'DurationMs'], stats: state.offline ? null : state.myData, replaySessionId: state.offline ? undefined : state.myData[field + 'ReplaySessionId'] });
-    }
-
-    rows.sort(compareRankRows);
-    myIndex = rows.findIndex(r => r.uid === (!state.offline && state.currentUser ? state.currentUser.uid : '__me__'));
-
-    // janela: 2 antes e 2 depois (expande pra manter 5 linhas quando possível)
-    let start = Math.max(0, myIndex - 2);
-    let end = Math.min(rows.length, myIndex + 3);
-    while (end - start < 5 && (start > 0 || end < rows.length)) {
-      if (start > 0) start--;
-      else end++;
-    }
-
-    body.innerHTML = '';
-    for (let i = start; i < end; i++) {
-      const r = rows[i];
-      const pos = i + 1;
-      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + (state.lang === 'en' ? '' : 'º');
-      const tr = document.createElement('tr');
-      if (i === myIndex) tr.className = 'me';
-      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
-      const nickCell = tr.children[1];
-      buildRankRowNick(nickCell, r, r.stats ? equippedBadgeLabel(r.stats) : '', 'over-screen');
-      applyRowTheme(tr, r.stats);
-      if (r.replaySessionId) {
-        const ptsCell = tr.children[2];
-        const replayBtn = document.createElement('button');
-        replayBtn.className = 'replay-btn';
-        replayBtn.textContent = '▶️';
-        replayBtn.title = T[state.lang].btn_watch_replay;
-        replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
-        ptsCell.appendChild(replayBtn);
-      }
-      body.appendChild(tr);
-    }
-    if (rows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_no_players_mini}</td></tr>`;
-  } catch {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error_mini}</td></tr>`;
-  }
-}
-
-function renderMiniRankings(m) {
-  $('mini-mode').textContent = modeLabel(m);
-  const myModePts = state.offline ? score : (state.myData[m] || 0);
-  renderRankPreview(m, 'mini-ranking-body', myModePts);
-}
-
 window.goSignup = () => {
   state.offline = false;
   show('auth-screen');
@@ -1776,6 +1608,9 @@ function openProfileFromRanking(r, backTarget) {
   if (isMe) renderProfile();
   else renderProfile(r.stats, r.nick, r.uid);
 }
+// exposta em window pra js/ranking-cache.js (buildRankRowNick) poder chamar
+// sem esperar o perfil ganhar seu próprio módulo (fase futura)
+window.openProfileFromRanking = openProfileFromRanking;
 
 // pra cada ranking em que o jogador já pontuou (os 4 modos + geral/nível/
 // divulgador via RANK_FIELDS, mais o Salão da Fama do desafio diário à parte),
@@ -2097,7 +1932,7 @@ window.runAdminRecomputeSnapshot = async (btn) => {
   if (status) status.textContent = 'Recalculando...';
   try {
     const res = await callAdminRecomputeScoresSnapshot();
-    scoresCache = { rows: null, at: 0 }; // invalida o cache local de 2min pra próxima leitura já vir atualizada
+    invalidateScoresCache(); // invalida o cache local de 5min pra próxima leitura já vir atualizada
     if (status) status.textContent = `✅ Retrato atualizado — ${res.data.userCount} conta(s), ${res.data.chunkCount} pedaço(s).`;
   } catch (e) {
     if (status) status.textContent = '❌ ' + (e.message || 'Erro ao recalcular.');
@@ -2148,6 +1983,9 @@ async function fetchMyFriends(force) {
   myFriendsCacheAt = Date.now();
   return myFriendsCache;
 }
+// exposta em window pra js/ranking.js (filtro de ranking de amigos) poder
+// chamar sem esperar amigos ganhar seu próprio módulo (fase futura)
+window.fetchMyFriends = fetchMyFriends;
 
 async function fetchMyFriendRequests(force) {
   if (state.offline || !state.currentUser) return { incoming: {}, outgoing: {} };
@@ -2703,254 +2541,7 @@ async function submitPendingScore() {
 // abre a partir do perfil de alguém.
 window.showRanking = (tab, backTarget) => {
   pushScreenAndShow('ranking-screen', backTarget);
-  loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
-};
-window.rankingBack = () => popScreenBack();
-
-const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', caos: 'caos', level: 'xp', geral: 'total', divulgador: 'referrals' };
-
-const RANKING_PAGE_SIZE = 20;
-let rankingRows = [];
-let rankingPage = 0;
-let rankingTab = 'geral';
-let rankingScope = 'geral'; // 'geral' = todo mundo (como já era), 'amigos' = só quem está na sua lista de amigos (+ você)
-
-window.setRankingScope = (scope) => {
-  rankingScope = scope;
-  loadRanking(rankingTab);
-};
-
-window.loadRanking = async (m) => {
-  rankingTab = m;
-  $('ranking-select').value = m;
-
-  // desafio diário tem sua própria estrutura (2 abas, sem escopo amigos/todos
-  // — ver loadDailyTodayRanking/loadDailyAlltimeRanking mais abaixo)
-  $('daily-subtabs').style.display = (m === 'daily') ? '' : 'none';
-  $('scope-tabs-row').style.display = (m === 'daily') ? 'none' : '';
-  $('daily-prizes-legend').style.display = (m === 'daily') ? '' : 'none';
-  if (m === 'daily') {
-    renderDailyPrizesLegend();
-    $('ranking-pagination').innerHTML = '';
-    $('ranking-explain').textContent = ''; // sem frase explicativa no ranking do desafio diário
-    dailyRankSubtab = 'today';
-    $('daily-subtab-today-btn').classList.add('active');
-    $('daily-subtab-alltime-btn').classList.remove('active');
-    $('ranking-table-card').style.display = '';
-    $('daily-alltime-card').style.display = 'none';
-    loadDailyTodayRanking();
-    return;
-  }
-
-  // saindo do desafio diário — "ranking-table-card" é compartilhado com o
-  // daily-today, e "daily-alltime-card" (Salão da Fama) só é escondido no
-  // ramo acima; sem isso, sair do Salão da Fama pra outro ranking deixa a
-  // lista escondida mesmo com os dados carregados certinho
-  $('ranking-table-card').style.display = '';
-  $('daily-alltime-card').style.display = 'none';
-
-  $('scope-geral-btn').classList.toggle('active', rankingScope === 'geral');
-  $('scope-amigos-btn').classList.toggle('active', rankingScope === 'amigos');
-  $('ranking-explain').textContent = (m === 'level') ? T[state.lang].level_explain : (m === 'divulgador') ? T[state.lang].divulgador_explain : '';
-  $('ranking-points-header').textContent = (m === 'divulgador') ? T[state.lang].points_header_divulgador : (m === 'level') ? T[state.lang].points_header_level : T[state.lang].points_header;
-  const field = RANK_FIELDS[m];
-  const body = $('ranking-body');
-  $('ranking-pagination').innerHTML = '';
-
-  // ranking de amigos exige conta (não dá pra ter amigos jogando sem login)
-  if (rankingScope === 'amigos' && (state.offline || !state.currentUser)) {
-    body.innerHTML = `
-      <tr><td colspan="3">
-        <div class="card" style="text-align:center;">
-          <p>${T[state.lang].profile_offline_msg1}</p>
-          <button onclick="goSignup()">${T[state.lang].btn_create_account}</button>
-        </div>
-      </td></tr>`;
-    rankingRows = [];
-    resetScroll('ranking-screen');
-    return;
-  }
-
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
-  try {
-    const all = await fetchAllScores();
-    // filtro de amigos usa o mesmo cache já lido pra tela de amigos — sem leitura extra
-    const friendUids = (rankingScope === 'amigos') ? new Set(Object.keys(await fetchMyFriends())) : null;
-    const rows = [];
-    for (const r of all) {
-      if (friendUids && r.uid !== state.currentUser.uid && !friendUids.has(r.uid)) continue;
-      const data = rowData(r);
-      // no ranking de nível todo mundo entra (mesmo com 0 XP)
-      if (m === 'level') {
-        rows.push({ uid: r.uid, nick: data.nick, pts: data.xp || 0, at: null, stats: data });
-      } else if (data[field] > 0) {
-        rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], durationMs: data[field + 'DurationMs'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
-      }
-    }
-    // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
-    // TESTE.HTML: admin também entra aqui de propósito (ver fetchAllScores).
-    // Banido não entra nem aqui.
-    if (!state.offline && state.currentUser && state.myData.nick && state.myData.banned !== true && !rows.some(r => r.uid === state.currentUser.uid)) {
-      if (m === 'level') rows.push({ uid: state.currentUser.uid, nick: state.myData.nick, pts: state.myData.xp || 0, at: null, stats: state.myData });
-      else if ((state.myData[field] || 0) > 0) rows.push({ uid: state.currentUser.uid, nick: state.myData.nick, pts: state.myData[field], at: state.myData[field + 'At'], durationMs: state.myData[field + 'DurationMs'], stats: state.myData, replaySessionId: state.myData[field + 'ReplaySessionId'] });
-    }
-    rows.sort(compareRankRows);
-    rankingRows = rows;
-    rankingPage = 0;
-    renderRankingPage();
-  } catch (e) {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error}</td></tr>`;
-  }
-};
-
-function renderRankingPage() {
-  const body = $('ranking-body');
-  const start = rankingPage * RANKING_PAGE_SIZE;
-  const pageRows = rankingRows.slice(start, start + RANKING_PAGE_SIZE);
-
-  body.innerHTML = '';
-  pageRows.forEach((r, i) => {
-    const pos = start + i + 1;
-    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-    const ptsDisplay = r.pts;
-    const tr = document.createElement('tr');
-    if (state.currentUser && r.uid === state.currentUser.uid) tr.className = 'me';
-    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${ptsDisplay}</td>`;
-    const nickCell = tr.children[1];
-    const rankingBadgeHtml = (rankingTab === 'divulgador') ? sharerTierLabel(r.stats) : (rankingTab === 'level') ? '' : equippedBadgeLabel(r.stats);
-    buildRankRowNick(nickCell, r, rankingBadgeHtml, 'ranking-screen');
-    applyRowTheme(tr, r.stats);
-    // botão de replay só aparece se o MODO desse ranking (rankingTab) já
-    // estiver desbloqueado pro nível de quem está olhando — dá pra ver
-    // ranking/pontuação de um modo ainda travado (curiosidade/motivação pra
-    // subir de nível), só não libera espiar o replay de um modo que a pessoa
-    // ainda nem pode jogar. modeUnlocked() já cobre sozinho os casos sem
-    // trava (classic) e as abas que não são modo (geral/level/divulgador —
-    // essas nem chegam a ter replaySessionId, ver loadRanking).
-    if (r.replaySessionId && modeUnlocked(rankingTab)) {
-      const ptsCell = tr.children[2];
-      const replayBtn = document.createElement('button');
-      replayBtn.className = 'replay-btn';
-      replayBtn.textContent = '▶️';
-      replayBtn.title = T[state.lang].btn_watch_replay;
-      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
-      ptsCell.appendChild(replayBtn);
-    }
-    body.appendChild(tr);
-  });
-  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[state.lang].ranking_no_friends : T[state.lang].ranking_no_players}</td></tr>`;
-
-  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
-  const pag = $('ranking-pagination');
-  if (totalPages <= 1) {
-    pag.innerHTML = '';
-  } else {
-    pag.innerHTML = `
-      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_prev}</button>
-      <span class="muted">${T[state.lang].pagination_page(rankingPage + 1, totalPages)}</span>
-      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_next}</button>`;
-  }
-  resetScroll('ranking-screen');
-}
-
-window.rankingGoPage = (p) => {
-  const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
-  rankingPage = Math.max(0, Math.min(p, totalPages - 1));
-  renderRankingPage();
-};
-
-/* ================== ranking do desafio diário ==================
-   "Hoje": lê dailyScores filtrando por dateStr==hoje (índice simples, sem
-   precisar de índice composto) e ordena no JS pela melhor pontuação.
-   "Salão da Fama": reaproveita o mesmo fetchAllScores() (coleção scores) que
-   já alimenta os outros rankings — dailyWins/pigmentos são só mais dois
-   campos daquele mesmo documento. */
-async function loadDailyTodayRanking() {
-  const body = $('ranking-body');
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
-  try {
-    const dateStr = dailyLocalDateStr();
-    const snap = await getDocs(query(collection(db, 'dailyScores'), where('dateStr', '==', dateStr)));
-    const all = await fetchAllScores(); // só pra enriquecer com nível/chip de quem já está no cache (2 min)
-    const statsByUid = {};
-    all.forEach(r => { statsByUid[r.uid] = rowData(r); });
-    const rows = [];
-    snap.forEach(d => {
-      const data = d.data();
-      if ((data.attempts || 0) <= 0 || !data.nick) return;
-      const isMe = state.currentUser && data.uid === state.currentUser.uid;
-      // aproveita que a própria linha já vem nesse mesmo snap (é só mais um
-      // documento de dailyScores) pra atualizar dailyAttemptsUsed com dado
-      // fresco direto do servidor — usado logo abaixo em renderDailyTodayPage
-      // pra decidir se os botões de replay já podem aparecer (ver comentário lá)
-      if (isMe) dailyAttemptsUsed = data.attempts || 0;
-      // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
-      // testar/depurar o ranking do desafio diário com a própria conta) — no
-      // index.html (produção) a exclusão de admin continua valendo
-      const stats = statsByUid[data.uid] || (isMe ? state.myData : null);
-      // banido não aparece nem no próprio ranking dele: statsByUid já veio
-      // filtrado (fetchAllScores exclui banned), então isso só cobre o caso
-      // isMe acima, que usa state.myData direto e não passa por esse filtro
-      if (!stats || stats.banned === true) return;
-      // bestScoreAt/bestScoreDurationMs só avançam no servidor quando a
-      // tentativa bate um recorde novo do dia (ver submitDailyResult em
-      // functions/index.js) — não é só "última tentativa enviada", então dá
-      // pra usar de verdade pro desempate por menos tempo gasto, igual já é
-      // feito nos outros rankings (compareRankRows)
-      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, durationMs: data.bestScoreDurationMs, stats, replaySessionId: data.bestScoreSessionId });
-    });
-    rows.sort(compareRankRows);
-    dailyTodayRows = rows;
-    dailyTodayPage = 0;
-    renderDailyTodayPage();
-  } catch (e) {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error}</td></tr>`;
-  }
-}
-function renderDailyTodayPage() {
-  const body = $('ranking-body');
-  const start = dailyTodayPage * RANKING_PAGE_SIZE;
-  const pageRows = dailyTodayRows.slice(start, start + RANKING_PAGE_SIZE);
-  body.innerHTML = '';
-  pageRows.forEach((r, i) => {
-    const pos = start + i + 1;
-    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-    const tr = document.createElement('tr');
-    if (state.currentUser && r.uid === state.currentUser.uid) tr.className = 'me';
-    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
-    const nickCell = tr.children[1];
-    buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
-    applyRowTheme(tr, r.stats);
-    // botão de replay só aparece depois que VOCÊ (quem está olhando) já usou
-    // as 3 tentativas de hoje — a rodada do desafio diário é igual pra todo
-    // mundo, então assistir o replay de alguém ANTES de terminar suas
-    // próprias tentativas seria colar (você veria o tabuleiro inteiro de
-    // antemão). Não depende de quantas tentativas o DONO da linha usou, só
-    // das suas.
-    if (r.replaySessionId && dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
-      const ptsCell = tr.children[2];
-      const replayBtn = document.createElement('button');
-      replayBtn.className = 'replay-btn';
-      replayBtn.textContent = '▶️';
-      replayBtn.title = T[state.lang].btn_watch_replay;
-      replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
-      ptsCell.appendChild(replayBtn);
-    }
-    body.appendChild(tr);
-  });
-  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].daily_no_today_players}</td></tr>`;
-  const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
-  const pag = $('ranking-pagination');
-  pag.innerHTML = totalPages <= 1 ? '' : `
-    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage - 1})" ${dailyTodayPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_prev}</button>
-    <span class="muted">${T[state.lang].pagination_page(dailyTodayPage + 1, totalPages)}</span>
-    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage + 1})" ${dailyTodayPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_next}</button>`;
-  resetScroll('ranking-screen');
-}
-window.dailyTodayGoPage = (p) => {
-  const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
-  dailyTodayPage = Math.max(0, Math.min(p, totalPages - 1));
-  renderDailyTodayPage();
+  window.loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
 };
 
 /* ================== tela de replay ==================
@@ -3253,74 +2844,6 @@ window.scrubReplay = (val) => {
   replayRoundIdx = -1; // força redesenho mesmo se cair na mesma rodada de antes
   replayLastFlashIdx = -1; // permite o flash de clique disparar de novo se arrastar de volta pra essa janela
   renderReplayFrame(replayClockMs);
-};
-
-async function loadDailyAlltimeRanking() {
-  const body = $('daily-alltime-body');
-  body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].loading_text}</td></tr>`;
-  try {
-    // Salão da Fama sempre lê AO VIVO (fetchScoresLive), não o retrato de
-    // 5min nem o cache de fetchAllScores — é o único ranking que precisa
-    // refletir dailyWins/pigmentos na hora, logo depois do resolveDailyChallenge
-    const all = await fetchScoresLive();
-    const rows = [];
-    for (const r of all) {
-      const data = rowData(r);
-      const wins = data.dailyWins || 0;
-      // pigmentos (gastável na loja) só é creditado no resgate da caixa de
-      // entrada; pendingPigmentos é creditado na hora (junto com dailyWins,
-      // ver resolveDailyChallenge) e representa o que ainda está esperando
-      // ser resgatado — somando os dois, o ranking mostra o total certo
-      // independente de a pessoa já ter aberto a caixa de entrada ou não.
-      const pig = (data.pigmentos || 0) + (data.pendingPigmentos || 0);
-      if (wins > 0 || pig > 0) rows.push({ uid: r.uid, nick: data.nick, wins, pig, stats: data });
-    }
-    // mais colunas => a ordenação mais importante é o nº de vitórias de 1º lugar
-    rows.sort((a, b) => (b.wins - a.wins) || (b.pig - a.pig));
-    dailyAlltimeRows = rows;
-    dailyAlltimePage = 0;
-    renderDailyAlltimePage();
-  } catch (e) {
-    body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].ranking_error}</td></tr>`;
-  }
-}
-function renderDailyAlltimePage() {
-  const body = $('daily-alltime-body');
-  const start = dailyAlltimePage * RANKING_PAGE_SIZE;
-  const pageRows = dailyAlltimeRows.slice(start, start + RANKING_PAGE_SIZE);
-  body.innerHTML = '';
-  pageRows.forEach((r, i) => {
-    const pos = start + i + 1;
-    const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-    const tr = document.createElement('tr');
-    if (state.currentUser && r.uid === state.currentUser.uid) tr.className = 'me';
-    tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.wins}</td><td class="pts">${r.pig}</td>`;
-    const nickCell = tr.children[1];
-    buildRankRowNick(nickCell, r, equippedBadgeLabel(r.stats), 'ranking-screen');
-    applyRowTheme(tr, r.stats);
-    body.appendChild(tr);
-  });
-  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].daily_no_wins_yet}</td></tr>`;
-  const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
-  const pag = $('ranking-pagination');
-  pag.innerHTML = totalPages <= 1 ? '' : `
-    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage - 1})" ${dailyAlltimePage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_prev}</button>
-    <span class="muted">${T[state.lang].pagination_page(dailyAlltimePage + 1, totalPages)}</span>
-    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage + 1})" ${dailyAlltimePage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_next}</button>`;
-  resetScroll('ranking-screen');
-}
-window.dailyAlltimeGoPage = (p) => {
-  const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
-  dailyAlltimePage = Math.max(0, Math.min(p, totalPages - 1));
-  renderDailyAlltimePage();
-};
-window.setDailyRankSubtab = (tab) => {
-  dailyRankSubtab = tab;
-  $('daily-subtab-today-btn').classList.toggle('active', tab === 'today');
-  $('daily-subtab-alltime-btn').classList.toggle('active', tab === 'alltime');
-  $('ranking-table-card').style.display = (tab === 'today') ? '' : 'none';
-  $('daily-alltime-card').style.display = (tab === 'alltime') ? '' : 'none';
-  if (tab === 'today') loadDailyTodayRanking(); else loadDailyAlltimeRanking();
 };
 
 /* ================== desafio diário — tela, cronômetro, jogo, caixa de entrada ==================
