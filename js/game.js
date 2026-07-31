@@ -203,6 +203,8 @@ const T = {
     mode_shapes_reverse_desc: 'Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.',
     mode_trio_title: '🔺 Trio',
     mode_trio_desc: 'Cada quadrado tem <b>3 cores</b>: o fundo, a cor da palavra e a palavra em si. Decore as <b>2 cores pedidas</b> e clique no único quadrado que tiver uma delas em qualquer uma das 3 partes. Para a próxima rodada, decore as outras 2 cores desse quadrado.',
+    mode_caos_title: '🌀 Caos',
+    mode_caos_desc: 'Igual o modo Formas, mas as figuras também têm <b>cor</b>! Decore <b>duas características</b> (podendo ser 2 cores, 2 formas ou uma de cada) e clique na única figura que tiver uma delas. Para a próxima rodada, decore as outras duas informações nessa figura.',
     record_label: '📊 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
@@ -210,7 +212,7 @@ const T = {
     btn_create_save: '🏆 CRIAR CONTA E SALVAR PONTOS', ranking_dash: 'Ranking —', points_header: 'Pontos',
     link_view_full: 'ver ranking completo', btn_play_again: 'JOGAR DE NOVO', btn_share: '📤 COMPARTILHAR',
     btn_menu: 'MENU', ranking_title: '🏆 RANKING', tab_geral: '🌍 Geral', tab_classic: '🎨 Clássico',
-    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', tab_trio: '🔺 Trio', nick_header: 'Jogador', loading_text: 'Carregando...', btn_back: 'VOLTAR',
+    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', tab_trio: '🔺 Trio', tab_caos: '🌀 Caos', nick_header: 'Jogador', loading_text: 'Carregando...', btn_back: 'VOLTAR',
     btn_watch_replay: 'Assistir replay', replay_title: '▶️ REPLAY', replay_error: 'Não foi possível carregar este replay.',
     profile_title: '🎖️ PERFIL',
 
@@ -242,8 +244,10 @@ const T = {
     instr_next_shapes_reverse: '🧠 Clique no nome da forma que você memorizou (e memorize a nova FORMA ao redor!)',
     instr_first_trio: (nameA, nameB) => `👉 Decore o ${nameA} e o ${nameB}. Encontre o único quadrado com uma dessas cores (no fundo do quadrado, na cor da palavra ou na própria palavra)!`,
     instr_next_trio: '🧠 Encontre uma das 2 cores que você memorizou (fundo, cor da palavra ou a palavra) — e memorize as outras 2 cores nesse quadrado!',
+    instr_first_caos: (nameA, nameB) => `👉 Decore ${nameA} e ${nameB}. Encontre a única figura com uma dessas características!`,
+    instr_next_caos: '🧠 Encontre uma das 2 informações que você memorizou — e memorize as outras 2 características nessa figura!',
     reason_timeout: '⏰ TEMPO ESGOTADO!', reason_wrong: '❌ QUADRADO ERRADO!',
-    mode_name_classic: 'Clássico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trio',
+    mode_name_classic: 'Clássico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trio', mode_name_caos: 'Caos',
     ranking_no_players: 'Ninguém pontuou ainda. Seja o primeiro! 🚀',
     ranking_no_players_mini: 'Ninguém no ranking ainda. Seja o primeiro! 🚀',
     ranking_no_friends: 'Nenhum dos seus amigos pontuou neste ranking ainda.',
@@ -365,11 +369,11 @@ const T = {
 
     tut_btn: '❓ Como jogar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRIO' },
+    tut_title: { classic: '📖 TUTORIAL CLÁSSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRIO', caos: '📖 TUTORIAL CAOS' },
     tut_skip: 'Fechar tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Próximo ›',
-    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR', 'shapes-reverse': '🎮 JOGAR', trio: '🎮 JOGAR' },
+    tut_play_btn: { classic: '🎮 JOGAR', reverse: '🎮 JOGAR', shapes: '🎮 JOGAR', 'shapes-reverse': '🎮 JOGAR', trio: '🎮 JOGAR', caos: '🎮 JOGAR' },
     tut_play_btn_daily: '📅 INICIAR DESAFIO',
     tut_back_btn: 'VOLTAR AO MENU',
     tut_caption_classic_1: 'Repare: a instrução lá em cima pede uma cor (<b>VERMELHO</b>). Você deve então procurar o quadrado com essa <b>cor de fundo</b>.',
@@ -407,6 +411,13 @@ const T = {
     tut_caption_trio_5: 'Memorize as outras 2 cores nesse quadrado: o <b>fundo</b> (<b>VERDE</b>) e a <b>palavra</b> (<b>AMARELO</b>).',
     tut_caption_trio_6: 'Após memorizar, <b>clique</b> nesse quadrado.',
     tut_caption_trio_7: 'É isso — o ciclo será sempre: <b>encontre uma das 2 cores memorizadas na rodada anterior → memorize as outras duas cores naquele quadrado → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
+    tut_caption_caos_1: 'Repare: a instrução lá em cima pede <b>2 características</b> (<b>VERMELHO</b> e <b>ESTRELA</b> — uma cor e uma forma!). Procure a única figura que tenha uma delas em qualquer uma das <b>3 partes</b> (forma, cor ou palavra). Aqui foi a <b>cor da figura</b> (<b>VERMELHO</b>).',
+    tut_caption_caos_2: 'Antes de clicar, memorize as <b>outras 2 informações</b> nessa figura: a forma (<b>QUADRADO</b>) e a palavra escrita nela (<b>ROXO</b>).',
+    tut_caption_caos_3: 'Após memorizar, <b>clique</b> nessa figura.',
+    tut_caption_caos_4: 'Agora encontre a figura com uma das características que você acabou de memorizar (<b>QUADRADO</b> ou <b>ROXO</b>) — dessa vez bateu na <b>palavra</b> (<b>ROXO</b>).',
+    tut_caption_caos_5: 'Memorize as outras 2 informações dessa figura: a forma (<b>CÍRCULO</b>) e a cor (<b>VERDE</b>).',
+    tut_caption_caos_6: 'Após memorizar, <b>clique</b> nessa figura.',
+    tut_caption_caos_7: 'É isso — o ciclo será sempre: <b>encontre uma das 2 características memorizadas (forma, cor ou palavra) → memorize as outras duas informações naquela figura → clique</b>, cada vez mais rápido. Bora jogar? 🚀',
   },
   en: {
     btn_login: 'LOG IN', btn_signup: 'SIGN UP', btn_google: 'Sign in with Google',
@@ -439,6 +450,8 @@ const T = {
     mode_shapes_reverse_desc: "Click the <b>requested word</b> and memorize the <b>surrounding shape</b>. Next round, click on the name of the memorized shape.",
     mode_trio_title: '🔺 Trio',
     mode_trio_desc: "Every square has <b>3 colors</b>: the background, the word's own color, and the word itself. Memorize the <b>2 requested colors</b> and click the only square with one of them anywhere among those 3 parts. For the next round, memorize that square's other 2 colors.",
+    mode_caos_title: '🌀 Chaos',
+    mode_caos_desc: "Like Shapes mode, but the shapes also have <b>color</b>! Memorize <b>two characteristics</b> (2 colors, 2 shapes, or one of each) and click the only shape with one of them. For the next round, memorize the other two details on that shape.",
     record_label: '📊 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
@@ -446,7 +459,7 @@ const T = {
     btn_create_save: '🏆 CREATE ACCOUNT AND SAVE SCORE', ranking_dash: 'Leaderboard —', points_header: 'Points',
     link_view_full: 'view full leaderboard', btn_play_again: 'PLAY AGAIN', btn_share: '📤 SHARE',
     btn_menu: 'MENU', ranking_title: '🏆 LEADERBOARD', tab_geral: '🌍 Overall', tab_classic: '🎨 Classic',
-    tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse', tab_trio: '🔺 Trio', nick_header: 'Player', loading_text: 'Loading...', btn_back: 'BACK',
+    tab_reverse: '🔄 Reverse', tab_shapes: '🔶 Shapes', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Shapes Reverse', tab_trio: '🔺 Trio', tab_caos: '🌀 Chaos', nick_header: 'Player', loading_text: 'Loading...', btn_back: 'BACK',
     btn_watch_replay: 'Watch replay', replay_title: '▶️ REPLAY', replay_error: 'Could not load this replay.',
     profile_title: '🎖️ PROFILE',
 
@@ -478,8 +491,10 @@ const T = {
     instr_next_shapes_reverse: "🧠 Click on the name of the shape you memorized (and memorize the new surrounding SHAPE!)",
     instr_first_trio: (nameA, nameB) => `👉 Memorize ${nameA} and ${nameB}. Find the only square with one of these colors (in the background, the word's color, or the word itself)!`,
     instr_next_trio: "🧠 Find the square with one of the 2 colors you just memorized (background, word color, or the word) — and memorize that square's 2 new colors!",
+    instr_first_caos: (nameA, nameB) => `👉 Memorize ${nameA} and ${nameB}. Find the only shape with one of these characteristics!`,
+    instr_next_caos: "🧠 Find the shape with one of the 2 details you just memorized — and memorize the other 2 characteristics on that shape!",
     reason_timeout: "⏰ TIME'S UP!", reason_wrong: '❌ WRONG SQUARE!',
-    mode_name_classic: 'Classic', mode_name_reverse: 'Reverse', mode_name_shapes: 'Shapes', mode_name_shapes_reverse: 'Shapes Reverse', mode_name_trio: 'Trio',
+    mode_name_classic: 'Classic', mode_name_reverse: 'Reverse', mode_name_shapes: 'Shapes', mode_name_shapes_reverse: 'Shapes Reverse', mode_name_trio: 'Trio', mode_name_caos: 'Chaos',
     ranking_no_players: 'No one has scored yet. Be the first! 🚀',
     ranking_no_players_mini: 'No one on the leaderboard yet. Be the first! 🚀',
     ranking_no_friends: "None of your friends have scored in this leaderboard yet.",
@@ -601,11 +616,11 @@ const T = {
 
     tut_btn: '❓ How to play',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL', shapes: '📖 SHAPES TUTORIAL', 'shapes-reverse': '📖 SHAPES REVERSE TUTORIAL', trio: '📖 TRIO TUTORIAL' },
+    tut_title: { classic: '📖 CLASSIC TUTORIAL', reverse: '📖 REVERSE TUTORIAL', shapes: '📖 SHAPES TUTORIAL', 'shapes-reverse': '📖 SHAPES REVERSE TUTORIAL', trio: '📖 TRIO TUTORIAL', caos: '📖 CHAOS TUTORIAL' },
     tut_skip: 'Close tutorial',
     tut_prev: '‹ Previous',
     tut_next: 'Next ›',
-    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY', 'shapes-reverse': '🎮 PLAY', trio: '🎮 PLAY' },
+    tut_play_btn: { classic: '🎮 PLAY', reverse: '🎮 PLAY', shapes: '🎮 PLAY', 'shapes-reverse': '🎮 PLAY', trio: '🎮 PLAY', caos: '🎮 PLAY' },
     tut_play_btn_daily: '📅 START CHALLENGE',
     tut_back_btn: 'BACK TO MENU',
     tut_caption_classic_1: 'Notice: the instruction up top asks for a color (<b>RED</b>). You should then look for the square with that <b>background color</b>.',
@@ -643,6 +658,13 @@ const T = {
     tut_caption_trio_5: 'Memorize the other 2 colors on that square: the <b>background</b> (<b>GREEN</b>) and the <b>word</b> (<b>YELLOW</b>).',
     tut_caption_trio_6: 'After memorizing, <b>click</b> that square.',
     tut_caption_trio_7: "That's it — the cycle is always: <b>find one of the 2 memorized colors (in any of the 3 parts) → memorize the other 2 → click</b>, getting faster each time. Ready to play? 🚀",
+    tut_caption_caos_1: "Notice: the instruction up top asks for <b>2 characteristics</b> (<b>RED</b> and <b>STAR</b> — one color and one shape!). Look for the only shape that has one of them in any of its <b>3 parts</b> (shape, color, or word) — here, it matched the <b>shape's color</b> (<b>RED</b>).",
+    tut_caption_caos_2: "Before clicking, memorize the <b>other 2 details</b> on that shape: its shape (<b>SQUARE</b>) and the word written on it (<b>PURPLE</b>).",
+    tut_caption_caos_3: 'After memorizing, <b>click</b> that shape.',
+    tut_caption_caos_4: "Now find the shape with one of the characteristics you just memorized (<b>SQUARE</b> or <b>PURPLE</b>) — this time it matched the <b>word</b> (<b>PURPLE</b>).",
+    tut_caption_caos_5: "Memorize the other 2 details on that shape: its shape (<b>CIRCLE</b>) and its color (<b>GREEN</b>).",
+    tut_caption_caos_6: 'After memorizing, <b>click</b> that shape.',
+    tut_caption_caos_7: "That's it — the cycle is always: <b>find one of the 2 memorized characteristics (shape, color, or word) → memorize the other 2 details on that shape → click</b>, getting faster each time. Ready to play? 🚀",
   },
   es: {
     btn_login: 'INICIAR SESIÓN', btn_signup: 'CREAR CUENTA', btn_google: 'Iniciar sesión con Google',
@@ -675,6 +697,8 @@ const T = {
     mode_shapes_reverse_desc: 'Haz clic en la <b>palabra pedida</b> y memoriza la <b>forma que la rodea</b>. En la siguiente ronda, haz clic en el nombre de la forma memorizada.',
     mode_trio_title: '🔺 Trío',
     mode_trio_desc: 'Cada cuadrado tiene <b>3 colores</b>: el fondo, el color de la palabra y la palabra en sí. Memoriza los <b>2 colores pedidos</b> y haz clic en el único cuadrado que tenga uno de ellos en cualquiera de esas 3 partes. Para la siguiente ronda, memoriza los otros 2 colores de ese cuadrado.',
+    mode_caos_title: '🌀 Caos',
+    mode_caos_desc: 'Como el modo Formas, ¡pero las figuras también tienen <b>color</b>! Memoriza <b>dos características</b> (2 colores, 2 formas o una de cada una) y haz clic en la única figura que tenga una de ellas. Para la siguiente ronda, memoriza las otras dos informaciones de esa figura.',
     record_label: '📊 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
     footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
     hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
@@ -682,7 +706,7 @@ const T = {
     btn_create_save: '🏆 CREAR CUENTA Y GUARDAR PUNTOS', ranking_dash: 'Ranking —', points_header: 'Puntos',
     link_view_full: 'ver ranking completo', btn_play_again: 'JUGAR DE NUEVO', btn_share: '📤 COMPARTIR',
     btn_menu: 'MENÚ', ranking_title: '🏆 RANKING', tab_geral: '🌍 General', tab_classic: '🎨 Clásico',
-    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', tab_trio: '🔺 Trío', nick_header: 'Jugador', loading_text: 'Cargando...', btn_back: 'VOLVER',
+    tab_reverse: '🔄 Reverso', tab_shapes: '🔶 Formas', tab_shapes_reverse: '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso', tab_trio: '🔺 Trío', tab_caos: '🌀 Caos', nick_header: 'Jugador', loading_text: 'Cargando...', btn_back: 'VOLVER',
     btn_watch_replay: 'Ver repetición', replay_title: '▶️ REPETICIÓN', replay_error: 'No se pudo cargar esta repetición.',
     profile_title: '🎖️ PERFIL',
 
@@ -714,8 +738,10 @@ const T = {
     instr_next_shapes_reverse: '🧠 Haz clic en el nombre de la forma que memorizaste (¡y memoriza la nueva FORMA que la rodea!)',
     instr_first_trio: (nameA, nameB) => `👉 Memoriza ${nameA} y ${nameB}. ¡Encuentra el único cuadrado con uno de estos colores (en el fondo, en el color de la palabra o en la propia palabra)!`,
     instr_next_trio: '🧠 Encuentra el cuadrado con uno de los 2 colores que acabas de memorizar (fondo, color de la palabra o la palabra) — ¡y memoriza los 2 nuevos colores de ese cuadrado!',
+    instr_first_caos: (nameA, nameB) => `👉 Memoriza ${nameA} y ${nameB}. ¡Encuentra la única figura con una de estas características!`,
+    instr_next_caos: '🧠 Encuentra la figura con una de las 2 informaciones que acabas de memorizar — ¡y memoriza las otras 2 características de esa figura!',
     reason_timeout: '⏰ ¡SE ACABÓ EL TIEMPO!', reason_wrong: '❌ ¡CUADRADO EQUIVOCADO!',
-    mode_name_classic: 'Clásico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trío',
+    mode_name_classic: 'Clásico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trío', mode_name_caos: 'Caos',
     ranking_no_players: 'Nadie ha puntuado todavía. ¡Sé el primero! 🚀',
     ranking_no_players_mini: 'Nadie en el ranking todavía. ¡Sé el primero! 🚀',
     ranking_no_friends: 'Ninguno de tus amigos ha puntuado en este ranking todavía.',
@@ -837,11 +863,11 @@ const T = {
 
     tut_btn: '❓ Cómo jugar',
     tut_intro_banner: '📖 TUTORIAL',
-    tut_title: { classic: '📖 TUTORIAL CLÁSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRÍO' },
+    tut_title: { classic: '📖 TUTORIAL CLÁSICO', reverse: '📖 TUTORIAL REVERSO', shapes: '📖 TUTORIAL FORMAS', 'shapes-reverse': '📖 TUTORIAL FORMAS REVERSO', trio: '📖 TUTORIAL TRÍO', caos: '📖 TUTORIAL CAOS' },
     tut_skip: 'Cerrar tutorial',
     tut_prev: '‹ Anterior',
     tut_next: 'Siguiente ›',
-    tut_play_btn: { classic: '🎮 JUGAR', reverse: '🎮 JUGAR', shapes: '🎮 JUGAR', 'shapes-reverse': '🎮 JUGAR', trio: '🎮 JUGAR' },
+    tut_play_btn: { classic: '🎮 JUGAR', reverse: '🎮 JUGAR', shapes: '🎮 JUGAR', 'shapes-reverse': '🎮 JUGAR', trio: '🎮 JUGAR', caos: '🎮 JUGAR' },
     tut_play_btn_daily: '📅 INICIAR DESAFÍO',
     tut_back_btn: 'VOLVER AL MENÚ',
     tut_caption_classic_1: 'Fíjate: la instrucción de arriba pide un color (<b>ROJO</b>). Entonces debes buscar el cuadrado con ese <b>color de fondo</b>.',
@@ -879,6 +905,13 @@ const T = {
     tut_caption_trio_5: 'Memoriza los otros 2 colores de ese cuadrado: el <b>fondo</b> (<b>VERDE</b>) y la <b>palabra</b> (<b>AMARILLO</b>).',
     tut_caption_trio_6: 'Después de memorizar, <b>haz clic</b> en ese cuadrado.',
     tut_caption_trio_7: 'Eso es todo — el ciclo siempre será: <b>encuentra uno de los 2 colores memorizados (en cualquiera de las 3 partes) → memoriza los otros 2 → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
+    tut_caption_caos_1: 'Fíjate: la instrucción de arriba pide <b>2 características</b> (<b>ROJO</b> y <b>ESTRELLA</b> — ¡un color y una forma!). Busca la única figura que tenga una de ellas en cualquiera de sus <b>3 partes</b> (forma, color o palabra) — aquí, coincidió en el <b>color de la figura</b> (<b>ROJO</b>).',
+    tut_caption_caos_2: 'Antes de hacer clic, memoriza las <b>otras 2 informaciones</b> de esa figura: la forma (<b>CUADRADO</b>) y la palabra escrita en ella (<b>MORADO</b>).',
+    tut_caption_caos_3: 'Después de memorizar, <b>haz clic</b> en esa figura.',
+    tut_caption_caos_4: 'Ahora encuentra la figura con una de las características que acabas de memorizar (<b>CUADRADO</b> o <b>MORADO</b>) — esta vez coincidió en la <b>palabra</b> (<b>MORADO</b>).',
+    tut_caption_caos_5: 'Memoriza las otras 2 informaciones de esa figura: su forma (<b>CÍRCULO</b>) y su color (<b>VERDE</b>).',
+    tut_caption_caos_6: 'Después de memorizar, <b>haz clic</b> en esa figura.',
+    tut_caption_caos_7: 'Eso es todo — el ciclo siempre será: <b>encuentra una de las 2 características memorizadas (forma, color o palabra) → memoriza las otras 2 informaciones en esa figura → haz clic</b>, cada vez más rápido. ¿Vamos a jugar? 🚀',
   },
 };
 
@@ -1055,14 +1088,19 @@ const SHAPES = [
   { name: { pt: 'CRUZ',       en: 'CROSS',    es: 'CRUZ'      }, shapeClass: 'shape-cross' },
 ];
 const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : COLORS;
+// modo Caos (ver newCaosRound mais abaixo): pool combinado de cores + formas —
+// cada quadrado pode "bater" com um item memorizado seja ele uma cor ou uma
+// forma, então o sorteio precisa dos dois universos juntos num só array
+const CAOS_POOL = [...COLORS, ...SHAPES];
+const isColorItem = item => COLORS.includes(item);
 // identificador estável (string curta) de um item de cor/forma — usado só
 // pra gravar/reconstruir o "filme" da tela de replay (ver newRound/
 // dailyNewRound e renderReplayRound mais abaixo); nunca participa da
 // pontuação nem da validação, é puramente visual
 const poolItemId = item => item.key || item.shapeClass;
 const poolItemById = (pool, id) => pool.find(x => (x.key || x.shapeClass) === id) || pool[0];
-const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio' };
-const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio'];
+const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio', caos: 'playedCaos' };
+const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio', 'caos'];
 // o desafio diário sorteia só entre Clássico e Reverso (ver dailyModeForToday)
 // — de propósito uma lista separada de ALL_MODES, pra um modo novo (como o
 // Trio) poder entrar no jogo livre/ranking sem precisar reconstruir também a
@@ -1124,7 +1162,7 @@ function xpStreakMultiplier(streak) {
   if (streak <= 50) return 1.5;
   return 2;
 }
-const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15, trio: 20 }; // nível mínimo pra jogar cada modo
+const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15, trio: 20, caos: 25 }; // nível mínimo pra jogar cada modo
 const xpForNext = lv => lv * 100;
 const totalXpForLevel = lv => 50 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
 function levelFromXp(xp) {
@@ -1274,6 +1312,7 @@ function modeLabel(m) {
     : m === 'reverse' ? T[lang].mode_name_reverse
     : m === 'shapes' ? T[lang].mode_name_shapes
     : m === 'shapes-reverse' ? T[lang].mode_name_shapes_reverse
+    : m === 'caos' ? T[lang].mode_name_caos
     : T[lang].mode_name_trio;
 }
 
@@ -1477,6 +1516,9 @@ let mode, score, target, nextTarget, duration, timerStart, rafId, playing;
 // que NÃO deram o match no quadrado certo desta rodada) que virão a ser o
 // próximo par assim que o clique certo acontecer (ver handleTrioClick)
 let trioColorA, trioColorB, trioNextPairA, trioNextPairB;
+// estado do modo Caos (ver newCaosRound/handleCaosClick): mesma ideia do Trio
+// acima, só que os itens podem ser cor OU forma (CAOS_POOL) em vez de só cor
+let caosItemA, caosItemB, caosNextPairA, caosNextPairB;
 let xpGain = 0; // XP acumulada na partida atual
 // promessas dos sinais de progresso (ver callSyncProgress) desta
 // partida — gameOver() espera todas "assentarem" no servidor antes de
@@ -1587,7 +1629,7 @@ let currentSessionId = null;     // sessão validada pelo servidor pra partida a
 let myData = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, playedCaos: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
 };
 
 const $ = id => document.getElementById(id);
@@ -2094,7 +2136,7 @@ window.playOffline = () => {
   myData = {
     nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
     gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
+    playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, playedCaos: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
   };
   showMenu();
 };
@@ -2142,7 +2184,7 @@ onAuthStateChanged(auth, async user => {
 const EMPTY_PROFILE = {
   nick: null, classic: 0, reverse: 0, shapes: 0, 'shapes-reverse': 0,
   gamesPlayed: 0, totalPoints: 0, bestStreak: 0, currentStreak: 0, lastPlayedDate: null,
-  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
+  playedClassic: false, playedReverse: false, playedShapes: false, playedShapesReverse: false, playedTrio: false, playedCaos: false, referrals: 0, bestRank: null, refCode: null, total: 0, xp: 0, dailyWins: 0, pigmentos: 0, ownedItems: [], equipped: {}, equippedBadge: null, equippedBadgeTier: null, badgesSeenTiers: {},
 };
 
 // true só quando a página está rodando dentro do app nativo (Capacitor,
@@ -2315,6 +2357,7 @@ window.showMenu = () => {
   $('record-shapes').textContent = myRecord('shapes');
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
   $('record-trio').textContent = myRecord('trio');
+  $('record-caos').textContent = myRecord('caos');
   $('mute-btn').classList.toggle('on', !muted);
   $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
 
@@ -2431,6 +2474,17 @@ function renderTrioSquare(el, sq) {
   el.style.background = sq.bg.hex;
   el.style.boxShadow = `0 0 18px ${sq.bg.hex}99, 0 0 40px ${sq.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
   el.innerHTML = `<span class="word word-trio" style="color:${sq.tc.hex}">${cName(sq.word)}</span>`;
+}
+
+// desenha um quadrado do modo Caos (forma + cor de preenchimento + palavra,
+// os 3 atributos independentes — ver newCaosRound) — igual renderTrioSquare,
+// função compartilhada entre a partida de verdade e o replay, pra nunca
+// desenhar esse quadrado de 2 jeitos diferentes por engano
+function renderCaosSquare(el, sq) {
+  el.className = 'square shape-square ' + sq.shape.shapeClass;
+  el.style.background = '';
+  el.style.boxShadow = '';
+  el.innerHTML = `<span class="shape-fill ${sq.shape.shapeClass}" style="background:${sq.color.hex}; filter: drop-shadow(0 0 14px ${sq.color.hex}88) drop-shadow(0 0 26px ${sq.color.hex}44);"></span><span class="word">${cName(sq.word)}</span>`;
 }
 
 // Modo Trio: cada quadrado tem 3 cores independentes (fundo/bg, cor da
@@ -2565,8 +2619,139 @@ function handleTrioClick(isCorrect, e) {
   }
 }
 
+// Modo Caos: cada quadrado tem 3 atributos independentes — a FORMA (shape),
+// a COR de preenchimento dela (color) e a PALAVRA escrita nela (word, que
+// pode nomear tanto uma cor quanto uma forma — vem de CAOS_POOL). A pessoa
+// decora um PAR de itens (caosItemA/caosItemB — podendo ser 2 cores, 2
+// formas ou 1 de cada); o quadrado certo é o ÚNICO em que um desses 2 itens
+// aparece em QUALQUER um dos 3 atributos. Ao acertar, o novo par a decorar
+// são os 2 OUTROS atributos (os que não deram o match) do quadrado que
+// acabou de ser clicado — mesma mecânica do Trio (ver newTrioRound), só que
+// com um pool misto de cor+forma em vez de só cor.
+//
+// Diferença-chave pro Trio: lá os 3 atributos aceitam QUALQUER uma das 8
+// cores. Aqui só a palavra (word) aceita qualquer item do pool misto — forma
+// só aceita forma, cor só aceita cor (domínio fixo) — por isso matchSlot só
+// pode ser sorteado entre os slots cujo domínio aceita o item sorteado (ver
+// matchableSlots abaixo), e o preenchimento de cada quadrado trata os 3
+// casos (match na forma / na cor / na palavra) separadamente.
+//
+// Viabilidade: forma e cor nunca se repetem entre os 4 quadrados (ver
+// shapeAssignment/colorAssignment abaixo). Pior caso é quando os 2 itens
+// memorizados são as 2 formas sorteadas E o match cai na palavra (não
+// "gasta" nenhuma forma do fillerPool) — sobram exatamente 4 formas livres
+// (6 - 2) pros 4 quadrados, just certo. Cor nunca fica tão apertada (mínimo
+// 6 livres de 8, sempre dá pras até 4 necessárias).
+function newCaosRound(first) {
+  let itemA, itemB;
+  if (first || !caosItemA || !caosItemB) {
+    const shuffled = shuffle(CAOS_POOL.slice());
+    itemA = shuffled[0];
+    itemB = shuffled[1];
+  } else {
+    itemA = caosItemA;
+    itemB = caosItemB;
+  }
+  caosItemA = itemA;
+  caosItemB = itemB;
+
+  const targetIdx = Math.floor(Math.random() * SQUARES);
+  const matchItem = Math.random() < 0.5 ? itemA : itemB;
+  const matchableSlots = isColorItem(matchItem) ? ['color', 'word'] : ['shape', 'word'];
+  const matchSlot = matchableSlots[Math.floor(Math.random() * matchableSlots.length)];
+
+  const fillerPool = CAOS_POOL.filter(x => x !== itemA && x !== itemB); // sempre 12 itens
+  const shapeFillerPool = fillerPool.filter(x => !isColorItem(x));
+  const colorFillerPool = fillerPool.filter(x => isColorItem(x));
+
+  // forma E cor NUNCA se repetem entre os 4 quadrados da rodada — reserva
+  // antes de tudo uma forma distinta e uma cor distinta por quadrado (mesma
+  // ideia do "fundo nunca se repete" do Trio — ver newTrioRound — só que
+  // aplicada aos 2 atributos visuais aqui, já que são os mais visíveis). Se
+  // o quadrado certo "gastar" o match na própria forma/cor, ele já sai
+  // direto com matchItem nesse atributo; os outros, com valores distintos
+  // dos respectivos fillerPools (sempre cabe: colorFillerPool nunca tem
+  // menos que 6 cores livres, contra no máximo 4 necessárias).
+  const shapeShuffled = shuffle(shapeFillerPool.slice());
+  const colorShuffled = shuffle(colorFillerPool.slice());
+  const shapeAssignment = [];
+  const colorAssignment = [];
+  let shapeCursor = 0, colorCursor = 0;
+  for (let i = 0; i < SQUARES; i++) {
+    shapeAssignment[i] = (i === targetIdx && matchSlot === 'shape') ? matchItem : shapeShuffled[shapeCursor++];
+    colorAssignment[i] = (i === targetIdx && matchSlot === 'color') ? matchItem : colorShuffled[colorCursor++];
+  }
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  const roundSnapshot = [];
+  let newPairA = null, newPairB = null;
+
+  for (let i = 0; i < SQUARES; i++) {
+    const shape = shapeAssignment[i];
+    const color = colorAssignment[i];
+    const isTarget = (i === targetIdx);
+    let word;
+    if (isTarget && matchSlot === 'word') {
+      word = matchItem;
+      newPairA = shape; newPairB = color;
+    } else {
+      word = shuffle(fillerPool.filter(x => x !== shape && x !== color))[0];
+      if (isTarget) {
+        // matchSlot é 'shape' ou 'color' — já ficou reservado direto no
+        // Assignment acima; o outro atributo (não-match) + a palavra são o
+        // novo par a memorizar
+        newPairA = (matchSlot === 'shape') ? color : shape;
+        newPairB = word;
+      }
+    }
+    const sq = { shape, color, word, isTarget };
+    const el = document.createElement('div');
+    renderCaosSquare(el, sq);
+    el.onclick = (e) => handleCaosClick(sq.isTarget, e);
+    grid.appendChild(el);
+    roundSnapshot.push({
+      shape: poolItemId(sq.shape), color: sq.color.key, word: poolItemId(sq.word), isTarget: sq.isTarget,
+      // par inicial (ver pairA/pairB do Trio) — só existe na primeira rodada,
+      // é o que a tela de replay usa pra montar a instrução "decore X e Y"
+      ...(first ? { pairA: poolItemId(itemA), pairB: poolItemId(itemB) } : {}),
+    });
+  }
+  if (replayRounds.length < 400) replayRounds.push({ t: Math.round(performance.now() - replayStartMs), sq: roundSnapshot });
+
+  caosNextPairA = newPairA;
+  caosNextPairB = newPairB;
+
+  $('instruction').textContent = first
+    ? T[lang].instr_first_caos(cName(itemA), cName(itemB))
+    : T[lang].instr_next_caos;
+  $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
+
+  startTimer();
+}
+
+function handleCaosClick(isCorrect, e) {
+  if (!playing) return;
+  if (isCorrect) {
+    score++;
+    if (currentSessionId) pendingRoundSync.push(callSyncProgress({ sessionId: currentSessionId, trusted: !e || e.isTrusted }).catch(() => {}));
+    const elapsed = (performance.now() - timerStart) / 1000;
+    xpGain += Math.max(0, 3 - 0.2 * elapsed) * xpStreakMultiplier(score);
+    sfx.correct(score);
+    $('score').textContent = score;
+    caosItemA = caosNextPairA;
+    caosItemB = caosNextPairB;
+    duration *= 0.95;
+    newCaosRound(false);
+  } else {
+    sfx.wrong();
+    gameOver(T[lang].reason_wrong);
+  }
+}
+
 function newRound(first) {
   if (mode === 'trio') return newTrioRound(first);
+  if (mode === 'caos') return newCaosRound(first);
   const pool = poolFor(mode);
   nextTarget = pick(pool);
   const others = shuffle(pool.filter(c => c !== target)).slice(0, SQUARES - 1);
@@ -3038,7 +3223,7 @@ function renderPublicProfileBadges(stats) {
 // posição no ranking de cada modo em que a pessoa já pontuou (medalha pro
 // top 3, número pros demais) — vazio se ela ainda não pontuou em nenhum modo
 function renderPublicProfileRanks(stats, ranks) {
-  const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺' };
+  const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺', caos: '🌀' };
   // cada linha leva pra aba daquele ranking no clique (ver profileRankGoto)
   const row = (label, pos, key) => {
     const medal = pos === 1 ? '🥇 ' : pos === 2 ? '🥈 ' : pos === 3 ? '🥉 ' : '';
@@ -3849,7 +4034,7 @@ window.showRanking = (tab) => {
   loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
 };
 
-const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', level: 'xp', geral: 'total', divulgador: 'referrals' };
+const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', caos: 'caos', level: 'xp', geral: 'total', divulgador: 'referrals' };
 
 const RANKING_PAGE_SIZE = 20;
 let rankingRows = [];
@@ -4135,6 +4320,10 @@ function renderReplaySquares(round, idx) {
       const sq = { bg: poolItemById(pool, cell.bg), tc: poolItemById(pool, cell.tc), word: poolItemById(pool, cell.word) };
       renderTrioSquare(el, sq);
       if (cell.pairA) { pairA = poolItemById(pool, cell.pairA); pairB = poolItemById(pool, cell.pairB); }
+    } else if (rmode === 'caos') {
+      const sq = { shape: poolItemById(CAOS_POOL, cell.shape), color: poolItemById(CAOS_POOL, cell.color), word: poolItemById(CAOS_POOL, cell.word) };
+      renderCaosSquare(el, sq);
+      if (cell.pairA) { pairA = poolItemById(CAOS_POOL, cell.pairA); pairB = poolItemById(CAOS_POOL, cell.pairB); }
     } else {
       const item = poolItemById(pool, cell.id);
       const paired = poolItemById(pool, cell.paired);
@@ -4171,6 +4360,7 @@ function renderReplaySquares(round, idx) {
     // servidor (pairA/pairB descartados por engano) — em vez de travar toda
     // a tela com cName(null), cai pra instrução genérica do modo Trio
     trio: () => (pairA && pairB) ? T[lang].instr_first_trio(cName(pairA), cName(pairB)) : T[lang].instr_next_trio,
+    caos: () => (pairA && pairB) ? T[lang].instr_first_caos(cName(pairA), cName(pairB)) : T[lang].instr_next_caos,
   };
   const INSTR_NEXT = {
     classic: T[lang].instr_next_classic,
@@ -4178,6 +4368,7 @@ function renderReplaySquares(round, idx) {
     shapes: T[lang].instr_next_shapes,
     'shapes-reverse': T[lang].instr_next_shapes_reverse,
     trio: T[lang].instr_next_trio,
+    caos: T[lang].instr_next_caos,
   };
   $('replay-instruction').textContent = (idx === 0) ? INSTR_FIRST[rmode]() : INSTR_NEXT[rmode];
 }
@@ -5831,6 +6022,45 @@ const TUT_DATA = {
       ],
     },
   ],
+  // caos: mesma mecânica do Trio (ver comentário lá em cima), só que cada
+  // quadrado tem 3 atributos de domínio misto (shape/color/word — mesmo
+  // shape que renderCaosSquare espera) em vez de 3 cores. Pedem-se 2 itens
+  // (targetA/targetB, podendo ser cor e/ou forma); o quadrado certo é o
+  // único em que UM deles aparece em QUALQUER um dos 3 atributos; o que se
+  // memoriza pra rodada seguinte são os OUTROS 2 atributos desse quadrado.
+  // As 3 rodadas de exemplo variam de propósito ONDE o item pedido bate
+  // (cor da figura → palavra → forma), pra ensinar que vale qualquer um dos
+  // 3 — e a rodada A já mistura 1 cor + 1 forma nos itens pedidos, deixando
+  // claro que os 2 podem ser de tipos diferentes.
+  caos: [
+    {
+      targetA: COLORS[1], targetB: SHAPES[4], // vermelho e estrela
+      squares: [
+        { shape: SHAPES[3], color: COLORS[2], word: SHAPES[0] },
+        { shape: SHAPES[1], color: COLORS[1], word: COLORS[4], correct: true }, // bate na COR (vermelho) — memoriza shape=quadrado e word=roxo
+        { shape: SHAPES[2], color: COLORS[5], word: SHAPES[5] },
+        { shape: SHAPES[0], color: COLORS[6], word: COLORS[3] },
+      ],
+    },
+    {
+      // par memorizado na rodada A: quadrado (shape) + roxo (word)
+      squares: [
+        { shape: SHAPES[5], color: COLORS[0], word: SHAPES[2] },
+        { shape: SHAPES[3], color: COLORS[7], word: SHAPES[4] },
+        { shape: SHAPES[0], color: COLORS[2], word: COLORS[4], correct: true }, // bate na PALAVRA (roxo) — memoriza shape=círculo e color=verde
+        { shape: SHAPES[2], color: COLORS[5], word: COLORS[6] },
+      ],
+    },
+    {
+      // par memorizado na rodada B: círculo (shape) + verde (color)
+      squares: [
+        { shape: SHAPES[3], color: COLORS[6], word: SHAPES[5] },
+        { shape: SHAPES[4], color: COLORS[1], word: COLORS[3] },
+        { shape: SHAPES[2], color: COLORS[5], word: SHAPES[1] },
+        { shape: SHAPES[0], color: COLORS[7], word: COLORS[4], correct: true }, // bate na FORMA (círculo) — posição diferente das anteriores
+      ],
+    },
+  ],
 };
 const TUT_TOTAL = 7;
 let tutMode = 'classic';
@@ -5861,6 +6091,11 @@ function tutRenderRound(roundIdx, instrText) {
       el.style.background = s.bg.hex;
       el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word word-trio" style="color:${s.tc.hex}">${cName(s.word)}</span><span class="tut-check">✅</span>`;
+    } else if (tutMode === 'caos') {
+      // mesmo visual de renderCaosSquare (jogo/replay), só acrescentando o
+      // check verde que só o tutorial usa
+      el.classList.add('shape-square', s.shape.shapeClass);
+      el.innerHTML = `<span class="shape-fill ${s.shape.shapeClass}" style="background:${s.color.hex}; filter: drop-shadow(0 0 14px ${s.color.hex}88) drop-shadow(0 0 26px ${s.color.hex}44);"></span><span class="word">${cName(s.word)}</span><span class="tut-check">✅</span>`;
     } else {
       el.style.background = s.bg.hex;
       el.style.boxShadow = `0 0 18px ${s.bg.hex}99, 0 0 40px ${s.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
@@ -5936,14 +6171,14 @@ function showTutStep(n) {
   tutSetNav();
   $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
 
-  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes, 'shapes-reverse': T[lang].instr_first_shapes_reverse, trio: T[lang].instr_first_trio };
-  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes, 'shapes-reverse': T[lang].instr_next_shapes_reverse, trio: T[lang].instr_next_trio };
+  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes, 'shapes-reverse': T[lang].instr_first_shapes_reverse, trio: T[lang].instr_first_trio, caos: T[lang].instr_first_caos };
+  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes, 'shapes-reverse': T[lang].instr_next_shapes_reverse, trio: T[lang].instr_next_trio, caos: T[lang].instr_next_caos };
   const instrFirst = INSTR_FIRST_BY_TUT_MODE[tutMode];
   const instrNext = INSTR_NEXT_BY_TUT_MODE[tutMode];
-  // trio pede 2 cores (targetA/targetB) — instrFirst recebe os 2 nomes; os
-  // outros modos pedem só 1 (target)
-  const round0 = () => tutRenderRound(0, (tutMode === 'trio')
-    ? instrFirst(cName(TUT_DATA.trio[0].targetA), cName(TUT_DATA.trio[0].targetB))
+  // trio e caos pedem 2 itens (targetA/targetB) — instrFirst recebe os 2
+  // nomes; os outros modos pedem só 1 (target)
+  const round0 = () => tutRenderRound(0, (tutMode === 'trio' || tutMode === 'caos')
+    ? instrFirst(cName(TUT_DATA[tutMode][0].targetA), cName(TUT_DATA[tutMode][0].targetB))
     : instrFirst(cName(TUT_DATA[tutMode][0].target)));
   const round1 = () => tutRenderRound(1, instrNext);
   const round2 = () => tutRenderRound(2, instrNext);
@@ -6049,8 +6284,8 @@ function showTutStep(n) {
     round0();
     const sq = tutCorrectSquare(0);
     tutFocusSquare(sq);
-    if (tutMode === 'trio') {
-      tutHighlightInstrWord(cName(TUT_DATA.trio[0].targetA), cName(TUT_DATA.trio[0].targetB));
+    if (tutMode === 'trio' || tutMode === 'caos') {
+      tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].targetA), cName(TUT_DATA[tutMode][0].targetB));
     } else {
       tutHighlightInstrWord(cName(TUT_DATA[tutMode][0].target));
     }
@@ -6076,9 +6311,10 @@ function showTutStep(n) {
     tutFocusSquare(sq);
     if (tutMode === 'reverse' || tutMode === 'shapes-reverse') {
       tutPointAtWord(sq); // destaca só a palavra, sem piscar o quadrado inteiro
-    } else if (tutMode === 'trio') {
-      // aqui o match é na COR da palavra — aponta pra ela, mas deslocada pra
-      // esquerda (xr baixo) pra não sobrepor o texto no meio do quadrado
+    } else if (tutMode === 'trio' || tutMode === 'caos') {
+      // aqui o match é na COR da palavra (trio) ou na PALAVRA (caos) — aponta
+      // pra ela, mas deslocada pra esquerda (xr baixo) pra não sobrepor o
+      // texto no meio do quadrado
       sq.classList.add('tut-glow');
       tutPointAtWord(sq, { xr: 0.2 });
     } else {
