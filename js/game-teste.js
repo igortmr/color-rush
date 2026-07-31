@@ -120,6 +120,9 @@ const callBackfillPendingPigmentos = callable('backfillPendingPigmentos');
 const callAdminRecomputeScoresSnapshot = callable('adminRecomputeScoresSnapshot');
 const callBackfillReplayDurations = callable('backfillReplayDurations');
 const callAdminGetFlaggedAccounts = callable('adminGetFlaggedAccounts');
+const callAdminListPendingDeletions = callable('adminListPendingDeletions');
+const callAdminCancelAccountDeletion = callable('adminCancelAccountDeletion');
+const callAdminForcePurgeAccount = callable('adminForcePurgeAccount');
 // desafio diário — mesmo esquema de sessão/validação de tempo do modo normal
 // (ver startDailyAttempt/submitDailyResult em functions/index.js)
 const callStartDailyAttempt = callable('startDailyAttempt');
@@ -2035,6 +2038,71 @@ window.runAdminGetFlaggedAccounts = async (btn) => {
   }
 };
 
+// lista os pedidos de exclusão dentro da carência de 15 dias, com botão pra
+// desfazer (reativa login) ou acelerar (apaga os dados na hora) cada um —
+// ver adminListPendingDeletions/adminCancelAccountDeletion/
+// adminForcePurgeAccount em functions/index.js
+window.runAdminListPendingDeletions = async (btn) => {
+  const list = $('pending-deletions-list');
+  btn.disabled = true;
+  if (list) list.innerHTML = '<div class="muted">Carregando...</div>';
+  try {
+    const res = await callAdminListPendingDeletions();
+    const requests = (res.data && res.data.requests) || [];
+    if (!requests.length) {
+      if (list) list.innerHTML = '<div class="muted">Nenhum pedido de exclusão pendente.</div>';
+    } else if (list) {
+      list.innerHTML = requests.map(r => {
+        const esc = s => (s || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+        const msLeft = (r.scheduledPurgeAt || 0) - Date.now();
+        const daysLeft = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+        const timeLabel = msLeft <= 0 ? 'já venceu — purga automática deve rodar em breve' : `${daysLeft} dia(s) restante(s)`;
+        return `<div class="card" style="text-align:left; padding:10px 14px;">
+          <div><b>${esc(r.nick)}</b>${r.email ? ' — ' + esc(r.email) : ''}</div>
+          <div class="muted" style="margin-top:2px;">Pedido em ${fmtDateTime(r.requestedAt)} — ${timeLabel} (exclusão automática em ${fmtDateTime(r.scheduledPurgeAt)})</div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button class="secondary" style="flex:1;" onclick="runAdminCancelAccountDeletion('${r.uid}', this)">↩️ Desfazer</button>
+            <button class="secondary" style="flex:1; border-color:var(--neon-red); color:#ff8bab;" onclick="runAdminForcePurgeAccount('${r.uid}', this)">🗑️ Excluir agora</button>
+          </div>
+          <div class="muted pending-deletion-status" style="margin-top:6px;"></div>
+        </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    if (list) list.innerHTML = '❌ ' + (e.message || 'Erro ao carregar.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+window.runAdminCancelAccountDeletion = async (uid, btn) => {
+  if (!confirm('Cancelar o pedido de exclusão e reativar o login dessa conta?')) return;
+  const row = btn.closest('.card');
+  const status = row && row.querySelector('.pending-deletion-status');
+  btn.disabled = true;
+  try {
+    await callAdminCancelAccountDeletion({ uid });
+    if (row) row.remove();
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro.');
+    btn.disabled = false;
+  }
+};
+
+window.runAdminForcePurgeAccount = async (uid, btn) => {
+  if (!confirm('Excluir esta conta AGORA, sem esperar o resto da carência? Isso apaga todos os dados na hora e não pode ser desfeito.')) return;
+  const row = btn.closest('.card');
+  const status = row && row.querySelector('.pending-deletion-status');
+  btn.disabled = true;
+  try {
+    await callAdminForcePurgeAccount({ uid });
+    if (row) row.remove();
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro.');
+    btn.disabled = false;
+  }
+};
+
 window.runAdminSetOwnLevel = async (btn) => {
   const input = $('admin-set-level-input');
   const status = $('admin-set-level-status');
@@ -2490,6 +2558,12 @@ async function renderProfile(viewStats, viewNick, viewUid) {
         <p class="muted" style="margin-top:6px;">Lista os alertas mais recentes de possível compartilhamento de conta: mesmo IP em duas contas diferentes, ou uma conta "pulando" de local rápido demais (ver checkIpAndFlag em functions/index.js). Não bloqueia nada sozinho — é só pra você decidir manualmente o que fazer.</p>
         <button class="secondary" onclick="runAdminGetFlaggedAccounts(this)">Carregar contas suspeitas</button>
         <div id="flagged-accounts-list" style="margin-top:6px;"></div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <b>🕒 Pedidos de Exclusão de Conta</b>
+        <p class="muted" style="margin-top:6px;">Contas que pediram exclusão e ainda estão dentro da carência de 15 dias (exigência da Apple — ver deleteMyAccount em functions/index.js). "Desfazer" reativa o login e cancela o pedido; "Excluir agora" apaga os dados na hora, sem esperar o resto da carência.</p>
+        <button class="secondary" onclick="runAdminListPendingDeletions(this)">Carregar pedidos de exclusão</button>
+        <div id="pending-deletions-list" style="margin-top:6px;"></div>
       </div>
       <div class="card" style="text-align:left;">
         <b>🛠️ Admin — editar meu nível</b>
