@@ -201,7 +201,7 @@ const T = {
     mode_trio_title: '🔺 Trio',
     mode_trio_desc: 'Cada quadrado tem <b>3 cores</b>: o fundo, a cor da palavra e a palavra em si. Decore as <b>2 cores pedidas</b> e clique no único quadrado que tiver uma delas em qualquer uma das 3 partes. Para a próxima rodada, decore as outras 2 cores desse quadrado.',
     mode_caos_title: '🌀 Caos',
-    mode_caos_desc: 'Igual o modo Formas, mas as figuras também têm <b>cor</b>! Decore <b>2 coisas</b> (podendo ser 2 cores, 2 formas ou uma de cada) e clique no único quadrado que tiver uma delas — na forma, na cor ou na palavra escrita nele. Para a próxima rodada, decore as outras 2 coisas desse quadrado.',
+    mode_caos_desc: 'Igual o modo Formas, mas as figuras também têm <b>cor</b>! Decore <b>duas características</b> (podendo ser 2 cores, 2 formas ou uma de cada) e clique na única figura que tiver uma delas. Para a próxima rodada, decore as outras duas informações nessa figura.',
     record_label: '📊 Seu recorde:', btn_ranking: '🏆 RANKING', btn_invite: '➕ ADICIONAR AMIGO', btn_invite_profile: '➕ ADICIONAR AMIGOS',
     footer_note: '⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!',
     hud_points: 'PONTOS:', go_title_default: 'FIM DE JOGO', new_record_text: '🎉 NOVO RECORDE! 🎉',
@@ -241,8 +241,8 @@ const T = {
     instr_next_shapes_reverse: '🧠 Clique no nome da forma que você memorizou (e memorize a nova FORMA ao redor!)',
     instr_first_trio: (nameA, nameB) => `👉 Decore o ${nameA} e o ${nameB}. Encontre o único quadrado com uma dessas cores (no fundo do quadrado, na cor da palavra ou na própria palavra)!`,
     instr_next_trio: '🧠 Encontre uma das 2 cores que você memorizou (fundo, cor da palavra ou a palavra) — e memorize as outras 2 cores nesse quadrado!',
-    instr_first_caos: (nameA, nameB) => `👉 Decore ${nameA} e ${nameB}. Encontre o único quadrado com uma dessas coisas (na forma, na cor ou na palavra escrita nele)!`,
-    instr_next_caos: '🧠 Encontre uma das 2 coisas que você memorizou (forma, cor ou palavra) — e memorize as outras 2 coisas nesse quadrado!',
+    instr_first_caos: (nameA, nameB) => `👉 Decore ${nameA} e ${nameB}. Encontre a única figura com uma dessas características!`,
+    instr_next_caos: '🧠 Encontre uma das 2 características que você memorizou — e memorize as outras 2 informações nessa figura!',
     reason_timeout: '⏰ TEMPO ESGOTADO!', reason_wrong: '❌ QUADRADO ERRADO!',
     mode_name_classic: 'Clássico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trio', mode_name_caos: 'Caos',
     ranking_no_players: 'Ninguém pontuou ainda. Seja o primeiro! 🚀',
@@ -448,7 +448,7 @@ const T = {
     mode_trio_title: '🔺 Trio',
     mode_trio_desc: "Every square has <b>3 colors</b>: the background, the word's own color, and the word itself. Memorize the <b>2 requested colors</b> and click the only square with one of them anywhere among those 3 parts. For the next round, memorize that square's other 2 colors.",
     mode_caos_title: '🌀 Chaos',
-    mode_caos_desc: "Like Shapes mode, but the shapes also have <b>color</b>! Memorize <b>2 things</b> (2 colors, 2 shapes, or one of each) and click the only square with one of them — in its shape, its color, or the word written on it. For the next round, memorize that square's other 2 things.",
+    mode_caos_desc: "Like Shapes mode, but the shapes also have <b>color</b>! Memorize <b>two characteristics</b> (2 colors, 2 shapes, or one of each) and click the only shape with one of them. For the next round, memorize the other two details on that shape.",
     record_label: '📊 Your record:', btn_ranking: '🏆 LEADERBOARD', btn_invite: '➕ ADD FRIEND', btn_invite_profile: '➕ ADD FRIENDS',
     footer_note: '⏱️ 10 seconds per round — time gets 5% faster with each correct answer!',
     hud_points: 'POINTS:', go_title_default: 'GAME OVER', new_record_text: '🎉 NEW RECORD! 🎉',
@@ -488,8 +488,8 @@ const T = {
     instr_next_shapes_reverse: "🧠 Click on the name of the shape you memorized (and memorize the new surrounding SHAPE!)",
     instr_first_trio: (nameA, nameB) => `👉 Memorize ${nameA} and ${nameB}. Find the only square with one of these colors (in the background, the word's color, or the word itself)!`,
     instr_next_trio: "🧠 Find the square with one of the 2 colors you just memorized (background, word color, or the word) — and memorize that square's 2 new colors!",
-    instr_first_caos: (nameA, nameB) => `👉 Memorize ${nameA} and ${nameB}. Find the only square with one of these things (in its shape, color, or the word written on it)!`,
-    instr_next_caos: "🧠 Find the square with one of the 2 things you just memorized (shape, color, or word) — and memorize that square's other 2 things!",
+    instr_first_caos: (nameA, nameB) => `👉 Memorize ${nameA} and ${nameB}. Find the only shape with one of these characteristics!`,
+    instr_next_caos: "🧠 Find the shape with one of the 2 characteristics you just memorized — and memorize the other 2 details on that shape!",
     reason_timeout: "⏰ TIME'S UP!", reason_wrong: '❌ WRONG SQUARE!',
     mode_name_classic: 'Classic', mode_name_reverse: 'Reverse', mode_name_shapes: 'Shapes', mode_name_shapes_reverse: 'Shapes Reverse', mode_name_trio: 'Trio', mode_name_caos: 'Chaos',
     ranking_no_players: 'No one has scored yet. Be the first! 🚀',
@@ -695,7 +695,7 @@ const T = {
     mode_trio_title: '🔺 Trío',
     mode_trio_desc: 'Cada cuadrado tiene <b>3 colores</b>: el fondo, el color de la palabra y la palabra en sí. Memoriza los <b>2 colores pedidos</b> y haz clic en el único cuadrado que tenga uno de ellos en cualquiera de esas 3 partes. Para la siguiente ronda, memoriza los otros 2 colores de ese cuadrado.',
     mode_caos_title: '🌀 Caos',
-    mode_caos_desc: 'Como el modo Formas, ¡pero las figuras también tienen <b>color</b>! Memoriza <b>2 cosas</b> (2 colores, 2 formas o una de cada una) y haz clic en el único cuadrado que tenga una de ellas — en su forma, su color o la palabra escrita en él. Para la siguiente ronda, memoriza las otras 2 cosas de ese cuadrado.',
+    mode_caos_desc: 'Como el modo Formas, ¡pero las figuras también tienen <b>color</b>! Memoriza <b>dos características</b> (2 colores, 2 formas o una de cada una) y haz clic en la única figura que tenga una de ellas. Para la siguiente ronda, memoriza las otras dos informaciones de esa figura.',
     record_label: '📊 Tu récord:', btn_ranking: '🏆 RANKING', btn_invite: '➕ AGREGAR AMIGO', btn_invite_profile: '➕ AGREGAR AMIGOS',
     footer_note: '⏱️ ¡10 segundos por ronda — el tiempo se acelera un 5% con cada acierto!',
     hud_points: 'PUNTOS:', go_title_default: 'FIN DEL JUEGO', new_record_text: '🎉 ¡NUEVO RÉCORD! 🎉',
@@ -735,8 +735,8 @@ const T = {
     instr_next_shapes_reverse: '🧠 Haz clic en el nombre de la forma que memorizaste (¡y memoriza la nueva FORMA que la rodea!)',
     instr_first_trio: (nameA, nameB) => `👉 Memoriza ${nameA} y ${nameB}. ¡Encuentra el único cuadrado con uno de estos colores (en el fondo, en el color de la palabra o en la propia palabra)!`,
     instr_next_trio: '🧠 Encuentra el cuadrado con uno de los 2 colores que acabas de memorizar (fondo, color de la palabra o la palabra) — ¡y memoriza los 2 nuevos colores de ese cuadrado!',
-    instr_first_caos: (nameA, nameB) => `👉 Memoriza ${nameA} y ${nameB}. ¡Encuentra el único cuadrado con una de estas cosas (en su forma, su color o la palabra escrita en él)!`,
-    instr_next_caos: '🧠 Encuentra el cuadrado con una de las 2 cosas que acabas de memorizar (forma, color o palabra) — ¡y memoriza las otras 2 cosas de ese cuadrado!',
+    instr_first_caos: (nameA, nameB) => `👉 Memoriza ${nameA} y ${nameB}. ¡Encuentra la única figura con una de estas características!`,
+    instr_next_caos: '🧠 Encuentra la figura con una de las 2 características que acabas de memorizar — ¡y memoriza las otras 2 informaciones de esa figura!',
     reason_timeout: '⏰ ¡SE ACABÓ EL TIEMPO!', reason_wrong: '❌ ¡CUADRADO EQUIVOCADO!',
     mode_name_classic: 'Clásico', mode_name_reverse: 'Reverso', mode_name_shapes: 'Formas', mode_name_shapes_reverse: 'Formas Reverso', mode_name_trio: 'Trío', mode_name_caos: 'Caos',
     ranking_no_players: 'Nadie ha puntuado todavía. ¡Sé el primero! 🚀',
@@ -2609,10 +2609,12 @@ function handleTrioClick(isCorrect, e) {
 // matchableSlots abaixo), e o preenchimento de cada quadrado trata os 3
 // casos (match na forma / na cor / na palavra) separadamente.
 //
-// Viabilidade: pior caso é quando os 2 itens memorizados são as 2 formas
-// sorteadas E o match cai na palavra (não "gasta" nenhuma forma do
-// fillerPool) — sobram exatamente 4 formas livres (6 - 2) pros 4 quadrados,
-// just certo. Cor nunca fica tão apertada (mínimo 6 livres de 8).
+// Viabilidade: forma e cor nunca se repetem entre os 4 quadrados (ver
+// shapeAssignment/colorAssignment abaixo). Pior caso é quando os 2 itens
+// memorizados são as 2 formas sorteadas E o match cai na palavra (não
+// "gasta" nenhuma forma do fillerPool) — sobram exatamente 4 formas livres
+// (6 - 2) pros 4 quadrados, just certo. Cor nunca fica tão apertada (mínimo
+// 6 livres de 8, sempre dá pras até 4 necessárias).
 function newCaosRound(first) {
   let itemA, itemB;
   if (first || !caosItemA || !caosItemB) {
@@ -2635,17 +2637,22 @@ function newCaosRound(first) {
   const shapeFillerPool = fillerPool.filter(x => !isColorItem(x));
   const colorFillerPool = fillerPool.filter(x => isColorItem(x));
 
-  // forma NUNCA se repete entre os 4 quadrados da rodada — reserva antes de
-  // tudo uma forma distinta por quadrado (mesma ideia do "fundo nunca se
-  // repete" do Trio — ver newTrioRound — só que aplicada à forma aqui, já
-  // que é o atributo mais visível). Se o quadrado certo "gastar" o match na
-  // própria forma, ele já sai direto com matchItem; os outros, com formas
-  // distintas do shapeFillerPool.
+  // forma E cor NUNCA se repetem entre os 4 quadrados da rodada — reserva
+  // antes de tudo uma forma distinta e uma cor distinta por quadrado (mesma
+  // ideia do "fundo nunca se repete" do Trio — ver newTrioRound — só que
+  // aplicada aos 2 atributos visuais aqui, já que são os mais visíveis). Se
+  // o quadrado certo "gastar" o match na própria forma/cor, ele já sai
+  // direto com matchItem nesse atributo; os outros, com valores distintos
+  // dos respectivos fillerPools (sempre cabe: colorFillerPool nunca tem
+  // menos que 6 cores livres, contra no máximo 4 necessárias).
   const shapeShuffled = shuffle(shapeFillerPool.slice());
+  const colorShuffled = shuffle(colorFillerPool.slice());
   const shapeAssignment = [];
-  let shapeCursor = 0;
+  const colorAssignment = [];
+  let shapeCursor = 0, colorCursor = 0;
   for (let i = 0; i < SQUARES; i++) {
     shapeAssignment[i] = (i === targetIdx && matchSlot === 'shape') ? matchItem : shapeShuffled[shapeCursor++];
+    colorAssignment[i] = (i === targetIdx && matchSlot === 'color') ? matchItem : colorShuffled[colorCursor++];
   }
 
   const grid = $('grid');
@@ -2655,23 +2662,21 @@ function newCaosRound(first) {
 
   for (let i = 0; i < SQUARES; i++) {
     const shape = shapeAssignment[i];
+    const color = colorAssignment[i];
     const isTarget = (i === targetIdx);
-    let color, word;
-    if (isTarget && matchSlot === 'color') {
-      color = matchItem;
-      word = shuffle(fillerPool.filter(x => x !== shape && x !== color))[0];
-      newPairA = shape; newPairB = word;
-    } else if (isTarget && matchSlot === 'word') {
-      color = shuffle(colorFillerPool)[0];
+    let word;
+    if (isTarget && matchSlot === 'word') {
       word = matchItem;
       newPairA = shape; newPairB = color;
-    } else if (isTarget) { // matchSlot === 'shape'
-      const fillers = shuffle(fillerPool.slice()).slice(0, 2);
-      color = fillers[0]; word = fillers[1];
-      newPairA = color; newPairB = word;
     } else {
-      color = shuffle(colorFillerPool)[0];
       word = shuffle(fillerPool.filter(x => x !== shape && x !== color))[0];
+      if (isTarget) {
+        // matchSlot é 'shape' ou 'color' — já ficou reservado direto no
+        // Assignment acima; o outro atributo (não-match) + a palavra são o
+        // novo par a memorizar
+        newPairA = (matchSlot === 'shape') ? color : shape;
+        newPairB = word;
+      }
     }
     const sq = { shape, color, word, isTarget };
     const el = document.createElement('div');
