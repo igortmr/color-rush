@@ -1,0 +1,124 @@
+import { $ } from './dom.js';
+import { state } from './state.js';
+
+// rodapé com links das redes sociais — mesmo bloquinho HTML colado no fim
+// de CADA tela (não é fixo, é só mais um elemento normal dentro do fluxo de
+// cada .screen), pra dar visibilidade das redes em qualquer lugar do jogo
+// sem competir visualmente com o conteúdo enquanto joga. O índice "i" só
+// existe pra cada cópia ter seu próprio id de gradiente (evita ids
+// duplicados no HTML final, mesmo que o resultado visual seja idêntico).
+function socialLinksHtml(i) {
+  return `
+  <div class="social-links">
+    <a class="social-link" href="https://instagram.com/colorrushsaga" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="igGrad-${i}" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffdb73"/>
+            <stop offset="25%" stop-color="#fd5949"/>
+            <stop offset="55%" stop-color="#d6249f"/>
+            <stop offset="100%" stop-color="#285AEB"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="none" stroke="url(#igGrad-${i})" stroke-width="2"/>
+        <circle cx="12" cy="12" r="4.2" fill="none" stroke="url(#igGrad-${i})" stroke-width="2"/>
+        <circle cx="17.4" cy="6.6" r="1.3" fill="url(#igGrad-${i})"/>
+      </svg>
+      <span>@colorrushsaga</span>
+    </a>
+    <a class="social-link" href="https://x.com/colorrushsaga" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff">
+        <path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.5 22H1.4l8.1-9.3L1 2h7.2l5 6.6L18.9 2zm-1.2 18h1.7L6.4 4H4.6l13.1 16z"/>
+      </svg>
+      <span>@colorrushsaga</span>
+    </a>
+  </div>`;
+}
+document.querySelectorAll('.screen').forEach((screen, i) => {
+  // loading-screen nunca tem conteúdo de verdade (só "Carregando..." antes do
+  // Firebase resolver quem é a pessoa) — não faz sentido mostrar as redes
+  // sociais junto de um esqueleto vazio, então essa é a única tela que fica
+  // de fora
+  if (screen.id === 'loading-screen') return;
+  screen.insertAdjacentHTML('beforeend', socialLinksHtml(i));
+});
+
+// ===== proteção global contra clique duplo/muito rápido =====
+// alguns cliques disparam ações com consequência real no servidor (aceitar/
+// recusar duelo, resgatar prêmio, comprar na loja, salvar nick...). Um
+// clique duplo bem rápido (toque acidental, "ghost click" do celular, ou o
+// dedo escorregando) pode disparar a mesma ação duas vezes antes da primeira
+// terminar — já aconteceu de resgatar o mesmo prêmio da caixa de entrada
+// duas vezes clicando rápido demais, precisando corrigir na mão no Firestore
+// depois. Um tempo fixo curto (300ms) não é garantia nenhuma, porque a
+// resposta do servidor pode demorar mais que isso (rede lenta, function fria
+// etc.) — o que resolve de verdade é travar até a resposta chegar.
+// Por isso o travamento aqui combina os dois: (1) um mínimo de 300ms sempre,
+// pra cobrir ações que nem chamam o servidor, e (2) enquanto tiver alguma
+// chamada ao servidor pendente (state.pendingServerCalls, incrementado/
+// decrementado em `callable()`, ver game-teste.js), NENHUM clique novo
+// passa — só libera de verdade quando a resposta (sucesso ou erro) chega.
+// Em vez de mexer em cada botão um por um, um único listener no topo (fase
+// de captura, roda ANTES de qualquer onclick) cobre tudo de uma vez.
+// Fica de fora o jogo oficial (os grids de resposta: clássico/reverso/
+// formas/formas reverso, desafio diário e PvP) — ali cada clique já tem sua
+// própria trava (handleClick só aceita um clique por rodada, ver `playing`),
+// e o ritmo do jogo pode exigir cliques bem mais rápidos que 300ms conforme
+// a partida acelera, então esse travamento genérico não se aplica lá.
+const CLICK_LOCK_MS = 300;
+const CLICK_LOCK_EXCLUDE_SELECTOR = '#grid, #daily-grid, #pvp-grid';
+document.addEventListener('click', (e) => {
+  if (e.target.closest(CLICK_LOCK_EXCLUDE_SELECTOR)) return; // jogo oficial: sem travamento genérico
+  const now = Date.now();
+  if (now < state.clickLockedUntil || state.pendingServerCalls > 0) {
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+  state.clickLockedUntil = now + CLICK_LOCK_MS;
+}, true);
+
+export const show = id => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  resetScroll(id);
+};
+
+// pilha de navegação — usada por telas que têm um botão "voltar" que depende
+// de onde a pessoa veio (perfil, ranking). Antes disso, cada uma dessas
+// telas guardava só 1 variável fixa "pra onde volta". Isso quebrava em
+// cadeias mais profundas (ex.: perfil A -> ranking -> perfil B, clicando num
+// nick de dentro do ranking -> ranking de novo): as 2 variáveis podiam
+// acabar apontando uma pra outra, e "voltar" entrava num loop que nunca
+// alcançava o menu de novo. Uma pilha de verdade resolve isso de forma
+// estrutural — cada "voltar" sempre tira exatamente 1 nível dela, e ela só
+// cresce quando alguém abre uma tela nova (nunca sozinha), então bate no
+// fundo (menu) mais cedo ou mais tarde, não importa quantos níveis a pessoa
+// empilhar antes.
+let screenBackStack = [];
+export function pushScreenAndShow(nextScreenId, cameFromScreenId) {
+  screenBackStack.push(cameFromScreenId || 'menu-screen');
+  show(nextScreenId);
+}
+export function popScreenBack() {
+  show(screenBackStack.pop() || 'menu-screen');
+}
+// menu é a "raiz" da navegação — zera a pilha de "voltar" toda vez que quem
+// chama (showMenu) decide voltar pra raiz, pra nunca ir acumulando entradas
+// órfãs de sessões de perfil/ranking anteriores
+export function resetScreenBackStack() {
+  screenBackStack = [];
+}
+
+// depois de trocar o conteúdo de uma tela que já estava aberta (ex.: troca de
+// aba do ranking), houve mais de um relato de tela ficando presa no topo sem
+// rolar. Além de a página inteira ter passado a rolar de verdade (nada mais
+// de overflow-y aninhado dentro de flexbox centralizado — ver comentário
+// junto de .screen no <style>), isso aqui força um reflow e volta pro topo
+// sempre que o conteúdo muda, como reforço extra.
+export function resetScroll(screenId) {
+  const el = $(screenId);
+  if (!el) return;
+  void el.offsetHeight; // força o navegador recalcular o layout
+  window.scrollTo(0, 0); // quem rola agora é a página inteira, não mais cada .screen por dentro
+}
