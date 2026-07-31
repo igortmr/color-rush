@@ -1122,17 +1122,39 @@ const DAILY_COLORS = [
   { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',     es: 'ROJO'       }, hex: '#ff3c3c' },
 ];
 // DAILY_PALETTE_OVERRIDE: mesma ideia do DAILY_MODE_OVERRIDE (ver mais
-// abaixo) só que pra paleta — força um dia específico a usar outras 4 cores
-// em vez da paleta padrão do desafio diário (DAILY_COLORS), sem mexer no
-// sorteio de verdade dos outros dias. Sempre precisa ter EXATAMENTE 4 cores
-// (== SQUARES) pra continuar garantindo que nunca repete cor de fundo na
-// mesma rodada (ver dailyNewRound).
+// abaixo) só que pra paleta — força um dia específico a usar outras cores em
+// vez da paleta padrão do desafio diário (DAILY_COLORS), sem mexer no
+// sorteio de verdade dos outros dias. Precisa de PELO MENOS 4 cores (==
+// SQUARES) — dailyNewRound() sorteia 4 distintas a cada rodada dentro da
+// paleta do dia, igual o Clássico/Reverso normal já faz com as 8 cores de
+// COLORS (ver poolFor); só quando a paleta tem EXATAMENTE 4 (caso de
+// 2026-07-30 abaixo) é que as mesmas 4 acabam aparecendo toda rodada.
 const DAILY_PALETTE_OVERRIDE = {
   '2026-07-30': [
     { key: 'blue',   name: { pt: 'AZUL',  en: 'BLUE',   es: 'AZUL'   }, hex: '#1e90ff' },
     { key: 'cyan',   name: { pt: 'CIANO', en: 'CYAN',   es: 'CIAN'   }, hex: '#00d2d3' },
     { key: 'green',  name: { pt: 'VERDE', en: 'GREEN',  es: 'VERDE'  }, hex: '#2ed573' },
     { key: 'purple', name: { pt: 'ROXO',  en: 'PURPLE', es: 'MORADO' }, hex: '#a55eea' },
+  ],
+  // 12 cores a pedido — inclui as 8 do jogo livre (COLORS) + marrom (já usado
+  // na paleta padrão do diário, DAILY_COLORS) + 3 novas exclusivas do diário
+  // (cinza/branco/preto, nunca usadas em nenhuma outra paleta do jogo).
+  // "preto" usa #1a1a1a (quase preto) em vez de #000 puro: o brilho do
+  // quadrado (box-shadow) usa a mesma hex, e um brilho literalmente preto não
+  // apareceria — assim o quadrado ainda "acende" como os outros, só mais escuro.
+  '2026-07-31': [
+    { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO' }, hex: '#ffd32a' },
+    { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'     }, hex: '#1e90ff' },
+    { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'    }, hex: '#2ed573' },
+    { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'   }, hex: '#a55eea' },
+    { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'     }, hex: '#00d2d3' },
+    { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'     }, hex: '#ff3c3c' },
+    { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'  }, hex: '#ff7f24' },
+    { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'     }, hex: '#ff6b9d' },
+    { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',  es: 'MARRÓN'   }, hex: '#73421c' },
+    { key: 'gray',   name: { pt: 'CINZA',    en: 'GRAY',   es: 'GRIS'     }, hex: '#8a8a8a' },
+    { key: 'white',  name: { pt: 'BRANCO',   en: 'WHITE',  es: 'BLANCO'   }, hex: '#ffffff' },
+    { key: 'black',  name: { pt: 'PRETO',    en: 'BLACK',  es: 'NEGRO'    }, hex: '#1a1a1a' },
   ],
 };
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
@@ -1763,9 +1785,10 @@ function seededShuffle(rng, a) {
 // DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
 // sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
 // de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
-// (29/07/2026) é Clássico; amanhã (30/07/2026) também será Clássico, com a
-// paleta trocada pra Azul/Ciano/Verde/Roxo (ver DAILY_PALETTE_OVERRIDE).
-const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic' };
+// (30/07/2026) é Clássico, com a paleta trocada pra Azul/Ciano/Verde/Roxo;
+// amanhã (31/07/2026) será Reverso, com a paleta estendida de 12 cores (ver
+// DAILY_PALETTE_OVERRIDE).
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse' };
 function dailyModeForToday(dateStr) {
   if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
