@@ -1801,6 +1801,31 @@ async function renderAdminPanel(uid, currentNick, stats) {
   }
   wrap.appendChild(friendsList);
 
+  // histórico de IPs/locais dessa conta (ver checkIpAndFlag em
+  // functions/index.js) — só pra revisão manual, não marca nada sozinho.
+  // Cada IP é uma linha própria de propósito (não uma frase corrida), pra
+  // ficar fácil comparar visualmente com o histórico de outra conta suspeita.
+  const ipTitle = document.createElement('div');
+  ipTitle.innerHTML = `<b>Histórico de IPs (${(details.ipHistory || []).length}):</b>`;
+  wrap.appendChild(ipTitle);
+  const ipList = document.createElement('div');
+  ipList.style.cssText = 'display:flex; flex-direction:column; gap:2px;';
+  if (!details.ipHistory || !details.ipHistory.length) {
+    const row = document.createElement('div');
+    row.className = 'muted';
+    row.textContent = 'Nenhum IP registrado ainda.';
+    ipList.appendChild(row);
+  } else {
+    details.ipHistory.forEach(h => {
+      const row = document.createElement('div');
+      row.className = 'muted';
+      const place = [h.city, h.country].filter(Boolean).join(', ') || '(local desconhecido)';
+      row.textContent = `🌐 ${h.ip} — ${place} — ${fmtDateTime(h.at)}`;
+      ipList.appendChild(row);
+    });
+  }
+  wrap.appendChild(ipList);
+
   // editar nick + banir/desbanir — ambos validados de novo no servidor
   // (adminSetNick / adminSetBanned), isso aqui só monta a UI
   const toolsBox = document.createElement('div');
