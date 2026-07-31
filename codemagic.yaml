@@ -25,12 +25,12 @@ workflows:
         XCODE_PROJECT: "app/ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
         # CFBundleShortVersionString ("versão" visível na App Store, ex.
-        # "1.1"). A Apple recusa reenviar uma versão igual ou menor que a
+        # "1.0.1"). A Apple recusa reenviar uma versão igual ou menor que a
         # última aprovada -- diferente do número de build ($BUILD_NUMBER
         # logo abaixo, que o Codemagic já incrementa sozinho), essa aqui
         # precisa ser subida manualmente aqui toda vez que fizer uma nova
         # submissão pro App Store depois da primeira (1.0) já aprovada.
-        XCODE_MARKETING_VERSION: "1.1"
+        XCODE_MARKETING_VERSION: "1.0.1"
       node: latest
       xcode: latest
     scripts:
