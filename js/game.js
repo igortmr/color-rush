@@ -1523,8 +1523,18 @@ function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
 
 // maior pontuação primeiro; empate é desempatado por quem bateu o recorde primeiro
+// desempate por MENOS TEMPO gasto na partida que gerou a pontuação (não mais
+// "quem fez primeiro"). durationMs vem de <modo>DurationMs (ou
+// bestScoreDurationMs no desafio diário — ver submitGameResult/
+// submitDailyResult em functions/index.js), gravado a partir do mesmo
+// elapsedMs que o anti-cheat já calculava, só quando aquela tentativa bate
+// um recorde novo. Registros de antes dessa mudança (ou pontuação feita sem
+// conta, sem sessão de servidor pra medir tempo — ver claimPendingScore) não
+// têm esse campo; só nesse caso os dois lados caem de volta pro critério
+// antigo (quem pontuou primeiro).
 function compareRankRows(a, b) {
   if (b.pts !== a.pts) return b.pts - a.pts;
+  if (a.durationMs != null && b.durationMs != null) return a.durationMs - b.durationMs;
   const at = a.at ? a.at.toMillis() : Infinity;
   const bt = b.at ? b.at.toMillis() : Infinity;
   return at - bt;
@@ -3136,14 +3146,14 @@ async function renderRankPreview(field, bodyElId, myPts) {
     const rows = [];
     for (const r of all) {
       const data = rowData(r);
-      if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
+      if (data[field] > 0) rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], durationMs: data[field + 'DurationMs'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
     }
 
     // localiza (ou insere) a linha do jogador (admin/banido nunca aparece, nem pra si mesma)
     const youLabel = lang === 'en' ? 'YOU' : lang === 'es' ? 'TÚ' : 'VOCÊ';
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
     if (myIndex === -1 && myData.admin !== true && myData.banned !== true) {
-      rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, stats: offline ? null : myData, replaySessionId: offline ? undefined : myData[field + 'ReplaySessionId'] });
+      rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, durationMs: offline ? undefined : myData[field + 'DurationMs'], stats: offline ? null : myData, replaySessionId: offline ? undefined : myData[field + 'ReplaySessionId'] });
     }
 
     rows.sort(compareRankRows);
@@ -3226,7 +3236,7 @@ async function computeModeRanks(uid) {
     const rows = [];
     for (const r of all) {
       const data = rowData(r);
-      if ((data[field] || 0) > 0) rows.push({ uid: r.uid, pts: data[field], at: data[field + 'At'] });
+      if ((data[field] || 0) > 0) rows.push({ uid: r.uid, pts: data[field], at: data[field + 'At'], durationMs: data[field + 'DurationMs'] });
     }
     rows.sort(compareRankRows);
     const idx = rows.findIndex(x => x.uid === uid);
@@ -4170,14 +4180,14 @@ window.loadRanking = async (m) => {
       if (m === 'level') {
         rows.push({ uid: r.uid, nick: data.nick, pts: data.xp || 0, at: null, stats: data });
       } else if (data[field] > 0) {
-        rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
+        rows.push({ uid: r.uid, nick: data.nick, pts: data[field], at: data[field + 'At'], durationMs: data[field + 'DurationMs'], stats: data, replaySessionId: data[field + 'ReplaySessionId'] });
       }
     }
     // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
     // (exceto se for admin ou banido — essas nunca devem aparecer no ranking, nem pra si mesmas)
     if (!offline && currentUser && myData.nick && myData.admin !== true && myData.banned !== true && !rows.some(r => r.uid === currentUser.uid)) {
       if (m === 'level') rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData.xp || 0, at: null, stats: myData });
-      else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], stats: myData, replaySessionId: myData[field + 'ReplaySessionId'] });
+      else if ((myData[field] || 0) > 0) rows.push({ uid: currentUser.uid, nick: myData.nick, pts: myData[field], at: myData[field + 'At'], durationMs: myData[field + 'DurationMs'], stats: myData, replaySessionId: myData[field + 'ReplaySessionId'] });
     }
     rows.sort(compareRankRows);
     rankingRows = rows;
@@ -4275,12 +4285,12 @@ async function loadDailyTodayRanking() {
       // nesse ranking, nem pra si mesmo
       const stats = statsByUid[data.uid] || (isMe ? myData : null);
       if (!stats || stats.admin === true || stats.banned === true) return;
-      // bestScoreAt só avança no servidor quando a tentativa bate um recorde
-      // novo do dia (ver submitDailyResult em functions/index.js) — não é só
-      // "última tentativa enviada", então dá pra usar de verdade pra
-      // desempatar por "quem pontuou primeiro", igual já é feito nos outros
-      // rankings (compareRankRows)
-      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, stats, replaySessionId: data.bestScoreSessionId });
+      // bestScoreAt/bestScoreDurationMs só avançam no servidor quando a
+      // tentativa bate um recorde novo do dia (ver submitDailyResult em
+      // functions/index.js) — não é só "última tentativa enviada", então dá
+      // pra usar de verdade pro desempate por menos tempo gasto, igual já é
+      // feito nos outros rankings (compareRankRows)
+      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, durationMs: data.bestScoreDurationMs, stats, replaySessionId: data.bestScoreSessionId });
     });
     rows.sort(compareRankRows);
     dailyTodayRows = rows;
