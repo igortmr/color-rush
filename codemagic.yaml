@@ -24,6 +24,13 @@ workflows:
         # existe mais Podfile nessa versão).
         XCODE_PROJECT: "app/ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
+        # CFBundleShortVersionString ("versão" visível na App Store, ex.
+        # "1.1"). A Apple recusa reenviar uma versão igual ou menor que a
+        # última aprovada -- diferente do número de build ($BUILD_NUMBER
+        # logo abaixo, que o Codemagic já incrementa sozinho), essa aqui
+        # precisa ser subida manualmente aqui toda vez que fizer uma nova
+        # submissão pro App Store depois da primeira (1.0) já aprovada.
+        XCODE_MARKETING_VERSION: "1.1"
       node: latest
       xcode: latest
     scripts:
@@ -261,14 +268,21 @@ workflows:
       - name: Configurar assinatura de código
         script: |
           xcode-project use-profiles
-      - name: Incrementar número da build (evita duplicidade no App Store Connect)
+      - name: Incrementar número da build e versão (evita duplicidade/regressão no App Store Connect)
         script: |
           # o projeto iOS nasce do zero a cada build (rm -rf ios), sempre com
           # o número "1" — e a Apple recusa reenviar um número já usado pra
           # mesma versão. $BUILD_NUMBER é uma variável própria do Codemagic
           # que já vem incrementando sozinha a cada build deste app.
+          #
+          # já a versão "marketing" (CFBundleShortVersionString) também
+          # nasce do zero como "1.0" a cada build (template padrão do
+          # Xcode/Capacitor) — precisa ser maior que a última aprovada, por
+          # isso aplica $XCODE_MARKETING_VERSION (definida ali em cima, nos
+          # vars) por cima do valor gerado.
           cd app/ios/App
           agvtool new-version -all $BUILD_NUMBER
+          agvtool new-marketing-version $XCODE_MARKETING_VERSION
       - name: Build do .ipa
         script: |
           xcode-project build-ipa \
