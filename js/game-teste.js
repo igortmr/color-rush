@@ -140,6 +140,7 @@ const callAdminSetNick = callable('adminSetNick');
 const callAdminSetXp = callable('adminSetXp');
 const callBackfillPendingPigmentos = callable('backfillPendingPigmentos');
 const callAdminRecomputeScoresSnapshot = callable('adminRecomputeScoresSnapshot');
+const callBackfillReplayDurations = callable('backfillReplayDurations');
 // desafio diário — mesmo esquema de sessão/validação de tempo do modo normal
 // (ver startDailyAttempt/submitDailyResult em functions/index.js)
 const callStartDailyAttempt = callable('startDailyAttempt');
@@ -3484,6 +3485,25 @@ window.runBackfillPendingPigmentos = async (btn) => {
   }
 };
 
+// preenche <modo>DurationMs/bestScoreDurationMs de recordes/pontuações
+// retroativas — ver backfillReplayDurations em functions/index.js. Rodar
+// uma vez só; idempotente, então clicar de novo por engano não faz mal
+// (só reprocessa o que ainda estiver faltando).
+window.runBackfillReplayDurations = async (btn) => {
+  const status = $('backfill-duration-status');
+  btn.disabled = true;
+  if (status) status.textContent = 'Rodando...';
+  try {
+    const res = await callBackfillReplayDurations();
+    const d = res.data;
+    if (status) status.textContent = `✅ Concluído — ${d.scoresUpdated} recorde(s) e ${d.dailyUpdated} pontuação(ões) do diário atualizados. Sem dado suficiente pra calcular: ${d.scoresFieldsSkipped} recorde(s) e ${d.dailySkipped} do diário (ficam no critério antigo).`;
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro ao rodar backfill.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
 // outra ferramenta avulsa só pra admin, mesmo raciocínio da de cima — define
 // o XP da PRÓPRIA conta pro mínimo do nível digitado (ver totalXpForLevel).
 // Só atualiza o essencial na tela (chip de nível no cabeçalho + myData.xp),
@@ -3942,6 +3962,12 @@ async function renderProfile(viewStats, viewNick, viewUid) {
         <p class="muted" style="margin-top:6px;">Recalcula pendingPigmentos de todo mundo a partir do que ainda está na caixa de entrada de cada um. Seguro rodar mais de uma vez.</p>
         <button class="secondary" onclick="runBackfillPendingPigmentos(this)">Rodar backfill de pigmentos pendentes</button>
         <div class="muted" id="backfill-status" style="margin-top:6px;"></div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <b>🛠️ Admin — preencher duração de partidas retroativas</b>
+        <p class="muted" style="margin-top:6px;">Preenche a duração das partidas que já bateram recorde antes dessa medição existir (usa a sessão salva do recorde atual — start/fim já gravados). O ranking passou a desempatar por "menos tempo gasto" em vez de "quem pontuou primeiro"; sem isso, todo recorde antigo continua no critério velho. Seguro rodar mais de uma vez.</p>
+        <button class="secondary" onclick="runBackfillReplayDurations(this)">Rodar backfill de duração</button>
+        <div class="muted" id="backfill-duration-status" style="margin-top:6px;"></div>
       </div>
       <div class="card" style="text-align:left;">
         <b>🛠️ Admin — atualizar ranking agora</b>
