@@ -199,40 +199,52 @@
     </div>
     <span class="record-badge lock-badge" id="lock-daily" style="display:none;"></span>
   </div>
-  <div class="mode-card" onclick="startGame('classic')">
-    <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
-    <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
-    <div class="mode-card-footer">
-      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('classic');" title="Ver ranking do modo Clássico"><span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
-      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('classic');" data-i18n="tut_btn">❓ Como jogar</button>
+  <div class="mode-card mode-card-tabbed" id="card-pair-cr">
+    <div class="mode-tabs">
+      <button type="button" class="mode-tab active" id="tab-classic" data-pair="cr" data-mode="classic" onclick="selectModeTab(event,'cr','classic')" data-i18n="mode_classic_title">🎨 Clássico</button>
+      <button type="button" class="mode-tab" id="tab-reverse" data-pair="cr" data-mode="reverse" onclick="selectModeTab(event,'cr','reverse')">
+        <span data-i18n="mode_reverse_title">🔄 Reverso</span>
+        <span class="record-badge lock-badge mode-tab-lock" id="lock-reverse" style="display:none;"></span>
+      </button>
+    </div>
+    <div class="mode-tab-body" data-pair="cr" onclick="startPairMode('cr')">
+      <p data-i18n-html="mode_classic_desc" data-pair-content="cr" data-mode="classic">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
+      <p data-i18n-html="mode_reverse_desc" data-pair-content="cr" data-mode="reverse" style="display:none;">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
+      <div class="mode-tab-locked-msg" data-pair-lockmsg="cr" style="display:none;"></div>
+      <div class="mode-card-footer" data-pair-content="cr" data-mode="classic">
+        <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('classic');" title="Ver ranking do modo Clássico"><span data-i18n="record_label">Seu recorde:</span> <span id="record-classic">0</span></span>
+        <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('classic');" data-i18n="tut_btn">❓ Como jogar</button>
+      </div>
+      <div class="mode-card-footer" data-pair-content="cr" data-mode="reverse" style="display:none;">
+        <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('reverse');" title="Ver ranking do modo Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
+        <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('reverse');" data-i18n="tut_btn">❓ Como jogar</button>
+      </div>
     </div>
   </div>
-  <div class="mode-card" id="card-reverse" onclick="startGame('reverse')">
-    <h2 data-i18n="mode_reverse_title">🔄 Reverso</h2>
-    <p data-i18n-html="mode_reverse_desc">Clique no quadrado onde a <b>palavra pedida</b> está escrita e memorize a <b>cor do quadrado</b>. Na próxima rodada, clique onde está escrito o nome da cor memorizada.</p>
-    <div class="mode-card-footer">
-      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('reverse');" title="Ver ranking do modo Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-reverse">0</span></span>
-      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('reverse');" data-i18n="tut_btn">❓ Como jogar</button>
+  <div class="mode-card mode-card-tabbed" id="card-pair-fr">
+    <div class="mode-tabs">
+      <button type="button" class="mode-tab active" id="tab-shapes" data-pair="fr" data-mode="shapes" onclick="selectModeTab(event,'fr','shapes')">
+        <span data-i18n="mode_shapes_title">🔶 Formas</span>
+        <span class="record-badge lock-badge mode-tab-lock" id="lock-shapes" style="display:none;"></span>
+      </button>
+      <button type="button" class="mode-tab" id="tab-shapes-reverse" data-pair="fr" data-mode="shapes-reverse" onclick="selectModeTab(event,'fr','shapes-reverse')">
+        <span data-i18n-html="mode_shapes_reverse_title"><span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso</span>
+        <span class="record-badge lock-badge mode-tab-lock" id="lock-shapes-reverse" style="display:none;"></span>
+      </button>
     </div>
-    <span class="record-badge lock-badge" id="lock-reverse" style="display:none;"></span>
-  </div>
-  <div class="mode-card" id="card-shapes" onclick="startGame('shapes')">
-    <h2 data-i18n="mode_shapes_title">🔶 Formas</h2>
-    <p data-i18n-html="mode_shapes_desc">Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.</p>
-    <div class="mode-card-footer">
-      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('shapes');" title="Ver ranking do modo Formas"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
-      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes');" data-i18n="tut_btn">❓ Como jogar</button>
+    <div class="mode-tab-body" data-pair="fr" onclick="startPairMode('fr')">
+      <p data-i18n-html="mode_shapes_desc" data-pair-content="fr" data-mode="shapes">Clique na <b>forma pedida</b> e memorize a <b>palavra</b> escrita nela. Na próxima rodada, clique na forma cujo nome você memorizou.</p>
+      <p data-i18n-html="mode_shapes_reverse_desc" data-pair-content="fr" data-mode="shapes-reverse" style="display:none;">Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.</p>
+      <div class="mode-tab-locked-msg" data-pair-lockmsg="fr" style="display:none;"></div>
+      <div class="mode-card-footer" data-pair-content="fr" data-mode="shapes">
+        <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('shapes');" title="Ver ranking do modo Formas"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes">0</span></span>
+        <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes');" data-i18n="tut_btn">❓ Como jogar</button>
+      </div>
+      <div class="mode-card-footer" data-pair-content="fr" data-mode="shapes-reverse" style="display:none;">
+        <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('shapes-reverse');" title="Ver ranking do modo Formas Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
+        <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes-reverse');" data-i18n="tut_btn">❓ Como jogar</button>
+      </div>
     </div>
-    <span class="record-badge lock-badge" id="lock-shapes" style="display:none;"></span>
-  </div>
-  <div class="mode-card" id="card-shapes-reverse" onclick="startGame('shapes-reverse')">
-    <h2 data-i18n-html="mode_shapes_reverse_title"><span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span> Formas Reverso</h2>
-    <p data-i18n-html="mode_shapes_reverse_desc">Clique na <b>palavra pedida</b> e memorize a <b>forma ao redor dela</b>. Na próxima rodada, clique no nome da forma memorizada.</p>
-    <div class="mode-card-footer">
-      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('shapes-reverse');" title="Ver ranking do modo Formas Reverso"><span data-i18n="record_label">Seu recorde:</span> <span id="record-shapes-reverse">0</span></span>
-      <button class="tut-link-btn" onclick="event.stopPropagation(); startTutorial('shapes-reverse');" data-i18n="tut_btn">❓ Como jogar</button>
-    </div>
-    <span class="record-badge lock-badge" id="lock-shapes-reverse" style="display:none;"></span>
   </div>
   <div class="mode-card" id="card-trio" onclick="startGame('trio')">
     <h2 data-i18n="mode_trio_title">🔺 Trio</h2>

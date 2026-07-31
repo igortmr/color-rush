@@ -364,6 +364,43 @@
   .mode-card:hover { transform: scale(1.03); border-color: var(--neon-purple); box-shadow: 0 0 22px rgba(177,77,255,0.3); }
   .mode-card h2 { font-family: 'Orbitron', sans-serif; font-size: 1.15rem; letter-spacing: 0.5px; margin-bottom: 6px; }
   .mode-card p { color: #a9b4e0; font-size: 0.88rem; line-height: 1.5; margin-bottom: 10px; }
+
+  /* card de par de modos (Clássico/Reverso, Formas/Formas Reverso) — 2 abas
+     lado a lado em cima, uma caixa de conteúdo compartilhada embaixo (troca
+     de acordo com a aba ativa). Existe pra compactar a tela inicial, que
+     tava crescendo demais na vertical com 1 card cheio por modo. */
+  .mode-card-tabbed { padding: 0; cursor: default; overflow: hidden; }
+  .mode-card-tabbed:hover { transform: none; border-color: rgba(255,255,255,0.08); box-shadow: none; }
+  .mode-tabs { display: flex; }
+  .mode-tab {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255,255,255,0.03);
+    border: none;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    color: #a9b4e0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 12px 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .mode-tab:hover { background: rgba(255,255,255,0.07); color: #eef1ff; }
+  .mode-tab.active { color: #fff; border-bottom-color: var(--neon-purple); background: rgba(177,77,255,0.1); }
+  .mode-tab.locked { opacity: 0.6; }
+  .mode-tab-lock { font-size: 0.62rem; padding: 2px 8px; white-space: normal; line-height: 1.3; }
+  .mode-tab-body { padding: 18px 20px 20px; cursor: pointer; transition: filter 0.15s; }
+  .mode-tab-body.locked { cursor: not-allowed; }
+  .mode-tab-body.locked:hover { filter: none; }
+  .mode-tab-locked-msg { color: #cfd8ff; text-align: center; font-weight: 700; padding: 4px 0 2px; }
   .record-badge {
     display: inline-block;
     background: #060a16;
