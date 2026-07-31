@@ -428,10 +428,10 @@ function applyEquippedCosmetics() {
 // DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
 // sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
 // de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
-// (30/07/2026) é Clássico, com a paleta trocada pra Azul/Ciano/Verde/Roxo;
-// amanhã (31/07/2026) será Reverso, com a paleta estendida de 12 cores (ver
-// DAILY_PALETTE_OVERRIDE).
-const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse' };
+// (31/07/2026) é Reverso, com a paleta estendida de 12 cores; amanhã
+// (01/08/2026) será Clássico, reaproveitando a MESMA paleta de 12 cores de
+// hoje (ver DAILY_PALETTE_OVERRIDE).
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse', '2026-08-01': 'classic' };
 function dailyModeForToday(dateStr) {
   if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);

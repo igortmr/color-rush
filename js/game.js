@@ -1159,6 +1159,23 @@ const DAILY_PALETTE_OVERRIDE = {
     { key: 'white',  name: { pt: 'BRANCO',   en: 'WHITE',  es: 'BLANCO'   }, hex: '#ffffff' },
     { key: 'black',  name: { pt: 'PRETO',    en: 'BLACK',  es: 'NEGRO'    }, hex: '#1a1a1a' },
   ],
+  // amanhã (01/08/2026) reaproveita a MESMA paleta de 12 cores de hoje, a
+  // pedido — só a paleta muda de dia (dailyLocalDateStr), o modo forçado
+  // pra Clássico é o DAILY_MODE_OVERRIDE logo abaixo
+  '2026-08-01': [
+    { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO' }, hex: '#ffd32a' },
+    { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'     }, hex: '#1e90ff' },
+    { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'    }, hex: '#2ed573' },
+    { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'   }, hex: '#a55eea' },
+    { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'     }, hex: '#00d2d3' },
+    { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'     }, hex: '#ff3c3c' },
+    { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'  }, hex: '#ff7f24' },
+    { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'     }, hex: '#ff6b9d' },
+    { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',  es: 'MARRÓN'   }, hex: '#73421c' },
+    { key: 'gray',   name: { pt: 'CINZA',    en: 'GRAY',   es: 'GRIS'     }, hex: '#8a8a8a' },
+    { key: 'white',  name: { pt: 'BRANCO',   en: 'WHITE',  es: 'BLANCO'   }, hex: '#ffffff' },
+    { key: 'black',  name: { pt: 'PRETO',    en: 'BLACK',  es: 'NEGRO'    }, hex: '#1a1a1a' },
+  ],
 };
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS, ou o override do dia — ver
@@ -1823,10 +1840,10 @@ function seededShuffle(rng, a) {
 // DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
 // sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
 // de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
-// (30/07/2026) é Clássico, com a paleta trocada pra Azul/Ciano/Verde/Roxo;
-// amanhã (31/07/2026) será Reverso, com a paleta estendida de 12 cores (ver
-// DAILY_PALETTE_OVERRIDE).
-const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse' };
+// (31/07/2026) é Reverso, com a paleta estendida de 12 cores; amanhã
+// (01/08/2026) será Clássico, reaproveitando a MESMA paleta de 12 cores de
+// hoje (ver DAILY_PALETTE_OVERRIDE).
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse', '2026-08-01': 'classic' };
 function dailyModeForToday(dateStr) {
   if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
