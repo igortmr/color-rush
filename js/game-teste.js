@@ -1736,6 +1736,26 @@ const show = id => {
   $(id).classList.add('active');
   resetScroll(id);
 };
+
+// pilha de navegação — usada por telas que têm um botão "voltar" que depende
+// de onde a pessoa veio (perfil, ranking). Antes disso, cada uma dessas
+// telas guardava só 1 variável fixa "pra onde volta". Isso quebrava em
+// cadeias mais profundas (ex.: perfil A -> ranking -> perfil B, clicando num
+// nick de dentro do ranking -> ranking de novo): as 2 variáveis podiam
+// acabar apontando uma pra outra, e "voltar" entrava num loop que nunca
+// alcançava o menu de novo. Uma pilha de verdade resolve isso de forma
+// estrutural — cada "voltar" sempre tira exatamente 1 nível dela, e ela só
+// cresce quando alguém abre uma tela nova (nunca sozinha), então bate no
+// fundo (menu) mais cedo ou mais tarde, não importa quantos níveis a pessoa
+// empilhar antes.
+let screenBackStack = [];
+function pushScreenAndShow(nextScreenId, cameFromScreenId) {
+  screenBackStack.push(cameFromScreenId || 'menu-screen');
+  show(nextScreenId);
+}
+function popScreenBack() {
+  show(screenBackStack.pop() || 'menu-screen');
+}
 // depois de trocar o conteúdo de uma tela que já estava aberta (ex.: troca de
 // aba do ranking), houve mais de um relato de tela ficando presa no topo sem
 // rolar. Além de a página inteira ter passado a rolar de verdade (nada mais
@@ -2411,6 +2431,11 @@ window.showMenu = () => {
     labelEl.appendChild(document.createTextNode(T[lang].user_greeting(myData.nick || '')));
     $('menu-logout-btn').textContent = T[lang].sair_label;
   }
+  // menu é a "raiz" da navegação — zera a pilha de "voltar" (ver
+  // pushScreenAndShow/popScreenBack) toda vez que ela é mostrada de
+  // verdade, pra nunca ir acumulando entradas órfãs de sessões de
+  // perfil/ranking anteriores
+  screenBackStack = [];
   show('menu-screen');
 };
 
@@ -3147,22 +3172,17 @@ window.goSignup = () => {
 };
 
 /* ================== perfil / conquistas ================== */
-// pra onde o botão "voltar" do perfil deve levar — muda conforme de onde o
-// perfil foi aberto (menu, ranking completo, ou mini-ranking do fim de jogo)
-let profileBackTarget = 'menu-screen';
 window.showProfile = () => {
-  profileBackTarget = 'menu-screen';
-  show('profile-screen');
+  pushScreenAndShow('profile-screen', 'menu-screen');
   renderProfile();
 };
-window.profileBack = () => show(profileBackTarget);
+window.profileBack = () => popScreenBack();
 
 // abre o perfil ao clicar num nick do ranking (mini ou completo). Se for você
 // mesmo, abre a versão própria de sempre (editável, dados sempre frescos);
 // senão, abre a versão somente-leitura (medalhas + posição no ranking).
 function openProfileFromRanking(r, backTarget) {
-  profileBackTarget = backTarget;
-  show('profile-screen');
+  pushScreenAndShow('profile-screen', backTarget);
   const isMe = !offline && currentUser && (r.uid === currentUser.uid || r.uid === '__me__');
   if (isMe) renderProfile();
   else renderProfile(r.stats, r.nick, r.uid);
@@ -4063,19 +4083,15 @@ async function submitPendingScore() {
 }
 
 /* ================== ranking ================== */
-// mesma ideia do profileBackTarget (ver openProfileFromRanking/profileBack):
-// guarda de onde a tela de ranking foi aberta, pra "VOLTAR" saber pra onde
-// voltar de verdade em vez de sempre cair no menu. Default 'menu-screen'
-// preserva o comportamento de sempre pra quem abre ranking direto do menu
-// (cards de modo, atalho "🏆 RANKING" etc.) — só quem passa um backTarget
-// explícito (hoje, só profileRankGoto) muda esse padrão.
-let rankingBackTarget = 'menu-screen';
+// backTarget (2º parâmetro) é opcional — vira 'menu-screen' na pilha (ver
+// pushScreenAndShow) pra quem abre ranking direto do menu (cards de modo,
+// atalho "🏆 RANKING" etc.); profileRankGoto passa 'profile-screen' quando
+// abre a partir do perfil de alguém.
 window.showRanking = (tab, backTarget) => {
-  rankingBackTarget = backTarget || 'menu-screen';
-  show('ranking-screen');
+  pushScreenAndShow('ranking-screen', backTarget);
   loadRanking(tab || mode || 'classic'); // abre na aba pedida, ou no modo que a pessoa estava jogando
 };
-window.rankingBack = () => show(rankingBackTarget);
+window.rankingBack = () => popScreenBack();
 
 const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', caos: 'caos', level: 'xp', geral: 'total', divulgador: 'referrals' };
 
