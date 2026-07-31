@@ -1963,8 +1963,13 @@ window.inviteFriends = async (statusElId = 'invite-status') => {
     } else {
       await navigator.clipboard.writeText(text);
       if (statusEl) {
+        // esses status ficam "display:none" quando vazios (ver HTML) — só
+        // um textContent sozinho deixava um espaço fantasma reservado pelo
+        // gap do flex mesmo sem nenhum texto aparecendo (esticava, por
+        // exemplo, o espaço entre o nick e o botão de amizade no perfil)
+        statusEl.style.display = '';
         statusEl.textContent = T[lang].share_copied;
-        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        setTimeout(() => { statusEl.textContent = ''; statusEl.style.display = 'none'; }, 3000);
       }
     }
   } catch {}
@@ -1979,8 +1984,9 @@ window.copyRefCode = async (statusElId) => {
     await navigator.clipboard.writeText(myData.refCode);
     const el = $(statusElId);
     if (el) {
+      el.style.display = ''; // ver comentário equivalente em inviteFriends
       el.textContent = T[lang].share_copied;
-      setTimeout(() => { el.textContent = ''; }, 3000);
+      setTimeout(() => { el.textContent = ''; el.style.display = 'none'; }, 3000);
     }
   } catch {}
 };

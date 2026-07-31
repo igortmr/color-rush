@@ -522,7 +522,7 @@
     <div class="muted" id="profile-summary"></div>
   </div>
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
-  <div class="muted" id="profile-invite-status"></div>
+  <div class="muted" id="profile-invite-status" style="display:none;"></div>
   <!-- código de indicação da própria pessoa, pra passar direto (de viva voz,
        WhatsApp, etc.) sem precisar mandar o link inteiro — ver ref-code-input
        na tela de nick, que é onde um amigo cola esse código -->
@@ -531,7 +531,7 @@
     <b id="profile-refcode-value" style="font-family:'Orbitron',sans-serif; letter-spacing:1px; color:var(--neon-yellow);"></b>
     <button class="secondary" style="padding:5px 9px;" onclick="copyRefCode('profile-refcode-status')" title="Copiar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
   </div>
-  <div class="muted" id="profile-refcode-status"></div>
+  <div class="muted" id="profile-refcode-status" style="display:none;"></div>
   <div id="profile-friend-action" style="display:none;"></div>
   <div class="muted" id="profile-friend-status"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
@@ -545,7 +545,7 @@
   </div>
   <div class="muted" id="friends-status"></div>
   <button class="secondary" style="width:100%;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR AMIGO</button>
-  <div class="muted" id="friends-invite-status"></div>
+  <div class="muted" id="friends-invite-status" style="display:none;"></div>
   <!-- mesma ideia do profile-refcode-row no perfil — código pra passar direto
        pra um amigo colar na tela de nick dele -->
   <div id="friends-refcode-row" style="display:none; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:-14px;">
@@ -553,7 +553,7 @@
     <b id="friends-refcode-value" style="font-family:'Orbitron',sans-serif; letter-spacing:1px; color:var(--neon-yellow);"></b>
     <button class="secondary" style="padding:5px 9px;" onclick="copyRefCode('friends-refcode-status')" title="Copiar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
   </div>
-  <div class="muted" id="friends-refcode-status"></div>
+  <div class="muted" id="friends-refcode-status" style="display:none;"></div>
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
 </div>
 
