@@ -30,6 +30,15 @@ import {
   show, resetScroll, pushScreenAndShow, popScreenBack, resetScreenBackStack
 } from './nav.js';
 import { T } from './i18n.js';
+import {
+  MODE_UNLOCK, levelFromXp, lvChip, applyNickFrame, applyRowTheme, avatarSvg,
+  avatarOrDefaultIcon, pigmentIconSvg, renderDailyPrizesLegend, modeLabel,
+  xpInfo, xpStreakMultiplier, totalXpForLevel
+} from './levels.js';
+import {
+  TIER_COLORS, BADGE_DEFS, BADGE_ORDER, unlockedTier, badgePillHtml,
+  equippedBadgeLabel, sharerTierLabel
+} from './badges.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
@@ -166,26 +175,15 @@ const callBuyShopItem = callable('buyShopItem');
 const callSetEquippedItem = callable('setEquippedItem');
 
 /* ================== idioma ================== */
-let lang = 'pt';
-try {
-  // link de compartilhamento pode vir com ?lang=en — se vier, abre já traduzido
-  // e lembra a escolha (senão cai no idioma salvo, ou português por padrão)
-  const urlLang = new URLSearchParams(location.search).get('lang');
-  if (urlLang === 'en' || urlLang === 'pt' || urlLang === 'es') {
-    lang = urlLang;
-    localStorage.setItem('colorRushLang', urlLang);
-  } else {
-    const saved = localStorage.getItem('colorRushLang');
-    lang = (saved === 'en' || saved === 'es') ? saved : 'pt';
-  }
-} catch {}
-auth.languageCode = (lang === 'en' || lang === 'es') ? lang : 'pt'; // e-mails do Firebase (verificação etc.) saem no idioma do jogo
+// detecção inicial (URL/localStorage) agora mora em js/state.js, já que o
+// idioma é lido por quase toda função de renderização em vários módulos
+auth.languageCode = (state.lang === 'en' || state.lang === 'es') ? state.lang : 'pt'; // e-mails do Firebase (verificação etc.) saem no idioma do jogo
 
 // eventos pro Google Analytics (se o gtag não estiver na página, vira um no-op silencioso)
 const track = (name, params) => { try { if (window.gtag) window.gtag('event', name, params || {}); } catch {} };
 
 function applyLanguage() {
-  const dict = T[lang];
+  const dict = T[state.lang];
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (dict[key] != null) el.textContent = dict[key];
@@ -198,21 +196,21 @@ function applyLanguage() {
     const key = el.getAttribute('data-i18n-placeholder');
     if (dict[key] != null) el.placeholder = dict[key];
   });
-  document.documentElement.lang = (lang === 'en') ? 'en' : (lang === 'es') ? 'es' : 'pt-BR';
-  $('lang-select').value = lang;
+  document.documentElement.lang = (state.lang === 'en') ? 'en' : (state.lang === 'es') ? 'es' : 'pt-BR';
+  $('state.lang-select').value = state.lang;
 
   // re-renderiza a tela dinâmica que já estava aberta, se aplicável
   if ($('menu-screen').classList.contains('active')) showMenu();
   if ($('profile-screen').classList.contains('active')) renderProfile();
   if ($('ranking-screen').classList.contains('active')) loadRanking(rankingTab || 'geral');
   if ($('tutorial-screen').classList.contains('active')) {
-    $('tut-title-el').textContent = T[lang].tut_title[tutMode];
+    $('tut-title-el').textContent = T[state.lang].tut_title[tutMode];
     showTutStep(tutStep);
   }
 }
 
 window.setLang = (l) => {
-  lang = l;
+  state.lang = l;
   try { localStorage.setItem('colorRushLang', l); } catch {}
   auth.languageCode = (l === 'en' || l === 'es') ? l : 'pt';
   // reflete o idioma na URL da barra de endereço (sem recarregar a página), pra
@@ -220,7 +218,7 @@ window.setLang = (l) => {
   // levar o idioma junto. Mantém outros parâmetros existentes (ex.: ?ref=)
   try {
     const params = new URLSearchParams(location.search);
-    if (l === 'pt') params.delete('lang'); else params.set('lang', l);
+    if (l === 'pt') params.delete('state.lang'); else params.set('state.lang', l);
     const qs = params.toString();
     const newUrl = location.pathname + (qs ? `?${qs}` : '') + location.hash;
     history.replaceState(null, '', newUrl);
@@ -334,7 +332,7 @@ function spawnConfettiVariant(confettiId) {
   setTimeout(() => layer.remove(), 2800);
 }
 function spawnConfetti() { spawnConfettiVariant(equippedConfetti); }
-const cName = c => c.name[lang];
+const cName = c => c.name[state.lang];
 
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS, ou o override do dia — ver
@@ -354,24 +352,6 @@ const computeTotal = (overrideMode, overrideScore) =>
 // Nível N -> N+1 custa N * 100 de XP (100, 200, 300, ...)
 // bônus de sequência: recompensa acertos mais avançados no run, já que ficam mais difíceis
 // (o tempo por rodada encolhe 5% a cada acerto)
-function xpStreakMultiplier(streak) {
-  if (streak <= 10) return 1;
-  if (streak <= 25) return 1.25;
-  if (streak <= 50) return 1.5;
-  return 2;
-}
-const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15, trio: 20, caos: 25 }; // nível mínimo pra jogar cada modo
-const xpForNext = lv => lv * 100;
-const totalXpForLevel = lv => 50 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
-function levelFromXp(xp) {
-  let lv = 1;
-  while (xp >= totalXpForLevel(lv + 1)) lv++;
-  return lv;
-}
-function xpInfo(xp) {
-  const lv = levelFromXp(xp);
-  return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
-}
 function myXp() { return offline ? 0 : (myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
 function modeUnlocked(m) { return myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
 // conta banida (campo "banned" setado à mão no Firebase Console, ver
@@ -383,211 +363,11 @@ function modeUnlocked(m) { return myData.admin === true || !MODE_UNLOCK[m] || le
 function isBanned() { return myData.banned === true; }
 function blockIfBanned() {
   if (!isBanned()) return false;
-  alert(T[lang].banned_msg);
+  alert(T[state.lang].banned_msg);
   return true;
 }
 
-// cor do emblema de nível é um único degradê contínuo por toda a subida: começa
-// verde no nível 5, passa por azul, roxo, branco, amarelo e laranja, e termina
-// vermelho no nível 95 (ver LV_SPECTRUM/lvSpectrumColor — interpolação linear
-// de RGB entre os "stops" da paleta da marca); cada chip mostra 3 tons vizinhos
-// desse degradê centrados na sua própria faixa de 5 níveis (ver lvChipGradient),
-// então a cor muda suave e continuamente de faixa pra faixa sem nunca repetir; e
-// o nível 100 vira "master" — arco-íris animado, igual (mesmo ciclo de cores e
-// duração) a moldura arco-íris da loja (ver .lv-chip-master no CSS)
-const LV_SPECTRUM = ['#21e6a1', '#2dd6ff', '#b14dff', '#ffffff', '#ffe93c', '#ff9f1c', '#ff2d6b'];
-const LV_MAX_BAND = 19; // faixa do nível 95-99, o último degrau antes do "master" no nível 100
-function hexToRgb(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function mixHex(hexA, hexB, f) {
-  const a = hexToRgb(hexA), b = hexToRgb(hexB);
-  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * f).toString(16).padStart(2, '0')).join('');
-}
-function lvSpectrumColor(t) {
-  const segs = LV_SPECTRUM.length - 1;
-  const scaled = Math.min(Math.max(t, 0), 1) * segs;
-  const i = Math.min(Math.floor(scaled), segs - 1);
-  return mixHex(LV_SPECTRUM[i], LV_SPECTRUM[i + 1], scaled - i);
-}
-function lvChipGradient(band) {
-  const t = Math.min(Math.max(band / LV_MAX_BAND, 0), 1);
-  const d = 0.035;
-  return [lvSpectrumColor(Math.max(0, t - d)), lvSpectrumColor(t), lvSpectrumColor(Math.min(1, t + d))];
-}
-function lvChip(xp) {
-  const lv = levelFromXp(xp || 0);
-  if (lv >= 100) return `<span class="lv-chip lv-chip-master">Lv ${lv}</span>`;
-  const band = Math.floor(lv / 5);
-  const [c1, c2, c3] = lvChipGradient(band);
-  return `<span class="lv-chip" style="background:linear-gradient(90deg, ${c1}, ${c2}, ${c3}); -webkit-background-clip:text; background-clip:text; color:transparent; border-color:${c2}88; text-shadow:0 0 6px ${c2}80">Lv ${lv}</span>`;
-}
-// moldura da loja ao redor do nick — "equipped" é público (mesmo doc de
-// scores/{uid} que já alimenta o ranking), então aparece pra QUALQUER um que
-// tiver comprado e equipado, não só pra você mesmo
-function applyNickFrame(el, stats) {
-  const frame = stats && stats.equipped && stats.equipped.frame;
-  el.classList.remove('nick-frame-gold', 'nick-frame-rainbow');
-  if (frame === 'frame_gold') el.classList.add('nick-frame-gold');
-  else if (frame === 'frame_rainbow') el.classList.add('nick-frame-rainbow');
-}
-// linha temática da loja — fundo diferenciado na <tr> do jogador nas tabelas
-// de ranking, pra se destacar na lista. Mesmo raciocínio da moldura: campo
-// público (stats.equipped), então funciona pra QUALQUER linha (não só a sua)
-function applyRowTheme(el, stats) {
-  const theme = stats && stats.equipped && stats.equipped.rowTheme;
-  el.classList.remove('row-theme-fire', 'row-theme-ocean', 'row-theme-galaxy');
-  if (theme === 'row_fire') el.classList.add('row-theme-fire');
-  else if (theme === 'row_ocean') el.classList.add('row-theme-ocean');
-  else if (theme === 'row_galaxy') el.classList.add('row-theme-galaxy');
-}
-// avatares da loja — desenhados em SVG (sem imagem externa), um ícone
-// circular por personagem. "glyph" é só o miolo do desenho, sempre
-// centralizado em (0,0); avatarSvg() monta o círculo + halo em volta.
-const AVATAR_SHAPES = {
-  avatar_robot: { color: '#2dd6ff', glyph: '<rect x="-26" y="-26" width="52" height="52" rx="10" fill="#2dd6ff"/><line x1="0" y1="-26" x2="0" y2="-38" stroke="#2dd6ff" stroke-width="3"/><circle cx="0" cy="-40" r="4" fill="#2dd6ff"/><rect x="-18" y="-8" width="36" height="16" rx="4" fill="#0a0e1e"/><circle cx="-9" cy="0" r="4" fill="#e8ecfa"/><circle cx="9" cy="0" r="4" fill="#e8ecfa"/>' },
-  avatar_ninja: { color: '#b14dff', glyph: '<circle r="30" fill="#b14dff"/><rect x="-30" y="-6" width="60" height="12" fill="#0a0e1e"/><ellipse cx="-11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><ellipse cx="11" cy="0" rx="7" ry="5" fill="#e8ecfa"/><circle cx="-11" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="11" cy="0" r="2.5" fill="#0a0e1e"/>' },
-  avatar_ghost: { color: '#e8ecfa', glyph: '<path d="M -26 6 C -26 -22 26 -22 26 6 L 26 20 L 17 12 L 8 20 L 0 12 L -8 20 L -17 12 L -26 20 Z" fill="#e8ecfa"/><ellipse cx="-10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/><ellipse cx="10" cy="-4" rx="4.5" ry="6" fill="#0a0e1e"/>' },
-  avatar_cat: { color: '#ff9f1c', glyph: '<polygon points="-26,-14 -14,-32 -4,-12" fill="#ff9f1c"/><polygon points="26,-14 14,-32 4,-12" fill="#ff9f1c"/><circle r="28" fill="#ff9f1c"/><ellipse cx="-9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><ellipse cx="9" cy="-2" rx="6" ry="7" fill="#e8ecfa"/><circle cx="-9" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="9" cy="0" r="2.5" fill="#0a0e1e"/><polygon points="-4,10 4,10 0,15" fill="#ff6b9d"/>' },
-  avatar_alien: { color: '#21e6a1', glyph: '<ellipse rx="26" ry="32" fill="#21e6a1"/><line x1="-10" y1="-30" x2="-16" y2="-42" stroke="#21e6a1" stroke-width="3"/><line x1="10" y1="-30" x2="16" y2="-42" stroke="#21e6a1" stroke-width="3"/><circle cx="-16" cy="-42" r="3.5" fill="#21e6a1"/><circle cx="16" cy="-42" r="3.5" fill="#21e6a1"/><ellipse cx="-10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/><ellipse cx="10" cy="-2" rx="7" ry="9" fill="#0a0e1e"/>' },
-  avatar_flame: { color: '#ff2d6b', glyph: '<path d="M 0 -34 C 14 -18 24 0 14 18 C 20 8 16 -2 8 -6 C 12 6 4 20 -6 24 C -22 18 -22 0 -12 -12 C -16 -4 -12 6 -6 8 C -10 -6 -8 -22 0 -34 Z" fill="#ff2d6b"/><path d="M -8 -8 L -2 -14 L 4 -8" fill="none" stroke="#0a0e1e" stroke-width="2.5" stroke-linecap="round"/><circle cx="-6" cy="0" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="0" r="2.5" fill="#0a0e1e"/>' },
-  avatar_crystal: { color: '#00d2d3', glyph: '<polygon points="-16,-28 16,-28 26,-4 0,30 -26,-4" fill="#00d2d3"/><line x1="-16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="-28" x2="0" y2="30" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><line x1="-26" y1="-4" x2="26" y2="-4" stroke="#0a0e1e" stroke-width="1.5" opacity="0.5"/><circle cx="14" cy="-18" r="2.5" fill="#e8ecfa"/>' },
-  avatar_star: { color: '#ffe93c', glyph: '<polygon points="0,-30 7.5,-10.3 28.5,-9.3 12.1,3.9 17.7,24.3 0,12.7 -17.7,24.3 -12.1,3.9 -28.5,-9.3 -7.5,-10.3" fill="#ffe93c"/><circle cx="-6" cy="-2" r="2.5" fill="#0a0e1e"/><circle cx="6" cy="-2" r="2.5" fill="#0a0e1e"/><path d="M -6 6 Q 0 11 6 6" fill="none" stroke="#0a0e1e" stroke-width="2" stroke-linecap="round"/>' },
-};
-function avatarSvg(id, size = 32) {
-  const a = AVATAR_SHAPES[id];
-  if (!a) return '';
-  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;"><circle cx="60" cy="60" r="56" fill="${a.color}" opacity="0.22"/><circle cx="60" cy="60" r="48" fill="#131a33" stroke="${a.color}" stroke-width="4"/><g transform="translate(60,60)">${a.glyph}</g></svg>`;
-}
-// devolve o avatar equipado (SVG, markup fixo/confiável) ou o emoji padrão de
-// "pessoa" se nada foi comprado/equipado ainda — mesmo raciocínio de
-// fallback gracioso dos outros cosméticos da loja (glow/tema já removidos,
-// frame/confetti seguem esse mesmo padrão)
-function avatarOrDefaultIcon(avatarId, size = 20) {
-  return avatarId && AVATAR_SHAPES[avatarId] ? avatarSvg(avatarId, size) : '👤';
-}
-// ícone dos Pigmentos (moeda do desafio diário) — uma gota com as cores do
-// jogo se misturando, pra remeter ao tema sem precisar de nenhum arquivo de
-// imagem externo. Markup fixo/confiável (sem dado de usuário), inserido só
-// via insertAdjacentHTML/template literal mesmo mais abaixo.
-// contador só pra dar um id único de gradiente a cada ícone renderizado —
-// com o mesmo id "pigGrad" repetido em vários <svg> na mesma página (menu,
-// loja, legenda de prêmio, botão de compra...), o navegador às vezes usa a
-// cor errada (ou vira sólida) por causa do id duplicado. Cada ícone agora
-// tem seu próprio gradiente, sempre com as mesmas cores.
-let pigmentIconSeq = 0;
-function pigmentIconSvg(size = 18) {
-  const gradId = `pigGrad${pigmentIconSeq++}`;
-  return `<svg class="pigment-icon" width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#a55eea"/>
-        <stop offset="35%" stop-color="#1e90ff"/>
-        <stop offset="65%" stop-color="#2ed573"/>
-        <stop offset="100%" stop-color="#ffd32a"/>
-      </linearGradient>
-    </defs>
-    <path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#${gradId})" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-    <ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/>
-  </svg>`;
-}
-// legenda de premiação do ranking diário — uma linha por faixa, com o ícone
-// colorido de Pigmentos (igual ao resto do jogo) do lado do valor
-function renderDailyPrizesLegend() {
-  const el = $('daily-prizes-legend');
-  if (!el) return;
-  const cfg = T[lang].daily_prizes_legend;
-  const rows = cfg.rows.map(r => `
-    <div style="display:flex; justify-content:space-between; align-items:center; max-width:220px; margin:2px auto;">
-      <span>${r.label}</span>
-      <span style="display:inline-flex; align-items:center; gap:3px; font-weight:700;">${r.amount} ${pigmentIconSvg(14)}</span>
-    </div>`).join('');
-  el.innerHTML = `<div style="margin-bottom:4px;">${cfg.title}</div>${rows}`;
-}
-function modeLabel(m) {
-  return m === 'classic' ? T[lang].mode_name_classic
-    : m === 'reverse' ? T[lang].mode_name_reverse
-    : m === 'shapes' ? T[lang].mode_name_shapes
-    : m === 'shapes-reverse' ? T[lang].mode_name_shapes_reverse
-    : m === 'caos' ? T[lang].mode_name_caos
-    : T[lang].mode_name_trio;
-}
-
 /* ================== conquistas (badges) ================== */
-const TIER_COLORS = ['#cd7f32', '#c0c0c0', '#ffd700', '#66ccff', '#a55eea', '#ff4757']; // bronze, prata, ouro, platina, diamante, rubi
-
-const BADGE_DEFS = {
-  points: {
-    icon: '⭐',
-    label: { pt: 'Pontos Totais', en: 'Total Points', es: 'Puntos Totales' },
-    tiers: [500, 2000, 5000, 15000, 50000, 150000],
-    names: {
-      pt: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores', 'Universo Cromático'],
-      en: ['Shining', 'Radiant', 'Stellar', 'Supernova', 'Constellation of Colors', 'Chromatic Universe'],
-      es: ['Brillante', 'Radiante', 'Estelar', 'Supernova', 'Constelación de Colores', 'Universo Cromático'],
-    },
-    metric: u => u.totalPoints || 0,
-    desc: n => lang === 'en' ? `Accumulate ${n} points (sum of all games)`
-      : lang === 'es' ? `Acumula ${n} puntos (suma de todas las partidas)`
-      : `Acumule ${n} pontos (soma de todas as partidas)`,
-  },
-  games: {
-    icon: '🎮',
-    label: { pt: 'Partidas Jogadas', en: 'Games Played', es: 'Partidas Jugadas' },
-    tiers: [10, 50, 100, 250, 500, 1000],
-    names: {
-      pt: ['Iniciante', 'Frequente', 'Dedicado', 'Veterano', 'Lenda', 'Imortal'],
-      en: ['Beginner', 'Regular', 'Dedicated', 'Veteran', 'Legend', 'Immortal'],
-      es: ['Principiante', 'Habitual', 'Dedicado', 'Veterano', 'Leyenda', 'Inmortal'],
-    },
-    metric: u => u.gamesPlayed || 0,
-    desc: n => lang === 'en' ? `Play ${n} games`
-      : lang === 'es' ? `Juega ${n} partidas`
-      : `Jogue ${n} partidas`,
-  },
-  streak: {
-    icon: '🔥',
-    label: { pt: 'Sequência de Dias', en: 'Day Streak', es: 'Racha de Días' },
-    tiers: [3, 7, 14, 30, 100, 365],
-    names: {
-      pt: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável', 'Chama Eterna'],
-      en: ['Committed', 'Full Week', 'Fortnightly', 'Monthly', 'Unshakable', 'Eternal Flame'],
-      es: ['Comprometido', 'Semana Completa', 'Quincenal', 'Mensual', 'Inquebrantable', 'Llama Eterna'],
-    },
-    metric: u => u.bestStreak || 0,
-    desc: n => lang === 'en' ? `Play ${n} days in a row`
-      : lang === 'es' ? `Juega ${n} días seguidos`
-      : `Jogue ${n} dias seguidos`,
-  },
-  sharer: {
-    icon: '📣',
-    label: { pt: 'Divulgador', en: 'Promoter', es: 'Promotor' },
-    tiers: [1, 5, 15, 30, 50, 100],
-    names: {
-      pt: ['Recruta', 'Influencer', 'Viral', 'Embaixador', 'Celebridade', 'Fenômeno'],
-      en: ['Word of Mouth', 'Influencer', 'Viral', 'Ambassador', 'Celebrity', 'Phenomenon'],
-      es: ['Recluta', 'Influencer', 'Viral', 'Embajador', 'Celebridad', 'Fenómeno'],
-    },
-    metric: u => u.referrals || 0,
-    desc: n => lang === 'en'
-      ? `Have ${n} friend${n > 1 ? 's' : ''} sign up through your invite link`
-      : lang === 'es'
-      ? `Consigue que ${n} amigo${n > 1 ? 's' : ''} se registre${n > 1 ? 'n' : ''} con tu enlace de invitación`
-      : `Tenha ${n} amigo${n > 1 ? 's' : ''} cadastrado${n > 1 ? 's' : ''} pelo seu link de compartilhamento`,
-  },
-};
-const BADGE_ORDER = ['points', 'games', 'streak', 'sharer'];
-
-function unlockedTier(def, stats) {
-  const val = def.metric(stats);
-  let tier = -1;
-  for (let i = 0; i < def.tiers.length; i++) {
-    const ok = def.inverse ? val <= def.tiers[i] : val >= def.tiers[i];
-    if (ok) tier = i;
-  }
-  return tier;
-}
 // aviso de "medalha nova, ainda não vista" — como as medalhas não aparecem
 // mais sozinhas no ranking (a pessoa precisa ir no perfil e equipar se
 // quiser), essa bolinha avisa que tem uma categoria com nível desbloqueado
@@ -656,30 +436,6 @@ function refreshBadgeNotifDot() {
 // à parte pra poder reusar a MESMA marcação como prévia no perfil (ver
 // renderBadgeCard), assim a pessoa vê exatamente como vai aparecer antes de
 // equipar.
-function badgePillHtml(def, tier) {
-  const color = TIER_COLORS[tier] || TIER_COLORS[TIER_COLORS.length - 1];
-  const name = def.names[lang][tier];
-  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${def.icon} ${name}</span>`;
-}
-function equippedBadgeLabel(stats) {
-  const key = stats.equippedBadge;
-  if (!key || !BADGE_DEFS[key]) return ''; // ninguém escolheu ainda — não mostra nada até a pessoa ir no perfil e equipar uma
-  const def = BADGE_DEFS[key];
-  const maxTier = unlockedTier(def, stats);
-  if (maxTier < 0) return ''; // reconfere contra as stats reais — se não desbloqueou de verdade, não mostra
-  const chosen = stats.equippedBadgeTier;
-  const t = (typeof chosen === 'number' && chosen >= 0 && chosen <= maxTier) ? chosen : maxTier;
-  return badgePillHtml(def, t);
-}
-// nome da classe de divulgador (ex.: "Viral") com a cor da medalha — usado só no ranking de divulgador
-function sharerTierLabel(stats) {
-  const def = BADGE_DEFS.sharer;
-  const t = unlockedTier(def, stats);
-  if (t < 0) return '';
-  const color = TIER_COLORS[t] || TIER_COLORS[TIER_COLORS.length - 1];
-  const name = def.names[lang][t];
-  return `<span class="class-pill" style="color:${color}; border-color:${color}88; text-shadow:0 0 6px ${color}80" title="${def.label[lang]}: ${name}">${name}</span>`;
-}
 // monta o conteúdo de uma célula de ranking: nível, nick e conquista/classe
 // tudo numa coluna só (ver .nick-cell no <style>). Usado nas 4 tabelas de
 // ranking (mini-ranking, ranking completo, desafio diário hoje e Salão da
@@ -912,7 +668,7 @@ window.toggleMute = () => {
 
 /* ================== compartilhar ================== */
 // monta o link de compartilhamento — ?ref= só existe pra quem tem conta (conta pro
-// badge Divulgador) e &lang= só é incluído quando o idioma não é o padrão (pt), pra
+// badge Divulgador) e &state.lang= só é incluído quando o idioma não é o padrão (pt), pra
 // quem clicar já abrir o site traduzido em vez de cair sempre em português
 async function buildShareLink() {
   let link = `${location.origin}${location.pathname}`;
@@ -921,7 +677,7 @@ async function buildShareLink() {
     const code = await ensureRefCode();
     if (code) params.push(`ref=${code}`);
   }
-  if (lang !== 'pt') params.push(`lang=${lang}`);
+  if (state.lang !== 'pt') params.push(`state.lang=${state.lang}`);
   if (params.length) link += `?${params.join('&')}`;
   return link;
 }
@@ -929,16 +685,16 @@ async function buildShareLink() {
 window.shareScore = async () => {
   track('share', { content_type: 'score', mode });
   const modeName = modeLabel(mode);
-  const rec = $('new-record').classList.contains('show') ? T[lang].share_new_record_suffix : '';
+  const rec = $('new-record').classList.contains('show') ? T[state.lang].share_new_record_suffix : '';
   const link = await buildShareLink();
-  const text = T[lang].share_text(score, modeName, rec, link);
+  const text = T[state.lang].share_text(score, modeName, rec, link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   try {
     if (isMobile && navigator.share) {
       await navigator.share({ text });
     } else {
       await navigator.clipboard.writeText(text);
-      $('share-status').textContent = T[lang].share_copied;
+      $('share-status').textContent = T[state.lang].share_copied;
       setTimeout(() => { $('share-status').textContent = ''; }, 3000);
     }
   } catch {}
@@ -948,7 +704,7 @@ window.shareScore = async () => {
 window.inviteFriends = async (statusElId = 'invite-status') => {
   track('share', { content_type: 'invite' });
   const link = await buildShareLink();
-  const text = T[lang].invite_text(link);
+  const text = T[state.lang].invite_text(link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const statusEl = $(statusElId);
   try {
@@ -962,7 +718,7 @@ window.inviteFriends = async (statusElId = 'invite-status') => {
         // gap do flex mesmo sem nenhum texto aparecendo (esticava, por
         // exemplo, o espaço entre o nick e o botão de amizade no perfil)
         statusEl.style.display = '';
-        statusEl.textContent = T[lang].share_copied;
+        statusEl.textContent = T[state.lang].share_copied;
         setTimeout(() => { statusEl.textContent = ''; statusEl.style.display = 'none'; }, 3000);
       }
     }
@@ -979,7 +735,7 @@ window.copyRefCode = async (statusElId) => {
     const el = $(statusElId);
     if (el) {
       el.style.display = ''; // ver comentário equivalente em inviteFriends
-      el.textContent = T[lang].share_copied;
+      el.textContent = T[state.lang].share_copied;
       setTimeout(() => { el.textContent = ''; el.style.display = 'none'; }, 3000);
     }
   } catch {}
@@ -1024,7 +780,7 @@ const AUTH_ERRORS = {
     'auth/popup-blocked': 'Popup bloqueado por el navegador. Permite los popups.',
   },
 };
-const authErrMsg = e => (AUTH_ERRORS[lang][e.code]) || (lang === 'pt' ? 'Erro: ' : 'Error: ') + (e.code || e.message);
+const authErrMsg = e => (AUTH_ERRORS[state.lang][e.code]) || (state.lang === 'pt' ? 'Erro: ' : 'Error: ') + (e.code || e.message);
 
 window.doLogin = async () => {
   $('auth-error').textContent = '';
@@ -1044,7 +800,7 @@ window.resendVerification = async () => {
   $('verify-status').textContent = '';
   try {
     await sendEmailVerification(auth.currentUser);
-    $('verify-status').textContent = T[lang].verify_resent;
+    $('verify-status').textContent = T[state.lang].verify_resent;
   } catch (e) { $('verify-status').textContent = authErrMsg(e); }
 };
 window.checkVerification = async () => {
@@ -1055,7 +811,7 @@ window.checkVerification = async () => {
     currentUser = auth.currentUser;
     await proceedAfterLogin(currentUser);
   } else {
-    $('verify-status').textContent = T[lang].verify_not_confirmed;
+    $('verify-status').textContent = T[state.lang].verify_not_confirmed;
   }
 };
 // true só quando a página está rodando dentro do app nativo (Capacitor,
@@ -1155,7 +911,7 @@ window.confirmDeleteAccount = async () => {
   const btn = deleteAccountBtnRef;
   const statusEl = $('delete-account-status');
   if (btn) btn.disabled = true;
-  if (statusEl) statusEl.textContent = T[lang].delete_account_progress;
+  if (statusEl) statusEl.textContent = T[state.lang].delete_account_progress;
   try {
     await callDeleteMyAccount();
     stopPvpListener();
@@ -1163,10 +919,10 @@ window.confirmDeleteAccount = async () => {
     currentUser = null;
     await signOut(auth);
     show('auth-screen');
-    alert(T[lang].delete_account_done);
+    alert(T[state.lang].delete_account_done);
   } catch (e) {
     if (btn) btn.disabled = false;
-    if (statusEl) statusEl.textContent = T[lang].delete_account_error;
+    if (statusEl) statusEl.textContent = T[state.lang].delete_account_error;
   }
 };
 window.playOffline = () => {
@@ -1298,22 +1054,22 @@ window.saveNick = async () => {
   // reforço além do botão desabilitado (que já impede o clique via UI) — só
   // por garantia, caso algo force o clique sem a caixinha marcada
   if (!$('nick-consent-checkbox').checked) {
-    $('nick-error').textContent = T[lang].err_nick_consent;
+    $('nick-error').textContent = T[state.lang].err_nick_consent;
     return;
   }
   if (nick.length < 3 || nick.length > 16) {
-    $('nick-error').textContent = T[lang].err_nick_length;
+    $('nick-error').textContent = T[state.lang].err_nick_length;
     return;
   }
   if (/\s/.test(nick)) {
-    $('nick-error').textContent = T[lang].err_nick_spaces;
+    $('nick-error').textContent = T[state.lang].err_nick_spaces;
     return;
   }
   const nickKey = nick.toLowerCase(); // "Igor" e "IGOR" contam como o mesmo nick
   try {
     const taken = await getDoc(doc(db, 'nicks', nickKey));
     if (taken.exists()) {
-      $('nick-error').textContent = T[lang].err_nick_taken;
+      $('nick-error').textContent = T[state.lang].err_nick_taken;
       return;
     }
     const refCode = await generateUniqueRefCode();
@@ -1347,7 +1103,7 @@ window.saveNick = async () => {
     await submitPendingScore();
     startPvpListener();
     showMenu();
-  } catch (e) { $('nick-error').textContent = T[lang].err_nick_save(e.message); }
+  } catch (e) { $('nick-error').textContent = T[state.lang].err_nick_save(e.message); }
 };
 
 /* ================== menu ================== */
@@ -1391,19 +1147,19 @@ window.showMenu = () => {
     $('card-' + m).classList.toggle('locked', locked);
     const lockEl = $('lock-' + m);
     lockEl.style.display = locked ? '' : 'none';
-    if (locked) lockEl.textContent = T[lang].unlock_at(minLv);
+    if (locked) lockEl.textContent = T[state.lang].unlock_at(minLv);
   }
   if (offline) {
-    $('user-label').textContent = T[lang].offline_label;
-    $('menu-logout-btn').textContent = T[lang].entrar_label;
+    $('user-label').textContent = T[state.lang].offline_label;
+    $('menu-logout-btn').textContent = T[state.lang].entrar_label;
   } else {
     // avatar (markup fixo/confiável) vai por innerHTML; o nick sempre por
     // textContent/createTextNode (pode ter qualquer caractere não-espaço)
     const labelEl = $('user-label');
     labelEl.innerHTML = '';
     labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 32) + ' ');
-    labelEl.appendChild(document.createTextNode(T[lang].user_greeting(myData.nick || '')));
-    $('menu-logout-btn').textContent = T[lang].sair_label;
+    labelEl.appendChild(document.createTextNode(T[state.lang].user_greeting(myData.nick || '')));
+    $('menu-logout-btn').textContent = T[state.lang].sair_label;
   }
   // menu é a "raiz" da navegação — zera a pilha de "voltar" (ver
   // pushScreenAndShow/popScreenBack) toda vez que ela é mostrada de
@@ -1599,8 +1355,8 @@ function newTrioRound(first) {
   trioNextPairB = newPairB;
 
   $('instruction').textContent = first
-    ? T[lang].instr_first_trio(cName(colorA), cName(colorB))
-    : T[lang].instr_next_trio;
+    ? T[state.lang].instr_first_trio(cName(colorA), cName(colorB))
+    : T[state.lang].instr_next_trio;
   $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
 
   startTimer();
@@ -1621,7 +1377,7 @@ function handleTrioClick(isCorrect, e) {
     newTrioRound(false);
   } else {
     sfx.wrong();
-    gameOver(T[lang].reason_wrong);
+    gameOver(T[state.lang].reason_wrong);
   }
 }
 
@@ -1729,8 +1485,8 @@ function newCaosRound(first) {
   caosNextPairB = newPairB;
 
   $('instruction').textContent = first
-    ? T[lang].instr_first_caos(cName(itemA), cName(itemB))
-    : T[lang].instr_next_caos;
+    ? T[state.lang].instr_first_caos(cName(itemA), cName(itemB))
+    : T[state.lang].instr_next_caos;
   $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
 
   startTimer();
@@ -1751,7 +1507,7 @@ function handleCaosClick(isCorrect, e) {
     newCaosRound(false);
   } else {
     sfx.wrong();
-    gameOver(T[lang].reason_wrong);
+    gameOver(T[state.lang].reason_wrong);
   }
 }
 
@@ -1798,16 +1554,16 @@ function newRound(first) {
   if (replayRounds.length < 400) replayRounds.push({ t: Math.round(performance.now() - replayStartMs), sq: roundSnapshot }); // teto de sanidade — mesma ideia do HARD_SCORE_CAP do servidor
 
   const INSTR_FIRST = {
-    classic: () => T[lang].instr_first_classic(cName(target)),
-    reverse: () => T[lang].instr_first_reverse(cName(target)),
-    shapes: () => T[lang].instr_first_shapes(cName(target)),
-    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(target)),
+    classic: () => T[state.lang].instr_first_classic(cName(target)),
+    reverse: () => T[state.lang].instr_first_reverse(cName(target)),
+    shapes: () => T[state.lang].instr_first_shapes(cName(target)),
+    'shapes-reverse': () => T[state.lang].instr_first_shapes_reverse(cName(target)),
   };
   const INSTR_NEXT = {
-    classic: T[lang].instr_next_classic,
-    reverse: T[lang].instr_next_reverse,
-    shapes: T[lang].instr_next_shapes,
-    'shapes-reverse': T[lang].instr_next_shapes_reverse,
+    classic: T[state.lang].instr_next_classic,
+    reverse: T[state.lang].instr_next_reverse,
+    shapes: T[state.lang].instr_next_shapes,
+    'shapes-reverse': T[state.lang].instr_next_shapes_reverse,
   };
   $('instruction').textContent = first ? INSTR_FIRST[mode]() : INSTR_NEXT[mode];
   $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;
@@ -1823,7 +1579,7 @@ function startTimer() {
     if (!playing) return;
     const left = 1 - (now - timerStart) / duration;
     $('timer-fill').style.width = Math.max(0, left * 100) + '%';
-    if (left <= 0) { sfx.timeout(); return gameOver(T[lang].reason_timeout); }
+    if (left <= 0) { sfx.timeout(); return gameOver(T[state.lang].reason_timeout); }
     if (left < 0.35 && now - lastTick > 250) { lastTick = now; sfx.tick(); } // tic-tac no fim do tempo
     rafId = requestAnimationFrame(tick);
   };
@@ -1845,7 +1601,7 @@ function handleClick(item, e) {
     newRound(false);
   } else {
     sfx.wrong();
-    gameOver(T[lang].reason_wrong);
+    gameOver(T[state.lang].reason_wrong);
   }
 }
 
@@ -1883,7 +1639,7 @@ async function gameOver(reason) {
   // antes de mandar o resultado final — fecha a corrida entre o envio final
   // chegar antes de algum sinal ainda em trânsito pela rede
   setOverButtonsEnabled(false);
-  if (!offline && currentUser && myData.nick) $('sync-status').textContent = T[lang].sync_calculating;
+  if (!offline && currentUser && myData.nick) $('sync-status').textContent = T[state.lang].sync_calculating;
   await Promise.allSettled(pendingRoundSync);
   pendingRoundSync = [];
   $('sync-status').textContent = ''; // volta a ficar vazio — persistGameResult decide se mostra sucesso/erro
@@ -1942,7 +1698,7 @@ function animateXpGain(earned, before, after, leveledUp) {
 
 function showLevelUp(newLv) {
   track('level_up', { level: newLv });
-  $('levelup-title').textContent = T[lang].levelup_title;
+  $('levelup-title').textContent = T[state.lang].levelup_title;
   $('levelup-lv').textContent = `Lv ${newLv}`;
   $('levelup-banner').classList.add('show');
   sfx.levelUp();
@@ -1956,7 +1712,7 @@ async function persistGameResult(xpEarned = 0) {
   if (!currentSessionId) {
     // sem sessão validada (ex.: caiu a internet bem no início da partida) —
     // não há como confirmar no servidor, então não grava essa partida.
-    $('sync-status').textContent = T[lang].sync_fail;
+    $('sync-status').textContent = T[state.lang].sync_fail;
     return;
   }
   const sessionId = currentSessionId;
@@ -1982,7 +1738,7 @@ async function persistGameResult(xpEarned = 0) {
       // hora que mais importa: logo após bater um recorde novo
       myData[mode + 'At'] = Timestamp.now();
       if (d.total !== undefined) { myData.total = d.total; myData.totalAt = Timestamp.now(); } // mesmo motivo, pro ranking "Geral" (soma dos recordes)
-      $('sync-status').textContent = T[lang].sync_success;
+      $('sync-status').textContent = T[state.lang].sync_success;
       // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima)
       // só agora que virou recorde — em segundo plano, não atrasa a tela de
       // resultado. myData[mode+'ReplaySessionId'] atualiza na hora, sem
@@ -1991,7 +1747,7 @@ async function persistGameResult(xpEarned = 0) {
       saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
   } catch (e) {
-    $('sync-status').textContent = T[lang].sync_fail;
+    $('sync-status').textContent = T[state.lang].sync_fail;
   }
 }
 
@@ -2077,7 +1833,7 @@ function rowData(r) {
 
 async function renderRankPreview(field, bodyElId, myPts) {
   const body = $(bodyElId);
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
   try {
     const all = await fetchAllScores();
     const rows = [];
@@ -2089,7 +1845,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
     // localiza (ou insere) a linha do jogador — TESTE.HTML: admin também
     // entra aqui de propósito (ver comentário em fetchAllScores). Já banido
     // não entra nem aqui: a própria conta banida não deve se ver no ranking
-    const youLabel = lang === 'en' ? 'YOU' : lang === 'es' ? 'TÚ' : 'VOCÊ';
+    const youLabel = state.lang === 'en' ? 'YOU' : state.lang === 'es' ? 'TÚ' : 'VOCÊ';
     let myIndex = (!offline && currentUser) ? rows.findIndex(r => r.uid === currentUser.uid) : -1;
     if (myIndex === -1 && myData.banned !== true) {
       rows.push({ uid: '__me__', nick: offline ? youLabel : (myData.nick || youLabel), pts: myPts, at: null, durationMs: offline ? undefined : myData[field + 'DurationMs'], stats: offline ? null : myData, replaySessionId: offline ? undefined : myData[field + 'ReplaySessionId'] });
@@ -2110,7 +1866,7 @@ async function renderRankPreview(field, bodyElId, myPts) {
     for (let i = start; i < end; i++) {
       const r = rows[i];
       const pos = i + 1;
-      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + (lang === 'en' ? '' : 'º');
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos + (state.lang === 'en' ? '' : 'º');
       const tr = document.createElement('tr');
       if (i === myIndex) tr.className = 'me';
       tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${r.pts}</td>`;
@@ -2122,15 +1878,15 @@ async function renderRankPreview(field, bodyElId, myPts) {
         const replayBtn = document.createElement('button');
         replayBtn.className = 'replay-btn';
         replayBtn.textContent = '▶️';
-        replayBtn.title = T[lang].btn_watch_replay;
+        replayBtn.title = T[state.lang].btn_watch_replay;
         replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
         ptsCell.appendChild(replayBtn);
       }
       body.appendChild(tr);
     }
-    if (rows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_no_players_mini}</td></tr>`;
+    if (rows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_no_players_mini}</td></tr>`;
   } catch {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error_mini}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error_mini}</td></tr>`;
   }
 }
 
@@ -2206,21 +1962,21 @@ function renderPublicProfileBadges(stats) {
     const tier = unlockedTier(def, stats);
     if (tier < 0) return null;
     const color = TIER_COLORS[tier];
-    const name = def.names[lang][tier];
-    const val = def.metric(stats).toLocaleString(lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'pt-BR');
+    const name = def.names[state.lang][tier];
+    const val = def.metric(stats).toLocaleString(state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR');
     return `
       <div class="card" style="flex-direction:row; align-items:center; justify-content:space-between; gap:12px; padding:14px;">
         <div style="display:flex; align-items:center; gap:12px;">
           <span class="badge-chip big" style="background:${color}">${def.icon}</span>
           <div>
-            <div class="name" style="font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.95rem;">${def.label[lang]}</div>
+            <div class="name" style="font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.95rem;">${def.label[state.lang]}</div>
             <div class="muted" style="text-align:left;">${name}</div>
           </div>
         </div>
         <div style="text-align:right; font-family:'Orbitron',sans-serif; font-weight:800; color:#fff; font-size:1.1rem;">${val}</div>
       </div>`;
   }).filter(Boolean);
-  return items.length ? items.join('') : `<div class="muted" style="text-align:center;">${T[lang].profile_no_badges_yet}</div>`;
+  return items.length ? items.join('') : `<div class="muted" style="text-align:center;">${T[state.lang].profile_no_badges_yet}</div>`;
 }
 
 // posição no ranking de cada modo em que a pessoa já pontuou (medalha pro
@@ -2239,20 +1995,20 @@ function renderPublicProfileRanks(stats, ranks) {
   const items = [];
   // geral primeiro (visão resumida da pessoa), depois os modos individuais,
   // nível, divulgador e por último o Salão da Fama
-  if ((stats.total || 0) > 0 && ranks.geral) items.push(row(T[lang].tab_geral, ranks.geral, 'geral'));
+  if ((stats.total || 0) > 0 && ranks.geral) items.push(row(T[state.lang].tab_geral, ranks.geral, 'geral'));
   ALL_MODES.forEach(m => {
     if (stats[m] > 0 && ranks[m]) items.push(row(`${MODE_ICON[m]} ${modeLabel(m)}`, ranks[m], m));
   });
   // rankings gerais — mesmos campos (RANK_FIELDS) e rótulos com emoji já
   // embutido das <option> da tela de ranking completo, pra ficar consistente
-  [['level', T[lang].tab_level], ['divulgador', T[lang].tab_divulgador]].forEach(([key, label]) => {
+  [['level', T[state.lang].tab_level], ['divulgador', T[state.lang].tab_divulgador]].forEach(([key, label]) => {
     const field = RANK_FIELDS[key];
     if ((stats[field] || 0) > 0 && ranks[key]) items.push(row(label, ranks[key], key));
   });
   // Salão da Fama do desafio diário — não é um RANK_FIELDS comum (ver
   // computeModeRanks), por isso checado à parte aqui
   const dailyPig = (stats.pigmentos || 0) + (stats.pendingPigmentos || 0);
-  if (((stats.dailyWins || 0) > 0 || dailyPig > 0) && ranks.daily) items.push(row(T[lang].daily_subtab_alltime, ranks.daily, 'daily'));
+  if (((stats.dailyWins || 0) > 0 || dailyPig > 0) && ranks.daily) items.push(row(T[state.lang].daily_subtab_alltime, ranks.daily, 'daily'));
   return items.join('');
 }
 // clique numa linha de posição no ranking do perfil de outra pessoa — leva
@@ -2384,7 +2140,7 @@ async function renderAdminPanel(uid, currentNick, stats) {
       await callAdminSetNick({ uid, nick });
       nickStatus.textContent = '✅ Nick atualizado.';
       stats.nick = nick;
-      $('profile-nick-text').textContent = T[lang].profile_nick_label(nick);
+      $('profile-nick-text').textContent = T[state.lang].profile_nick_label(nick);
       $('profile-nick-lv').innerHTML = ' ' + lvChip(stats.xp || 0);
     } catch (e) {
       nickStatus.textContent = '❌ ' + (e.message || 'Erro ao salvar.');
@@ -2580,8 +2336,8 @@ async function openProfileByUid(uid, fallbackNick) {
 function showFriendActionError() {
   [$('profile-friend-status'), $('friends-status')].forEach(el => {
     if (!el) return;
-    el.textContent = T[lang].friend_action_error;
-    setTimeout(() => { if (el.textContent === T[lang].friend_action_error) el.textContent = ''; }, 3000);
+    el.textContent = T[state.lang].friend_action_error;
+    setTimeout(() => { if (el.textContent === T[state.lang].friend_action_error) el.textContent = ''; }, 3000);
   });
 }
 
@@ -2594,7 +2350,7 @@ async function renderProfileFriendAction(theirUid) {
   box.dataset.uid = theirUid;
   if (offline || !currentUser) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
-  box.innerHTML = `<span class="muted">${T[lang].loading_text}</span>`;
+  box.innerHTML = `<span class="muted">${T[state.lang].loading_text}</span>`;
   const rel = await getFriendRelation(theirUid);
   if (box.dataset.uid !== theirUid) return; // perfil trocou enquanto isso carregava
   box.innerHTML = '';
@@ -2605,7 +2361,7 @@ function friendActionNode(rel, theirUid) {
   if (rel === 'friends') {
     const btn = document.createElement('button');
     btn.className = 'secondary';
-    btn.textContent = T[lang].btn_remove_friend_profile;
+    btn.textContent = T[state.lang].btn_remove_friend_profile;
     btn.style.cssText = 'padding:9px 18px; font-size:0.85rem;';
     btn.onclick = () => uiRemoveFriend(theirUid);
     return btn;
@@ -2615,11 +2371,11 @@ function friendActionNode(rel, theirUid) {
     wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:6px;';
     const label = document.createElement('div');
     label.className = 'muted';
-    label.textContent = T[lang].friend_request_sent_label;
+    label.textContent = T[state.lang].friend_request_sent_label;
     wrap.appendChild(label);
     const btn = document.createElement('button');
     btn.className = 'secondary';
-    btn.textContent = T[lang].btn_cancel_request;
+    btn.textContent = T[state.lang].btn_cancel_request;
     btn.onclick = () => uiCancelFriendRequest(theirUid);
     wrap.appendChild(btn);
     return wrap;
@@ -2629,20 +2385,20 @@ function friendActionNode(rel, theirUid) {
     wrap.className = 'btn-row';
     wrap.style.width = '100%';
     const acceptBtn = document.createElement('button');
-    acceptBtn.textContent = T[lang].btn_accept;
+    acceptBtn.textContent = T[state.lang].btn_accept;
     acceptBtn.style.cssText = 'flex:1;';
     acceptBtn.onclick = () => uiRespondFriendRequest(theirUid, true);
     wrap.appendChild(acceptBtn);
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
-    declineBtn.textContent = T[lang].btn_decline;
+    declineBtn.textContent = T[state.lang].btn_decline;
     declineBtn.style.cssText = 'flex:1;';
     declineBtn.onclick = () => uiRespondFriendRequest(theirUid, false);
     wrap.appendChild(declineBtn);
     return wrap;
   }
   const btn = document.createElement('button');
-  btn.textContent = T[lang].btn_add_friend;
+  btn.textContent = T[state.lang].btn_add_friend;
   btn.onclick = () => uiSendFriendRequest(theirUid);
   return btn;
 }
@@ -2669,14 +2425,14 @@ function friendRow(uid, nick, xp) {
   actions.style.cssText = 'display:flex; gap:5px;';
 
   const challengeBtn = document.createElement('button');
-  challengeBtn.textContent = T[lang].btn_challenge;
+  challengeBtn.textContent = T[state.lang].btn_challenge;
   challengeBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
   challengeBtn.onclick = () => uiChallengeFriend(uid);
   actions.appendChild(challengeBtn);
 
   const btn = document.createElement('button');
   btn.className = 'secondary';
-  btn.textContent = T[lang].btn_remove_friend;
+  btn.textContent = T[state.lang].btn_remove_friend;
   btn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
   btn.onclick = () => uiRemoveFriend(uid);
   actions.appendChild(btn);
@@ -2702,21 +2458,21 @@ function friendRequestRow(uid, nick, incoming) {
 
   if (incoming) {
     const acceptBtn = document.createElement('button');
-    acceptBtn.textContent = T[lang].btn_accept;
+    acceptBtn.textContent = T[state.lang].btn_accept;
     acceptBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     acceptBtn.onclick = () => uiRespondFriendRequest(uid, true);
     actions.appendChild(acceptBtn);
 
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
-    declineBtn.textContent = T[lang].btn_decline;
+    declineBtn.textContent = T[state.lang].btn_decline;
     declineBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     declineBtn.onclick = () => uiRespondFriendRequest(uid, false);
     actions.appendChild(declineBtn);
   } else {
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'secondary';
-    cancelBtn.textContent = T[lang].btn_cancel_request;
+    cancelBtn.textContent = T[state.lang].btn_cancel_request;
     cancelBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     cancelBtn.onclick = () => uiCancelFriendRequest(uid);
     actions.appendChild(cancelBtn);
@@ -2739,8 +2495,8 @@ async function renderFriendsScreen(force) {
     $('friends-refcode-row').style.display = 'none';
     body.innerHTML = `
       <div class="card" style="text-align:center;">
-        <p>${T[lang].profile_offline_msg1}</p>
-        <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+        <p>${T[state.lang].profile_offline_msg1}</p>
+        <button onclick="goSignup()">${T[state.lang].btn_create_account}</button>
       </div>`;
     resetScroll('friends-screen');
     return;
@@ -2750,20 +2506,20 @@ async function renderFriendsScreen(force) {
   $('friends-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
   if (showOwnRefCode) $('friends-refcode-value').textContent = myData.refCode;
 
-  body.innerHTML = `<div class="muted" style="text-align:center;">${T[lang].loading_text}</div>`;
+  body.innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].loading_text}</div>`;
   const [friends, reqs] = await Promise.all([fetchMyFriends(force), fetchMyFriendRequests(force)]);
   body.innerHTML = '';
 
   const incomingEntries = Object.entries(reqs.incoming || {});
   if (incomingEntries.length) {
-    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_incoming_title));
+    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[state.lang].friends_incoming_title));
     incomingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', true)));
   }
 
-  body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_list_title));
+  body.insertAdjacentHTML('beforeend', profileSectionLabel(T[state.lang].friends_list_title));
   const friendEntries = Object.entries(friends);
   if (!friendEntries.length) {
-    body.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[lang].friends_empty}</div>`);
+    body.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[state.lang].friends_empty}</div>`);
   } else {
     // nível de cada amigo vem do cache geral de pontuações (mesmo já usado
     // pelo ranking), pra não precisar de uma leitura extra por amigo
@@ -2778,7 +2534,7 @@ async function renderFriendsScreen(force) {
   // amigos de verdade nem os pedidos RECEBIDOS (que pedem uma ação da pessoa)
   const outgoingEntries = Object.entries(reqs.outgoing || {});
   if (outgoingEntries.length) {
-    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[lang].friends_outgoing_title));
+    body.insertAdjacentHTML('beforeend', profileSectionLabel(T[state.lang].friends_outgoing_title));
     outgoingEntries.forEach(([uid, data]) => body.appendChild(friendRequestRow(uid, data.nick || '', false)));
   }
   resetScroll('friends-screen');
@@ -2851,7 +2607,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
 
   if (!isOther && offline) {
     $('profile-nick-avatar').innerHTML = '';
-    $('profile-nick-text').textContent = T[lang].profile_offline_label;
+    $('profile-nick-text').textContent = T[state.lang].profile_offline_label;
     $('profile-nick-lv').innerHTML = '';
     $('profile-summary').textContent = '';
     $('profile-friend-action').style.display = 'none';
@@ -2859,9 +2615,9 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     $('profile-friend-status').textContent = '';
     $('profile-body').innerHTML = `
       <div class="card" style="text-align:center;">
-        <p>${T[lang].profile_offline_msg1}</p>
-        <p class="muted">${T[lang].profile_offline_msg2}</p>
-        <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+        <p>${T[state.lang].profile_offline_msg1}</p>
+        <p class="muted">${T[state.lang].profile_offline_msg2}</p>
+        <button onclick="goSignup()">${T[state.lang].btn_create_account}</button>
       </div>`;
     resetScroll('profile-screen');
     return;
@@ -2874,7 +2630,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   // direto no #profile-nick, o que podia deixar ícone duplicado se essa função
   // rodasse mais de uma vez em sequência (ex.: ao trocar a medalha equipada).
   $('profile-nick-avatar').innerHTML = avatarOrDefaultIcon(stats.equipped && stats.equipped.avatar, 42) + ' ';
-  $('profile-nick-text').textContent = T[lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
+  $('profile-nick-text').textContent = T[state.lang].profile_nick_label(isOther ? (viewNick || '') : (myData.nick || ''));
   $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
 
@@ -2884,8 +2640,8 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     const ranks = await computeModeRanks(viewUid);
     const ranksHtml = renderPublicProfileRanks(stats, ranks);
     let html = '';
-    if (ranksHtml) html += profileSectionLabel(T[lang].profile_ranks_section) + ranksHtml;
-    html += profileSectionLabel(T[lang].profile_badges_section) + renderPublicProfileBadges(stats);
+    if (ranksHtml) html += profileSectionLabel(T[state.lang].profile_ranks_section) + ranksHtml;
+    html += profileSectionLabel(T[state.lang].profile_badges_section) + renderPublicProfileBadges(stats);
     // painel só pra admin (myData.admin, setado à mão no Firebase Console) —
     // último login, últimos duelos e amigos de QUALQUER jogador, com opção de
     // editar o nick e banir a conta, tudo validado de novo no servidor (ver
@@ -2911,7 +2667,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     return n + (t >= 0 ? t + 1 : 0);
   }, 0);
   const totalLevels = BADGE_ORDER.reduce((n, k) => n + BADGE_DEFS[k].tiers.length, 0);
-  $('profile-summary').textContent = T[lang].profile_summary(unlockedCount, totalLevels);
+  $('profile-summary').textContent = T[state.lang].profile_summary(unlockedCount, totalLevels);
   $('profile-body').innerHTML = BADGE_ORDER.map(key => renderBadgeCard(key, BADGE_DEFS[key], stats)).join('');
   // ferramenta avulsa só pra admin (myData.admin, setado à mão no Firebase
   // Console) — corrige pendingPigmentos de quem já tinha prêmio parado na
@@ -2967,17 +2723,17 @@ function renderBadgeCard(key, def, stats) {
   const val = def.metric(stats);
   const maxed = tier === def.tiers.length - 1;
   const color = tier >= 0 ? TIER_COLORS[tier] : '#0f3460';
-  const currentName = tier >= 0 ? def.names[lang][tier] : T[lang].badge_not_unlocked;
+  const currentName = tier >= 0 ? def.names[state.lang][tier] : T[state.lang].badge_not_unlocked;
   const newCount = newBadgeCountFor(key); // quantos níveis novos essa categoria tem ainda não vistos
 
   let progressHtml;
   if (maxed) {
-    progressHtml = `<div class="muted" style="text-align:left;">${T[lang].badge_maxed}</div>`;
+    progressHtml = `<div class="muted" style="text-align:left;">${T[state.lang].badge_maxed}</div>`;
   } else {
     const nextThreshold = def.tiers[tier + 1];
     if (def.inverse) {
-      const posText = (val === Infinity) ? T[lang].badge_rank_unknown : T[lang].badge_rank_current(val);
-      progressHtml = `<div class="muted" style="text-align:left;">${posText}<br>${T[lang].badge_next_goal(def.desc(nextThreshold))}</div>`;
+      const posText = (val === Infinity) ? T[state.lang].badge_rank_unknown : T[state.lang].badge_rank_current(val);
+      progressHtml = `<div class="muted" style="text-align:left;">${posText}<br>${T[state.lang].badge_next_goal(def.desc(nextThreshold))}</div>`;
     } else {
       const pct = Math.min(100, Math.max(0, (val / nextThreshold) * 100));
       progressHtml = `
@@ -3002,15 +2758,15 @@ function renderBadgeCard(key, def, stats) {
     const isShown = i === equippedTier;
     const clickAttr = unlocked ? ` onclick="setEquippedBadgeTier('${key}', ${i})"` : '';
     const cursorStyle = unlocked ? 'cursor:pointer;' : '';
-    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}${isShown ? ' equipped' : ''}" style="background:${TIER_COLORS[i]};${cursorStyle}" title="${def.names[lang][i]}"${clickAttr}>${def.icon}</span>${lockOverlay}</span>`;
+    return `<span class="chip-wrap"><span class="badge-chip${unlocked ? '' : ' locked'}${isShown ? ' equipped' : ''}" style="background:${TIER_COLORS[i]};${cursorStyle}" title="${def.names[state.lang][i]}"${clickAttr}>${def.icon}</span>${lockOverlay}</span>`;
   }).join('');
 
   // legenda embaixo dos chips — só existe pra medalha já desbloqueada (tier >= 0)
   let equipHtml = '';
   if (tier >= 0) {
     equipHtml = (equippedTier >= 0)
-      ? `<div class="muted" style="text-align:left; margin-top:6px;">${T[lang].profile_badge_equipped_btn}: ${badgePillHtml(def, equippedTier)}</div>`
-      : `<div class="muted" style="text-align:left; margin-top:6px;">${T[lang].profile_badge_equip_btn}</div>`;
+      ? `<div class="muted" style="text-align:left; margin-top:6px;">${T[state.lang].profile_badge_equipped_btn}: ${badgePillHtml(def, equippedTier)}</div>`
+      : `<div class="muted" style="text-align:left; margin-top:6px;">${T[state.lang].profile_badge_equip_btn}</div>`;
   }
 
   return `
@@ -3018,7 +2774,7 @@ function renderBadgeCard(key, def, stats) {
       <div class="badge-card-head">
         <span class="badge-chip big" style="background:${color}; position:relative;">${def.icon}${newCount > 0 ? `<span class="notif-dot">${newCount}</span>` : ''}</span>
         <div>
-          <div class="name">${def.label[lang]}</div>
+          <div class="name">${def.label[state.lang]}</div>
           <div class="muted" style="text-align:left;">${currentName}</div>
         </div>
       </div>
@@ -3136,8 +2892,8 @@ window.loadRanking = async (m) => {
 
   $('scope-geral-btn').classList.toggle('active', rankingScope === 'geral');
   $('scope-amigos-btn').classList.toggle('active', rankingScope === 'amigos');
-  $('ranking-explain').textContent = (m === 'level') ? T[lang].level_explain : (m === 'divulgador') ? T[lang].divulgador_explain : '';
-  $('ranking-points-header').textContent = (m === 'divulgador') ? T[lang].points_header_divulgador : (m === 'level') ? T[lang].points_header_level : T[lang].points_header;
+  $('ranking-explain').textContent = (m === 'level') ? T[state.lang].level_explain : (m === 'divulgador') ? T[state.lang].divulgador_explain : '';
+  $('ranking-points-header').textContent = (m === 'divulgador') ? T[state.lang].points_header_divulgador : (m === 'level') ? T[state.lang].points_header_level : T[state.lang].points_header;
   const field = RANK_FIELDS[m];
   const body = $('ranking-body');
   $('ranking-pagination').innerHTML = '';
@@ -3147,8 +2903,8 @@ window.loadRanking = async (m) => {
     body.innerHTML = `
       <tr><td colspan="3">
         <div class="card" style="text-align:center;">
-          <p>${T[lang].profile_offline_msg1}</p>
-          <button onclick="goSignup()">${T[lang].btn_create_account}</button>
+          <p>${T[state.lang].profile_offline_msg1}</p>
+          <button onclick="goSignup()">${T[state.lang].btn_create_account}</button>
         </div>
       </td></tr>`;
     rankingRows = [];
@@ -3156,7 +2912,7 @@ window.loadRanking = async (m) => {
     return;
   }
 
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
   try {
     const all = await fetchAllScores();
     // filtro de amigos usa o mesmo cache já lido pra tela de amigos — sem leitura extra
@@ -3184,7 +2940,7 @@ window.loadRanking = async (m) => {
     rankingPage = 0;
     renderRankingPage();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error}</td></tr>`;
   }
 };
 
@@ -3217,13 +2973,13 @@ function renderRankingPage() {
       const replayBtn = document.createElement('button');
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
-      replayBtn.title = T[lang].btn_watch_replay;
+      replayBtn.title = T[state.lang].btn_watch_replay;
       replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
       ptsCell.appendChild(replayBtn);
     }
     body.appendChild(tr);
   });
-  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[lang].ranking_no_friends : T[lang].ranking_no_players}</td></tr>`;
+  if (rankingRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${rankingScope === 'amigos' ? T[state.lang].ranking_no_friends : T[state.lang].ranking_no_players}</td></tr>`;
 
   const totalPages = Math.max(1, Math.ceil(rankingRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
@@ -3231,9 +2987,9 @@ function renderRankingPage() {
     pag.innerHTML = '';
   } else {
     pag.innerHTML = `
-      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_prev}</button>
-      <span class="muted">${T[lang].pagination_page(rankingPage + 1, totalPages)}</span>
-      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
+      <button class="link" onclick="rankingGoPage(${rankingPage - 1})" ${rankingPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_prev}</button>
+      <span class="muted">${T[state.lang].pagination_page(rankingPage + 1, totalPages)}</span>
+      <button class="link" onclick="rankingGoPage(${rankingPage + 1})" ${rankingPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_next}</button>`;
   }
   resetScroll('ranking-screen');
 }
@@ -3252,7 +3008,7 @@ window.rankingGoPage = (p) => {
    campos daquele mesmo documento. */
 async function loadDailyTodayRanking() {
   const body = $('ranking-body');
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
   try {
     const dateStr = dailyLocalDateStr();
     const snap = await getDocs(query(collection(db, 'dailyScores'), where('dateStr', '==', dateStr)));
@@ -3289,7 +3045,7 @@ async function loadDailyTodayRanking() {
     dailyTodayPage = 0;
     renderDailyTodayPage();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].ranking_error}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error}</td></tr>`;
   }
 }
 function renderDailyTodayPage() {
@@ -3317,19 +3073,19 @@ function renderDailyTodayPage() {
       const replayBtn = document.createElement('button');
       replayBtn.className = 'replay-btn';
       replayBtn.textContent = '▶️';
-      replayBtn.title = T[lang].btn_watch_replay;
+      replayBtn.title = T[state.lang].btn_watch_replay;
       replayBtn.onclick = (ev) => { ev.stopPropagation(); openReplay(r.replaySessionId, r.nick, r.stats); };
       ptsCell.appendChild(replayBtn);
     }
     body.appendChild(tr);
   });
-  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[lang].daily_no_today_players}</td></tr>`;
+  if (dailyTodayRows.length === 0) body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].daily_no_today_players}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyTodayRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
-    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage - 1})" ${dailyTodayPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_prev}</button>
-    <span class="muted">${T[lang].pagination_page(dailyTodayPage + 1, totalPages)}</span>
-    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage + 1})" ${dailyTodayPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
+    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage - 1})" ${dailyTodayPage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_prev}</button>
+    <span class="muted">${T[state.lang].pagination_page(dailyTodayPage + 1, totalPages)}</span>
+    <button class="link" onclick="dailyTodayGoPage(${dailyTodayPage + 1})" ${dailyTodayPage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_next}</button>`;
   resetScroll('ranking-screen');
 }
 window.dailyTodayGoPage = (p) => {
@@ -3420,23 +3176,23 @@ function renderReplaySquares(round, idx) {
   // memorizar); nas seguintes é genérica (INSTR_NEXT — supõe que quem jogou
   // memorizou o alvo no fim da rodada anterior), mesmo texto/i18n de sempre
   const INSTR_FIRST = {
-    classic: () => T[lang].instr_first_classic(cName(targetItem)),
-    reverse: () => T[lang].instr_first_reverse(cName(targetItem)),
-    shapes: () => T[lang].instr_first_shapes(cName(targetItem)),
-    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(targetItem)),
+    classic: () => T[state.lang].instr_first_classic(cName(targetItem)),
+    reverse: () => T[state.lang].instr_first_reverse(cName(targetItem)),
+    shapes: () => T[state.lang].instr_first_shapes(cName(targetItem)),
+    'shapes-reverse': () => T[state.lang].instr_first_shapes_reverse(cName(targetItem)),
     // fallback pra replays gravados antes do fix do sanitizeReplayRounds no
     // servidor (pairA/pairB descartados por engano) — em vez de travar toda
     // a tela com cName(null), cai pra instrução genérica do modo Trio
-    trio: () => (pairA && pairB) ? T[lang].instr_first_trio(cName(pairA), cName(pairB)) : T[lang].instr_next_trio,
-    caos: () => (pairA && pairB) ? T[lang].instr_first_caos(cName(pairA), cName(pairB)) : T[lang].instr_next_caos,
+    trio: () => (pairA && pairB) ? T[state.lang].instr_first_trio(cName(pairA), cName(pairB)) : T[state.lang].instr_next_trio,
+    caos: () => (pairA && pairB) ? T[state.lang].instr_first_caos(cName(pairA), cName(pairB)) : T[state.lang].instr_next_caos,
   };
   const INSTR_NEXT = {
-    classic: T[lang].instr_next_classic,
-    reverse: T[lang].instr_next_reverse,
-    shapes: T[lang].instr_next_shapes,
-    'shapes-reverse': T[lang].instr_next_shapes_reverse,
-    trio: T[lang].instr_next_trio,
-    caos: T[lang].instr_next_caos,
+    classic: T[state.lang].instr_next_classic,
+    reverse: T[state.lang].instr_next_reverse,
+    shapes: T[state.lang].instr_next_shapes,
+    'shapes-reverse': T[state.lang].instr_next_shapes_reverse,
+    trio: T[state.lang].instr_next_trio,
+    caos: T[state.lang].instr_next_caos,
   };
   $('replay-instruction').textContent = (idx === 0) ? INSTR_FIRST[rmode]() : INSTR_NEXT[rmode];
 }
@@ -3557,7 +3313,7 @@ function stopReplayClock() {
 // só pra você) e sem depender de admin:true
 function formatReplayDateTime(ts) {
   if (!ts || typeof ts.toMillis !== 'function') return '';
-  const loc = lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'pt-BR';
+  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
   return new Date(ts.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
@@ -3642,7 +3398,7 @@ window.scrubReplay = (val) => {
 
 async function loadDailyAlltimeRanking() {
   const body = $('daily-alltime-body');
-  body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].loading_text}</td></tr>`;
+  body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].loading_text}</td></tr>`;
   try {
     // Salão da Fama sempre lê AO VIVO (fetchScoresLive), não o retrato de
     // 5min nem o cache de fetchAllScores — é o único ranking que precisa
@@ -3666,7 +3422,7 @@ async function loadDailyAlltimeRanking() {
     dailyAlltimePage = 0;
     renderDailyAlltimePage();
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].ranking_error}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].ranking_error}</td></tr>`;
   }
 }
 function renderDailyAlltimePage() {
@@ -3685,13 +3441,13 @@ function renderDailyAlltimePage() {
     applyRowTheme(tr, r.stats);
     body.appendChild(tr);
   });
-  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[lang].daily_no_wins_yet}</td></tr>`;
+  if (dailyAlltimeRows.length === 0) body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].daily_no_wins_yet}</td></tr>`;
   const totalPages = Math.max(1, Math.ceil(dailyAlltimeRows.length / RANKING_PAGE_SIZE));
   const pag = $('ranking-pagination');
   pag.innerHTML = totalPages <= 1 ? '' : `
-    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage - 1})" ${dailyAlltimePage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_prev}</button>
-    <span class="muted">${T[lang].pagination_page(dailyAlltimePage + 1, totalPages)}</span>
-    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage + 1})" ${dailyAlltimePage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[lang].pagination_next}</button>`;
+    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage - 1})" ${dailyAlltimePage === 0 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_prev}</button>
+    <span class="muted">${T[state.lang].pagination_page(dailyAlltimePage + 1, totalPages)}</span>
+    <button class="link" onclick="dailyAlltimeGoPage(${dailyAlltimePage + 1})" ${dailyAlltimePage >= totalPages - 1 ? 'disabled style="opacity:0.3;"' : ''}>${T[state.lang].pagination_next}</button>`;
   resetScroll('ranking-screen');
 }
 window.dailyAlltimeGoPage = (p) => {
@@ -3741,7 +3497,7 @@ function renderDailyCardCountdown() {
   const h = Math.floor(msLeft / 3600000);
   const m = Math.floor((msLeft % 3600000) / 60000);
   const s = Math.floor((msLeft % 60000) / 1000);
-  const label = (!live || startDelay) ? T[lang].daily_starts_in : T[lang].daily_ends_in;
+  const label = (!live || startDelay) ? T[state.lang].daily_starts_in : T[state.lang].daily_ends_in;
   const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
   // atualiza os DOIS lugares que mostram esse cronômetro (card do menu e a
@@ -3801,7 +3557,7 @@ window.dailyCardClick = () => {
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
-    $('daily-blocked-msg').textContent = T[lang].daily_blocked_msg;
+    $('daily-blocked-msg').textContent = T[state.lang].daily_blocked_msg;
     $('daily-intro').style.display = 'none';
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
@@ -3825,9 +3581,9 @@ window.showDailyIntro = () => {
   // as chaves de i18n usam "_" (mode_shapes_reverse_title), não "-" como o id
   // do modo (shapes-reverse) — só o "shapes-reverse" precisa dessa troca
   const modeKey = dailyMode.replace(/-/g, '_');
-  $('daily-intro-mode-title').innerHTML = T[lang][`mode_${modeKey}_title`];
-  $('daily-intro-mode-desc').innerHTML = T[lang][`mode_${modeKey}_desc`];
-  $('daily-intro-attempts').textContent = T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+  $('daily-intro-mode-title').innerHTML = T[state.lang][`mode_${modeKey}_title`];
+  $('daily-intro-mode-desc').innerHTML = T[state.lang][`mode_${modeKey}_desc`];
+  $('daily-intro-attempts').textContent = T[state.lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
   $('daily-intro-best').textContent = dailyBestScore;
   renderDailyCardCountdown(); // atualiza o cronômetro na hora, sem esperar o próximo tique do segundo
   $('daily-intro-tut-btn').onclick = () => startTutorial(dailyMode, { fromDaily: true });
@@ -3869,7 +3625,7 @@ function renderInboxList(msgs) {
   const allBtn = $('inbox-claim-all-btn');
   $('inbox-status').textContent = '';
   if (msgs.length === 0) {
-    list.innerHTML = `<div class="muted" style="text-align:center;">${T[lang].inbox_empty}</div>`;
+    list.innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].inbox_empty}</div>`;
     allBtn.style.display = 'none';
     return;
   }
@@ -3880,14 +3636,14 @@ function renderInboxList(msgs) {
   list.innerHTML = '';
   msgs.forEach(msg => {
     const pos = msg.position;
-    const posLabel = pos === 1 ? T[lang].daily_pos_1 : pos === 2 ? T[lang].daily_pos_2 : pos === 3 ? T[lang].daily_pos_3 : T[lang].daily_pos_n(pos);
+    const posLabel = pos === 1 ? T[state.lang].daily_pos_1 : pos === 2 ? T[state.lang].daily_pos_2 : pos === 3 ? T[state.lang].daily_pos_3 : T[state.lang].daily_pos_n(pos);
     const box = document.createElement('div');
     box.className = 'daily-inbox-msg';
     if (msg.claimed) box.style.opacity = '0.6';
 
     const posLine = document.createElement('div');
     posLine.className = 'pos-line';
-    posLine.textContent = T[lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
+    posLine.textContent = T[state.lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
     box.appendChild(posLine);
 
     const claimRow = document.createElement('div');
@@ -3904,12 +3660,12 @@ function renderInboxList(msgs) {
       const claimedLabel = document.createElement('span');
       claimedLabel.className = 'muted';
       claimedLabel.style.fontWeight = '700';
-      claimedLabel.textContent = T[lang].daily_reward_claimed_label;
+      claimedLabel.textContent = T[state.lang].daily_reward_claimed_label;
       claimRow.appendChild(claimedLabel);
     } else {
       const claimBtn = document.createElement('button');
       claimBtn.className = 'secondary';
-      claimBtn.textContent = T[lang].btn_claim;
+      claimBtn.textContent = T[state.lang].btn_claim;
       claimBtn.onclick = () => claimOneDailyReward(msg.dateStr);
       claimRow.appendChild(claimBtn);
     }
@@ -3945,7 +3701,7 @@ window.claimOneDailyReward = async (dateStr) => {
     renderMenuPigmentosBar();
     renderUserPigmentos();
   } catch (e) {
-    $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
+    $('inbox-status').textContent = e.message || T[state.lang].daily_claim_error;
   }
 };
 window.claimAllDailyRewards = async () => {
@@ -3959,7 +3715,7 @@ window.claimAllDailyRewards = async () => {
     renderMenuPigmentosBar();
     renderUserPigmentos();
   } catch (e) {
-    $('inbox-status').textContent = e.message || T[lang].daily_claim_error;
+    $('inbox-status').textContent = e.message || T[state.lang].daily_claim_error;
   }
 };
 
@@ -3986,7 +3742,7 @@ async function updateDailyMenuCard() {
     card.classList.toggle('level-locked', showLock);
     if (lockEl) {
       lockEl.style.display = showLock ? '' : 'none';
-      if (showLock) lockEl.textContent = T[lang].unlock_at(DAILY_MIN_LEVEL);
+      if (showLock) lockEl.textContent = T[state.lang].unlock_at(DAILY_MIN_LEVEL);
     }
     return;
   }
@@ -4004,17 +3760,17 @@ async function updateDailyMenuCard() {
     dailyAttemptsUsed = 0;
     dailyBestScore = 0;
   }
-  $('daily-card-best').textContent = T[lang].daily_card_best(dailyBestScore);
+  $('daily-card-best').textContent = T[state.lang].daily_card_best(dailyBestScore);
   $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
-    ? T[lang].daily_card_already_played
-    : T[lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+    ? T[state.lang].daily_card_already_played
+    : T[state.lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
 }
 
 /* -------- jogo do desafio (mesmo modo Clássico, RNG determinística) -------- */
 window.startDailyChallenge = async () => {
   if (offline || !currentUser || !myData.nick) { goSignup(); return; }
   if (!(await isDailyClientUpToDate())) {
-    $('daily-blocked-msg').textContent = T[lang].daily_update_required;
+    $('daily-blocked-msg').textContent = T[state.lang].daily_update_required;
     $('daily-intro').style.display = 'none';
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
@@ -4065,7 +3821,7 @@ window.startDailyChallenge = async () => {
     // sem tentativas hoje (ou outro erro) — não tem uma tela de lobby pra
     // mostrar a mensagem, então manda pra tela de "sem tentativas", que já
     // tem o link pro ranking do desafio
-    $('daily-blocked-msg').textContent = e.message || T[lang].daily_start_error;
+    $('daily-blocked-msg').textContent = e.message || T[state.lang].daily_start_error;
     $('daily-intro').style.display = 'none';
     $('daily-play').style.display = 'none';
     $('daily-result').style.display = 'none';
@@ -4090,7 +3846,7 @@ function startDailyCountdown(onDone) {
   function tick() {
     const remaining = DAILY_COUNTDOWN_MS - (performance.now() - startedMs);
     if (remaining <= 0) {
-      $('daily-countdown-num').textContent = T[lang].pvp_go;
+      $('daily-countdown-num').textContent = T[state.lang].pvp_go;
       if (lastNum !== 'go') { lastNum = 'go'; sfx.countdown(true); }
       dailyCountdownTimerId = setTimeout(() => {
         $('daily-countdown').style.display = 'none';
@@ -4150,16 +3906,16 @@ function dailyNewRound(first) {
   if (dailyReplayRounds.length < 400) dailyReplayRounds.push({ t: Math.round(performance.now() - dailyReplayStartMs), sq: roundSnapshot });
 
   const INSTR_FIRST = {
-    classic: () => T[lang].instr_first_classic(cName(dailyTarget)),
-    reverse: () => T[lang].instr_first_reverse(cName(dailyTarget)),
-    shapes: () => T[lang].instr_first_shapes(cName(dailyTarget)),
-    'shapes-reverse': () => T[lang].instr_first_shapes_reverse(cName(dailyTarget)),
+    classic: () => T[state.lang].instr_first_classic(cName(dailyTarget)),
+    reverse: () => T[state.lang].instr_first_reverse(cName(dailyTarget)),
+    shapes: () => T[state.lang].instr_first_shapes(cName(dailyTarget)),
+    'shapes-reverse': () => T[state.lang].instr_first_shapes_reverse(cName(dailyTarget)),
   };
   const INSTR_NEXT = {
-    classic: T[lang].instr_next_classic,
-    reverse: T[lang].instr_next_reverse,
-    shapes: T[lang].instr_next_shapes,
-    'shapes-reverse': T[lang].instr_next_shapes_reverse,
+    classic: T[state.lang].instr_next_classic,
+    reverse: T[state.lang].instr_next_reverse,
+    shapes: T[state.lang].instr_next_shapes,
+    'shapes-reverse': T[state.lang].instr_next_shapes_reverse,
   };
   $('daily-instruction').textContent = first ? INSTR_FIRST[dailyMode]() : INSTR_NEXT[dailyMode];
   $('daily-speed').textContent = `⏱️ ${(dailyDuration / 1000).toFixed(1)}s`;
@@ -4174,7 +3930,7 @@ function startDailyTimer() {
     if (!dailyPlaying) return;
     const left = 1 - (now - dailyTimerStart) / dailyDuration;
     $('daily-timer-fill').style.width = Math.max(0, left * 100) + '%';
-    if (left <= 0) { sfx.timeout(); return dailyGameOver(T[lang].reason_timeout); }
+    if (left <= 0) { sfx.timeout(); return dailyGameOver(T[state.lang].reason_timeout); }
     if (left < 0.35 && now - lastTick > 250) { lastTick = now; sfx.tick(); }
     dailyRafId = requestAnimationFrame(tick);
   };
@@ -4193,7 +3949,7 @@ function dailyHandleClick(item, e) {
     dailyNewRound(false);
   } else {
     sfx.wrong();
-    dailyGameOver(T[lang].reason_wrong);
+    dailyGameOver(T[state.lang].reason_wrong);
   }
 }
 
@@ -4219,7 +3975,7 @@ async function dailyGameOver(reason) {
   // "assentarem" no servidor antes de mandar o resultado final (mesma ideia
   // de gameOver no modo livre — ver comentário lá)
   setDailyResultButtonsEnabled(false);
-  $('daily-result-attempts').textContent = T[lang].sync_calculating;
+  $('daily-result-attempts').textContent = T[state.lang].sync_calculating;
   await Promise.allSettled(dailyPendingRoundSync);
   dailyPendingRoundSync = [];
 
@@ -4230,7 +3986,7 @@ async function dailyGameOver(reason) {
     if (res.data && typeof res.data.bestScore === 'number') bestScore = res.data.bestScore;
     if (res.data && typeof res.data.xpEarned === 'number' && res.data.xpEarned > 0) {
       myData.xp = (myData.xp || 0) + res.data.xpEarned;
-      $('daily-result-xp').textContent = T[lang].daily_xp_bonus(res.data.xpEarned);
+      $('daily-result-xp').textContent = T[state.lang].daily_xp_bonus(res.data.xpEarned);
       $('daily-result-xp').style.display = '';
       if (levelFromXp(myXp()) > lvBefore) sfx.levelUp();
     }
@@ -4250,8 +4006,8 @@ async function dailyGameOver(reason) {
 
   const left = Math.max(0, DAILY_MAX_ATTEMPTS - dailyAttemptsUsed);
   $('daily-result-attempts').textContent = left > 0
-    ? T[lang].daily_attempts_left_msg(left)
-    : T[lang].daily_attempts_used_msg;
+    ? T[state.lang].daily_attempts_left_msg(left)
+    : T[state.lang].daily_attempts_used_msg;
   $('daily-result-again-btn').style.display = left > 0 ? '' : 'none';
   setDailyResultButtonsEnabled(true);
 
@@ -4614,7 +4370,7 @@ function renderPvpChallengeBanner(m) {
   const fromNick = (m.nicks && m.nicks[m.challengerUid]) || '';
   box.style.display = '';
   box.dataset.matchId = m.id;
-  $('pvp-challenge-text').textContent = T[lang].pvp_challenge_received(fromNick);
+  $('pvp-challenge-text').textContent = T[state.lang].pvp_challenge_received(fromNick);
 }
 
 window.uiAcceptChallenge = async () => {
@@ -4712,7 +4468,7 @@ function renderPvpScreen(m) {
     stopPvpTicker();
     stopPvpCountdownTicker();
     $('pvp-waiting').style.display = '';
-    $('pvp-waiting-text').textContent = T[lang].pvp_waiting_text((m.nicks && m.nicks[oppUid]) || '');
+    $('pvp-waiting-text').textContent = T[state.lang].pvp_waiting_text((m.nicks && m.nicks[oppUid]) || '');
     return;
   }
 
@@ -4726,9 +4482,9 @@ function renderPvpScreen(m) {
   if (m.status === 'active') {
     stopPvpCountdownTicker();
     $('pvp-active').style.display = 'flex';
-    setPvpNameWithLevel($('pvp-my-name'), T[lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp(), equippedAvatar);
+    setPvpNameWithLevel($('pvp-my-name'), T[state.lang].pvp_you_label((m.nicks && m.nicks[myUid]) || ''), myXp(), equippedAvatar);
     setPvpNameWithLevel($('pvp-opp-name'), (m.nicks && m.nicks[oppUid]) || '', getPvpOppXp(oppUid), getPvpOppEquipped(oppUid).avatar);
-    $('pvp-turn-label').textContent = (m.turnUid === myUid) ? T[lang].pvp_your_turn : T[lang].pvp_opp_turn((m.nicks && m.nicks[oppUid]) || '');
+    $('pvp-turn-label').textContent = (m.turnUid === myUid) ? T[state.lang].pvp_your_turn : T[state.lang].pvp_opp_turn((m.nicks && m.nicks[oppUid]) || '');
     checkPvpBonusToast(m);
     renderPvpBoard(m, myUid);
     if (!pvpAnimFrame) startPvpTicker();
@@ -4765,7 +4521,7 @@ function renderPvpBoard(m, myUid) {
   const boxColor = COLORS[round.promptColorIdx] || COLORS[0];
   const targetColor = COLORS[round.promptWordIdx] || COLORS[0];
   const box = $('pvp-prompt-box');
-  box.textContent = targetColor.name[lang]; // conteúdo fixo (tabela COLORS), sem dado de usuário
+  box.textContent = targetColor.name[state.lang]; // conteúdo fixo (tabela COLORS), sem dado de usuário
   box.style.background = boxColor.hex;
   box.style.boxShadow = `0 0 18px ${boxColor.hex}99, 0 0 40px ${boxColor.hex}55, inset 0 0 14px rgba(255,255,255,0.15)`;
 
@@ -4779,7 +4535,7 @@ function renderPvpBoard(m, myUid) {
     el.className = 'square';
     el.style.background = bg.hex;
     el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-    el.innerHTML = `<span class="word">${word.name[lang]}</span>`; // conteúdo fixo (tabela COLORS), sem dado de usuário
+    el.innerHTML = `<span class="word">${word.name[state.lang]}</span>`; // conteúdo fixo (tabela COLORS), sem dado de usuário
     if (myTurn) {
       el.onclick = () => uiSubmitPvpAnswer(i);
     } else {
@@ -4812,30 +4568,30 @@ function renderPvpResult(m, myUid, oppUid) {
   roundsEl.textContent = '';
 
   if (m.status === 'declined') {
-    titleEl.textContent = T[lang].pvp_declined_title;
+    titleEl.textContent = T[state.lang].pvp_declined_title;
     subEl.textContent = '';
     return;
   }
   if (m.status === 'cancelled') {
-    titleEl.textContent = T[lang].pvp_cancelled_title;
+    titleEl.textContent = T[state.lang].pvp_cancelled_title;
     subEl.textContent = '';
     return;
   }
   if (m.status === 'draw') {
     playPvpResultSound('draw');
-    titleEl.textContent = T[lang].pvp_draw_title;
-    subEl.textContent = T[lang].pvp_draw_sub;
+    titleEl.textContent = T[state.lang].pvp_draw_title;
+    subEl.textContent = T[state.lang].pvp_draw_sub;
     const finalBank = m.finalBank || m.bank || {};
     playersEl.appendChild(pvpPlayerRow(myNick, finalBank[myUid] || 0, null));
     playersEl.appendChild(pvpPlayerRow(oppNick, finalBank[oppUid] || 0, null));
-    roundsEl.textContent = T[lang].pvp_rounds_played(m.cycleNumber || 1);
+    roundsEl.textContent = T[state.lang].pvp_rounds_played(m.cycleNumber || 1);
     return;
   }
 
   const won = m.winnerUid === myUid;
   playPvpResultSound(won ? 'win' : 'lose');
-  titleEl.textContent = won ? T[lang].pvp_win_title : T[lang].pvp_lose_title;
-  const reasonFn = { timeout: T[lang].pvp_reason_timeout, wrong_click: T[lang].pvp_reason_wrong, forfeit: T[lang].pvp_reason_forfeit }[m.loseReason];
+  titleEl.textContent = won ? T[state.lang].pvp_win_title : T[state.lang].pvp_lose_title;
+  const reasonFn = { timeout: T[state.lang].pvp_reason_timeout, wrong_click: T[state.lang].pvp_reason_wrong, forfeit: T[state.lang].pvp_reason_forfeit }[m.loseReason];
   subEl.textContent = reasonFn ? reasonFn(won, oppNick) : '';
 
   // placar final: os dois participantes, com quanto tempo sobrou no banco
@@ -4846,7 +4602,7 @@ function renderPvpResult(m, myUid, oppUid) {
   playersEl.appendChild(pvpPlayerRow(winnerNick, finalBank[m.winnerUid] || 0, true));
   playersEl.appendChild(pvpPlayerRow(loserNick, finalBank[m.loseUid] || 0, false));
 
-  roundsEl.textContent = T[lang].pvp_rounds_played(m.cycleNumber || 1);
+  roundsEl.textContent = T[state.lang].pvp_rounds_played(m.cycleNumber || 1);
 }
 
 // linha do placar final — nick sempre via textContent (nunca innerHTML),
@@ -4918,7 +4674,7 @@ function renderPvpCountdown(m) {
   const num = Math.max(1, Math.ceil(remaining / 1000));
 
   if (remaining <= 0) {
-    $('pvp-countdown-num').textContent = T[lang].pvp_go;
+    $('pvp-countdown-num').textContent = T[state.lang].pvp_go;
     if (pvpCountdownLastNum !== 'go') { pvpCountdownLastNum = 'go'; sfx.countdown(true); }
   } else {
     $('pvp-countdown-num').textContent = String(num);
@@ -5257,10 +5013,10 @@ function tutSetNav() {
   $('tut-prev-btn').style.visibility = tutStep === 1 ? 'hidden' : 'visible';
   const nextBtn = $('tut-next-btn');
   if (tutStep === TUT_TOTAL) {
-    nextBtn.textContent = tutFromDaily ? T[lang].tut_play_btn_daily : T[lang].tut_play_btn[tutMode];
+    nextBtn.textContent = tutFromDaily ? T[state.lang].tut_play_btn_daily : T[state.lang].tut_play_btn[tutMode];
     nextBtn.onclick = tutPlay;
   } else {
-    nextBtn.textContent = T[lang].tut_next;
+    nextBtn.textContent = T[state.lang].tut_next;
     nextBtn.onclick = tutNext;
   }
 }
@@ -5271,10 +5027,10 @@ function showTutStep(n) {
   tutStep = n;
   tutSetDots();
   tutSetNav();
-  $('tut-caption').innerHTML = T[lang][`tut_caption_${tutMode}_${n}`];
+  $('tut-caption').innerHTML = T[state.lang][`tut_caption_${tutMode}_${n}`];
 
-  const INSTR_FIRST_BY_TUT_MODE = { classic: T[lang].instr_first_classic, reverse: T[lang].instr_first_reverse, shapes: T[lang].instr_first_shapes, 'shapes-reverse': T[lang].instr_first_shapes_reverse, trio: T[lang].instr_first_trio, caos: T[lang].instr_first_caos };
-  const INSTR_NEXT_BY_TUT_MODE = { classic: T[lang].instr_next_classic, reverse: T[lang].instr_next_reverse, shapes: T[lang].instr_next_shapes, 'shapes-reverse': T[lang].instr_next_shapes_reverse, trio: T[lang].instr_next_trio, caos: T[lang].instr_next_caos };
+  const INSTR_FIRST_BY_TUT_MODE = { classic: T[state.lang].instr_first_classic, reverse: T[state.lang].instr_first_reverse, shapes: T[state.lang].instr_first_shapes, 'shapes-reverse': T[state.lang].instr_first_shapes_reverse, trio: T[state.lang].instr_first_trio, caos: T[state.lang].instr_first_caos };
+  const INSTR_NEXT_BY_TUT_MODE = { classic: T[state.lang].instr_next_classic, reverse: T[state.lang].instr_next_reverse, shapes: T[state.lang].instr_next_shapes, 'shapes-reverse': T[state.lang].instr_next_shapes_reverse, trio: T[state.lang].instr_next_trio, caos: T[state.lang].instr_next_caos };
   const instrFirst = INSTR_FIRST_BY_TUT_MODE[tutMode];
   const instrNext = INSTR_NEXT_BY_TUT_MODE[tutMode];
   // trio e caos pedem 2 itens (targetA/targetB) — instrFirst recebe os 2
@@ -5455,7 +5211,7 @@ window.startTutorial = (mode = 'classic', opts = {}) => {
   tutFromDaily = !!opts.fromDaily;
   track('tutorial_start', { mode, fromDaily: tutFromDaily });
   show('tutorial-screen');
-  $('tut-title-el').textContent = T[lang].tut_title[tutMode];
+  $('tut-title-el').textContent = T[state.lang].tut_title[tutMode];
   showTutStep(1);
   $('tut-intro-banner').classList.add('show');
   setTimeout(() => $('tut-intro-banner').classList.remove('show'), 1500);

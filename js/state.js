@@ -1,3 +1,17 @@
+// link de compartilhamento pode vir com ?lang=en — se vier, abre já traduzido
+// e lembra a escolha (senão cai no idioma salvo, ou português por padrão)
+function detectInitialLang() {
+  try {
+    const urlLang = new URLSearchParams(location.search).get('lang');
+    if (urlLang === 'en' || urlLang === 'pt' || urlLang === 'es') {
+      localStorage.setItem('colorRushLang', urlLang);
+      return urlLang;
+    }
+    const saved = localStorage.getItem('colorRushLang');
+    return (saved === 'en' || saved === 'es') ? saved : 'pt';
+  } catch { return 'pt'; }
+}
+
 // Objeto único de estado mutável compartilhado entre os módulos do jogo.
 // Em vez de `let` exportado (que outros módulos só enxergam como leitura),
 // cada módulo importa `{ state }` e lê/escreve `state.campo` diretamente —
@@ -10,4 +24,8 @@ export const state = {
   // travamento de clique lê os dois pra decidir se libera o clique atual.
   pendingServerCalls: 0,
   clickLockedUntil: 0,
+  // idioma atual (pt/en/es) — lido por praticamente toda função de
+  // renderização (T[state.lang]), por isso vive aqui e não num módulo de
+  // domínio específico.
+  lang: detectInitialLang(),
 };
