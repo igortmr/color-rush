@@ -28,11 +28,13 @@ import { T, cName } from './i18n.js';
 import {
   MODE_UNLOCK, levelFromXp, lvChip, applyNickFrame, applyRowTheme, avatarSvg,
   avatarOrDefaultIcon, pigmentIconSvg, renderDailyPrizesLegend, modeLabel,
-  xpInfo, xpStreakMultiplier, totalXpForLevel
+  xpInfo, xpStreakMultiplier, totalXpForLevel, myXp, modeUnlocked, isBanned,
+  blockIfBanned
 } from './levels.js';
 import {
   TIER_COLORS, BADGE_DEFS, BADGE_ORDER, unlockedTier, badgePillHtml,
-  equippedBadgeLabel, sharerTierLabel
+  equippedBadgeLabel, sharerTierLabel, hasNewBadgeFor, newBadgeCountFor,
+  hasAnyNewBadge, totalNewBadgeCount, markAllBadgesSeen, refreshBadgeNotifDot
 } from './badges.js';
 import { tutMode, tutStep, showTutStep } from './tutorial.js';
 
@@ -289,83 +291,7 @@ const dailyPoolFor = m => (m === 'classic' || m === 'reverse')
 const computeTotal = (overrideMode, overrideScore) =>
   ALL_MODES.reduce((sum, k) => sum + (k === overrideMode ? overrideScore : (state.myData[k] || 0)), 0);
 
-/* ================== níveis / XP ================== */
-// XP por rodada certa: (3 - 0,2 * segundos gastos) * multiplicador de sequência
-// (quanto mais rápido, mais XP; quanto mais longa a sequência, maior o multiplicador)
-// Nível N -> N+1 custa N * 100 de XP (100, 200, 300, ...)
-// bônus de sequência: recompensa acertos mais avançados no run, já que ficam mais difíceis
-// (o tempo por rodada encolhe 5% a cada acerto)
-function myXp() { return state.offline ? 0 : (state.myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
-function modeUnlocked(m) { return state.myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
-// conta banida (campo "banned" setado à mão no Firebase Console, ver
-// checkNotBanned em functions/index.js) não pode jogar NENHUM modo — isso
-// aqui é só a trava do client (mensagem amigável antes de nem tentar); o
-// servidor já rejeitaria qualquer sessão/pontuação de uma conta banida de
-// qualquer forma, isso aqui só evita deixar a pessoa jogar a partida
-// inteira só pra descobrir no fim que não vai valer nada
-function isBanned() { return state.myData.banned === true; }
-function blockIfBanned() {
-  if (!isBanned()) return false;
-  alert(T[state.lang].banned_msg);
-  return true;
-}
-
 /* ================== conquistas (badges) ================== */
-// aviso de "medalha nova, ainda não vista" — como as medalhas não aparecem
-// mais sozinhas no ranking (a pessoa precisa ir no perfil e equipar se
-// quiser), essa bolinha avisa que tem uma categoria com nível desbloqueado
-// que ainda não foi conferido. Guardado em scores/{uid}.badgesSeenTiers (ver
-// firestore.rules), não no navegador — assim funciona certo mesmo trocando
-// de dispositivo/navegador pra entrar na mesma conta. Sem valor de jogo: é
-// puramente uma marcação de "já olhei", então o cliente pode escrever direto
-// sem precisar de Cloud Function (mesmo raciocínio do equippedBadge). Como o
-// registro começa vazio pra todo mundo, quem já tinha medalha desbloqueada
-// antes dessa funcionalidade existir também recebe o aviso na primeira vez.
-function hasNewBadgeFor(key) {
-  return newBadgeCountFor(key) > 0;
-}
-// quantos NÍVEIS novos essa categoria desbloqueou desde a última vez que a
-// pessoa viu o perfil (normalmente 1, mas pode ser mais se ela pulou vários
-// níveis de uma vez sem abrir o perfil) — usado pra mostrar o número dentro
-// da bolinha de notificação, em vez de só um sinal de "tem novidade"
-function newBadgeCountFor(key) {
-  if (state.offline || !state.currentUser || !state.myData.nick) return 0;
-  const tier = unlockedTier(BADGE_DEFS[key], state.myData);
-  if (tier < 0) return 0;
-  const seen = state.myData.badgesSeenTiers || {};
-  const seenTier = seen[key] != null ? seen[key] : -1;
-  return Math.max(0, tier - seenTier);
-}
-function hasAnyNewBadge() {
-  return BADGE_ORDER.some(hasNewBadgeFor);
-}
-// soma de novidades em todas as categorias — número mostrado na bolinha do
-// nick, na tela principal
-function totalNewBadgeCount() {
-  return BADGE_ORDER.reduce((n, key) => n + newBadgeCountFor(key), 0);
-}
-// chamada depois que a pessoa vê o próprio perfil (onde todas as categorias
-// aparecem) — marca o nível atual de cada uma como "visto", até a próxima
-// vez que desbloquear algo novo
-async function markAllBadgesSeen() {
-  if (state.offline || !state.currentUser || !state.myData.nick) return;
-  const seen = {};
-  BADGE_ORDER.forEach(key => { seen[key] = unlockedTier(BADGE_DEFS[key], state.myData); });
-  state.myData.badgesSeenTiers = seen; // atualiza local na hora, antes mesmo do Firestore confirmar
-  refreshBadgeNotifDot();
-  try {
-    await setDoc(doc(db, 'scores', state.currentUser.uid), { badgesSeenTiers: seen, updatedAt: serverTimestamp() }, { merge: true });
-  } catch (e) {
-    // não foi possível salvar agora — a marcação fica só localmente até a próxima tentativa
-  }
-}
-function refreshBadgeNotifDot() {
-  const dot = $('user-label-badge');
-  if (!dot) return;
-  const n = totalNewBadgeCount();
-  dot.textContent = n;
-  dot.style.display = n > 0 ? '' : 'none';
-}
 // pill com ícone + nome da ÚNICA medalha escolhida pra aparecer ao lado do
 // nick no ranking (ver setEquippedBadgeTier, no perfil próprio). Sem escolha
 // feita ainda, não mostra nada — só passa a exibir depois que a própria

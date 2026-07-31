@@ -20,6 +20,20 @@ export function xpInfo(xp) {
   const lv = levelFromXp(xp);
   return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
 }
+export function myXp() { return state.offline ? 0 : (state.myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
+export function modeUnlocked(m) { return state.myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+// conta banida (campo "banned" setado à mão no Firebase Console, ver
+// checkNotBanned em functions/index.js) não pode jogar NENHUM modo — isso
+// aqui é só a trava do client (mensagem amigável antes de nem tentar); o
+// servidor já rejeitaria qualquer sessão/pontuação de uma conta banida de
+// qualquer forma, isso aqui só evita deixar a pessoa jogar a partida
+// inteira só pra descobrir no fim que não vai valer nada
+export function isBanned() { return state.myData.banned === true; }
+export function blockIfBanned() {
+  if (!isBanned()) return false;
+  alert(T[state.lang].banned_msg);
+  return true;
+}
 
 // cor do emblema de nível é um único degradê contínuo por toda a subida: começa
 // verde no nível 5, passa por azul, roxo, branco, amarelo e laranja, e termina
