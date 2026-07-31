@@ -14,6 +14,16 @@ import {
 import {
   initializeAppCheck, ReCaptchaV3Provider
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+import {
+  COLORS, CONFETTI_COLORS, SQUARES, SHAPES, poolFor, CAOS_POOL, isColorItem,
+  poolItemId, poolItemById, PLAYED_FIELD, ALL_MODES, DAILY_ROTATION_MODES,
+  DAILY_COLORS, DAILY_PALETTE_OVERRIDE
+} from './constants.js';
+import {
+  shuffle, pick, mulberry32, hashSeed, seededPick, seededShuffle,
+  getLocalRecord, setLocalRecord, isMuted, setMuted, audioContext, tone,
+  playCorrectSfxVariant
+} from './utils.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAQUvnXszefkF1gQzQCdf_C21FNmJc7YLo",
@@ -1040,17 +1050,6 @@ async function ensureRefCode() {
 }
 
 /* ================== state ================== */
-const COLORS = [
-  { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'      }, hex: '#1e90ff' },
-  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'      }, hex: '#ff3c3c' }, // um pouco mais puro/forte que antes (#ff4757), pra diferenciar melhor do rosa (#ff6b9d) — hue quase idêntico ao original antes puxava pro lado do rosa
-  { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'     }, hex: '#2ed573' },
-  { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO'  }, hex: '#ffd32a' },
-  { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'    }, hex: '#a55eea' },
-  { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'   }, hex: '#ff7f24' },
-  { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'      }, hex: '#ff6b9d' },
-  { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'      }, hex: '#00d2d3' },
-];
-const CONFETTI_COLORS = { confetti_gold: ['#ffd700', '#ffe93c', '#fff2a8'] };
 // confete cosmético da loja ao bater um novo recorde — camada leve (sem
 // biblioteca), some sozinha depois da animação. "confettiId" explícito permite
 // reusar a mesma função tanto pro confete realmente equipado quanto pra prévia
@@ -1075,89 +1074,7 @@ function spawnConfettiVariant(confettiId) {
 }
 function spawnConfetti() { spawnConfettiVariant(equippedConfetti); }
 const cName = c => c.name[lang];
-const SQUARES = 4;
 
-const SHAPES = [
-  { name: { pt: 'CÍRCULO',    en: 'CIRCLE',   es: 'CÍRCULO'   }, shapeClass: 'shape-circle' },
-  { name: { pt: 'QUADRADO',   en: 'SQUARE',   es: 'CUADRADO'  }, shapeClass: 'shape-square-shape' },
-  { name: { pt: 'TRIÂNGULO',  en: 'TRIANGLE', es: 'TRIÁNGULO' }, shapeClass: 'shape-triangle' },
-  { name: { pt: 'LOSANGO',    en: 'DIAMOND',  es: 'ROMBO'     }, shapeClass: 'shape-diamond' },
-  { name: { pt: 'ESTRELA',    en: 'STAR',     es: 'ESTRELLA'  }, shapeClass: 'shape-star' },
-  { name: { pt: 'CRUZ',       en: 'CROSS',    es: 'CRUZ'      }, shapeClass: 'shape-cross' },
-];
-const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : COLORS;
-// modo Caos (ver newCaosRound mais abaixo): pool combinado de cores + formas —
-// cada quadrado pode "bater" com um item memorizado seja ele uma cor ou uma
-// forma, então o sorteio precisa dos dois universos juntos num só array
-const CAOS_POOL = [...COLORS, ...SHAPES];
-const isColorItem = item => COLORS.includes(item);
-// identificador estável (string curta) de um item de cor/forma — usado só
-// pra gravar/reconstruir o "filme" da tela de replay (ver newRound/
-// dailyNewRound e renderReplayRound mais abaixo); nunca participa da
-// pontuação nem da validação, é puramente visual
-const poolItemId = item => item.key || item.shapeClass;
-const poolItemById = (pool, id) => pool.find(x => (x.key || x.shapeClass) === id) || pool[0];
-const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio', caos: 'playedCaos' };
-const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio', 'caos'];
-// o desafio diário sorteia só entre Clássico e Reverso (ver dailyModeForToday)
-// — de propósito uma lista separada de ALL_MODES, pra um modo novo (como o
-// Trio) poder entrar no jogo livre/ranking sem precisar reconstruir também a
-// tela do desafio diário (grid/replay dele têm o próprio código de render).
-// Formas/Formas Reverso saíram do sorteio a pedido (ficou só entre os 2 modos
-// de cor, que agora usam a paleta estendida DAILY_COLORS abaixo).
-const DAILY_ROTATION_MODES = ['classic', 'reverse'];
-// paleta exclusiva do desafio diário: só 4 tons quentes próximos (Amarelo,
-// Laranja, Marrom e Vermelho), de propósito bem mais difícil de diferenciar
-// que as 8 cores normais — o jogo livre (Clássico/Reverso/Trio) continua só
-// com as 8 cores de COLORS, sem mudança. Precisa de um "kind: 'daily'"
-// gravado no replay (ver saveMatchReplay em functions/index.js e
-// dailyGameOver aqui) pra tela de replay saber que deve reconstruir com esta
-// paleta em vez da COLORS normal (ver renderReplaySquares).
-// Como o pool tem exatamente 4 cores e cada rodada mostra exatamente 4
-// quadrados (ver SQUARES), dailyNewRound() sempre usa as 4 de uma vez
-// (embaralhadas) — nunca duas cores de fundo repetidas na mesma rodada.
-const DAILY_COLORS = [
-  { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW',  es: 'AMARILLO'   }, hex: '#ffd32a' },
-  { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE',  es: 'NARANJA'    }, hex: '#ff7f24' },
-  { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',   es: 'MARRÓN'     }, hex: '#73421c' },
-  { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',     es: 'ROJO'       }, hex: '#ff3c3c' },
-];
-// DAILY_PALETTE_OVERRIDE: mesma ideia do DAILY_MODE_OVERRIDE (ver mais
-// abaixo) só que pra paleta — força um dia específico a usar outras cores em
-// vez da paleta padrão do desafio diário (DAILY_COLORS), sem mexer no
-// sorteio de verdade dos outros dias. Precisa de PELO MENOS 4 cores (==
-// SQUARES) — dailyNewRound() sorteia 4 distintas a cada rodada dentro da
-// paleta do dia, igual o Clássico/Reverso normal já faz com as 8 cores de
-// COLORS (ver poolFor); só quando a paleta tem EXATAMENTE 4 (caso de
-// 2026-07-30 abaixo) é que as mesmas 4 acabam aparecendo toda rodada.
-const DAILY_PALETTE_OVERRIDE = {
-  '2026-07-30': [
-    { key: 'blue',   name: { pt: 'AZUL',  en: 'BLUE',   es: 'AZUL'   }, hex: '#1e90ff' },
-    { key: 'cyan',   name: { pt: 'CIANO', en: 'CYAN',   es: 'CIAN'   }, hex: '#00d2d3' },
-    { key: 'green',  name: { pt: 'VERDE', en: 'GREEN',  es: 'VERDE'  }, hex: '#2ed573' },
-    { key: 'purple', name: { pt: 'ROXO',  en: 'PURPLE', es: 'MORADO' }, hex: '#a55eea' },
-  ],
-  // 12 cores a pedido — inclui as 8 do jogo livre (COLORS) + marrom (já usado
-  // na paleta padrão do diário, DAILY_COLORS) + 3 novas exclusivas do diário
-  // (cinza/branco/preto, nunca usadas em nenhuma outra paleta do jogo).
-  // "preto" usa #1a1a1a (quase preto) em vez de #000 puro: o brilho do
-  // quadrado (box-shadow) usa a mesma hex, e um brilho literalmente preto não
-  // apareceria — assim o quadrado ainda "acende" como os outros, só mais escuro.
-  '2026-07-31': [
-    { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO' }, hex: '#ffd32a' },
-    { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'     }, hex: '#1e90ff' },
-    { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'    }, hex: '#2ed573' },
-    { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'   }, hex: '#a55eea' },
-    { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'     }, hex: '#00d2d3' },
-    { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'     }, hex: '#ff3c3c' },
-    { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'  }, hex: '#ff7f24' },
-    { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'     }, hex: '#ff6b9d' },
-    { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',  es: 'MARRÓN'   }, hex: '#73421c' },
-    { key: 'gray',   name: { pt: 'CINZA',    en: 'GRAY',   es: 'GRIS'     }, hex: '#8a8a8a' },
-    { key: 'white',  name: { pt: 'BRANCO',   en: 'WHITE',  es: 'BLANCO'   }, hex: '#ffffff' },
-    { key: 'black',  name: { pt: 'PRETO',    en: 'BLACK',  es: 'NEGRO'    }, hex: '#1a1a1a' },
-  ],
-};
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS, ou o override do dia — ver
 // DAILY_PALETTE_OVERRIDE acima); qualquer outro valor cai no poolFor normal
@@ -1779,40 +1696,6 @@ function resetScroll(screenId) {
   void el.offsetHeight; // força o navegador recalcular o layout
   window.scrollTo(0, 0); // quem rola agora é a página inteira, não mais cada .screen por dentro
 }
-const shuffle = a => a.sort(() => Math.random() - 0.5);
-const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-
-/* ================== RNG determinística (desafio diário) ==================
-   O desafio diário precisa que TODO MUNDO veja exatamente a mesma sequência
-   de cores no mesmo dia — em vez de Math.random(), usamos um gerador
-   determinístico (mulberry32) semeado a partir da data do dia (hashSeed).
-   Toda a lógica de rodada (dailyNewRound) chama seededPick/seededShuffle
-   NA MESMA ORDEM que newRound() chama pick/shuffle, pra garantir que a
-   sequência bate entre as até 3 tentativas de uma mesma pessoa e entre
-   jogadores diferentes. */
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-function hashSeed(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  return h >>> 0;
-}
-function seededPick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
-function seededShuffle(rng, a) {
-  const arr = a.slice();
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
 // modo sorteado do desafio diário — determinístico por dia (mesmo modo pra
 // TODO MUNDO, e igual nas 3 tentativas), sorteado entre os modos de
 // DAILY_ROTATION_MODES, SEM olhar nível desbloqueado: o desafio diário
@@ -1860,74 +1743,11 @@ function dailyTodayStartsAtMs(now = new Date()) {
 function isDailyStartDelay(now = new Date()) { return now.getTime() < dailyTodayStartsAtMs(now); }
 
 /* ================== recordes locais (modo sem conta) ================== */
-function getLocalRecord(m) {
-  try { return parseInt(localStorage.getItem('colorRushRecord_' + m)) || 0; } catch { return 0; }
-}
-function setLocalRecord(m, v) {
-  try { localStorage.setItem('colorRushRecord_' + m, v); } catch {}
-}
 function myRecord(m) {
   return offline ? getLocalRecord(m) : (myData[m] || 0);
 }
 
 /* ================== sons (Web Audio, sem arquivos) ================== */
-let audioCtx = null;
-let muted = false;
-try { muted = localStorage.getItem('colorRushMuted') === '1'; } catch {}
-
-function audioContext() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
-  if (muted) return;
-  try {
-    const c = audioContext();
-    const t = c.currentTime + delay;
-    const o = c.createOscillator();
-    const g = c.createGain();
-    o.type = type;
-    o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(g); g.connect(c.destination);
-    o.start(t); o.stop(t + dur);
-  } catch {}
-}
-// cosmético da loja (equippedSfx) troca o som do acerto — a lógica de "sobe o
-// tom a cada acerto" continua igual, só muda o timbre. "variant" explícito
-// permite reusar pra prévia da loja, tocando um som mesmo sem estar equipado.
-function playCorrectSfxVariant(variant, n) {
-  if (variant === 'sfx_8bit') {
-    const f = 220 + Math.min(n, 24) * 55;
-    tone(f, 0.06, 'square', 0.13);
-    tone(f * 1.5, 0.04, 'square', 0.07, 0.02);
-  } else if (variant === 'sfx_splash') {
-    const f = 500 + Math.min(n, 24) * 20;
-    tone(f, 0.07, 'sine', 0.13);
-    tone(f * 0.5, 0.12, 'sine', 0.09, 0.04);
-  } else if (variant === 'sfx_bell') {
-    const f = 600 + Math.min(n, 24) * 25;
-    tone(f, 0.15, 'sine', 0.12);
-    tone(f * 1.5, 0.12, 'sine', 0.07, 0.03);
-  } else if (variant === 'sfx_laser') {
-    const f = 900 + Math.min(n, 24) * 30;
-    tone(f, 0.05, 'sawtooth', 0.11);
-    tone(f * 0.6, 0.08, 'sawtooth', 0.08, 0.03);
-  } else if (variant === 'sfx_bubble') {
-    const f = 350 + Math.min(n, 24) * 25;
-    tone(f, 0.05, 'triangle', 0.12);
-    tone(f * 1.8, 0.06, 'triangle', 0.09, 0.05);
-  } else if (variant === 'sfx_synth') {
-    const f = 300 + Math.min(n, 24) * 35;
-    tone(f, 0.08, 'square', 0.1);
-    tone(f * 1.25, 0.08, 'square', 0.08, 0.04);
-    tone(f * 1.5, 0.1, 'square', 0.06, 0.08);
-  } else {
-    tone(440 + Math.min(n, 24) * 40, 0.1, 'square', 0.1);
-  }
-}
 const sfx = {
   correct(n) { playCorrectSfxVariant(equippedSfx, n); },
   wrong()   { tone(160, 0.3, 'sawtooth', 0.15); tone(110, 0.4, 'sawtooth', 0.15, 0.08); },
@@ -1941,10 +1761,9 @@ const sfx = {
   countdown(isGo) { isGo ? tone(880, 0.2, 'square', 0.16) : tone(660, 0.12, 'square', 0.14); }, // bipe da contagem 3-2-1 (mais agudo/comprido no "Vai!")
 };
 window.toggleMute = () => {
-  muted = !muted;
-  try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
-  $('mute-btn').classList.toggle('on', !muted);
-  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
+  setMuted(!isMuted());
+  $('mute-btn').classList.toggle('on', !isMuted());
+  $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
 };
 
 /* ================== compartilhar ================== */
@@ -2395,8 +2214,8 @@ window.showMenu = () => {
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
   $('record-trio').textContent = myRecord('trio');
   $('record-caos').textContent = myRecord('caos');
-  $('mute-btn').classList.toggle('on', !muted);
-  $('mute-btn').querySelector('.tgl-icon').textContent = muted ? '🔇' : '🔊';
+  $('mute-btn').classList.toggle('on', !isMuted());
+  $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
 
   // nível e barra de XP (só aparece pra quem tem conta)
   $('menu-xp-wrap').style.display = offline ? 'none' : '';
