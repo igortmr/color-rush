@@ -118,6 +118,7 @@ const callAdminSetXp = callable('adminSetXp');
 const callBackfillPendingPigmentos = callable('backfillPendingPigmentos');
 const callAdminRecomputeScoresSnapshot = callable('adminRecomputeScoresSnapshot');
 const callBackfillReplayDurations = callable('backfillReplayDurations');
+const callAdminGetFlaggedAccounts = callable('adminGetFlaggedAccounts');
 // desafio diário — mesmo esquema de sessão/validação de tempo do modo normal
 // (ver startDailyAttempt/submitDailyResult em functions/index.js)
 const callStartDailyAttempt = callable('startDailyAttempt');
@@ -1941,6 +1942,43 @@ window.runAdminRecomputeSnapshot = async (btn) => {
   }
 };
 
+// mostra os alertas mais recentes de checkIpAndFlag (functions/index.js) —
+// texto fixo em português de propósito, igual o resto do painel de admin
+window.runAdminGetFlaggedAccounts = async (btn) => {
+  const list = $('flagged-accounts-list');
+  btn.disabled = true;
+  if (list) list.innerHTML = '<div class="muted">Carregando...</div>';
+  try {
+    const res = await callAdminGetFlaggedAccounts();
+    const events = (res.data && res.data.events) || [];
+    if (!events.length) {
+      if (list) list.innerHTML = '<div class="muted">Nenhum alerta registrado ainda.</div>';
+    } else if (list) {
+      list.innerHTML = events.map(ev => {
+        const nickSafe = (ev.nick || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+        let detailText;
+        if (ev.reason === 'ip_compartilhado_entre_contas') {
+          const otherSafe = (ev.otherNick || '(sem nick)').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+          detailText = `mesmo IP que <b>${otherSafe}</b> (${ev.details.ip || '?'})`;
+        } else {
+          const from = ev.details.fromCity || ev.details.fromCountry || '?';
+          const to = ev.details.toCity || ev.details.toCountry || '?';
+          const mins = ev.details.elapsedMs ? Math.round(ev.details.elapsedMs / 60000) : '?';
+          detailText = `pulou de <b>${from}</b> pra <b>${to}</b> (${ev.details.distanceKm || '?'}km) em ${mins}min`;
+        }
+        return `<div class="card" style="text-align:left; padding:10px 14px;">
+          <div><b>${nickSafe}</b> — ${detailText}</div>
+          <div class="muted" style="margin-top:4px;">${fmtDateTime(ev.at)}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    if (list) list.innerHTML = '❌ ' + (e.message || 'Erro ao carregar.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
 window.runAdminSetOwnLevel = async (btn) => {
   const input = $('admin-set-level-input');
   const status = $('admin-set-level-status');
@@ -2390,6 +2428,12 @@ async function renderProfile(viewStats, viewNick, viewUid) {
         <p class="muted" style="margin-top:6px;">Recalcula o retrato do ranking (scoresSnapshot) na hora, em vez de esperar até 5min pelo agendamento automático. Útil pra testar mudanças recém-implantadas nas functions.</p>
         <button class="secondary" onclick="runAdminRecomputeSnapshot(this)">Recalcular ranking agora</button>
         <div class="muted" id="recompute-snapshot-status" style="margin-top:6px;"></div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <b>🚩 Contas Suspeitas</b>
+        <p class="muted" style="margin-top:6px;">Lista os alertas mais recentes de possível compartilhamento de conta: mesmo IP em duas contas diferentes, ou uma conta "pulando" de local rápido demais (ver checkIpAndFlag em functions/index.js). Não bloqueia nada sozinho — é só pra você decidir manualmente o que fazer.</p>
+        <button class="secondary" onclick="runAdminGetFlaggedAccounts(this)">Carregar contas suspeitas</button>
+        <div id="flagged-accounts-list" style="margin-top:6px;"></div>
       </div>
       <div class="card" style="text-align:left;">
         <b>🛠️ Admin — editar meu nível</b>
