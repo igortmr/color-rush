@@ -2377,40 +2377,6 @@ window.saveNick = async () => {
 };
 
 /* ================== menu ================== */
-// pares de modo compactados em abas (Clássico/Reverso = 'cr', Formas/Formas
-// Reverso = 'fr') — trocar de aba só troca qual descrição/rodapé aparece na
-// caixa compartilhada embaixo (ver selectModeTab); clicar na própria caixa
-// é que inicia o modo selecionado no momento (ver startPairMode). O default
-// de cada par é sempre o lado nunca-bloqueado (classic/shapes), então a
-// aba inicial nunca cai num modo travado.
-const modeTabSelected = { cr: 'classic', fr: 'shapes' };
-window.selectModeTab = (ev, pairId, mode) => {
-  ev.stopPropagation();
-  modeTabSelected[pairId] = mode;
-  document.querySelectorAll(`.mode-tab[data-pair="${pairId}"]`).forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
-  document.querySelectorAll(`[data-pair-content="${pairId}"]`).forEach(el => el.style.display = (el.dataset.mode === mode) ? '' : 'none');
-  updateModeTabLockState(pairId);
-};
-// reaplica o estado de travado/destravado da aba ATUALMENTE selecionada de
-// um par — chamado ao trocar de aba e sempre que o menu é desenhado de novo
-// (nível pode ter mudado desde a última vez). Quando a aba selecionada está
-// travada, esconde descrição/rodapé (ninguém pode jogar mesmo) e mostra só
-// a mensagem de desbloqueio, igual os cards avulsos (trio/caos) já fazem.
-function updateModeTabLockState(pairId) {
-  const mode = modeTabSelected[pairId];
-  const body = document.querySelector(`.mode-tab-body[data-pair="${pairId}"]`);
-  const lockMsg = document.querySelector(`[data-pair-lockmsg="${pairId}"]`);
-  if (!body) return;
-  const locked = !modeUnlocked(mode);
-  body.classList.toggle('locked', locked);
-  document.querySelectorAll(`[data-pair-content="${pairId}"][data-mode="${mode}"]`).forEach(el => el.style.display = locked ? 'none' : '');
-  if (lockMsg) {
-    lockMsg.style.display = locked ? '' : 'none';
-    if (locked) lockMsg.textContent = T[lang].unlock_at(MODE_UNLOCK[mode]);
-  }
-}
-window.startPairMode = (pairId) => startGame(modeTabSelected[pairId]);
-
 window.showMenu = () => {
   $('record-classic').textContent = myRecord('classic');
   $('record-reverse').textContent = myRecord('reverse');
@@ -2445,21 +2411,14 @@ window.showMenu = () => {
   renderUserPigmentos();
   refreshBadgeNotifDot();
 
-  // bloqueio dos modos por nível — trio/caos continuam card avulso
-  // (card-<modo>); reverse/shapes-reverse agora moram dentro de um card de
-  // par com abas (tab-<modo>), ver selectModeTab/updateModeTabLockState
+  // bloqueio dos modos por nível
   for (const [m, minLv] of Object.entries(MODE_UNLOCK)) {
     const locked = !modeUnlocked(m);
-    const card = $('card-' + m);
-    if (card) card.classList.toggle('locked', locked);
-    const tab = $('tab-' + m);
-    if (tab) tab.classList.toggle('locked', locked);
+    $('card-' + m).classList.toggle('locked', locked);
     const lockEl = $('lock-' + m);
     lockEl.style.display = locked ? '' : 'none';
     if (locked) lockEl.textContent = T[lang].unlock_at(minLv);
   }
-  updateModeTabLockState('cr');
-  updateModeTabLockState('fr');
   if (offline) {
     $('user-label').textContent = T[lang].offline_label;
     $('menu-logout-btn').textContent = T[lang].entrar_label;
