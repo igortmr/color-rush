@@ -78,79 +78,21 @@ workflows:
       - name: Gerar e aplicar o ícone real do app (substitui o placeholder do Capacitor)
         script: |
           # o cap add ios sempre recria o ícone padrão do Capacitor (o "X"
-          # genérico) do zero. Em vez de depender de um PNG ter subido certo
-          # pro GitHub (já tomamos um susto com isso no capacitor.config.json),
-          # o ícone de verdade (mesmo desenho "tabuleiro" 2x2 já usado no
-          # PWA/Android: fundo escuro + quadrados vermelho/azul/verde/amarelo)
-          # é gerado aqui na hora, só com a biblioteca padrão do Python (zlib),
-          # sem precisar de Pillow nem de nenhum arquivo externo.
+          # genérico) do zero. O ícone de verdade agora é o PNG 1024x1024
+          # commitado em icons/appicon-1024.png (mesma arte usada no favicon/
+          # PWA), só copiado pro slot certo do appiconset — checagem de
+          # tamanho mínimo abaixo pra falhar alto caso o PNG não tenha vindo
+          # certo do GitHub, em vez de aplicar um arquivo vazio/corrompido
+          # silenciosamente.
           set -e
           cd app
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           test -d "$ICONSET" || (echo "ERRO: AppIcon.appiconset não encontrado em $ICONSET" && exit 1)
 
-          python3 << 'PYEOF'
-          import zlib, struct
-
-          SIZE = 1024
-          BG = (14, 18, 36)
-          RED = (255, 45, 107)
-          BLUE = (45, 214, 255)
-          GREEN = (33, 230, 161)
-          YELLOW = (255, 233, 60)
-
-          safe = int(SIZE * 0.52)
-          x0 = (SIZE - safe) // 2
-          y0 = (SIZE - safe) // 2
-          gap = int(safe * 0.09)
-          sq = (safe - gap) // 2
-          radius = int(sq * 0.22)
-
-          quads = [
-              (x0, y0, RED),
-              (x0 + sq + gap, y0, BLUE),
-              (x0, y0 + sq + gap, GREEN),
-              (x0 + sq + gap, y0 + sq + gap, YELLOW),
-          ]
-
-          def inside_rounded(lx, ly, w, h, r):
-              if lx < r and ly < r:
-                  return (lx - r) ** 2 + (ly - r) ** 2 <= r * r
-              if lx >= w - r and ly < r:
-                  return (lx - (w - r)) ** 2 + (ly - r) ** 2 <= r * r
-              if lx < r and ly >= h - r:
-                  return (lx - r) ** 2 + (ly - (h - r)) ** 2 <= r * r
-              if lx >= w - r and ly >= h - r:
-                  return (lx - (w - r)) ** 2 + (ly - (h - r)) ** 2 <= r * r
-              return 0 <= lx < w and 0 <= ly < h
-
-          def pixel_color(px, py):
-              for qx, qy, color in quads:
-                  lx, ly = px - qx, py - qy
-                  if 0 <= lx < sq and 0 <= ly < sq and inside_rounded(lx, ly, sq, sq, radius):
-                      return color
-              return BG
-
-          raw = bytearray()
-          for y in range(SIZE):
-              raw.append(0)
-              for x in range(SIZE):
-                  raw += bytes(pixel_color(x, y))
-
-          compressed = zlib.compress(bytes(raw), 9)
-
-          def chunk(tag, data):
-              return (struct.pack('>I', len(data)) + tag + data +
-                      struct.pack('>I', zlib.crc32(tag + data) & 0xffffffff))
-
-          sig = b'\x89PNG\r\n\x1a\n'
-          ihdr = struct.pack('>IIBBBBB', SIZE, SIZE, 8, 2, 0, 0, 0)
-          png = sig + chunk(b'IHDR', ihdr) + chunk(b'IDAT', compressed) + chunk(b'IEND', b'')
-
-          with open('appicon-1024.png', 'wb') as f:
-              f.write(png)
-          print('appicon-1024.png gerado:', len(png), 'bytes')
-          PYEOF
+          cp ../icons/appicon-1024.png appicon-1024.png
+          SIZE_BYTES=$(wc -c < appicon-1024.png)
+          test "$SIZE_BYTES" -gt 10000 || (echo "ERRO: appicon-1024.png suspeito demais pequeno ($SIZE_BYTES bytes)" && exit 1)
+          echo "appicon-1024.png copiado: $SIZE_BYTES bytes"
 
           # aplica no(s) slot(s) de 1024x1024 do Contents.json gerado pelo cap
           # add ios (formato "single size" do Xcode 14+, que é o que o
