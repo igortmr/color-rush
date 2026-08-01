@@ -28,6 +28,29 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
   });
 }
 
+// faixa "baixe o app" -- reforço do Smart App Banner nativo do Safari (ver
+// <meta name="apple-itunes-app"> no <head> de index.html, que já cobre a
+// maioria dos casos sozinho) pra quem já dispensou aquele, ou está usando
+// outro navegador. Só em iPhone/iPad, fora do app nativo (mostrar isso pra
+// quem já tem o app instalado não faz sentido nenhum), e só se a pessoa
+// ainda não tiver fechado antes (guardado no localStorage, não expira).
+const IOS_APP_BANNER_DISMISSED_KEY = 'colorRushIosBannerDismissed';
+window.dismissIosAppBanner = () => {
+  const el = $('ios-app-banner');
+  if (el) el.style.display = 'none';
+  try { localStorage.setItem(IOS_APP_BANNER_DISMISSED_KEY, '1'); } catch {}
+};
+(() => {
+  const el = $('ios-app-banner');
+  if (!el) return; // teste.html/index.html sem esse elemento (ou tela antiga em cache)
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if (!isIOS || isNative) return;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem(IOS_APP_BANNER_DISMISSED_KEY) === '1'; } catch {}
+  if (!dismissed) el.style.display = '';
+})();
+
 /* ================== idioma ================== */
 // detecção inicial (URL/localStorage) agora mora em js/state.js, já que o
 // idioma é lido por quase toda função de renderização em vários módulos

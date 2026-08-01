@@ -27,6 +27,12 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#050810">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<!-- Smart App Banner: no Safari do iOS, mostra sozinho uma faixa nativa
+     "abrir no app" pra quem visita o site sem ter o app instalado (ex: link
+     de pontuação/indicação compartilhado) -- sem JS nenhum, é o próprio
+     Safari que reconhece essa tag. ID Apple do app (não é o Team ID), pego
+     no App Store Connect > Informações do App. -->
+<meta name="apple-itunes-app" content="app-id=6794695684">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -61,6 +67,16 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+<!-- reforço do Smart App Banner (ver <meta apple-itunes-app> no <head>) --
+     pra quem já dispensou a faixa do Safari, ou tá em outro navegador. Só
+     aparece via JS (ver window.showIosAppBanner em bootstrap.js), quando o
+     visitante estiver num iPhone/iPad fora do app nativo. -->
+<div class="ios-app-banner" id="ios-app-banner" style="display:none;">
+  <span class="ios-app-banner-text" data-i18n="ios_app_banner_text">Jogue no app — mais rápido, com notificações</span>
+  <a class="ios-app-banner-cta" href="https://apps.apple.com/app/id6794695684" target="_blank" rel="noopener" data-i18n="ios_app_banner_cta">Baixar</a>
+  <button class="ios-app-banner-close" aria-label="Fechar" onclick="dismissIosAppBanner()">✕</button>
+</div>
 
 <div class="levelup-banner" id="levelup-banner" onclick="dismissLevelUp()">
   <div class="levelup-inner">
