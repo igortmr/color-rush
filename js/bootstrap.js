@@ -38,6 +38,7 @@ const IOS_APP_BANNER_DISMISSED_KEY = 'colorRushIosBannerDismissed';
 window.dismissIosAppBanner = () => {
   const el = $('ios-app-banner');
   if (el) el.style.display = 'none';
+  document.body.style.paddingTop = ''; // volta pro padding normal (env(safe-area-inset-top)) do CSS
   try { localStorage.setItem(IOS_APP_BANNER_DISMISSED_KEY, '1'); } catch {}
 };
 (() => {
@@ -48,7 +49,15 @@ window.dismissIosAppBanner = () => {
   if (!isIOS || isNative) return;
   let dismissed = false;
   try { dismissed = localStorage.getItem(IOS_APP_BANNER_DISMISSED_KEY) === '1'; } catch {}
-  if (!dismissed) el.style.display = '';
+  if (dismissed) return;
+  el.style.display = '';
+  // a faixa é position:fixed (não empurra o body sozinha, ver comentário no
+  // CSS) -- compensa manualmente o espaço que ela ocupa, com a altura REAL
+  // dela (varia por causa da tradução/tamanho de tela), somada ao padding de
+  // topo que já existia (env(safe-area-inset-top), notch etc.)
+  requestAnimationFrame(() => {
+    document.body.style.paddingTop = `calc(env(safe-area-inset-top) + ${el.offsetHeight}px)`;
+  });
 })();
 
 /* ================== idioma ================== */

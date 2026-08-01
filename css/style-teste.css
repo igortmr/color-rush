@@ -1061,9 +1061,20 @@
     text-shadow: 0 0 10px rgba(33,230,161,0.7);
   }
   .ios-app-banner {
-    position: sticky;
+    /* fixed (não sticky/in-flow) de propósito -- body é display:flex (linha)
+       com só UM filho "de verdade" esperado (a .screen ativa); um segundo
+       filho em fluxo normal (mesmo sticky) vira item de flex e empurra a
+       .screen pro lado em vez de ficar embaixo (bug visto no Chrome iOS).
+       fixed tira a faixa do fluxo -- o espaço que ela ocupa é compensado à
+       parte, via padding-top do body (ver window.dismissIosAppBanner e a
+       IIFE que mostra a faixa em bootstrap.js). z-index abaixo do
+       .lang-switch (1000) de propósito, pra aquele pill continuar acima
+       da faixa na sobreposição do canto superior esquerdo. */
+    position: fixed;
     top: 0;
-    z-index: 1500;
+    left: 0;
+    right: 0;
+    z-index: 900;
     display: flex;
     align-items: center;
     gap: 10px;
