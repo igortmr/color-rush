@@ -12,6 +12,22 @@ import './nick.js';
 import './menu.js';
 import './auth.js';
 
+// Universal Links (iOS): quando alguém toca um link de colorrush.com.br por
+// fora do app (WhatsApp, Mensagens etc.) com o app já instalado, o iOS abre
+// o app em vez do Safari (ver .well-known/apple-app-site-association +
+// entitlement "associated-domains" no codemagic.yaml) e dispara esse evento
+// com a URL tocada — navega o próprio WebView pra lá, reaproveitando toda a
+// leitura de ?ref= que já acontece normalmente ao carregar a página (ver
+// share.js), sem precisar de nenhuma lógica de rota nova. window.Capacitor
+// (não um import de pacote) porque esta página roda remota, direto do site,
+// dentro do WebView — sem bundler pra resolver "@capacitor/app" (mesmo
+// padrão de window.Capacitor.Plugins já usado no login nativo, auth.js).
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+  window.Capacitor.Plugins.App.addListener('appUrlOpen', (data) => {
+    if (data && data.url) window.location.href = data.url;
+  });
+}
+
 /* ================== idioma ================== */
 // detecção inicial (URL/localStorage) agora mora em js/state.js, já que o
 // idioma é lido por quase toda função de renderização em vários módulos

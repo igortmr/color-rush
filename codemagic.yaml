@@ -173,7 +173,12 @@ workflows:
 
           # entitlement "Sign in with Apple" — exigido pra usar
           # ASAuthorizationController nativo (sem isso o app crasha/recusa na
-          # hora de pedir o login com Apple)
+          # hora de pedir o login com Apple). "associated-domains" (Universal
+          # Links) — deixa o iOS abrir o app direto (em vez do Safari) quando
+          # alguém toca num link de colorrush.com.br fora do app (ex: link de
+          # pontuação/indicação compartilhado no WhatsApp) — precisa bater com
+          # o applinks:colorrush.com.br do .well-known/apple-app-site-association
+          # hospedado no próprio site (ver esse arquivo pro appID com o Team ID)
           cat > ios/App/App/App.entitlements << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -182,6 +187,10 @@ workflows:
           	<key>com.apple.developer.applesignin</key>
           	<array>
           		<string>Default</string>
+          	</array>
+          	<key>com.apple.developer.associated-domains</key>
+          	<array>
+          		<string>applinks:colorrush.com.br</string>
           	</array>
           </dict>
           </plist>
@@ -254,6 +263,27 @@ workflows:
           with open(path, 'w') as f:
               f.write(content)
           print('AppDelegate.swift: função de abertura de URL adicionada')
+          PYEOF
+
+          # mesma ideia acima, mas pro OUTRO evento que abre o app por fora —
+          # Universal Links (Associated Domains), quando alguém toca num link
+          # de colorrush.com.br fora do app (WhatsApp, Mensagens etc). É um
+          # delegate diferente do "open url" (esse aqui usa NSUserActivity,
+          # não URL scheme), por isso precisa do próprio encaminhamento.
+          grep -q "ApplicationDelegateProxy.shared.application(application, continue: userActivity" ios/App/App/AppDelegate.swift || python3 << 'PYEOF'
+          path = "ios/App/App/AppDelegate.swift"
+          with open(path) as f:
+              content = f.read()
+          insertion = """
+              func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+                  return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+              }
+          """
+          idx = content.rfind('}')
+          content = content[:idx] + insertion + content[idx:]
+          with open(path, 'w') as f:
+              f.write(content)
+          print('AppDelegate.swift: função de Universal Links (continue userActivity) adicionada')
           PYEOF
       - name: Declarar isenção de criptografia (evita a pergunta manual a cada envio)
         script: |
