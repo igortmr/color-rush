@@ -75,9 +75,23 @@
 <div class="ios-app-banner" id="ios-app-banner" style="display:none;">
   <span class="ios-app-banner-text" data-i18n="ios_app_banner_text">Jogue no app — mais rápido, com notificações</span>
   <a class="ios-app-banner-cta" href="https://apps.apple.com/app/id6794695684">
-    <img class="ios-app-banner-badge" id="ios-app-banner-badge" src="img/app-store-badge/badge-pt-br.svg" alt="Baixar na App Store">
+    <img class="ios-app-banner-badge" data-app-store-badge src="img/app-store-badge/badge-pt-br.svg" alt="Baixar na App Store">
   </a>
   <button class="ios-app-banner-close" aria-label="Fechar" onclick="dismissIosAppBanner()">✕</button>
+</div>
+
+<!-- popup "já está no iPhone" -- só em navegador de computador (ver JS em
+     bootstrap.js), avisando quem só conhecia o jogo pelo site que agora
+     também tem app iOS. 1x por dispositivo, igual a faixa acima. -->
+<div class="modal-overlay" id="ios-launch-modal" style="display:none;" onclick="if(event.target===this) dismissIosLaunchModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center; align-items:center;">
+    <button class="ios-app-banner-close" style="align-self:flex-end; margin:-6px -6px 0 0;" aria-label="Fechar" onclick="dismissIosLaunchModal()">✕</button>
+    <h1 style="font-size:1.2rem;" data-i18n="ios_launch_modal_title">📱 Color Rush já está no iPhone!</h1>
+    <p class="muted" style="margin:0;" data-i18n="ios_launch_modal_text">Baixe o app pra jogar mais rápido, com notificações e sem precisar do navegador.</p>
+    <a href="https://apps.apple.com/app/id6794695684">
+      <img class="ios-launch-modal-badge" data-app-store-badge src="img/app-store-badge/badge-pt-br.svg" alt="Baixar na App Store">
+    </a>
+  </div>
 </div>
 
 <div class="levelup-banner" id="levelup-banner" onclick="dismissLevelUp()">

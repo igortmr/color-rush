@@ -50,13 +50,17 @@ const IOS_APP_BANNER_DISMISSED_KEY = 'colorRushIosBannerDismissed';
 const IOS_APP_BANNER_BADGE_LOCALE = { pt: 'pt-br', en: 'en-us', es: 'es-mx' };
 const IOS_APP_BANNER_BADGE_ALT = { pt: 'Baixar na App Store', en: 'Download on the App Store', es: 'Descargar en el App Store' };
 // selo oficial da Apple (baixado de tools.applemediaservices.com), um SVG por
-// idioma do jogo -- troca o src/alt junto com applyLanguage() (js/bootstrap.js)
-function updateIosAppBannerBadge() {
-  const img = $('ios-app-banner-badge');
-  if (!img) return;
+// idioma do jogo -- atualiza TODOS os selos da página de uma vez (a faixa do
+// topo E o popup de lançamento pra desktop, ver mais abaixo), identificados
+// por [data-app-store-badge] em vez de um id fixo cada -- troca junto com
+// applyLanguage() (js/bootstrap.js)
+function updateAppStoreBadges() {
   const locale = IOS_APP_BANNER_BADGE_LOCALE[state.lang] || 'pt-br';
-  img.src = `img/app-store-badge/badge-${locale}.svg`;
-  img.alt = IOS_APP_BANNER_BADGE_ALT[state.lang] || IOS_APP_BANNER_BADGE_ALT.pt;
+  const alt = IOS_APP_BANNER_BADGE_ALT[state.lang] || IOS_APP_BANNER_BADGE_ALT.pt;
+  document.querySelectorAll('[data-app-store-badge]').forEach(img => {
+    img.src = `img/app-store-badge/badge-${locale}.svg`;
+    img.alt = alt;
+  });
 }
 window.dismissIosAppBanner = () => {
   const el = $('ios-app-banner');
@@ -80,7 +84,7 @@ window.dismissIosAppBanner = () => {
   let dismissed = false;
   try { dismissed = localStorage.getItem(IOS_APP_BANNER_DISMISSED_KEY) === '1'; } catch {}
   if (dismissed) return;
-  updateIosAppBannerBadge();
+  updateAppStoreBadges();
   el.style.display = '';
   // a faixa é position:fixed (não empurra o body sozinha, ver comentário no
   // CSS) -- compensa manualmente o espaço que ela ocupa, com a altura REAL
@@ -91,6 +95,33 @@ window.dismissIosAppBanner = () => {
     document.body.style.paddingTop = `calc(env(safe-area-inset-top) + ${el.offsetHeight}px)`;
     document.documentElement.style.setProperty('--ios-banner-offset', `${el.offsetHeight}px`);
   });
+})();
+
+// popup "Color Rush já está no iPhone" -- só em navegador de COMPUTADOR (nem
+// iOS nem Android, mesmo em navegador comum), já que quem acessa pelo
+// celular já vê a faixa acima (ou já está no app). No PC não existe nenhum
+// aviso hoje de que o jogo lançou pro iOS, então isso cobre esse buraco. 1x
+// por dispositivo (localStorage, não expira, mesmo padrão da faixa acima) --
+// fecha tanto pelo X quanto clicando fora do card (ver modal-overlay/onclick
+// no HTML), os dois marcam como visto.
+const IOS_LAUNCH_MODAL_DISMISSED_KEY = 'colorRushIosLaunchModalDismissed';
+window.dismissIosLaunchModal = () => {
+  const el = $('ios-launch-modal');
+  if (el) el.style.display = 'none';
+  try { localStorage.setItem(IOS_LAUNCH_MODAL_DISMISSED_KEY, '1'); } catch {}
+};
+(() => {
+  const el = $('ios-launch-modal');
+  if (!el) return; // teste.html/index.html sem esse elemento (ou tela antiga em cache)
+  const ua = navigator.userAgent;
+  const isMobile = /iPhone|iPad|iPod|Android|Mobi/i.test(ua);
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if (isMobile || isNative) return;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem(IOS_LAUNCH_MODAL_DISMISSED_KEY) === '1'; } catch {}
+  if (dismissed) return;
+  updateAppStoreBadges();
+  el.style.display = '';
 })();
 
 /* ================== idioma ================== */
@@ -114,7 +145,7 @@ function applyLanguage() {
   });
   document.documentElement.lang = (state.lang === 'en') ? 'en' : (state.lang === 'es') ? 'es' : 'pt-BR';
   $('lang-select').value = state.lang;
-  updateIosAppBannerBadge();
+  updateAppStoreBadges();
 
   // re-renderiza a tela dinâmica que já estava aberta, se aplicável
   if ($('menu-screen').classList.contains('active')) showMenu();

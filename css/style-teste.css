@@ -1103,6 +1103,12 @@
     height: 32px;
     width: auto;
   }
+  .ios-launch-modal-badge {
+    display: block;
+    height: 48px;
+    width: auto;
+    margin-top: 4px;
+  }
   .ios-app-banner-close {
     flex-shrink: 0;
     background: none;
