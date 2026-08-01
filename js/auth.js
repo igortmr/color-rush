@@ -21,6 +21,7 @@ import { syncRefCodeField, resetNickConsent } from './nick.js';
 const callSuggestFriendFromRef = callable('suggestFriendFromRef');
 const callRecomputeTotal = callable('recomputeMyTotal');
 const callDeleteMyAccount = callable('deleteMyAccount');
+const callRegisterPushToken = callable('registerPushToken');
 // troca o authorization code do login com Apple por um refresh token que o
 // servidor guarda pra poder revogar na exclusão de conta (exigência da Apple,
 // ver doApple/registerAppleAuthCode mais abaixo e functions/index.js)
@@ -111,6 +112,31 @@ window.checkVerification = async () => {
 // de Capacitor até agora)
 function isNativeApp() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+// pede permissão e registra o dispositivo pra notificação push, só dentro do
+// app nativo, uma vez por sessão (chamado em proceedAfterLogin mais abaixo).
+// Melhor esforço: qualquer falha aqui fica só no console, nunca atrapalha o
+// login/uso normal do jogo (mesmo padrão do sendPushToUser no servidor, ver
+// functions/index.js).
+let nativePushInitDone = false;
+async function initNativePush() {
+  if (nativePushInitDone || !isNativeApp()) return;
+  nativePushInitDone = true;
+  try {
+    const PushNotifications = window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
+    if (!PushNotifications) return;
+    const perm = await PushNotifications.requestPermissions();
+    if (perm.receive !== 'granted') return;
+    PushNotifications.addListener('registration', (token) => {
+      callRegisterPushToken({ token: token.value }).catch(() => {});
+    });
+    PushNotifications.addListener('registrationError', (err) => {
+      console.warn('[push] erro de registro', err);
+    });
+    await PushNotifications.register();
+  } catch (e) {
+    console.warn('[push] indisponível', e);
+  }
 }
 // "Sign in with Apple" só aparece dentro do app empacotado — a Apple só
 // exige isso no APP (guideline 4.8), não no site avulso, e no navegador
@@ -286,6 +312,7 @@ async function proceedAfterLogin(user) {
     await submitPendingScore();
     startPvpListener();
     touchActivityTick(); // atualiza "última vez online" na hora (o heartbeat cuida do resto enquanto a aba ficar aberta)
+    initNativePush(); // sem await de propósito: nunca deve atrasar a entrada no menu
     // já tem conta — se chegou (ou já estava logada) com o link de convite de
     // alguém, sugere amizade em segundo plano, sem travar a entrada no menu
     // (mesmo caso de quem acabou de criar a conta, ver saveNick/creditReferral)
