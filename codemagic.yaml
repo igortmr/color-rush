@@ -30,7 +30,12 @@ workflows:
         # logo abaixo, que o Codemagic já incrementa sozinho), essa aqui
         # precisa ser subida manualmente aqui toda vez que fizer uma nova
         # submissão pro App Store depois da última já aprovada (1.1).
-        XCODE_MARKETING_VERSION: "1.1.1"
+        # 1.1.2: a 1.1.1 (Universal Links) ainda está em revisão -- não dá
+        # pra editar um binário já enviado, então essas duas correções que
+        # também exigem binário novo (push notification quebrado desde a
+        # refatoração, ver b02aec8; prompt de avaliação, ver ca95c33) vão
+        # numa submissão seguinte, separada.
+        XCODE_MARKETING_VERSION: "1.1.2"
       node: latest
       xcode: latest
     scripts:
