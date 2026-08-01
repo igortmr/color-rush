@@ -38,7 +38,7 @@ import {
 } from './badges.js';
 import { tutMode, tutStep, showTutStep } from './tutorial.js';
 import {
-  fetchAllScores, rowData, compareRankRows, invalidateScoresCache
+  fetchAllScores, rowData, compareRankRows, invalidateScoresCache, renderMiniRankings
 } from './ranking-cache.js';
 import { RANK_FIELDS } from './ranking.js';
 import {
