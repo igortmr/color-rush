@@ -518,6 +518,31 @@ function setOverButtonsEnabled(enabled) {
   document.querySelectorAll('#over-screen .btn-row button, #signup-cta').forEach(b => { b.disabled = !enabled; });
 }
 
+// pede a avaliação nativa da loja (SKStoreReviewController no iOS, In-App
+// Review no Android) num momento positivo -- logo que a pessoa bate um novo
+// recorde (ver isNewRecord em gameOver). Só a 1ª vez por sessão: o próprio
+// StoreKit/Play já decide sozinho se realmente mostra o modal (tem limite de
+// poucas vezes por ano, e não reaparece se já apareceu recentemente) -- não
+// faz sentido reimplementar esse controle aqui, só evitar chamar toda hora.
+//
+// Checa window.Capacitor.Plugins.InAppReview antes de usar em vez de
+// assumir que existe: o plugin @capacitor-community/in-app-review só passa
+// a existir no binário nativo a partir da versão que o adicionar, mas o
+// site (carregado remoto pelo WebView) atualiza na hora pra QUALQUER versão
+// instalada -- sem essa checagem, quem estiver com um binário mais antigo
+// receberia .requestReview() em undefined (mesma causa do bug corrigido em
+// d96cc6b pros Universal Links).
+let reviewRequestedThisSession = false;
+function maybeRequestAppReview() {
+  if (reviewRequestedThisSession) return;
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if (!isNative) return;
+  const InAppReview = window.Capacitor.Plugins && window.Capacitor.Plugins.InAppReview;
+  if (!InAppReview) return;
+  reviewRequestedThisSession = true;
+  InAppReview.requestReview().catch(() => {});
+}
+
 async function gameOver(reason) {
   playing = false;
   cancelAnimationFrame(rafId);
@@ -536,7 +561,7 @@ async function gameOver(reason) {
   $('new-record').classList.toggle('show', isNewRecord);
   $('sync-status').textContent = '';
   $('share-status').textContent = '';
-  if (isNewRecord) { window.sfx.record(); spawnConfetti(); }
+  if (isNewRecord) { window.sfx.record(); spawnConfetti(); maybeRequestAppReview(); }
   show('over-screen');
 
   // trava os botões e espera os sinais de progresso desta partida

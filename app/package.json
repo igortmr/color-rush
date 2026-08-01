@@ -2,7 +2,7 @@
   "name": "color-rush-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Wrapper nativo (Capacitor) do Color Rush para iOS/Android — carrega colorrush.com.br remotamente e adiciona push notifications + haptics.",
+  "description": "Wrapper nativo (Capacitor) do Color Rush para iOS/Android — carrega colorrush.com.br remotamente e adiciona push notifications + haptics + avaliação in-app.",
   "scripts": {
     "sync": "npx cap sync"
   },
@@ -12,6 +12,7 @@
     "@capacitor/app": "^8.0.0",
     "@capacitor/push-notifications": "^8.0.0",
     "@capacitor/haptics": "^8.0.0",
+    "@capacitor-community/in-app-review": "^8.0.0",
     "@capacitor-firebase/authentication": "^8.0.0",
     "firebase": "^12.6.0"
   },
