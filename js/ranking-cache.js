@@ -80,10 +80,13 @@ export async function fetchScoresFromSnapshot() {
     Array.from({ length: chunkCount }, (_, i) => getDoc(doc(db, 'scoresSnapshot', 'chunk_' + i)))
   );
   const rows = [];
-  // contas banidas nunca aparecem em ranking nenhum (nem aqui em teste.html,
-  // ao contrário do admin — que fica de fora só em produção pra dar pra
-  // testar com a própria conta admin)
-  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => { if (!r.data || r.data.banned !== true) rows.push(r); }); });
+  // contas banidas nunca aparecem em ranking nenhum (nem aqui em teste.html).
+  // Admin fica de fora só em produção (window.IS_TESTE, setado em
+  // main-teste.js) — em teste.html aparece de propósito, pra dar pra testar
+  // com a própria conta admin. O retrato (recomputeScoresSnapshot em
+  // functions/index.js) não filtra admin no servidor, então precisa filtrar
+  // aqui igual fetchScoresLive logo abaixo.
+  chunkSnaps.forEach(cs => { if (cs.exists()) (cs.data().rows || []).forEach(r => { if (r.data && r.data.banned !== true && (window.IS_TESTE || r.data.admin !== true)) rows.push(r); }); });
   return rows;
 }
 
@@ -100,9 +103,10 @@ export async function fetchScoresLive() {
     const data = d.data();
     // TESTE.HTML: admin aparece normalmente em qualquer ranking aqui de
     // propósito (pra dar pra testar/depurar com a própria conta) — no
-    // index.html (produção) a exclusão de admin continua valendo. Já
-    // banido fica de fora dos dois: não tem motivo pra aparecer nem em teste
-    if (data.nick && data.banned !== true) rows.push({ uid: d.id, data });
+    // index.html (produção, window.IS_TESTE undefined) a exclusão de admin
+    // continua valendo. Já banido fica de fora dos dois: não tem motivo pra
+    // aparecer nem em teste
+    if (data.nick && data.banned !== true && (window.IS_TESTE || data.admin !== true)) rows.push({ uid: d.id, data });
   });
   return rows;
 }
@@ -139,11 +143,12 @@ export async function renderRankPreview(field, bodyElId, myPts) {
     }
 
     // localiza (ou insere) a linha do jogador — TESTE.HTML: admin também
-    // entra aqui de propósito (ver comentário em fetchAllScores). Já banido
-    // não entra nem aqui: a própria conta banida não deve se ver no ranking
+    // entra aqui de propósito (ver comentário em fetchAllScores), em
+    // produção não. Já banido não entra nem aqui: a própria conta banida
+    // não deve se ver no ranking
     const youLabel = state.lang === 'en' ? 'YOU' : state.lang === 'es' ? 'TÚ' : 'VOCÊ';
     let myIndex = (!state.offline && state.currentUser) ? rows.findIndex(r => r.uid === state.currentUser.uid) : -1;
-    if (myIndex === -1 && state.myData.banned !== true) {
+    if (myIndex === -1 && state.myData.banned !== true && (window.IS_TESTE || state.myData.admin !== true)) {
       rows.push({ uid: '__me__', nick: state.offline ? youLabel : (state.myData.nick || youLabel), pts: myPts, at: null, durationMs: state.offline ? undefined : state.myData[field + 'DurationMs'], stats: state.offline ? null : state.myData, replaySessionId: state.offline ? undefined : state.myData[field + 'ReplaySessionId'] });
     }
 

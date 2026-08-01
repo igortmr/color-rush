@@ -94,9 +94,9 @@ window.loadRanking = async (m) => {
       }
     }
     // conta recém-criada pode ainda não estar no cache — insere a própria linha se faltar
-    // TESTE.HTML: admin também entra aqui de propósito (ver fetchAllScores).
-    // Banido não entra nem aqui.
-    if (!state.offline && state.currentUser && state.myData.nick && state.myData.banned !== true && !rows.some(r => r.uid === state.currentUser.uid)) {
+    // TESTE.HTML: admin também entra aqui de propósito (ver fetchAllScores),
+    // em produção não. Banido não entra nem aqui.
+    if (!state.offline && state.currentUser && state.myData.nick && state.myData.banned !== true && (window.IS_TESTE || state.myData.admin !== true) && !rows.some(r => r.uid === state.currentUser.uid)) {
       if (m === 'level') rows.push({ uid: state.currentUser.uid, nick: state.myData.nick, pts: state.myData.xp || 0, at: null, stats: state.myData });
       else if ((state.myData[field] || 0) > 0) rows.push({ uid: state.currentUser.uid, nick: state.myData.nick, pts: state.myData[field], at: state.myData[field + 'At'], durationMs: state.myData[field + 'DurationMs'], stats: state.myData, replaySessionId: state.myData[field + 'ReplaySessionId'] });
     }

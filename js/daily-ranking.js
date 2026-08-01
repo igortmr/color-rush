@@ -46,12 +46,16 @@ export async function loadDailyTodayRanking() {
       if (isMe) window.setDailyAttemptsUsed(data.attempts || 0);
       // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
       // testar/depurar o ranking do desafio diário com a própria conta) — no
-      // index.html (produção) a exclusão de admin continua valendo
+      // index.html (produção, window.IS_TESTE undefined) a exclusão de admin
+      // continua valendo
       const stats = statsByUid[data.uid] || (isMe ? state.myData : null);
       // banido não aparece nem no próprio ranking dele: statsByUid já veio
       // filtrado (fetchAllScores exclui banned), então isso só cobre o caso
       // isMe acima, que usa state.myData direto e não passa por esse filtro
       if (!stats || stats.banned === true) return;
+      // idem pra admin: statsByUid já vem filtrado por fetchAllScores em
+      // produção, mas o caso isMe (state.myData direto) não passa por lá
+      if (!window.IS_TESTE && stats.admin === true) return;
       // bestScoreAt/bestScoreDurationMs só avançam no servidor quando a
       // tentativa bate um recorde novo do dia (ver submitDailyResult em
       // functions/index.js) — não é só "última tentativa enviada", então dá
