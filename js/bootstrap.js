@@ -22,7 +22,15 @@ import './auth.js';
 // (não um import de pacote) porque esta página roda remota, direto do site,
 // dentro do WebView — sem bundler pra resolver "@capacitor/app" (mesmo
 // padrão de window.Capacitor.Plugins já usado no login nativo, auth.js).
-if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+//
+// Checa window.Capacitor.Plugins.App antes de usar (em vez de assumir que
+// existe) porque o site é carregado remoto pelo WebView, então esse código
+// já roda pra quem ainda está com um binário mais antigo, sem o plugin
+// "@capacitor/app" nativo (ex.: versão 1.1, aprovada antes desse plugin ser
+// adicionado). Sem essa checagem, .addListener em undefined derrubava com
+// exceção o topo do módulo inteiro na 1.1 -- travando tudo que é definido
+// depois neste arquivo (window.showRanking, sfx, etc.), sem log nenhum.
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
   window.Capacitor.Plugins.App.addListener('appUrlOpen', (data) => {
     if (data && data.url) window.location.href = data.url;
   });
