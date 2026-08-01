@@ -28,12 +28,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
   });
 }
 
-// faixa "baixe o app" -- reforço do Smart App Banner nativo do Safari (ver
-// <meta name="apple-itunes-app"> no <head> de index.html, que já cobre a
-// maioria dos casos sozinho) pra quem já dispensou aquele, ou está usando
-// outro navegador. Só em iPhone/iPad, fora do app nativo (mostrar isso pra
-// quem já tem o app instalado não faz sentido nenhum), e só se a pessoa
-// ainda não tiver fechado antes (guardado no localStorage, não expira).
+// faixa "baixe o app" -- no Safari o Smart App Banner nativo (ver
+// <meta name="apple-itunes-app"> no <head> de index.html) já cobre o caso
+// sozinho, então essa faixa custom só aparece nos OUTROS navegadores iOS
+// (Chrome, Firefox etc.), que não ganham o banner nativo da Apple. Não dá
+// pra detectar via JS se a pessoa já fechou o banner nativo do Safari (é um
+// elemento do próprio navegador, sem API pra isso) -- por isso, no Safari,
+// a faixa custom simplesmente nunca aparece, em vez de tentar adivinhar.
+// Só em iPhone/iPad, fora do app nativo (mostrar isso pra quem já tem o
+// app instalado não faz sentido nenhum), e só se a pessoa ainda não tiver
+// fechado a faixa custom antes (guardado no localStorage, não expira).
 const IOS_APP_BANNER_DISMISSED_KEY = 'colorRushIosBannerDismissed';
 const IOS_APP_BANNER_BADGE_LOCALE = { pt: 'pt-br', en: 'en-us', es: 'es-mx' };
 const IOS_APP_BANNER_BADGE_ALT = { pt: 'Baixar na App Store', en: 'Download on the App Store', es: 'Descargar en el App Store' };
@@ -56,9 +60,15 @@ window.dismissIosAppBanner = () => {
 (() => {
   const el = $('ios-app-banner');
   if (!el) return; // teste.html/index.html sem esse elemento (ou tela antiga em cache)
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  if (!isIOS || isNative) return;
+  // "Safari de verdade" tem "Safari" na UA e nenhum token dos outros
+  // navegadores iOS (todos usam WebKit por baixo, então também levam
+  // "Safari" na UA -- CriOS = Chrome, FxiOS = Firefox, EdgiOS = Edge,
+  // OPiOS = Opera; sem esses tokens, é o Safari mesmo).
+  const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+  if (!isIOS || isNative || isSafari) return;
   let dismissed = false;
   try { dismissed = localStorage.getItem(IOS_APP_BANNER_DISMISSED_KEY) === '1'; } catch {}
   if (dismissed) return;
