@@ -110,3 +110,26 @@ export const DAILY_PALETTE_OVERRIDE = {
     { key: 'black',  name: { pt: 'PRETO',    en: 'BLACK',  es: 'NEGRO'    }, hex: '#1a1a1a' },
   ],
 };
+// DAILY_SHAPES_OVERRIDE: mesma ideia do DAILY_PALETTE_OVERRIDE (acima), só
+// que pro pool de FORMAS do desafio diário -- força um dia específico a usar
+// outro conjunto de "formas" em vez do SHAPES padrão, sem mexer no modo
+// Formas do jogo livre (ver dailyPoolFor em daily-challenge.js).
+//
+// Cada item tem "glyph" em vez de "shapeClass" com clip-path: os naipes de
+// baralho (copas/ouros/espadas/paus) têm curvas complexas demais pra
+// aproximar bem com polygon() -- a técnica usada nas 6 formas normais (ver
+// .shape-fill no CSS) -- sem arriscar ficar torto. Em vez disso usam o
+// glyph Unicode de verdade como conteúdo (♥♦♠♣), preenchido com o mesmo
+// gradiente neon via background-clip:text (ver .shape-fill.shape-glyph no
+// CSS) -- garantidamente correto (é a fonte do sistema desenhando, não uma
+// aproximação nossa), e ainda consistente visualmente com as outras formas.
+// shapeClass aqui só serve de identificador único (poolItemId/replay), não
+// tem CSS de clip-path correspondente.
+export const DAILY_SHAPES_OVERRIDE = {
+  '2026-08-02': [
+    { name: { pt: 'COPAS',   en: 'HEARTS',   es: 'CORAZONES' }, shapeClass: 'shape-naipe-copas',   glyph: '♥' },
+    { name: { pt: 'OUROS',   en: 'DIAMONDS', es: 'DIAMANTES' }, shapeClass: 'shape-naipe-ouros',   glyph: '♦' },
+    { name: { pt: 'ESPADAS', en: 'SPADES',   es: 'PICAS'     }, shapeClass: 'shape-naipe-espadas', glyph: '♠' },
+    { name: { pt: 'PAUS',    en: 'CLUBS',    es: 'TRÉBOLES'  }, shapeClass: 'shape-naipe-paus',    glyph: '♣' },
+  ],
+};

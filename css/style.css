@@ -858,6 +858,13 @@
     position: relative;
     background: transparent;
     border: none;
+    /* pro glyph das formas com override (.shape-glyph, ver abaixo) escalar
+       em cqi, proporcional ao QUADRADO de verdade -- .screen tem
+       max-width:520px, então uma unidade tipo vw sozinha ficaria enorme em
+       telas largas de desktop (vw acompanha a janela inteira, não o
+       container limitado); as formas normais não precisam disso porque
+       clip-path já escala em % relativo ao próprio elemento. */
+    container-type: inline-size;
   }
   .shape-fill {
     position: absolute;
@@ -871,6 +878,28 @@
   .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
   .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
   .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+  /* formas com override que usam glyph Unicode em vez de clip-path (ex.:
+     naipes de baralho, DAILY_SHAPES_OVERRIDE em constants.js) -- curvas
+     complexas demais (coração/pá/trevo) pra aproximar bem com polygon() como
+     as 6 formas normais acima, sem arriscar ficar torto sem poder conferir
+     visualmente. Mesmo gradiente neon das outras, só que preenchendo o
+     glyph de texto (background-clip:text) em vez de recortar um clip-path;
+     o filter: drop-shadow do .shape-fill base ainda se aplica por cima,
+     dando o mesmo halo/brilho das outras formas. overflow:hidden é rede de
+     segurança (não deveria disparar com 62cqi, mas evita o glyph vazar pro
+     quadrado vizinho se algum navegador/fonte medir diferente). */
+  .shape-fill.shape-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    font-size: 62cqi;
+    line-height: 1;
+  }
 
   /* mesmo tamanho de palavra em todas as formas */
   .square.shape-square .word {

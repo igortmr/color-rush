@@ -10,7 +10,7 @@ import { T, cName } from './i18n.js';
 import { track, seededPick, seededShuffle, mulberry32, hashSeed } from './utils.js';
 import {
   SQUARES, poolItemId, DAILY_ROTATION_MODES, DAILY_MAX_ATTEMPTS, DAILY_COLORS,
-  DAILY_PALETTE_OVERRIDE, poolFor
+  DAILY_PALETTE_OVERRIDE, DAILY_SHAPES_OVERRIDE, poolFor
 } from './constants.js';
 import { levelFromXp, myXp, pigmentIconSvg, blockIfBanned } from './levels.js';
 import { renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
@@ -87,10 +87,10 @@ let dailyBestScore = 0;
 // DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
 // sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
 // de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). Hoje
-// (31/07/2026) é Reverso, com a paleta estendida de 12 cores; amanhã
-// (01/08/2026) será Clássico, reaproveitando a MESMA paleta de 12 cores de
-// hoje (ver DAILY_PALETTE_OVERRIDE).
-const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse', '2026-08-01': 'classic' };
+// (01/08/2026) é Clássico, com a paleta de 12 cores; amanhã (02/08/2026)
+// será Formas, com o pool de naipes de baralho em vez do SHAPES padrão (ver
+// DAILY_SHAPES_OVERRIDE em constants.js).
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse', '2026-08-01': 'classic', '2026-08-02': 'shapes' };
 function dailyModeForToday(dateStr) {
   if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
@@ -130,12 +130,17 @@ function isDailyStartDelay(now = new Date()) { return now.getTime() < dailyToday
 
 // mesma ideia de poolFor, mas pro desafio diário: Clássico/Reverso usam a
 // paleta estendida (DAILY_COLORS, ou o override do dia — ver
-// DAILY_PALETTE_OVERRIDE acima); qualquer outro valor cai no poolFor normal
-// (dead code hoje, já que DAILY_ROTATION_MODES só tem esses 2, mas mantém a
-// função segura se um modo de forma voltar a entrar no sorteio um dia)
-const dailyPoolFor = m => (m === 'classic' || m === 'reverse')
-  ? (DAILY_PALETTE_OVERRIDE[dailyLocalDateStr()] || DAILY_COLORS)
-  : poolFor(m);
+// DAILY_PALETTE_OVERRIDE acima); Formas/Formas Reverso usam o SHAPES normal,
+// a menos que o dia tenha um override próprio (DAILY_SHAPES_OVERRIDE, ex.:
+// os naipes de baralho de 02/08/2026). "dateStr" opcional (default: hoje de
+// verdade) só existe pra window.previewDailyForDate poder pedir o pool de
+// OUTRO dia sem mexer no relógio real — o jogo em si nunca passa esse
+// argumento, sempre usa o dia de hoje.
+const dailyPoolFor = (m, dateStr = dailyLocalDateStr()) => (m === 'classic' || m === 'reverse')
+  ? (DAILY_PALETTE_OVERRIDE[dateStr] || DAILY_COLORS)
+  : (m === 'shapes' || m === 'shapes-reverse')
+    ? (DAILY_SHAPES_OVERRIDE[dateStr] || poolFor(m))
+    : poolFor(m);
 
 /* ================== desafio diário — tela, cronômetro, jogo, caixa de entrada ==================
    Mesmo esquema de validação do resto do jogo (sessão emitida pelo servidor,
@@ -565,7 +570,14 @@ function dailyNewRound(first) {
       const shapeSide = (dailyMode === 'shapes') ? item : paired;
       const wordSide  = (dailyMode === 'shapes') ? paired : item;
       el.classList.add('shape-square', shapeSide.shapeClass);
-      el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+      // shapeSide.glyph: formas com override que usam glyph Unicode em vez
+      // de clip-path (ver DAILY_SHAPES_OVERRIDE em constants.js e
+      // .shape-fill.shape-glyph no CSS) -- curvas complexas demais (naipes de
+      // baralho) pra aproximar bem com polygon() como as 6 formas normais.
+      const fillHtml = shapeSide.glyph
+        ? `<span class="shape-fill shape-glyph">${shapeSide.glyph}</span>`
+        : `<span class="shape-fill ${shapeSide.shapeClass}"></span>`;
+      el.innerHTML = `${fillHtml}<span class="word">${cName(wordSide)}</span>`;
     } else {
       const bg   = (dailyMode === 'classic') ? item : paired;
       const word = (dailyMode === 'classic') ? paired : item;
@@ -692,4 +704,45 @@ window.dailyExitScreen = () => {
   cancelAnimationFrame(dailyRafId);
   stopDailyCountdown();
   window.showMenu();
+};
+
+// pré-visualização VISUAL de um dia específico do desafio diário, sem
+// esperar a data chegar de verdade -- útil pra conferir modo/paleta/pool
+// forçados (DAILY_MODE_OVERRIDE/DAILY_PALETTE_OVERRIDE/DAILY_SHAPES_OVERRIDE
+// acima) antes de publicar. Fora do fluxo real de partida de propósito: SEM
+// sessão do servidor (callStartDailyAttempt), SEM RNG/timer/pontuação, SEM
+// cliques funcionais -- só monta um grid de exemplo pra olhar visualmente.
+// Não mexe em dailyMode/dailyRng/dailySessionId (estado da partida real),
+// então não atrapalha nem se rodado no meio de uma tentativa de verdade
+// (embora não faça sentido usar assim). Uso, no console do navegador:
+//   window.previewDailyForDate('2026-08-02')
+window.previewDailyForDate = (dateStr) => {
+  const mode = dailyModeForToday(dateStr);
+  const pool = dailyPoolFor(mode, dateStr);
+  console.log(`[preview] ${dateStr} → modo sorteado: ${mode}`, pool.map(p => p.name.pt));
+  const grid = $('daily-grid');
+  grid.innerHTML = '';
+  pool.slice(0, SQUARES).forEach((item, i) => {
+    const paired = pool[(i + 1) % pool.length];
+    const el = document.createElement('div');
+    el.className = 'square';
+    if (mode === 'shapes' || mode === 'shapes-reverse') {
+      el.classList.add('shape-square', item.shapeClass);
+      const fillHtml = item.glyph
+        ? `<span class="shape-fill shape-glyph">${item.glyph}</span>`
+        : `<span class="shape-fill ${item.shapeClass}"></span>`;
+      el.innerHTML = `${fillHtml}<span class="word">${cName(paired)}</span>`;
+    } else {
+      el.style.background = item.pattern || item.hex;
+      el.style.boxShadow = `0 0 18px ${item.hex}99, 0 0 40px ${item.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      el.innerHTML = `<span class="word">${cName(paired)}</span>`;
+    }
+    grid.appendChild(el);
+  });
+  $('daily-countdown').style.display = 'none';
+  $('daily-intro').style.display = 'none';
+  $('daily-result').style.display = 'none';
+  $('daily-blocked').style.display = 'none';
+  $('daily-play').style.display = 'flex';
+  show('daily-screen');
 };

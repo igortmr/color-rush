@@ -7,7 +7,7 @@ import { show } from './nav.js';
 import { T, cName } from './i18n.js';
 import { lvChip, modeLabel } from './levels.js';
 import {
-  CAOS_POOL, DAILY_COLORS, DAILY_PALETTE_OVERRIDE, poolFor, poolItemById
+  CAOS_POOL, DAILY_COLORS, DAILY_PALETTE_OVERRIDE, DAILY_SHAPES_OVERRIDE, poolFor, poolItemById
 } from './constants.js';
 import { openProfileFromRanking } from './profile-public.js';
 
@@ -86,13 +86,15 @@ const REPLAY_CLICK_FLASH_MS = 300; // janela, antes da rodada trocar, em que o "
 function renderReplaySquares(round, idx) {
   const rmode = replayData.mode;
   // replay do desafio diário (kind:'daily', ver saveMatchReplay em
-  // functions/index.js) usa a paleta estendida do desafio diário nos modos
-  // Clássico/Reverso — mesmo "mode" que o jogo livre usa, então só dá pra
-  // saber qual paleta reconstruir checando esse flag à parte. Usa a paleta
-  // DO DIA em que a partida foi jogada (createdAt), não a de hoje — senão um
-  // dia com DAILY_PALETTE_OVERRIDE (ver dailyPoolFor) faz o replay tentar
-  // achar chaves tipo 'blue'/'cyan' numa paleta que não tem essas chaves,
-  // caindo todo no pool[0] (era isso que deixava tudo amarelo).
+  // functions/index.js) usa a paleta/pool estendidos do desafio diário nos
+  // modos Clássico/Reverso/Formas/Formas Reverso — mesmo "mode" que o jogo
+  // livre usa, então só dá pra saber qual pool reconstruir checando esse
+  // flag à parte. Usa a paleta/pool DO DIA em que a partida foi jogada
+  // (createdAt), não a de hoje — senão um dia com DAILY_PALETTE_OVERRIDE/
+  // DAILY_SHAPES_OVERRIDE (ver dailyPoolFor) faz o replay tentar achar
+  // chaves tipo 'blue'/'cyan' (ou um shapeClass de naipe) num pool que não
+  // tem essas chaves, caindo todo no pool[0] (era isso que deixava tudo
+  // amarelo antes de existir esse cuidado com a data certa).
   // dailyLocalDateStr vem de game-teste.js (domínio do desafio diário, ainda
   // não é um módulo próprio — fase futura), exposta lá só pra essa ponte
   const replayDateStr = (replayData.createdAt && typeof replayData.createdAt.toMillis === 'function')
@@ -100,7 +102,9 @@ function renderReplaySquares(round, idx) {
     : window.dailyLocalDateStr();
   const pool = (replayData.kind === 'daily' && (rmode === 'classic' || rmode === 'reverse'))
     ? (DAILY_PALETTE_OVERRIDE[replayDateStr] || DAILY_COLORS)
-    : poolFor(rmode);
+    : (replayData.kind === 'daily' && (rmode === 'shapes' || rmode === 'shapes-reverse'))
+      ? (DAILY_SHAPES_OVERRIDE[replayDateStr] || poolFor(rmode))
+      : poolFor(rmode);
   const grid = $('replay-grid');
   grid.innerHTML = '';
   replayTargetSquareEl = null;
@@ -124,7 +128,13 @@ function renderReplaySquares(round, idx) {
         const shapeSide = (rmode === 'shapes') ? item : paired;
         const wordSide  = (rmode === 'shapes') ? paired : item;
         el.classList.add('shape-square', shapeSide.shapeClass);
-        el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+        // shapeSide.glyph: ver mesmo comentário em daily-challenge.js
+        // (dailyNewRound) -- formas com override que usam glyph Unicode em
+        // vez de clip-path (naipes de baralho, curvas complexas demais)
+        const fillHtml = shapeSide.glyph
+          ? `<span class="shape-fill shape-glyph">${shapeSide.glyph}</span>`
+          : `<span class="shape-fill ${shapeSide.shapeClass}"></span>`;
+        el.innerHTML = `${fillHtml}<span class="word">${cName(wordSide)}</span>`;
       } else {
         const bg   = (rmode === 'classic') ? item : paired;
         const word = (rmode === 'classic') ? paired : item;
