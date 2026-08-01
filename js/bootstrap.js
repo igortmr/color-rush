@@ -35,10 +35,22 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
 // quem já tem o app instalado não faz sentido nenhum), e só se a pessoa
 // ainda não tiver fechado antes (guardado no localStorage, não expira).
 const IOS_APP_BANNER_DISMISSED_KEY = 'colorRushIosBannerDismissed';
+const IOS_APP_BANNER_BADGE_LOCALE = { pt: 'pt-br', en: 'en-us', es: 'es-mx' };
+const IOS_APP_BANNER_BADGE_ALT = { pt: 'Baixar na App Store', en: 'Download on the App Store', es: 'Descargar en el App Store' };
+// selo oficial da Apple (baixado de tools.applemediaservices.com), um SVG por
+// idioma do jogo -- troca o src/alt junto com applyLanguage() (js/bootstrap.js)
+function updateIosAppBannerBadge() {
+  const img = $('ios-app-banner-badge');
+  if (!img) return;
+  const locale = IOS_APP_BANNER_BADGE_LOCALE[state.lang] || 'pt-br';
+  img.src = `img/app-store-badge/badge-${locale}.svg`;
+  img.alt = IOS_APP_BANNER_BADGE_ALT[state.lang] || IOS_APP_BANNER_BADGE_ALT.pt;
+}
 window.dismissIosAppBanner = () => {
   const el = $('ios-app-banner');
   if (el) el.style.display = 'none';
   document.body.style.paddingTop = ''; // volta pro padding normal (env(safe-area-inset-top)) do CSS
+  document.documentElement.style.setProperty('--ios-banner-offset', '0px'); // combo de idioma sobe de volta (ver .lang-switch no CSS)
   try { localStorage.setItem(IOS_APP_BANNER_DISMISSED_KEY, '1'); } catch {}
 };
 (() => {
@@ -50,13 +62,16 @@ window.dismissIosAppBanner = () => {
   let dismissed = false;
   try { dismissed = localStorage.getItem(IOS_APP_BANNER_DISMISSED_KEY) === '1'; } catch {}
   if (dismissed) return;
+  updateIosAppBannerBadge();
   el.style.display = '';
   // a faixa é position:fixed (não empurra o body sozinha, ver comentário no
   // CSS) -- compensa manualmente o espaço que ela ocupa, com a altura REAL
   // dela (varia por causa da tradução/tamanho de tela), somada ao padding de
-  // topo que já existia (env(safe-area-inset-top), notch etc.)
+  // topo que já existia (env(safe-area-inset-top), notch etc.). O combo de
+  // idioma (.lang-switch) usa a mesma var pra descer e não ficar por baixo.
   requestAnimationFrame(() => {
     document.body.style.paddingTop = `calc(env(safe-area-inset-top) + ${el.offsetHeight}px)`;
+    document.documentElement.style.setProperty('--ios-banner-offset', `${el.offsetHeight}px`);
   });
 })();
 
@@ -81,6 +96,7 @@ function applyLanguage() {
   });
   document.documentElement.lang = (state.lang === 'en') ? 'en' : (state.lang === 'es') ? 'es' : 'pt-BR';
   $('lang-select').value = state.lang;
+  updateIosAppBannerBadge();
 
   // re-renderiza a tela dinâmica que já estava aberta, se aplicável
   if ($('menu-screen').classList.contains('active')) showMenu();

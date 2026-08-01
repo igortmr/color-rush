@@ -814,11 +814,15 @@
 
   .lang-switch {
     position: fixed;
-    top: 10px;
+    /* desce quando a faixa "baixe o app" está visível -- var setada/limpa
+       em JS (bootstrap.js) junto com o padding-top do body, mesma altura
+       real da faixa, pra não ficar sobreposto por ela */
+    top: calc(10px + var(--ios-banner-offset, 0px));
     left: 10px;
     display: flex;
     gap: 6px;
     z-index: 1000;
+    transition: top 0.25s ease;
   }
   .lang-select {
     font-family: 'Rajdhani', sans-serif;
@@ -1102,17 +1106,13 @@
   }
   .ios-app-banner-cta {
     flex-shrink: 0;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 700;
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    text-decoration: none;
-    color: #0a0e1a;
-    background: linear-gradient(90deg, var(--neon-blue), var(--neon-green));
-    padding: 7px 14px;
-    border-radius: 8px;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+  }
+  .ios-app-banner-badge {
+    display: block;
+    height: 32px;
+    width: auto;
   }
   .ios-app-banner-close {
     flex-shrink: 0;
