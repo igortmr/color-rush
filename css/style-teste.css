@@ -875,7 +875,7 @@
      glyph de texto (background-clip:text) em vez de recortar um clip-path;
      o filter: drop-shadow do .shape-fill base ainda se aplica por cima,
      dando o mesmo halo/brilho das outras formas. overflow:hidden é rede de
-     segurança (não deveria disparar com 62cqi, mas evita o glyph vazar pro
+     segurança (não deveria disparar com 76cqi, mas evita o glyph vazar pro
      quadrado vizinho se algum navegador/fonte medir diferente). */
   .shape-fill.shape-glyph {
     display: flex;
@@ -886,7 +886,7 @@
     background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
-    font-size: 62cqi;
+    font-size: 76cqi;
     line-height: 1;
   }
 
