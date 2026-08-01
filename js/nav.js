@@ -7,7 +7,22 @@ import { state } from './state.js';
 // sem competir visualmente com o conteúdo enquanto joga. O índice "i" só
 // existe pra cada cópia ter seu próprio id de gradiente (evita ids
 // duplicados no HTML final, mesmo que o resultado visual seja idêntico).
+//
+// true só quando a página está rodando dentro do app nativo (Capacitor) --
+// mesma checagem duplicada em auth.js/game-core.js (não vale a pena um
+// módulo compartilhado só pra isso, ver padrão já usado nos outros).
+const isNativeApp = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 function socialLinksHtml(i) {
+  // selo "Baixar na App Store" ao lado das redes -- SÓ fora do app nativo
+  // (quem já está no app não precisa ser convidado a baixar de novo).
+  // Diferente da faixa/popup (que se restringem por tipo de navegador),
+  // este aparece em QUALQUER navegador, mobile ou desktop -- reforço passivo
+  // sempre visível. data-app-store-badge: mesmo selo oficial da Apple, troca
+  // de idioma automática (ver updateAppStoreBadges em bootstrap.js).
+  const appStoreBadge = isNativeApp() ? '' : `
+    <a class="social-app-store-link" href="https://apps.apple.com/app/id6794695684">
+      <img class="social-app-store-badge" data-app-store-badge src="img/app-store-badge/badge-pt-br.svg" alt="Baixar na App Store">
+    </a>`;
   return `
   <div class="social-links">
     <a class="social-link" href="https://instagram.com/colorrushsaga" target="_blank" rel="noopener">
@@ -31,7 +46,7 @@ function socialLinksHtml(i) {
         <path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.5 22H1.4l8.1-9.3L1 2h7.2l5 6.6L18.9 2zm-1.2 18h1.7L6.4 4H4.6l13.1 16z"/>
       </svg>
       <span>@colorrushsaga</span>
-    </a>
+    </a>${appStoreBadge}
   </div>`;
 }
 document.querySelectorAll('.screen').forEach((screen, i) => {
