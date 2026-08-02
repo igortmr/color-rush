@@ -619,14 +619,11 @@
      Camada "padrão" (1000 pigmentos): só gradiente, sem padrão/animação.
      Camada "premium" (1500): padrão (pontinhos/listras) e/ou animação, pra
      se destacar mais na lista — ver preço em functions/index.js/js/shop.js. */
-  tbody tr.row-theme-fire   { background: linear-gradient(90deg, rgba(255,45,107,0.35), rgba(255,159,28,0.15)); }
   tbody tr.row-theme-ocean  { background: linear-gradient(90deg, rgba(30,144,255,0.35), rgba(0,210,211,0.15)); }
   tbody tr.row-theme-galaxy { background: linear-gradient(90deg, rgba(177,77,255,0.35), rgba(255,107,157,0.15)); }
-  tbody tr.row-theme-lava   { background: linear-gradient(90deg, rgba(139,0,0,0.5), rgba(255,87,34,0.2)); }
   tbody tr.row-theme-forest { background: linear-gradient(90deg, rgba(27,94,32,0.45), rgba(139,195,74,0.18)); }
   tbody tr.row-theme-sunset { background: linear-gradient(90deg, rgba(255,94,58,0.4), rgba(255,64,129,0.22), rgba(123,31,162,0.18)); }
   tbody tr.row-theme-frost  { background: linear-gradient(90deg, rgba(179,229,252,0.4), rgba(41,121,255,0.18)); }
-  tbody tr.row-theme-candy  { background: linear-gradient(90deg, rgba(255,64,180,0.4), rgba(179,102,255,0.22)); }
 
   /* --- premium (1500): padrão e/ou animação --- */
   tbody tr.row-theme-starfield {
@@ -651,12 +648,26 @@
   tbody tr.row-theme-stripes-gold {
     background: repeating-linear-gradient(45deg, rgba(255,215,0,0.4) 0px, rgba(255,215,0,0.4) 10px, rgba(20,16,0,0.3) 10px, rgba(20,16,0,0.3) 20px);
   }
-  tbody tr.row-theme-aurora {
-    background: linear-gradient(90deg, rgba(0,255,170,0.35), rgba(0,200,255,0.3), rgba(170,0,255,0.35), rgba(0,255,170,0.35));
-    background-size: 250% 100%;
-    animation: rowAuroraFlow 6s ease-in-out infinite;
+  /* raios brancos (SVG embutida, dois raios em tamanhos/opacidades
+     diferentes, ladrilhada) sobre um fundo escuro de nuvem de tempestade;
+     a animação simula o "clarão" de um raio caindo — dois flashes rápidos
+     bem juntos, depois um intervalo quieto, em vez de um pulso suave (ver
+     rowStarTwinkle acima) pra não parecer só uma variação da mesma ideia */
+  tbody tr.row-theme-storm {
+    background:
+      url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2770%27%20height%3D%2760%27%20viewBox%3D%270%200%2070%2060%27%3E%3Cpolygon%20points%3D%2716%2C2%206%2C26%2014%2C26%2010%2C44%2026%2C18%2017%2C18%2021%2C2%27%20fill%3D%27white%27%20fill-opacity%3D%270.55%27%2F%3E%3Cpolygon%20points%3D%2752%2C10%2044%2C30%2050%2C30%2047%2C46%2060%2C24%2053%2C24%2056%2C10%27%20fill%3D%27white%27%20fill-opacity%3D%270.32%27%2F%3E%3C%2Fsvg%3E"),
+      linear-gradient(90deg, rgba(30,32,48,0.65), rgba(70,72,110,0.35));
+    background-repeat: repeat;
+    background-size: 70px 60px, 100% 100%;
+    animation: rowStormFlash 4s ease-in-out infinite;
   }
-  @keyframes rowAuroraFlow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @keyframes rowStormFlash {
+    0%, 84%, 100% { filter: brightness(1); }
+    86% { filter: brightness(1.7); }
+    88% { filter: brightness(1); }
+    90% { filter: brightness(1.4); }
+    92% { filter: brightness(1); }
+  }
   tbody tr.row-theme-confetti-dots {
     background:
       radial-gradient(circle at 8% 40%, rgba(255,45,107,0.9) 0%, rgba(255,45,107,0) 6%),

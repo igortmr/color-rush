@@ -88,18 +88,15 @@ export function applyNickFrame(el, stats) {
 // com padrão/animação, ver ROW_THEME_CLASS) marcados como tal só pra
 // referência de quem for revisar o catálogo, não afeta o código.
 const ROW_THEME_CLASS = {
-  row_fire: 'row-theme-fire',
   row_ocean: 'row-theme-ocean',
   row_galaxy: 'row-theme-galaxy',
-  row_lava: 'row-theme-lava',
   row_forest: 'row-theme-forest',
   row_sunset: 'row-theme-sunset',
   row_frost: 'row-theme-frost',
-  row_candy: 'row-theme-candy',
   row_starfield: 'row-theme-starfield',
   row_holo: 'row-theme-holo',
   row_stripes_gold: 'row-theme-stripes-gold',
-  row_aurora: 'row-theme-aurora',
+  row_storm: 'row-theme-storm',
   row_confetti_dots: 'row-theme-confetti-dots',
 };
 const ROW_THEME_CLASSES = Object.values(ROW_THEME_CLASS);
