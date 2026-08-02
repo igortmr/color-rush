@@ -118,7 +118,7 @@ function renderShop() {
     section.appendChild(title);
 
     section.appendChild(shopDefaultRow(slot, equipped[slot]));
-    SHOP_ITEMS.filter(it => it.slot === slot).forEach(item => {
+    SHOP_ITEMS.filter(it => it.slot === slot).sort((a, b) => a.price - b.price).forEach(item => {
       section.appendChild(shopItemRow(item, owned.has(item.id), equipped[slot] === item.id));
     });
 
@@ -199,7 +199,7 @@ function shopItemPreview(item) {
     const tbody = document.createElement('tbody');
     const tr = document.createElement('tr');
     applyRowTheme(tr, { equipped: { rowTheme: item.id } });
-    tr.innerHTML = '<td class="pos" style="padding:6px 8px;">1</td><td style="padding:6px 8px; font-weight:700;">SeuNick</td><td class="pts" style="padding:6px 8px;">1234</td>';
+    tr.innerHTML = '<td style="padding:14px 8px;">&nbsp;</td>';
     tbody.appendChild(tr);
     mini.appendChild(tbody);
     wrap.appendChild(mini);
