@@ -266,7 +266,7 @@ window.startBuyShopItem = (itemId) => {
   pendingBuyItemId = itemId;
   $('buy-shop-modal-item').textContent = `${item.icon} ${item.name}`;
   $('buy-shop-modal-balance').innerHTML = `Seu saldo: ${state.myData.pigmentos || 0}${pigmentIconSvg(12)}`;
-  $('buy-shop-modal-price').innerHTML = `Custa: ${item.price}${pigmentIconSvg(20)}`;
+  $('buy-shop-modal-price').innerHTML = `Valor: <span style="font-size:1.35rem; color:var(--neon-yellow); text-shadow:0 0 8px rgba(255,233,60,0.4);">${item.price}</span>${pigmentIconSvg(20)}`;
   $('buy-shop-modal').style.display = 'flex';
 };
 window.closeBuyShopModal = () => {
