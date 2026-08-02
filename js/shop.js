@@ -267,7 +267,6 @@ window.startBuyShopItem = (itemId) => {
   // saldo insuficiente: nem abre a confirmação de compra — mostra uma popup
   // à parte incentivando a jogar o desafio diário em vez de só um erro seco
   if (balance < item.price) {
-    $('not-enough-pigmentos-msg').innerHTML = `Você tem ${balance}${pigmentIconSvg(12)}, mas ${item.name} custa ${item.price}${pigmentIconSvg(12)} — faltam ${item.price - balance}${pigmentIconSvg(12)}.`;
     $('not-enough-pigmentos-modal').style.display = 'flex';
     return;
   }
