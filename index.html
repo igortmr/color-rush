@@ -457,6 +457,19 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="buy-shop-modal" style="display:none;" onclick="if(event.target===this) closeBuyShopModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-yellow); text-shadow:0 0 10px rgba(255,233,60,0.5);">🛍️ Confirmar compra</h1>
+    <div class="modal-card-body">
+      <p style="text-align:left; font-weight:700; font-size:1.05rem;" id="buy-shop-modal-item"></p>
+      <p class="muted" style="text-align:left; display:flex; align-items:center; gap:6px;" id="buy-shop-modal-balance"></p>
+      <p style="text-align:left; display:flex; align-items:center; gap:6px;" id="buy-shop-modal-price"></p>
+    </div>
+    <button class="secondary" onclick="closeBuyShopModal()">Cancelar</button>
+    <button onclick="confirmBuyShopItem()">Confirmar compra</button>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">

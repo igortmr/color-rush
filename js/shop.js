@@ -101,7 +101,7 @@ window.showShop = () => {
   renderShop();
 };
 
-function renderShop() {
+function renderShop({ keepScroll = false } = {}) {
   $('shop-balance-icon').innerHTML = pigmentIconSvg(20);
   $('shop-balance-num').textContent = state.myData.pigmentos || 0;
   const owned = new Set(state.myData.ownedItems || []);
@@ -126,7 +126,9 @@ function renderShop() {
 
     body.appendChild(section);
   });
-  resetScroll('shop-screen');
+  // manter a posição de rolagem depois de comprar/equipar/desequipar — só a
+  // abertura inicial da loja (showShop) deve levar pro topo (ver keepScroll)
+  if (!keepScroll) resetScroll('shop-screen');
 }
 
 // opção "padrão" de cada slot — sempre disponível, sem custo, volta o visual original
@@ -247,11 +249,35 @@ function shopItemRow(item, isOwned, isEquipped) {
     priceSpan.textContent = ' ' + item.price;
     btn.appendChild(priceSpan);
     if ((state.myData.pigmentos || 0) < item.price) btn.style.opacity = '0.55';
-    btn.onclick = () => buyShopItemUi(item.id);
+    btn.onclick = () => window.startBuyShopItem(item.id);
   }
   row.appendChild(btn);
   return row;
 }
+
+// popup temática de confirmação (em vez de comprar direto no clique) — pede
+// pra pessoa conferir nome, saldo e preço antes de gastar Pigmentos de
+// verdade. Mesmo padrão do #delete-account-modal em auth.js (btn/id
+// pendente guardado numa variável de módulo até confirmar ou cancelar).
+let pendingBuyItemId = null;
+window.startBuyShopItem = (itemId) => {
+  const item = SHOP_ITEMS_BY_ID[itemId];
+  if (!item) return;
+  pendingBuyItemId = itemId;
+  $('buy-shop-modal-item').textContent = `${item.icon} ${item.name}`;
+  $('buy-shop-modal-balance').innerHTML = `${pigmentIconSvg(14)} Seu saldo: ${state.myData.pigmentos || 0}`;
+  $('buy-shop-modal-price').innerHTML = `${pigmentIconSvg(14)} Custa: ${item.price}`;
+  $('buy-shop-modal').style.display = 'flex';
+};
+window.closeBuyShopModal = () => {
+  $('buy-shop-modal').style.display = 'none';
+  pendingBuyItemId = null;
+};
+window.confirmBuyShopItem = async () => {
+  const itemId = pendingBuyItemId;
+  closeBuyShopModal();
+  if (itemId) await buyShopItemUi(itemId);
+};
 
 window.buyShopItemUi = async (itemId) => {
   $('shop-status').textContent = '';
@@ -259,7 +285,7 @@ window.buyShopItemUi = async (itemId) => {
     const res = await callBuyShopItem({ itemId });
     if (res.data && typeof res.data.pigmentos === 'number') state.myData.pigmentos = res.data.pigmentos;
     state.myData.ownedItems = [...(state.myData.ownedItems || []), itemId];
-    renderShop();
+    renderShop({ keepScroll: true });
     renderMenuPigmentosBar();
     renderUserPigmentos();
   } catch (e) {
@@ -274,7 +300,7 @@ window.equipShopItem = async (slot, itemId) => {
     if (!state.myData.equipped) state.myData.equipped = {};
     if (itemId) state.myData.equipped[slot] = itemId; else delete state.myData.equipped[slot];
     applyEquippedCosmetics();
-    renderShop();
+    renderShop({ keepScroll: true });
   } catch (e) {
     $('shop-status').textContent = e.message || 'Não foi possível trocar agora.';
   }
