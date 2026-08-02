@@ -93,6 +93,8 @@ const ROW_THEME_CLASS = {
   row_forest: 'row-theme-forest',
   row_sunset: 'row-theme-sunset',
   row_frost: 'row-theme-frost',
+  row_yellow: 'row-theme-yellow',
+  row_pink: 'row-theme-pink',
   row_starfield: 'row-theme-starfield',
   row_holo: 'row-theme-holo',
   row_stripes_gold: 'row-theme-stripes-gold',

@@ -29,6 +29,8 @@ export const SHOP_ITEMS = [
   { id: 'row_forest',    slot: 'rowTheme',   price: 1000, icon: '🌲', name: 'Linha: Floresta',                desc: 'Verdes de floresta na sua linha do ranking.' },
   { id: 'row_sunset',    slot: 'rowTheme',   price: 1000, icon: '🌇', name: 'Linha: Pôr do Sol',               desc: 'Degradê de laranja, rosa e roxo, tipo um pôr do sol.' },
   { id: 'row_frost',     slot: 'rowTheme',   price: 1000, icon: '❄️', name: 'Linha: Gelo',                    desc: 'Azul e branco gelados na sua linha do ranking.' },
+  { id: 'row_yellow',    slot: 'rowTheme',   price: 1000, icon: '💛', name: 'Linha: Amarelo',                 desc: 'Amarelo e dourado na sua linha do ranking.' },
+  { id: 'row_pink',      slot: 'rowTheme',   price: 1000, icon: '💗', name: 'Linha: Rosa',                    desc: 'Rosa na sua linha do ranking.' },
   { id: 'row_starfield', slot: 'rowTheme',   price: 3000, icon: '✨', name: 'Linha: Céu Estrelado',            desc: 'Fundo escuro cheio de estrelinhas cintilantes — anima sozinho.' },
   { id: 'row_holo',      slot: 'rowTheme',   price: 5000, icon: '🌈', name: 'Linha: RGB',                     desc: 'Degradê iridescente que muda de cor sozinho.' },
   { id: 'row_stripes_gold', slot: 'rowTheme', price: 3000, icon: '🐝', name: 'Linha: Listras Douradas',        desc: 'Listras diagonais douradas e pretas, visual VIP.' },
