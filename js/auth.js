@@ -127,31 +127,33 @@ let nativePushInitDone = false;
 function pushDbg(step, extra) {
   try { callLogClientDebug({ step, extra: extra != null ? String(extra) : null }).catch(() => {}); } catch {}
 }
+// @capacitor-firebase/messaging (não @capacitor/push-notifications) — esse
+// plugin entrega token do FCM de verdade via getToken(), pronto pro
+// admin.messaging().send() do servidor. O outro plugin (removido) só
+// devolvia o token BRUTO da APNs (64 hex), que o Firebase Admin SDK recusa
+// como "token inválido" — foi isso que o diagnóstico remoto mostrou depois
+// do registro nativo já estar funcionando (ver AppDelegate.swift/
+// codemagic.yaml: os delegates de registro continuam necessários, esse
+// plugin também depende deles).
 async function initNativePush() {
   if (nativePushInitDone || !isNativeApp()) return;
   nativePushInitDone = true;
   pushDbg('start');
   try {
-    const PushNotifications = window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
-    if (!PushNotifications) { pushDbg('no_plugin'); return; }
+    const FirebaseMessaging = window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseMessaging;
+    if (!FirebaseMessaging) { pushDbg('no_plugin'); return; }
     pushDbg('plugin_ok');
-    const perm = await PushNotifications.requestPermissions();
+    const perm = await FirebaseMessaging.requestPermissions();
     pushDbg('perm_result', perm && perm.receive);
     if (perm.receive !== 'granted') return;
-    PushNotifications.addListener('registration', (token) => {
-      pushDbg('registration_event_fired', token && token.value ? token.value.slice(0, 10) : null);
-      callRegisterPushToken({ token: token.value }).then(
-        () => pushDbg('register_call_ok'),
-        (e) => pushDbg('register_call_failed', e && e.message)
-      );
-    });
-    PushNotifications.addListener('registrationError', (err) => {
-      pushDbg('registration_error', JSON.stringify(err));
-      console.warn('[push] erro de registro', err);
-    });
-    pushDbg('calling_register');
-    await PushNotifications.register();
-    pushDbg('register_returned');
+    pushDbg('getting_token');
+    const { token } = await FirebaseMessaging.getToken();
+    pushDbg('got_token', token ? token.slice(0, 10) : null);
+    if (!token) return;
+    callRegisterPushToken({ token }).then(
+      () => pushDbg('register_call_ok'),
+      (e) => pushDbg('register_call_failed', e && e.message)
+    );
   } catch (e) {
     pushDbg('exception', e && e.message);
     console.warn('[push] indisponível', e);
