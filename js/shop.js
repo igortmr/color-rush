@@ -263,15 +263,33 @@ let pendingBuyItemId = null;
 window.startBuyShopItem = (itemId) => {
   const item = SHOP_ITEMS_BY_ID[itemId];
   if (!item) return;
+  const balance = state.myData.pigmentos || 0;
+  // saldo insuficiente: nem abre a confirmação de compra — mostra uma popup
+  // à parte incentivando a jogar o desafio diário em vez de só um erro seco
+  if (balance < item.price) {
+    $('not-enough-pigmentos-msg').innerHTML = `Você tem ${balance}${pigmentIconSvg(12)}, mas ${item.name} custa ${item.price}${pigmentIconSvg(12)} — faltam ${item.price - balance}${pigmentIconSvg(12)}.`;
+    $('not-enough-pigmentos-modal').style.display = 'flex';
+    return;
+  }
   pendingBuyItemId = itemId;
   $('buy-shop-modal-item').textContent = `${item.icon} ${item.name}`;
-  $('buy-shop-modal-balance').innerHTML = `Seu saldo: ${state.myData.pigmentos || 0}${pigmentIconSvg(12)}`;
+  $('buy-shop-modal-balance').innerHTML = `Seu saldo: ${balance}${pigmentIconSvg(12)}`;
   $('buy-shop-modal-price').innerHTML = `Valor: <span style="font-size:1.35rem; color:var(--neon-yellow); text-shadow:0 0 8px rgba(255,233,60,0.4);">${item.price}</span>${pigmentIconSvg(20)}`;
   $('buy-shop-modal').style.display = 'flex';
 };
 window.closeBuyShopModal = () => {
   $('buy-shop-modal').style.display = 'none';
   pendingBuyItemId = null;
+};
+window.closeNotEnoughPigmentosModal = () => {
+  $('not-enough-pigmentos-modal').style.display = 'none';
+};
+// fecha a popup e leva direto pro desafio diário — dailyCardClick já cuida
+// de decidir a tela certa (intro, bloqueado por já ter usado as tentativas
+// de hoje, etc.), mesma function usada pelo card do menu
+window.goPlayDailyFromShop = () => {
+  closeNotEnoughPigmentosModal();
+  window.dailyCardClick();
 };
 window.confirmBuyShopItem = async () => {
   const itemId = pendingBuyItemId;

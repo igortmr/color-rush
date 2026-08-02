@@ -470,6 +470,18 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="not-enough-pigmentos-modal" style="display:none;" onclick="if(event.target===this) closeNotEnoughPigmentosModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-orange); text-shadow:0 0 10px rgba(255,159,28,0.5);">💰 Pigmentos insuficientes</h1>
+    <div class="modal-card-body">
+      <p style="text-align:left;" id="not-enough-pigmentos-msg"></p>
+      <p class="muted" style="text-align:left;">Jogue o Desafio Diário todo dia pra ganhar mais Pigmentos! 🏆</p>
+    </div>
+    <button class="secondary" onclick="closeNotEnoughPigmentosModal()">Fechar</button>
+    <button onclick="goPlayDailyFromShop()">🏆 Jogar Desafio Diário</button>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">
