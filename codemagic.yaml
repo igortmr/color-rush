@@ -300,6 +300,38 @@ workflows:
               f.write(content)
           print('AppDelegate.swift: função de Universal Links (continue userActivity) adicionada')
           PYEOF
+
+          # mesma ideia acima, mas pro registro de PUSH NOTIFICATION -- sem
+          # esses dois delegates, o iOS registra o dispositivo (ou falha) mas
+          # não tem como avisar o app: o PushNotifications.register() do
+          # Capacitor resolve a Promise na hora (só confirma que PEDIU o
+          # registro pro iOS), sem esperar o resultado de verdade, que só
+          # chega depois por essas duas funções -- sem elas, nem o evento
+          # "registration" nem "registrationError" disparam NUNCA, mesmo com
+          # permissão concedida e tudo certo do lado JS (foi exatamente esse
+          # sintoma que apareceu no diagnóstico remoto: chegou até
+          # "register_returned" e parou, sem token nem erro). Usa
+          # NotificationCenter (não ApplicationDelegateProxy como os dois
+          # acima) porque é assim que o plugin @capacitor/push-notifications
+          # espera receber esses eventos.
+          grep -q "didRegisterForRemoteNotificationsWithDeviceToken" ios/App/App/AppDelegate.swift || python3 << 'PYEOF'
+          path = "ios/App/App/AppDelegate.swift"
+          with open(path) as f:
+              content = f.read()
+          insertion = """
+              func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+                  NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+              }
+              func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+                  NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+              }
+          """
+          idx = content.rfind('}')
+          content = content[:idx] + insertion + content[idx:]
+          with open(path, 'w') as f:
+              f.write(content)
+          print('AppDelegate.swift: delegates de registro de push adicionados')
+          PYEOF
       - name: Declarar isenção de criptografia (evita a pergunta manual a cada envio)
         script: |
           # o app só usa HTTPS/TLS padrão do sistema (Firebase) — isso é
