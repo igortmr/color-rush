@@ -1,8 +1,9 @@
+import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { state } from './state.js';
 import { $ } from './dom.js';
 import { show, resetScroll } from './nav.js';
 import { track, playCorrectSfxVariant } from './utils.js';
-import { callable } from './firebase.js';
+import { callable, db } from './firebase.js';
 import { pigmentIconSvg, applyNickFrame, applyRowTheme, avatarSvg } from './levels.js';
 
 // loja de cosméticos (paga com Pigmentos)
@@ -71,12 +72,37 @@ export function applyEquippedCosmetics() {
   equippedAvatar = eq.avatar || null;
 }
 
-// botão "🛍️ LOJA" do menu — a loja ainda tá em teste, então o botão fica
-// oculto pra todo mundo, menos pra quem loga como admin
+// botão "🛍️ LOJA" do menu — visível pra qualquer conta logada
 export function renderMenuPigmentosBar() {
   const shopBtn = $('menu-quick-shop-btn');
   if (!shopBtn) return;
-  shopBtn.style.display = (!state.offline && state.currentUser && state.myData.nick && state.myData.admin === true) ? '' : 'none';
+  shopBtn.style.display = (!state.offline && state.currentUser && state.myData.nick) ? '' : 'none';
+  refreshShopNotifDot();
+}
+// bolinha de "loja nova, ainda não conferida" — mesmo raciocínio do
+// notif-dot de medalha nova (ver badges.js/markAllBadgesSeen): guardado em
+// scores/{uid}.shopSeen, não no navegador, pra funcionar certo trocando de
+// dispositivo; sem valor de jogo, então o cliente escreve direto, sem
+// precisar de Cloud Function. Quem já tinha visto a loja antes desse aviso
+// existir também vê a bolinha uma vez (shopSeen começa undefined pra todo
+// mundo) — aceitável pra um aviso de "loja lançada pra todo mundo".
+function hasNewShop() {
+  return !(state.offline || !state.currentUser || !state.myData.nick) && !state.myData.shopSeen;
+}
+function refreshShopNotifDot() {
+  const dot = $('shop-notif-dot');
+  if (!dot) return;
+  dot.style.display = hasNewShop() ? '' : 'none';
+}
+async function markShopSeen() {
+  if (state.offline || !state.currentUser || !state.myData.nick || state.myData.shopSeen) return;
+  state.myData.shopSeen = true; // atualiza local na hora, antes mesmo do Firestore confirmar
+  refreshShopNotifDot();
+  try {
+    await setDoc(doc(db, 'scores', state.currentUser.uid), { shopSeen: true, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) {
+    // não foi possível salvar agora — a marcação fica só localmente até a próxima tentativa
+  }
 }
 // saldo de Pigmentos no topo da tela, entre o nick e a caixa de entrada — só
 // o número + ícone colorido, sem texto/link (o acesso à loja continua sendo
@@ -99,6 +125,7 @@ window.showShop = () => {
   $('shop-status').textContent = '';
   show('shop-screen');
   renderShop();
+  markShopSeen();
 };
 
 function renderShop({ keepScroll = false } = {}) {
