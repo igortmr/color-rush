@@ -615,10 +615,59 @@
   tbody tr:nth-child(odd) { background: #0a0e1e; }
   tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
   /* linha temática da loja — sobrepõe o fundo padrão/listrado da tabela;
-     combina normalmente com .me (que só usa outline, não background) */
+     combina normalmente com .me (que só usa outline, não background).
+     Camada "padrão" (1000 pigmentos): só gradiente, sem padrão/animação.
+     Camada "premium" (1500): padrão (pontinhos/listras) e/ou animação, pra
+     se destacar mais na lista — ver preço em functions/index.js/js/shop.js. */
   tbody tr.row-theme-fire   { background: linear-gradient(90deg, rgba(255,45,107,0.35), rgba(255,159,28,0.15)); }
   tbody tr.row-theme-ocean  { background: linear-gradient(90deg, rgba(30,144,255,0.35), rgba(0,210,211,0.15)); }
   tbody tr.row-theme-galaxy { background: linear-gradient(90deg, rgba(177,77,255,0.35), rgba(255,107,157,0.15)); }
+  tbody tr.row-theme-lava   { background: linear-gradient(90deg, rgba(139,0,0,0.5), rgba(255,87,34,0.2)); }
+  tbody tr.row-theme-forest { background: linear-gradient(90deg, rgba(27,94,32,0.45), rgba(139,195,74,0.18)); }
+  tbody tr.row-theme-sunset { background: linear-gradient(90deg, rgba(255,94,58,0.4), rgba(255,64,129,0.22), rgba(123,31,162,0.18)); }
+  tbody tr.row-theme-frost  { background: linear-gradient(90deg, rgba(179,229,252,0.4), rgba(41,121,255,0.18)); }
+  tbody tr.row-theme-candy  { background: linear-gradient(90deg, rgba(255,64,180,0.4), rgba(179,102,255,0.22)); }
+
+  /* --- premium (1500): padrão e/ou animação --- */
+  tbody tr.row-theme-starfield {
+    background:
+      radial-gradient(circle at 10% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 5%),
+      radial-gradient(circle at 25% 72%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 4%),
+      radial-gradient(circle at 40% 18%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 3.5%),
+      radial-gradient(circle at 55% 60%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 4.5%),
+      radial-gradient(circle at 70% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 3.5%),
+      radial-gradient(circle at 85% 75%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 4%),
+      radial-gradient(circle at 95% 22%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 3.5%),
+      linear-gradient(90deg, rgba(20,10,60,0.6), rgba(60,20,100,0.4));
+    animation: rowStarTwinkle 3s ease-in-out infinite;
+  }
+  @keyframes rowStarTwinkle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
+  tbody tr.row-theme-holo {
+    background: linear-gradient(120deg, rgba(255,0,150,0.4), rgba(0,229,255,0.35), rgba(255,234,0,0.35), rgba(150,0,255,0.4), rgba(255,0,150,0.4));
+    background-size: 300% 100%;
+    animation: rowHoloShift 4s linear infinite;
+  }
+  @keyframes rowHoloShift { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+  tbody tr.row-theme-stripes-gold {
+    background: repeating-linear-gradient(45deg, rgba(255,215,0,0.4) 0px, rgba(255,215,0,0.4) 10px, rgba(20,16,0,0.3) 10px, rgba(20,16,0,0.3) 20px);
+  }
+  tbody tr.row-theme-aurora {
+    background: linear-gradient(90deg, rgba(0,255,170,0.35), rgba(0,200,255,0.3), rgba(170,0,255,0.35), rgba(0,255,170,0.35));
+    background-size: 250% 100%;
+    animation: rowAuroraFlow 6s ease-in-out infinite;
+  }
+  @keyframes rowAuroraFlow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  tbody tr.row-theme-confetti-dots {
+    background:
+      radial-gradient(circle at 8% 40%, rgba(255,45,107,0.9) 0%, rgba(255,45,107,0) 6%),
+      radial-gradient(circle at 22% 75%, rgba(0,210,211,0.9) 0%, rgba(0,210,211,0) 6%),
+      radial-gradient(circle at 38% 25%, rgba(255,233,60,0.9) 0%, rgba(255,233,60,0) 6%),
+      radial-gradient(circle at 52% 65%, rgba(177,77,255,0.9) 0%, rgba(177,77,255,0) 6%),
+      radial-gradient(circle at 68% 30%, rgba(33,230,161,0.9) 0%, rgba(33,230,161,0) 6%),
+      radial-gradient(circle at 82% 70%, rgba(255,159,28,0.9) 0%, rgba(255,159,28,0) 6%),
+      radial-gradient(circle at 94% 40%, rgba(255,45,107,0.9) 0%, rgba(255,45,107,0) 6%),
+      #0e1224;
+  }
   td.pos { text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }

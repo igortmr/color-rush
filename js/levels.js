@@ -82,13 +82,32 @@ export function applyNickFrame(el, stats) {
 }
 // linha temática da loja — fundo diferenciado na <tr> do jogador nas tabelas
 // de ranking, pra se destacar na lista. Mesmo raciocínio da moldura: campo
-// público (stats.equipped), então funciona pra QUALQUER linha (não só a sua)
+// público (stats.equipped), então funciona pra QUALQUER linha (não só a sua).
+// id do item -> classe CSS (ver tbody tr.row-theme-* em style.css/
+// style-teste.css); padrão (linha) fica só na 1000, itens "premium" (1500,
+// com padrão/animação, ver ROW_THEME_CLASS) marcados como tal só pra
+// referência de quem for revisar o catálogo, não afeta o código.
+const ROW_THEME_CLASS = {
+  row_fire: 'row-theme-fire',
+  row_ocean: 'row-theme-ocean',
+  row_galaxy: 'row-theme-galaxy',
+  row_lava: 'row-theme-lava',
+  row_forest: 'row-theme-forest',
+  row_sunset: 'row-theme-sunset',
+  row_frost: 'row-theme-frost',
+  row_candy: 'row-theme-candy',
+  row_starfield: 'row-theme-starfield',
+  row_holo: 'row-theme-holo',
+  row_stripes_gold: 'row-theme-stripes-gold',
+  row_aurora: 'row-theme-aurora',
+  row_confetti_dots: 'row-theme-confetti-dots',
+};
+const ROW_THEME_CLASSES = Object.values(ROW_THEME_CLASS);
 export function applyRowTheme(el, stats) {
   const theme = stats && stats.equipped && stats.equipped.rowTheme;
-  el.classList.remove('row-theme-fire', 'row-theme-ocean', 'row-theme-galaxy');
-  if (theme === 'row_fire') el.classList.add('row-theme-fire');
-  else if (theme === 'row_ocean') el.classList.add('row-theme-ocean');
-  else if (theme === 'row_galaxy') el.classList.add('row-theme-galaxy');
+  el.classList.remove(...ROW_THEME_CLASSES);
+  const cls = ROW_THEME_CLASS[theme];
+  if (cls) el.classList.add(cls);
 }
 // avatares da loja — desenhados em SVG (sem imagem externa), um ícone
 // circular por personagem. "glyph" é só o miolo do desenho, sempre

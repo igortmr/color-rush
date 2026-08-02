@@ -24,9 +24,19 @@ export const SHOP_ITEMS = [
   { id: 'frame_gold',    slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Dourada',                desc: 'Uma moldura dourada ao redor do seu nick no ranking e perfil.' },
   { id: 'frame_rainbow', slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Arco-íris',              desc: 'Uma moldura multicolorida ao redor do seu nick.' },
   { id: 'confetti_gold', slot: 'confetti',   price: 120, icon: '🎊', name: 'Confete Dourado',                desc: 'Um confete dourado quando você bate um novo recorde.' },
-  { id: 'row_fire',      slot: 'rowTheme',   price: 130, icon: '🔥', name: 'Linha: Fogo',                    desc: 'Fundo temático de fogo na sua linha do ranking.' },
-  { id: 'row_ocean',     slot: 'rowTheme',   price: 130, icon: '🌊', name: 'Linha: Oceano',                  desc: 'Fundo temático de oceano na sua linha do ranking.' },
-  { id: 'row_galaxy',    slot: 'rowTheme',   price: 130, icon: '🌌', name: 'Linha: Galáxia',                 desc: 'Fundo temático de galáxia na sua linha do ranking.' },
+  { id: 'row_fire',      slot: 'rowTheme',   price: 1000, icon: '🔥', name: 'Linha: Fogo',                    desc: 'Fundo temático de fogo na sua linha do ranking.' },
+  { id: 'row_ocean',     slot: 'rowTheme',   price: 1000, icon: '🌊', name: 'Linha: Oceano',                  desc: 'Fundo temático de oceano na sua linha do ranking.' },
+  { id: 'row_galaxy',    slot: 'rowTheme',   price: 1000, icon: '🌌', name: 'Linha: Galáxia',                 desc: 'Fundo temático de galáxia na sua linha do ranking.' },
+  { id: 'row_lava',      slot: 'rowTheme',   price: 1000, icon: '🌋', name: 'Linha: Lava',                    desc: 'Vermelho e laranja escuros, um fundo de lava derretendo.' },
+  { id: 'row_forest',    slot: 'rowTheme',   price: 1000, icon: '🌲', name: 'Linha: Floresta',                desc: 'Verdes de floresta na sua linha do ranking.' },
+  { id: 'row_sunset',    slot: 'rowTheme',   price: 1000, icon: '🌇', name: 'Linha: Pôr do Sol',               desc: 'Degradê de laranja, rosa e roxo, tipo um pôr do sol.' },
+  { id: 'row_frost',     slot: 'rowTheme',   price: 1000, icon: '❄️', name: 'Linha: Gelo',                    desc: 'Azul e branco gelados na sua linha do ranking.' },
+  { id: 'row_candy',     slot: 'rowTheme',   price: 1000, icon: '🍬', name: 'Linha: Doce',                    desc: 'Rosa e roxo bem docinhos na sua linha do ranking.' },
+  { id: 'row_starfield', slot: 'rowTheme',   price: 1500, icon: '✨', name: 'Linha: Céu Estrelado',            desc: 'Fundo escuro cheio de estrelinhas cintilantes — anima sozinho.' },
+  { id: 'row_holo',      slot: 'rowTheme',   price: 1500, icon: '🌈', name: 'Linha: Holográfica',              desc: 'Degradê iridescente que muda de cor sozinho, tipo adesivo holográfico.' },
+  { id: 'row_stripes_gold', slot: 'rowTheme', price: 1500, icon: '🐝', name: 'Linha: Listras Douradas',        desc: 'Listras diagonais douradas e pretas, visual VIP.' },
+  { id: 'row_aurora',    slot: 'rowTheme',   price: 1500, icon: '🌠', name: 'Linha: Aurora',                  desc: 'Verde, azul e roxo fluindo devagar, tipo aurora boreal — anima sozinho.' },
+  { id: 'row_confetti_dots', slot: 'rowTheme', price: 1500, icon: '🎊', name: 'Linha: Confete',                desc: 'Bolinhas coloridas espalhadas, visual de festa.' },
   { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
   { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
   { id: 'avatar_ghost',   slot: 'avatar', price: 110, icon: '👻', name: 'Avatar: Fantasma', desc: 'Um fantasma pra representar você no perfil e no duelo.' },
@@ -44,6 +54,12 @@ export const SHOP_SLOTS = [
   { slot: 'rowTheme',   label: '📊 Linha do Ranking' },
   { slot: 'avatar',     label: '🧑 Avatar' },
 ];
+// só "Linha do Ranking" fica visível na loja por enquanto — as outras
+// categorias já existem no catálogo (e no servidor) mas ainda não foram
+// lançadas. A loja em si só aparece pra admin (ver renderMenuPigmentosBar),
+// então dá pra deixar isso sem risco; quando o resto estiver pronto, é só
+// trocar esse filtro por SHOP_SLOTS de novo.
+const VISIBLE_SHOP_SLOTS = SHOP_SLOTS.filter(s => s.slot === 'rowTheme');
 // exportadas como bindings ao vivo (o import sempre reflete o valor atual,
 // nativo de ES modules) — lidas em game-teste.js por domínios que ainda não
 // são módulos próprios (sons, confete, avatar no menu/duelo)
@@ -94,7 +110,7 @@ function renderShop() {
 
   const body = $('shop-body');
   body.innerHTML = '';
-  SHOP_SLOTS.forEach(({ slot, label }) => {
+  VISIBLE_SHOP_SLOTS.forEach(({ slot, label }) => {
     const section = document.createElement('div');
     section.className = 'card';
     section.style.textAlign = 'left';
