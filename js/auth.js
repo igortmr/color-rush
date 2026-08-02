@@ -22,7 +22,6 @@ const callSuggestFriendFromRef = callable('suggestFriendFromRef');
 const callRecomputeTotal = callable('recomputeMyTotal');
 const callDeleteMyAccount = callable('deleteMyAccount');
 const callRegisterPushToken = callable('registerPushToken');
-const callLogClientDebug = callable('logClientDebug'); // TEMPORÁRIO — ver initNativePush
 // troca o authorization code do login com Apple por um refresh token que o
 // servidor guarda pra poder revogar na exclusão de conta (exigência da Apple,
 // ver doApple/registerAppleAuthCode mais abaixo e functions/index.js)
@@ -120,42 +119,24 @@ function isNativeApp() {
 // login/uso normal do jogo (mesmo padrão do sendPushToUser no servidor, ver
 // functions/index.js).
 let nativePushInitDone = false;
-// TEMPORÁRIO — manda cada etapa pro logClientDebug (functions/index.js) pra
-// diagnosticar remotamente onde o registro está travando, já que nenhum
-// dispositivo até agora completou o registro. Remover junto com
-// logClientDebug assim que a causa for encontrada.
-function pushDbg(step, extra) {
-  try { callLogClientDebug({ step, extra: extra != null ? String(extra) : null }).catch(() => {}); } catch {}
-}
 // @capacitor-firebase/messaging (não @capacitor/push-notifications) — esse
 // plugin entrega token do FCM de verdade via getToken(), pronto pro
-// admin.messaging().send() do servidor. O outro plugin (removido) só
-// devolvia o token BRUTO da APNs (64 hex), que o Firebase Admin SDK recusa
-// como "token inválido" — foi isso que o diagnóstico remoto mostrou depois
-// do registro nativo já estar funcionando (ver AppDelegate.swift/
-// codemagic.yaml: os delegates de registro continuam necessários, esse
-// plugin também depende deles).
+// admin.messaging().send() do servidor. O outro plugin devolvia o token
+// BRUTO da APNs (64 hex), que o Firebase Admin SDK recusa como "token
+// inválido". Também depende dos delegates de registro em AppDelegate.swift
+// (ver codemagic.yaml) — sem eles o registro nativo nunca completa.
 async function initNativePush() {
   if (nativePushInitDone || !isNativeApp()) return;
   nativePushInitDone = true;
-  pushDbg('start');
   try {
     const FirebaseMessaging = window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseMessaging;
-    if (!FirebaseMessaging) { pushDbg('no_plugin'); return; }
-    pushDbg('plugin_ok');
+    if (!FirebaseMessaging) return;
     const perm = await FirebaseMessaging.requestPermissions();
-    pushDbg('perm_result', perm && perm.receive);
     if (perm.receive !== 'granted') return;
-    pushDbg('getting_token');
     const { token } = await FirebaseMessaging.getToken();
-    pushDbg('got_token', token ? token.slice(0, 10) : null);
     if (!token) return;
-    callRegisterPushToken({ token }).then(
-      () => pushDbg('register_call_ok'),
-      (e) => pushDbg('register_call_failed', e && e.message)
-    );
+    callRegisterPushToken({ token }).catch(() => {});
   } catch (e) {
-    pushDbg('exception', e && e.message);
     console.warn('[push] indisponível', e);
   }
 }
