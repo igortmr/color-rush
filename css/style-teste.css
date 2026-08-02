@@ -642,7 +642,7 @@
   tbody tr.row-theme-holo {
     background: linear-gradient(120deg, rgba(255,0,150,0.4), rgba(0,229,255,0.35), rgba(255,234,0,0.35), rgba(150,0,255,0.4), rgba(255,0,150,0.4));
     background-size: 300% 100%;
-    animation: rowHoloShift 4s linear infinite;
+    animation: rowHoloShift 10s linear infinite;
   }
   @keyframes rowHoloShift { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
   tbody tr.row-theme-stripes-gold {

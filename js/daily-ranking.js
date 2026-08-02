@@ -129,12 +129,11 @@ export async function loadDailyAlltimeRanking() {
     for (const r of all) {
       const data = rowData(r);
       const wins = data.dailyWins || 0;
-      // pigmentos (gastável na loja) só é creditado no resgate da caixa de
-      // entrada; pendingPigmentos é creditado na hora (junto com dailyWins,
-      // ver resolveDailyChallenge) e representa o que ainda está esperando
-      // ser resgatado — somando os dois, o ranking mostra o total certo
-      // independente de a pessoa já ter aberto a caixa de entrada ou não.
-      const pig = (data.pigmentos || 0) + (data.pendingPigmentos || 0);
+      // pigmentosEarned: total ganho participando do desafio diário, desde
+      // sempre — só sobe (ver resolveDailyChallenge), nunca desce quando a
+      // pessoa gasta pigmentos na loja (esse gasto mexe só em "pigmentos",
+      // o saldo gastável, não nesse total histórico).
+      const pig = data.pigmentosEarned || 0;
       if (wins > 0 || pig > 0) rows.push({ uid: r.uid, nick: data.nick, wins, pig, stats: data });
     }
     // mais colunas => a ordenação mais importante é o nº de vitórias de 1º lugar

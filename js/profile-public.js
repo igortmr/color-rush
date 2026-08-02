@@ -48,7 +48,7 @@ export async function computeModeRanks(uid) {
   for (const r of all) {
     const data = rowData(r);
     const wins = data.dailyWins || 0;
-    const pig = (data.pigmentos || 0) + (data.pendingPigmentos || 0);
+    const pig = data.pigmentosEarned || 0;
     if (wins > 0 || pig > 0) dailyRows.push({ uid: r.uid, wins, pig });
   }
   dailyRows.sort((a, b) => (b.wins - a.wins) || (b.pig - a.pig));
@@ -111,7 +111,7 @@ export function renderPublicProfileRanks(stats, ranks) {
   });
   // Salão da Fama do desafio diário — não é um RANK_FIELDS comum (ver
   // computeModeRanks), por isso checado à parte aqui
-  const dailyPig = (stats.pigmentos || 0) + (stats.pendingPigmentos || 0);
+  const dailyPig = stats.pigmentosEarned || 0;
   if (((stats.dailyWins || 0) > 0 || dailyPig > 0) && ranks.daily) items.push(row(T[state.lang].daily_subtab_alltime, ranks.daily, 'daily'));
   return items.join('');
 }
