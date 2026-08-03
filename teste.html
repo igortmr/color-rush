@@ -497,6 +497,21 @@
   </div>
 </div>
 
+<!-- confirmação de doação pro Cofre do Clã — mesmo padrão temático dos
+     modais de compra acima, ver window.startDonateToGuildTreasury em
+     js/guilds.js -->
+<div class="modal-overlay" id="donate-guild-treasury-modal" style="display:none;" onclick="if(event.target===this) closeDonateGuildTreasuryModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-yellow); text-shadow:0 0 10px rgba(255,233,60,0.5);">💰 Confirmar doação</h1>
+    <div class="modal-card-body">
+      <p style="text-align:left;">Doar pro Cofre do Clã? Esse valor sai da sua conta e não pode ser desfeito.</p>
+      <p style="display:flex; align-items:center; justify-content:flex-end; gap:6px; font-weight:700;" id="donate-guild-treasury-modal-amount"></p>
+    </div>
+    <button class="secondary" onclick="closeDonateGuildTreasuryModal()">Cancelar</button>
+    <button onclick="confirmDonateToGuildTreasury()">Confirmar doação</button>
+  </div>
+</div>
+
 <!-- criar conta: popup própria (campos separados dos de login), aberta pelo
      botão CRIAR CONTA em #auth-screen — repete Google/Apple pra quem prefere
      entrar por eles em vez de e-mail+senha (ver openSignupModal em js/auth.js) -->

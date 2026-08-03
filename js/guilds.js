@@ -680,7 +680,7 @@ function treasurySection(g) {
   status.style.cssText = 'margin-top:8px; min-height:1.2em; font-size:0.8rem;';
   donateCard.appendChild(status);
 
-  donateBtn.onclick = async () => {
+  donateBtn.onclick = () => {
     const amount = parseInt(input.value, 10);
     status.textContent = '';
     if (!Number.isInteger(amount) || amount <= 0) {
@@ -691,15 +691,20 @@ function treasurySection(g) {
       status.textContent = T[state.lang].guild_treasury_not_enough_own;
       return;
     }
-    donateBtn.disabled = true;
-    try {
-      await callDonateToGuildTreasury({ amount });
-      state.myData.pigmentos = myPigmentos - amount; // otimista — atualiza local na hora, sem esperar o próximo fetch
-      renderGuildScreen(); // recarrega saldo do cofre + lista de contribuintes
-    } catch (e) {
-      status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
-      donateBtn.disabled = false;
-    }
+    // popup temática de confirmação antes de doar de verdade (mesmo padrão
+    // do #buy-shop-modal/#buy-guild-tag-style-modal) — o callback só roda se
+    // a pessoa confirmar (ver window.confirmDonateToGuildTreasury abaixo)
+    window.startDonateToGuildTreasury(amount, async () => {
+      donateBtn.disabled = true;
+      try {
+        await callDonateToGuildTreasury({ amount });
+        state.myData.pigmentos = myPigmentos - amount; // otimista — atualiza local na hora, sem esperar o próximo fetch
+        renderGuildScreen(); // recarrega saldo do cofre + lista/histórico de doações
+      } catch (e) {
+        status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
+        donateBtn.disabled = false;
+      }
+    });
   };
   wrap.appendChild(donateCard);
 
@@ -918,6 +923,26 @@ window.confirmBuyGuildTagStyle = async () => {
   } catch (e) {
     if (status) status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
   }
+};
+
+// popup temática de confirmação pra doar pro Cofre do Clã — mesmo padrão de
+// #buy-shop-modal/#buy-guild-tag-style-modal acima, só que quem chama guarda
+// o callback de verdade (ver donateBtn.onclick em treasurySection) em vez de
+// um id de catálogo, já que doação não tem catálogo, é um valor livre.
+let pendingDonateConfirm = null;
+window.startDonateToGuildTreasury = (amount, onConfirm) => {
+  pendingDonateConfirm = onConfirm;
+  $('donate-guild-treasury-modal-amount').innerHTML = `<span style="font-size:1.35rem; color:var(--neon-yellow); text-shadow:0 0 8px rgba(255,233,60,0.4);">${amount}</span>${pigmentIconSvg(20)}`;
+  $('donate-guild-treasury-modal').style.display = 'flex';
+};
+window.closeDonateGuildTreasuryModal = () => {
+  $('donate-guild-treasury-modal').style.display = 'none';
+  pendingDonateConfirm = null;
+};
+window.confirmDonateToGuildTreasury = () => {
+  const onConfirm = pendingDonateConfirm;
+  window.closeDonateGuildTreasuryModal();
+  if (onConfirm) onConfirm();
 };
 
 /* ================== chat do clã (aba + balãozinho flutuante) ================== */
