@@ -70,9 +70,9 @@ export const BADGE_DEFS = {
     label: { pt: 'Vitórias em Duelo', en: 'Duel Wins', es: 'Victorias en Duelo' },
     tiers: [1, 10, 25, 50, 100, 250],
     names: {
-      pt: ['Desafiante', 'Duelista', 'Mestre do Duelo', 'Gladiador Cromático', 'Campeão dos Duelos', 'Lenda do Duelo'],
-      en: ['Challenger', 'Duelist', 'Duel Master', 'Chromatic Gladiator', 'Duel Champion', 'Duel Legend'],
-      es: ['Retador', 'Duelista', 'Maestro del Duelo', 'Gladiador Cromático', 'Campeón de Duelos', 'Leyenda del Duelo'],
+      pt: ['Desafiante das Cores', 'Duelista Cromático', 'Mestre das Cores', 'Gladiador Cromático', 'Campeão Cromático', 'Lenda das Cores'],
+      en: ['Color Challenger', 'Chromatic Duelist', 'Color Master', 'Chromatic Gladiator', 'Chromatic Champion', 'Color Legend'],
+      es: ['Retador de Colores', 'Duelista Cromático', 'Maestro de Colores', 'Gladiador Cromático', 'Campeón Cromático', 'Leyenda de Colores'],
     },
     metric: u => u.pvpWins || 0,
     desc: n => state.lang === 'en' ? `Win ${n} duel${n > 1 ? 's' : ''} (challenge a friend)`
