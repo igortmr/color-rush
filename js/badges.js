@@ -69,10 +69,12 @@ export const BADGE_DEFS = {
     icon: '⚔️',
     label: { pt: 'Vitórias em Duelo', en: 'Duel Wins', es: 'Victorias en Duelo' },
     tiers: [1, 10, 25, 50, 100, 250],
+    // nomes curtos (1 palavra, até 10 caracteres) pra não quebrar a pill no
+    // ranking — mesma restrição que as outras categorias já respeitam
     names: {
-      pt: ['Desafiante das Cores', 'Duelista Cromático', 'Mestre das Cores', 'Gladiador Cromático', 'Campeão Cromático', 'Lenda das Cores'],
-      en: ['Color Challenger', 'Chromatic Duelist', 'Color Master', 'Chromatic Gladiator', 'Chromatic Champion', 'Color Legend'],
-      es: ['Retador de Colores', 'Duelista Cromático', 'Maestro de Colores', 'Gladiador Cromático', 'Campeón Cromático', 'Leyenda de Colores'],
+      pt: ['Tingido', 'Vívido', 'Radioso', 'Cromático', 'Luminoso', 'Espectral'],
+      en: ['Tinted', 'Vivid', 'Beaming', 'Chromatic', 'Luminous', 'Spectral'],
+      es: ['Teñido', 'Vívido', 'Radioso', 'Cromático', 'Luminoso', 'Espectral'],
     },
     metric: u => u.pvpWins || 0,
     desc: n => state.lang === 'en' ? `Win ${n} duel${n > 1 ? 's' : ''} (challenge a friend)`
