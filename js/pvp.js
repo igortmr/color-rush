@@ -398,6 +398,10 @@ function renderPvpBoard(m, myUid) {
   if (!round) return;
   const mode = m.mode || 'classic'; // duelos criados antes desse campo existir eram sempre esse comportamento
   renderPvpPromptBox(mode, round);
+  // instrução muda de acordo com a mecânica do modo (ver pvp_explain em
+  // js/i18n.js) — não usa mais data-i18n-html porque agora é uma função,
+  // não um texto fixo
+  $('pvp-explain').innerHTML = T[state.lang].pvp_explain(mode);
 
   const myTurn = m.turnUid === myUid;
   const grid = $('pvp-grid');
