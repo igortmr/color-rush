@@ -967,7 +967,7 @@
      overflow:hidden do .shape-glyph acima ainda protege contra vazar pro
      quadrado vizinho. */
   .square.shape-heart .shape-fill.shape-glyph {
-    font-size: 150cqi;
+    font-size: 100cqi;
   }
 
   /* mesmo tamanho de palavra em todas as formas */
