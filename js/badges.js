@@ -12,9 +12,9 @@ export const BADGE_DEFS = {
     label: { pt: 'Pontos Totais', en: 'Total Points', es: 'Puntos Totales' },
     tiers: [500, 2000, 5000, 15000, 50000, 150000],
     names: {
-      pt: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Constelação das Cores', 'Universo Cromático'],
-      en: ['Shining', 'Radiant', 'Stellar', 'Supernova', 'Constellation of Colors', 'Chromatic Universe'],
-      es: ['Brillante', 'Radiante', 'Estelar', 'Supernova', 'Constelación de Colores', 'Universo Cromático'],
+      pt: ['Brilhante', 'Radiante', 'Estelar', 'Supernova', 'Hipernova', 'Quasar'],
+      en: ['Shining', 'Radiant', 'Stellar', 'Supernova', 'Hypernova', 'Quasar'],
+      es: ['Brillante', 'Radiante', 'Estelar', 'Supernova', 'Hipernova', 'Quasar'],
     },
     metric: u => u.totalPoints || 0,
     desc: n => state.lang === 'en' ? `Accumulate ${n} points (sum of all games)`
