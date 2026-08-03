@@ -510,6 +510,7 @@
     <div class="modal-card-body">
       <input type="text" id="create-guild-name" maxlength="24" data-i18n-placeholder="guild_name_ph" placeholder="Nome do clã (3 a 24 caracteres)">
       <input type="text" id="create-guild-tag" maxlength="3" data-i18n-placeholder="guild_tag_ph" placeholder="Sigla (2 a 3 letras)">
+      <div class="muted" id="create-guild-cost" style="display:flex; align-items:center; justify-content:center; gap:5px;"></div>
       <div class="error" id="create-guild-error"></div>
       <button onclick="submitCreateGuild()" data-i18n="guild_confirm_create_btn">Criar</button>
     </div>
@@ -700,7 +701,7 @@
     <h1 style="font-size:2rem;" data-i18n="guild_list_title">🛡️ CLÃS</h1>
     <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
-  <button id="guild-create-btn" style="width:100%; display:none;" onclick="openCreateGuildModal()"></button>
+  <button id="guild-create-btn" style="display:none;" onclick="openCreateGuildModal()"></button>
   <div class="muted" id="guild-create-hint" style="display:none; text-align:center;"></div>
   <div id="guild-list-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
 </div>

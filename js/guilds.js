@@ -114,7 +114,7 @@ async function renderGuildList() {
   const myLevel = levelFromXp(myXp());
   const canCreate = (myLevel >= GUILD_CREATE_MIN_LEVEL || state.myData.admin === true) && !state.myData.guildId;
   createBtn.style.display = canCreate ? '' : 'none';
-  if (canCreate) createBtn.innerHTML = `${T[state.lang].guild_btn_create} <b>500</b> ${pigmentIconSvg(16)}`;
+  if (canCreate) createBtn.textContent = T[state.lang].guild_btn_create;
   createHint.style.display = (!state.myData.guildId && !canCreate) ? '' : 'none';
   if (createHint.style.display !== 'none') {
     createHint.textContent = T[state.lang].guild_create_level_hint(GUILD_CREATE_MIN_LEVEL);
@@ -174,6 +174,7 @@ window.openCreateGuildModal = () => {
   $('create-guild-error').textContent = '';
   $('create-guild-name').value = '';
   $('create-guild-tag').value = '';
+  $('create-guild-cost').innerHTML = `${T[state.lang].guild_create_cost_label}<b>500</b>${pigmentIconSvg(16)}`;
   $('create-guild-modal').style.display = 'flex';
 };
 window.closeCreateGuildModal = () => {
@@ -365,7 +366,6 @@ async function renderGuildScreen() {
     if (isLeader) body.appendChild(joinRequestsSection(xpByUid));
     if (isLeader) body.appendChild(invitesSection(xpByUid));
     if (isLeader) body.appendChild(leaderToolsSection(g));
-    else if (isMember) body.appendChild(leaveSection());
   } else {
     body.appendChild(chatSection(g, myUid));
     ensureChatListener(g.id);
@@ -488,6 +488,16 @@ function memberRow(g, uid, data, myUid, isLeader, xpByUid) {
     kickBtn.onclick = () => uiKickGuildMember(uid, data.nick || '');
     actions.appendChild(kickBtn);
     row.appendChild(actions);
+  } else if (!isLeader && uid === myUid) {
+    // "sair do clã" fica na própria linha do membro (em vez de um botão à
+    // parte embaixo da lista toda) — só a líder não vê isso aqui, ela usa
+    // "desfazer clã" (ver leaderToolsSection)
+    const leaveBtn = document.createElement('button');
+    leaveBtn.className = 'secondary';
+    leaveBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
+    leaveBtn.textContent = T[state.lang].guild_btn_leave;
+    leaveBtn.onclick = uiLeaveGuild;
+    row.appendChild(leaveBtn);
   }
   return row;
 }
@@ -571,17 +581,6 @@ function leaderToolsSection() {
   btn.style.color = 'var(--neon-red)';
   btn.textContent = T[state.lang].guild_btn_disband;
   btn.onclick = uiDisbandGuild;
-  wrap.appendChild(btn);
-  return wrap;
-}
-
-function leaveSection() {
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:100%; text-align:center; margin-top:10px;';
-  const btn = document.createElement('button');
-  btn.className = 'secondary';
-  btn.textContent = T[state.lang].guild_btn_leave;
-  btn.onclick = uiLeaveGuild;
   wrap.appendChild(btn);
   return wrap;
 }
