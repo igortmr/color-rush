@@ -329,9 +329,13 @@ window.buyShopItemUi = async (itemId) => {
     const res = await callBuyShopItem({ itemId });
     if (res.data && typeof res.data.pigmentos === 'number') state.myData.pigmentos = res.data.pigmentos;
     state.myData.ownedItems = [...(state.myData.ownedItems || []), itemId];
-    renderShop({ keepScroll: true });
     renderMenuPigmentosBar();
     renderUserPigmentos();
+    // já equipa na hora — comprou, é pra usar, não precisa clicar em "USAR"
+    // logo depois (equipShopItem já cuida do próprio renderShop)
+    const item = SHOP_ITEMS_BY_ID[itemId];
+    if (item) await equipShopItem(item.slot, itemId);
+    else renderShop({ keepScroll: true });
   } catch (e) {
     $('shop-status').textContent = e.message || 'Não foi possível comprar agora.';
   }
