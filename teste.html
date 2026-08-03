@@ -281,6 +281,14 @@
     </div>
     <span class="record-badge lock-badge" id="lock-caos" style="display:none;"></span>
   </div>
+  <div class="mode-card" id="card-mosaic" onclick="startGame('mosaic')">
+    <h2 data-i18n="mode_mosaic_title">🧩 Mosaico</h2>
+    <p data-i18n-html="mode_mosaic_desc">Mesma regra do Clássico, só que num tabuleiro <b>3x3 (9 quadrados)</b> e com <b>12 cores</b> diferentes! Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>
+    <div class="mode-card-footer">
+      <span class="record-badge clickable" onclick="event.stopPropagation(); showRanking('mosaic');" title="Ver ranking do modo Mosaico"><span data-i18n="record_label">Seu recorde:</span> <span id="record-mosaic">0</span></span>
+    </div>
+    <span class="record-badge lock-badge" id="lock-mosaic" style="display:none;"></span>
+  </div>
   <p class="muted" data-i18n="footer_note">⏱️ 10 segundos por rodada — o tempo fica 5% mais rápido a cada acerto!</p>
 </div>
 
@@ -587,6 +595,7 @@
     <option value="shapes-reverse" data-i18n="tab_shapes_reverse_txt">🔸 Formas Reverso</option>
     <option value="trio" data-i18n="tab_trio">🔺 Trio</option>
     <option value="caos" data-i18n="tab_caos">🌀 Caos</option>
+    <option value="mosaic" data-i18n="tab_mosaic">🧩 Mosaico</option>
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
     <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
     <option value="daily" data-i18n="tab_daily">📅 Desafio Diário</option>

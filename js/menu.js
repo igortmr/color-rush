@@ -19,6 +19,7 @@ window.showMenu = () => {
   $('record-shapes-reverse').textContent = myRecord('shapes-reverse');
   $('record-trio').textContent = myRecord('trio');
   $('record-caos').textContent = myRecord('caos');
+  $('record-mosaic').textContent = myRecord('mosaic');
   $('mute-btn').classList.toggle('on', !isMuted());
   $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
 

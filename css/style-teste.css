@@ -573,6 +573,13 @@
     text-shadow: 0 0 12px rgba(45,214,255,0.35);
   }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+  /* modo Mosaico: tabuleiro 3x3 (9 quadrados) em vez do 2x2 padrão — ver
+     squaresFor/MODE_SQUARES em js/constants.js e o toggle da classe em
+     window.startGame (js/game-core.js), openReplay (js/replay.js) e
+     renderPvpScreen (js/pvp.js). .word menor pra caber nos quadrados mais
+     estreitos (3 colunas em vez de 2). */
+  .grid.grid-3x3 { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .grid.grid-3x3 .word { font-size: 0.82rem; padding: 4px 8px; }
   .square {
     position: relative;
     aspect-ratio: 1;

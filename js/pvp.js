@@ -6,7 +6,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { show } from './nav.js';
 import { T, cName } from './i18n.js';
-import { COLORS, SHAPES, CAOS_POOL, ALL_MODES } from './constants.js';
+import { COLORS, COLORS_12, SHAPES, CAOS_POOL, ALL_MODES } from './constants.js';
 import { avatarOrDefaultIcon, lvChip, myXp, blockIfBanned, modeLabel, MODE_ICON, modeUnlockedForXp } from './levels.js';
 import { equippedAvatar } from './shop.js';
 import { showFriendActionError } from './friends.js';
@@ -354,11 +354,13 @@ function renderPvpPromptBox(mode, round) {
     box.style.boxShadow = 'inset 0 0 14px rgba(255,255,255,0.08)';
     return;
   }
-  // clássico/reverso: a cor do RETÂNGULO é só distração — o que vale é a cor
-  // que a PALAVRA diz
-  const boxColor = COLORS[round.promptColorIdx] || COLORS[0];
-  const targetColor = COLORS[round.promptWordIdx] || COLORS[0];
-  box.textContent = cName(targetColor); // conteúdo fixo (tabela COLORS), sem dado de usuário
+  // clássico/reverso/mosaico: a cor do RETÂNGULO é só distração — o que vale
+  // é a cor que a PALAVRA diz. Mosaico usa a paleta de 12 cores (COLORS_12)
+  // em vez das 8 normais (ver generatePvpMosaicRound em functions/index.js)
+  const pool = (mode === 'mosaic') ? COLORS_12 : COLORS;
+  const boxColor = pool[round.promptColorIdx] || pool[0];
+  const targetColor = pool[round.promptWordIdx] || pool[0];
+  box.textContent = cName(targetColor); // conteúdo fixo (tabela COLORS/COLORS_12), sem dado de usuário
   box.style.background = boxColor.hex;
   box.style.boxShadow = `0 0 18px ${boxColor.hex}99, 0 0 40px ${boxColor.hex}55, inset 0 0 14px rgba(255,255,255,0.15)`;
 }
@@ -386,13 +388,14 @@ function renderPvpSquare(el, mode, sq) {
     renderCaosSquare(el, { shape: CAOS_POOL[sq.shape] || CAOS_POOL[0], color: CAOS_POOL[sq.color] || CAOS_POOL[0], word: CAOS_POOL[sq.word] || CAOS_POOL[0] });
     return;
   }
-  // clássico/reverso
-  const bg = COLORS[sq.bgIdx] || COLORS[0];
-  const word = COLORS[sq.wordIdx] || COLORS[0];
+  // clássico/reverso/mosaico (Mosaico usa a paleta de 12 cores, COLORS_12)
+  const pool = (mode === 'mosaic') ? COLORS_12 : COLORS;
+  const bg = pool[sq.bgIdx] || pool[0];
+  const word = pool[sq.wordIdx] || pool[0];
   el.className = 'square';
   el.style.background = bg.hex;
   el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-  el.innerHTML = `<span class="word">${cName(word)}</span>`; // conteúdo fixo (tabelas COLORS/SHAPES/CAOS_POOL), sem dado de usuário
+  el.innerHTML = `<span class="word">${cName(word)}</span>`; // conteúdo fixo (tabelas COLORS/COLORS_12/SHAPES/CAOS_POOL), sem dado de usuário
 }
 function renderPvpBoard(m, myUid) {
   const round = m.round;
@@ -406,6 +409,7 @@ function renderPvpBoard(m, myUid) {
 
   const myTurn = m.turnUid === myUid;
   const grid = $('pvp-grid');
+  grid.classList.toggle('grid-3x3', mode === 'mosaic'); // ver mesmo toggle em window.startGame (js/game-core.js)
   grid.innerHTML = '';
   round.squares.forEach((sq, i) => {
     const el = document.createElement('div');

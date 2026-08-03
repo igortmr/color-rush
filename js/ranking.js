@@ -12,7 +12,7 @@ import { loadGuildRanking } from './guilds.js';
 
 window.rankingBack = () => popScreenBack();
 
-export const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', caos: 'caos', level: 'xp', geral: 'total', divulgador: 'referrals' };
+export const RANK_FIELDS = { classic: 'classic', reverse: 'reverse', shapes: 'shapes', 'shapes-reverse': 'shapes-reverse', trio: 'trio', caos: 'caos', mosaic: 'mosaic', level: 'xp', geral: 'total', divulgador: 'referrals' };
 
 let rankingRows = [];
 let rankingPage = 0;

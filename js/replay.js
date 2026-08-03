@@ -111,6 +111,7 @@ function renderReplaySquares(round, idx) {
       ? (DAILY_SHAPES_OVERRIDE[replayDateStr] || poolFor(rmode))
       : poolFor(rmode);
   const grid = $('replay-grid');
+  grid.classList.toggle('grid-3x3', rmode === 'mosaic'); // ver mesmo toggle em window.startGame (js/game-core.js)
   grid.innerHTML = '';
   replayTargetSquareEl = null;
   let targetItem = null;
@@ -141,8 +142,8 @@ function renderReplaySquares(round, idx) {
           : `<span class="shape-fill ${shapeSide.shapeClass}"></span>`;
         el.innerHTML = `${fillHtml}<span class="word">${cName(wordSide)}</span>`;
       } else {
-        const bg   = (rmode === 'classic') ? item : paired;
-        const word = (rmode === 'classic') ? paired : item;
+        const bg   = (rmode === 'classic' || rmode === 'mosaic') ? item : paired;
+        const word = (rmode === 'classic' || rmode === 'mosaic') ? paired : item;
         el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
         el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
         el.innerHTML = `<span class="word">${cName(word)}</span>`;
@@ -169,6 +170,7 @@ function renderReplaySquares(round, idx) {
     // a tela com cName(null), cai pra instrução genérica do modo Trio
     trio: () => (pairA && pairB) ? T[state.lang].instr_first_trio(cName(pairA), cName(pairB)) : T[state.lang].instr_next_trio,
     caos: () => (pairA && pairB) ? T[state.lang].instr_first_caos(cName(pairA), cName(pairB)) : T[state.lang].instr_next_caos,
+    mosaic: () => T[state.lang].instr_first_classic(cName(targetItem)),
   };
   const INSTR_NEXT = {
     classic: T[state.lang].instr_next_classic,
@@ -177,6 +179,7 @@ function renderReplaySquares(round, idx) {
     'shapes-reverse': T[state.lang].instr_next_shapes_reverse,
     trio: T[state.lang].instr_next_trio,
     caos: T[state.lang].instr_next_caos,
+    mosaic: T[state.lang].instr_next_classic,
   };
   $('replay-instruction').textContent = (idx === 0) ? INSTR_FIRST[rmode]() : INSTR_NEXT[rmode];
 }

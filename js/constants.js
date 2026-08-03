@@ -13,6 +13,21 @@ export const COLORS = [
 ];
 export const CONFETTI_COLORS = { confetti_gold: ['#ffd700', '#ffe93c', '#fff2a8'] };
 export const SQUARES = 4;
+// paleta do modo Mosaico (3x3, 9 quadrados) — as 8 cores normais (COLORS) +
+// 4 novas, mesmos hex já usados na paleta de 12 cores do desafio diário (ver
+// DAILY_PALETTE_OVERRIDE mais abaixo), só que aqui é fixa (não muda por dia)
+export const COLORS_12 = [
+  ...COLORS,
+  { key: 'brown', name: { pt: 'MARROM', en: 'BROWN', es: 'MARRÓN' }, hex: '#73421c' },
+  { key: 'gray',  name: { pt: 'CINZA',  en: 'GRAY',  es: 'GRIS'   }, hex: '#8a8a8a' },
+  { key: 'white', name: { pt: 'BRANCO', en: 'WHITE', es: 'BLANCO' }, hex: '#ffffff' },
+  { key: 'black', name: { pt: 'PRETO',  en: 'BLACK', es: 'NEGRO'  }, hex: '#1a1a1a' },
+];
+// quantidade de quadrados por modo — só o Mosaico foge do padrão (SQUARES=4);
+// squaresFor() é o jeito seguro de ler isso (cai pro padrão se o modo não
+// estiver aqui), em vez de espalhar "MODE_SQUARES[m] || SQUARES" pelo código
+export const MODE_SQUARES = { mosaic: 9 };
+export const squaresFor = m => MODE_SQUARES[m] || SQUARES;
 export const SHAPES = [
   { name: { pt: 'CÍRCULO',    en: 'CIRCLE',   es: 'CÍRCULO'   }, shapeClass: 'shape-circle' },
   { name: { pt: 'QUADRADO',   en: 'SQUARE',   es: 'CUADRADO'  }, shapeClass: 'shape-square-shape' },
@@ -21,7 +36,7 @@ export const SHAPES = [
   { name: { pt: 'ESTRELA',    en: 'STAR',     es: 'ESTRELLA'  }, shapeClass: 'shape-star' },
   { name: { pt: 'CRUZ',       en: 'CROSS',    es: 'CRUZ'      }, shapeClass: 'shape-cross' },
 ];
-export const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : COLORS;
+export const poolFor = m => (m === 'shapes' || m === 'shapes-reverse') ? SHAPES : (m === 'mosaic') ? COLORS_12 : COLORS;
 // modo Caos: pool combinado de cores + formas — cada quadrado pode "bater"
 // com um item memorizado seja ele uma cor ou uma forma, então o sorteio
 // precisa dos dois universos juntos num só array
@@ -32,8 +47,8 @@ export const isColorItem = item => COLORS.includes(item);
 // pontuação nem da validação, é puramente visual
 export const poolItemId = item => item.key || item.shapeClass;
 export const poolItemById = (pool, id) => pool.find(x => (x.key || x.shapeClass) === id) || pool[0];
-export const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio', caos: 'playedCaos' };
-export const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio', 'caos'];
+export const PLAYED_FIELD = { classic: 'playedClassic', reverse: 'playedReverse', shapes: 'playedShapes', 'shapes-reverse': 'playedShapesReverse', trio: 'playedTrio', caos: 'playedCaos', mosaic: 'playedMosaic' };
+export const ALL_MODES = ['classic', 'reverse', 'shapes', 'shapes-reverse', 'trio', 'caos', 'mosaic'];
 // o desafio diário sorteia só entre Clássico e Reverso — de propósito uma
 // lista separada de ALL_MODES, pra um modo novo (como o Trio) poder entrar
 // no jogo livre/ranking sem precisar reconstruir também a tela do desafio

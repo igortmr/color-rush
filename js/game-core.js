@@ -8,7 +8,7 @@ import { T, cName } from './i18n.js';
 import { track, shuffle, pick, getLocalRecord, setLocalRecord } from './utils.js';
 import {
   COLORS, CONFETTI_COLORS, SQUARES, CAOS_POOL, isColorItem, poolItemId,
-  PLAYED_FIELD, poolFor
+  PLAYED_FIELD, poolFor, squaresFor
 } from './constants.js';
 import {
   levelFromXp, myXp, xpInfo, xpStreakMultiplier, modeUnlocked, blockIfBanned
@@ -114,6 +114,10 @@ window.startGame = (m) => {
   replayRounds = [];
   replayMouse = [];
   replayStartMs = performance.now();
+  // Mosaico é o único modo com tabuleiro 3x3 (9 quadrados) em vez do padrão
+  // 2x2 (ver squaresFor/MODE_SQUARES em constants.js) — grid-3x3 troca o
+  // grid-template-columns pra 3 colunas (ver css/style.css)
+  $('grid').classList.toggle('grid-3x3', mode === 'mosaic');
   show('game-screen');
   newRound(true);
 
@@ -420,10 +424,11 @@ function newRound(first) {
   if (mode === 'trio') return newTrioRound(first);
   if (mode === 'caos') return newCaosRound(first);
   const pool = poolFor(mode);
+  const squares = squaresFor(mode); // só o Mosaico foge do padrão de 4 (ver squaresFor em constants.js)
   nextTarget = pick(pool);
-  const others = shuffle(pool.filter(c => c !== target)).slice(0, SQUARES - 1);
-  const items = shuffle([target, ...others]); // clássico: fundos | reverso: palavras | formas: ícones
-  const distractors = shuffle(pool.filter(c => c !== nextTarget)).slice(0, SQUARES - 1);
+  const others = shuffle(pool.filter(c => c !== target)).slice(0, squares - 1);
+  const items = shuffle([target, ...others]); // clássico/mosaico: fundos | reverso: palavras | formas: ícones
+  const distractors = shuffle(pool.filter(c => c !== nextTarget)).slice(0, squares - 1);
   let d = 0;
 
   const grid = $('grid');
@@ -444,8 +449,8 @@ function newRound(first) {
       el.classList.add('shape-square', shapeSide.shapeClass);
       el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
     } else {
-      const bg   = (mode === 'classic') ? item : paired;
-      const word = (mode === 'classic') ? paired : item;
+      const bg   = (mode === 'classic' || mode === 'mosaic') ? item : paired;
+      const word = (mode === 'classic' || mode === 'mosaic') ? paired : item;
       el.style.background = bg.hex;
       el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
@@ -463,12 +468,16 @@ function newRound(first) {
     reverse: () => T[state.lang].instr_first_reverse(cName(target)),
     shapes: () => T[state.lang].instr_first_shapes(cName(target)),
     'shapes-reverse': () => T[state.lang].instr_first_shapes_reverse(cName(target)),
+    // Mosaico é a mesma mecânica do Clássico (só muda o tamanho do tabuleiro
+    // e a paleta) — reaproveita o mesmo texto, sem precisar de chave nova
+    mosaic: () => T[state.lang].instr_first_classic(cName(target)),
   };
   const INSTR_NEXT = {
     classic: T[state.lang].instr_next_classic,
     reverse: T[state.lang].instr_next_reverse,
     shapes: T[state.lang].instr_next_shapes,
     'shapes-reverse': T[state.lang].instr_next_shapes_reverse,
+    mosaic: T[state.lang].instr_next_classic,
   };
   $('instruction').textContent = first ? INSTR_FIRST[mode]() : INSTR_NEXT[mode];
   $('speed').textContent = `⏱️ ${(duration / 1000).toFixed(1)}s`;

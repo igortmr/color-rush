@@ -8,7 +8,7 @@ export function xpStreakMultiplier(streak) {
   if (streak <= 50) return 1.5;
   return 2;
 }
-export const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15, trio: 20, caos: 25 }; // nível mínimo pra jogar cada modo
+export const MODE_UNLOCK = { reverse: 5, shapes: 10, 'shapes-reverse': 15, trio: 20, caos: 25, mosaic: 30 }; // nível mínimo pra jogar cada modo
 export const xpForNext = lv => lv * 100;
 export const totalXpForLevel = lv => 50 * lv * (lv - 1); // XP total acumulada ao atingir o nível lv
 export function levelFromXp(xp) {
@@ -191,12 +191,13 @@ export function renderDailyPrizesLegend() {
     </div>`).join('');
   el.innerHTML = `<div style="margin-bottom:4px;">${cfg.title}</div>${rows}`;
 }
-export const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺', caos: '🌀' };
+export const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺', caos: '🌀', mosaic: '🧩' };
 export function modeLabel(m) {
   return m === 'classic' ? T[state.lang].mode_name_classic
     : m === 'reverse' ? T[state.lang].mode_name_reverse
     : m === 'shapes' ? T[state.lang].mode_name_shapes
     : m === 'shapes-reverse' ? T[state.lang].mode_name_shapes_reverse
     : m === 'caos' ? T[state.lang].mode_name_caos
+    : m === 'mosaic' ? T[state.lang].mode_name_mosaic
     : T[state.lang].mode_name_trio;
 }

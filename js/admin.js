@@ -203,7 +203,7 @@ export async function renderAdminPanel(uid, currentNick, stats) {
     }
   };
 
-  // zera a pontuação dos 6 modos de jogo (e o total geral, que é a soma
+  // zera a pontuação dos 7 modos de jogo (e o total geral, que é a soma
   // deles) mais a tentativa de hoje do desafio diário — não mexe em
   // dailyWins (Salão da Fama), XP/nível, indicações, Pigmentos nem itens da
   // loja. Sem "desfazer" (ao contrário do banimento): a confirmação é
@@ -218,14 +218,14 @@ export async function renderAdminPanel(uid, currentNick, stats) {
   toolsBox.appendChild(resetScoresStatus);
 
   resetScoresBtn.onclick = async () => {
-    if (!confirm(`Zerar as pontuações de ${currentNick || 'esta conta'} nos 6 modos de jogo (Clássico, Reverso, Formas, Formas Reverso, Trio, Caos) e a tentativa de hoje do desafio diário? Isso NÃO afeta o Salão da Fama, XP/nível, indicações, Pigmentos ou itens da loja. Não pode ser desfeito.`)) return;
+    if (!confirm(`Zerar as pontuações de ${currentNick || 'esta conta'} nos 7 modos de jogo (Clássico, Reverso, Formas, Formas Reverso, Trio, Caos, Mosaico) e a tentativa de hoje do desafio diário? Isso NÃO afeta o Salão da Fama, XP/nível, indicações, Pigmentos ou itens da loja. Não pode ser desfeito.`)) return;
     resetScoresBtn.disabled = true;
     resetScoresStatus.textContent = '';
     try {
       await callAdminResetScores({ uid });
       ALL_MODES.forEach(m => { stats[m] = 0; });
       stats.total = 0;
-      resetScoresStatus.textContent = '✅ Pontuações zeradas nos 6 modos e na tentativa de hoje do desafio diário.';
+      resetScoresStatus.textContent = '✅ Pontuações zeradas nos 7 modos e na tentativa de hoje do desafio diário.';
     } catch (e) {
       resetScoresStatus.textContent = '❌ ' + (e.message || 'Erro.');
     } finally {
