@@ -350,6 +350,11 @@
     overflow: hidden;
   }
   .modal-card-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  /* o scale() do hover normal do botão conta como overflow rolável dentro
+     de um container com overflow-y:auto, então passar o mouse num botão
+     colado na borda (ex: Google/Apple na popup de criar conta) fazia a
+     barra de rolagem aparecer/sumir e a popup "pular" de tamanho */
+  .modal-card-body button:hover { transform: none; }
 
   .mode-card {
     width: 100%;
