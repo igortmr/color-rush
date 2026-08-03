@@ -87,6 +87,10 @@ async function renderDmFriendsList() {
     try {
       const snap = await getDoc(doc(db, 'scores', uid));
       const data = snap.exists() ? snap.data() : {};
+      // quem ativou "ficar invisível" no próprio perfil (ver
+      // toggleHideOnlineStatus em js/profile.js) nunca aparece com a
+      // bolinha verde aqui, mesmo se estiver de fato ativo agora
+      if (data.hideOnlineStatus === true) return false;
       const lastActiveAt = data.lastActiveAt && typeof data.lastActiveAt.toMillis === 'function' ? data.lastActiveAt.toMillis() : 0;
       return (Date.now() - lastActiveAt) < DM_ONLINE_THRESHOLD_MS;
     } catch { return false; }
