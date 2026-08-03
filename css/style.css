@@ -961,6 +961,14 @@
     font-size: 88cqi;
     line-height: 1;
   }
+  /* ♥ (shape-heart, 03/08/2026) tem mais espaço em branco ao redor do próprio
+     glyph do que os naipes (♦♠♣) no mesmo tamanho de fonte -- precisa de um
+     font-size bem maior pra preencher o quadrado igual às outras formas.
+     overflow:hidden do .shape-glyph acima ainda protege contra vazar pro
+     quadrado vizinho. */
+  .square.shape-heart .shape-fill.shape-glyph {
+    font-size: 150cqi;
+  }
 
   /* mesmo tamanho de palavra em todas as formas */
   .square.shape-square .word {
