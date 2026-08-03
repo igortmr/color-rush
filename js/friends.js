@@ -62,21 +62,23 @@ async function getFriendRelation(theirUid) {
 
 // abre o perfil de alguém a partir só do uid (usado na tela de amigos, onde
 // não temos as stats completas em mãos) — reaproveita o cache do ranking
-// geral quando dá, senão busca o documento avulso
-async function openProfileByUid(uid, fallbackNick) {
+// geral quando dá, senão busca o documento avulso. backTarget é pra onde o
+// botão "voltar" do perfil leva (padrão tela de amigos; js/guilds.js passa
+// 'guild-screen' pros nicks da lista de membros/solicitações)
+export async function openProfileByUid(uid, fallbackNick, backTarget = 'friends-screen') {
   const all = await fetchAllScores();
   const found = all.find(r => r.uid === uid);
   if (found) {
     const data = rowData(found);
-    openProfileFromRanking({ uid, nick: data.nick, stats: data }, 'friends-screen');
+    openProfileFromRanking({ uid, nick: data.nick, stats: data }, backTarget);
     return;
   }
   try {
     const snap = await getDoc(doc(db, 'scores', uid));
     const data = snap.exists() ? snap.data() : {};
-    openProfileFromRanking({ uid, nick: data.nick || fallbackNick, stats: data }, 'friends-screen');
+    openProfileFromRanking({ uid, nick: data.nick || fallbackNick, stats: data }, backTarget);
   } catch {
-    openProfileFromRanking({ uid, nick: fallbackNick, stats: {} }, 'friends-screen');
+    openProfileFromRanking({ uid, nick: fallbackNick, stats: {} }, backTarget);
   }
 }
 

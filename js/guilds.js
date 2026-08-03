@@ -9,6 +9,7 @@ import { T } from './i18n.js';
 import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip } from './levels.js';
 import { isMuted, tone } from './utils.js';
 import { fetchAllScores, rowData } from './ranking-cache.js';
+import { openProfileByUid } from './friends.js';
 
 // clãs (Espectro) — igual ao resto: nenhuma escrita de verdade (criar,
 // entrar, expulsar, transferir liderança, desfazer, mandar mensagem) sai
@@ -156,13 +157,9 @@ function guildListRow(g) {
   const count = g.memberCount || 0;
   const full = count >= GUILD_MAX_MEMBERS;
   const countSpan = document.createElement('span');
-  countSpan.className = 'muted';
   countSpan.textContent = `👥 ${count}/${GUILD_MAX_MEMBERS}`;
+  countSpan.style.cssText = `font-weight:700; color:${full ? 'var(--neon-red)' : 'var(--neon-green)'};`;
   right.appendChild(countSpan);
-  const vacSpan = document.createElement('span');
-  vacSpan.textContent = full ? T[state.lang].guild_full : T[state.lang].guild_has_vacancy;
-  vacSpan.style.cssText = full ? 'color:var(--neon-red);' : 'color:var(--neon-green);';
-  right.appendChild(vacSpan);
   row.appendChild(right);
 
   row.onclick = () => {
@@ -366,7 +363,6 @@ async function renderGuildScreen() {
 
     body.appendChild(membersSection(g, myUid, isLeader, xpByUid));
     if (isLeader) body.appendChild(joinRequestsSection(xpByUid));
-    if (isLeader) body.appendChild(inviteMemberSection(g));
     if (isLeader) body.appendChild(invitesSection(xpByUid));
     if (isLeader) body.appendChild(leaderToolsSection(g));
     else if (isMember) body.appendChild(leaveSection());
@@ -471,6 +467,8 @@ function memberRow(g, uid, data, myUid, isLeader, xpByUid) {
   }
   const nickSpan = document.createElement('span');
   nickSpan.textContent = data.nick || '';
+  nickSpan.className = 'nick-click';
+  nickSpan.onclick = () => openProfileByUid(uid, data.nick || '', 'guild-screen');
   left.appendChild(nickSpan);
   row.appendChild(left);
 
@@ -509,6 +507,8 @@ function joinRequestsSection(xpByUid) {
     left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[uid]) || 0));
     const nickSpan = document.createElement('span');
     nickSpan.textContent = data.nick || '';
+    nickSpan.className = 'nick-click';
+    nickSpan.onclick = () => openProfileByUid(uid, data.nick || '', 'guild-screen');
     left.appendChild(nickSpan);
     row.appendChild(left);
     const actions = document.createElement('span');
@@ -530,27 +530,10 @@ function joinRequestsSection(xpByUid) {
   return wrap;
 }
 
-// campo pra líder convidar alguém direto pelo nick — "adicionar" membro
-// (complementa joinRequestsSection acima, que é a pessoa PEDINDO pra
-// entrar; aqui é a líder CHAMANDO alguém, ver inviteGuildMember)
-function inviteMemberSection(g) {
-  const wrap = document.createElement('div');
-  wrap.className = 'card';
-  wrap.style.cssText = 'margin-top:10px;';
-  const full = (g.memberCount || 0) >= GUILD_MAX_MEMBERS;
-  if (full) {
-    wrap.innerHTML = `<p class="muted" style="text-align:center;">${T[state.lang].guild_full}</p>`;
-    return wrap;
-  }
-  wrap.innerHTML = `
-    <p class="muted" style="text-align:center; margin:0 0 6px;">${T[state.lang].guild_invite_title}</p>
-    <div style="display:flex; gap:6px;">
-      <input type="text" id="guild-invite-nick" maxlength="16" placeholder="${T[state.lang].guild_invite_nick_ph}" style="flex:1;" onkeydown="if(event.key==='Enter') uiInviteGuildMember();">
-      <button style="padding:12px 16px;" onclick="uiInviteGuildMember()">${T[state.lang].guild_btn_invite}</button>
-    </div>
-    <div class="error" id="guild-invite-error"></div>`;
-  return wrap;
-}
+// convidar alguém pro clã não é mais digitando o nick aqui — agora é um
+// botão no PERFIL da pessoa (só visível pra quem lidera um clã, ver
+// renderGuildInviteAction mais abaixo), complementa joinRequestsSection
+// acima (que é a pessoa PEDINDO pra entrar; aqui é a líder CHAMANDO alguém)
 
 function invitesSection(xpByUid) {
   const entries = Object.entries(currentInvites || {});
@@ -955,16 +938,55 @@ window.uiCancelGuildRequest = async () => {
 async function uiRespondGuildRequest(applicantUid, accept) {
   try { await callRespondGuildJoinRequest({ applicantUid, accept }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 }
-window.uiInviteGuildMember = async () => {
-  const errEl = $('guild-invite-error');
-  const input = $('guild-invite-nick');
-  errEl.textContent = '';
-  const nick = input.value.trim();
-  if (!nick) return;
+// eu lidero o clã que estou? só usado pra decidir se mostra o botão
+// "convidar pro clã" no perfil de outra pessoa (ver renderGuildInviteAction
+// abaixo) — não reaproveita currentGuildData porque essa variável só existe
+// se a pessoa já abriu a TELA do próprio clã nesta sessão; o perfil pode ser
+// aberto de qualquer lugar (ranking, amigos etc.), então lê o doc direto
+async function amIGuildLeader() {
+  const myUid = state.currentUser && state.currentUser.uid;
+  const guildId = state.myData.guildId;
+  if (!myUid || !guildId) return false;
   try {
-    await callInviteGuildMember({ nick });
-    input.value = '';
-  } catch (e) { errEl.textContent = (e && e.message) || T[state.lang].guild_err_generic; }
+    const snap = await getDoc(doc(db, 'guilds', guildId));
+    return snap.exists() && snap.data().leaderUid === myUid;
+  } catch { return false; }
+}
+
+// botão "convidar pro clã" no perfil de outra pessoa — substitui o campo de
+// digitar nick que existia na tela do clã (ver comentário acima de
+// joinRequestsSection). Só aparece pra quem lidera um clã. Chamada por
+// js/profile.js via window (perfil ainda não conhece o domínio de clãs,
+// mesmo padrão de window.openGuildFromTag/window.fetchMyFriends)
+window.renderGuildInviteAction = async (theirUid, theirNick) => {
+  const el = $('profile-guild-invite-action');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!theirNick || (state.currentUser && theirUid === state.currentUser.uid)) return;
+  const isLeader = await amIGuildLeader();
+  if (!isLeader) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.style.textAlign = 'center';
+  const btn = document.createElement('button');
+  btn.textContent = T[state.lang].guild_btn_invite;
+  const statusEl = document.createElement('div');
+  statusEl.className = 'muted';
+  statusEl.style.marginTop = '6px';
+  btn.onclick = async () => {
+    btn.disabled = true;
+    statusEl.textContent = '';
+    try {
+      await callInviteGuildMember({ nick: theirNick });
+      statusEl.textContent = T[state.lang].guild_invite_sent_ok;
+    } catch (e) {
+      statusEl.textContent = (e && e.message) || T[state.lang].guild_err_generic;
+      btn.disabled = false;
+    }
+  };
+  wrap.appendChild(btn);
+  wrap.appendChild(statusEl);
+  el.appendChild(wrap);
 };
 async function uiCancelGuildInvite(uid) {
   try { await callCancelGuildInvite({ uid }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }

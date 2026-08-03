@@ -53,6 +53,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     $('profile-friend-action').style.display = 'none';
     $('profile-friend-action').innerHTML = '';
     $('profile-friend-status').textContent = '';
+    $('profile-guild-invite-action').innerHTML = '';
     $('profile-body').innerHTML = `
       <div class="card" style="text-align:center;">
         <p>${T[state.lang].profile_offline_msg1}</p>
@@ -88,6 +89,10 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   if (isOther) {
     $('profile-summary').textContent = '';
     renderProfileFriendAction(viewUid);
+    // botão "convidar pro clã" — window.renderGuildInviteAction vem de
+    // js/guilds.js (perfil ainda não conhece o domínio de clãs, mesmo padrão
+    // de window.openGuildFromTag logo acima)
+    if (window.renderGuildInviteAction) window.renderGuildInviteAction(viewUid, viewNick || '');
     const ranks = await computeModeRanks(viewUid);
     const ranksHtml = renderPublicProfileRanks(stats, ranks);
     let html = '';
@@ -110,6 +115,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   $('profile-friend-action').style.display = 'none';
   $('profile-friend-action').innerHTML = '';
   $('profile-friend-status').textContent = '';
+  $('profile-guild-invite-action').innerHTML = '';
 
   // conta cada NÍVEL desbloqueado dentro de cada categoria (não só se a categoria
   // foi iniciada) — cada categoria tem 6 níveis, então o total é 4×6 = 24
