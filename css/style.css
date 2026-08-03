@@ -211,7 +211,7 @@
   button.pill-btn {
     background: #0a0e1e;
     border: 1px solid rgba(255,45,107,0.4);
-    color: #ff8bab;
+    color: var(--neon-red);
     font-family: 'Rajdhani', sans-serif;
     font-size: 0.82rem;
     font-weight: 700;
