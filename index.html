@@ -545,6 +545,20 @@
   </div>
 </div>
 
+<!-- desfazer clã: popup temática (mesmo padrão de #delete-account-modal) em
+     vez do confirm() genérico do navegador — ação destrutiva/irreversível
+     (ver uiDisbandGuild em js/guilds.js) -->
+<div class="modal-overlay" id="disband-guild-modal" style="display:none;" onclick="if(event.target===this) closeDisbandGuildModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-red); text-shadow:0 0 10px rgba(255,45,107,0.5);" data-i18n="guild_disband_modal_title">⚠️ Desfazer clã</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" data-i18n="guild_confirm_disband">Tem certeza que quer desfazer o clã? Essa ação não pode ser desfeita — todos os membros serão removidos e o chat será apagado.</p>
+    </div>
+    <button class="secondary" onclick="closeDisbandGuildModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
+    <button onclick="confirmDisbandGuild()" data-i18n="guild_disband_modal_confirm_btn">Confirmo o desfazer do clã</button>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">

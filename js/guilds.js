@@ -1001,8 +1001,17 @@ async function uiInitiateGuildTransfer(toUid, nick) {
 window.respondGuildTransfer = async (accept) => {
   try { await callRespondGuildLeaderTransfer({ accept }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 };
-window.uiDisbandGuild = async () => {
-  if (!confirm(T[state.lang].guild_confirm_disband)) return;
+// desfazer clã é destrutivo/irreversível, então usa a popup temática
+// #disband-guild-modal em vez do confirm() genérico do navegador — mesmo
+// padrão de #delete-account-modal (ver startDeleteMyAccount em js/auth.js)
+window.uiDisbandGuild = () => {
+  $('disband-guild-modal').style.display = 'flex';
+};
+window.closeDisbandGuildModal = () => {
+  $('disband-guild-modal').style.display = 'none';
+};
+window.confirmDisbandGuild = async () => {
+  closeDisbandGuildModal();
   try {
     await callDisbandGuild();
     state.myData.guildId = null;
