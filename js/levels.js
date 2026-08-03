@@ -106,10 +106,12 @@ export function applyNickFrame(el, stats) {
 // guildTagStyle, espelhado em todo membro igual guildTag), então funciona
 // pra QUALQUER [TAG] renderizada, não só a sua. As 8 cores básicas são as
 // mesmas de COLORS (aplicadas via style inline, sem precisar de 8 classes
-// CSS); as especiais (ouro/rgb/espectro) usam classe + animação (ver
-// .tag-style-* em css/style.css).
+// CSS); a especial (espectro) usa classe + animação (ver .tag-style-espectro
+// em css/style.css). "gold"/"rgb" existiram e foram removidos (gold ficava
+// parecido com yellow, rgb com espectro) — se algum clã ainda tiver um dos
+// dois salvo de antes, cai no fallback (sem cor) em vez de quebrar.
 export function applyGuildTagStyle(el, tagStyle) {
-  el.classList.remove('tag-style-gold', 'tag-style-rgb', 'tag-style-espectro');
+  el.classList.remove('tag-style-espectro');
   el.style.color = '';
   el.style.textShadow = '';
   if (!tagStyle) return;
@@ -119,9 +121,7 @@ export function applyGuildTagStyle(el, tagStyle) {
     el.style.textShadow = `0 0 6px ${basic.hex}99`;
     return;
   }
-  if (tagStyle === 'gold' || tagStyle === 'rgb' || tagStyle === 'espectro') {
-    el.classList.add(`tag-style-${tagStyle}`);
-  }
+  if (tagStyle === 'espectro') el.classList.add('tag-style-espectro');
 }
 // linha temática da loja — fundo diferenciado na <tr> do jogador nas tabelas
 // de ranking, pra se destacar na lista. Mesmo raciocínio da moldura: campo

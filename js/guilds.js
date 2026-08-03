@@ -703,23 +703,34 @@ function treasurySection(g) {
   };
   wrap.appendChild(donateCard);
 
+  // ranking de maiores doações somadas (total por pessoa, treasuryContributions
+  // — só informativo, não dá nenhum privilégio)
   const contributions = g.treasuryContributions || {};
   const entries = Object.entries(contributions).filter(([, amt]) => amt > 0).sort((a, b) => b[1] - a[1]);
   if (entries.length) {
     const listTitle = document.createElement('div');
-    listTitle.innerHTML = `<b>${T[state.lang].guild_treasury_contributors_title}</b>`;
+    listTitle.innerHTML = `<b>${T[state.lang].guild_treasury_ranking_title}</b>`;
     wrap.appendChild(listTitle);
     const list = document.createElement('div');
     list.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
-    entries.forEach(([uid, amt]) => {
+    entries.forEach(([uid, amt], i) => {
+      const pos = i + 1;
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
       const memberRow2 = document.createElement('div');
       memberRow2.className = 'card';
-      memberRow2.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px;';
+      memberRow2.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px;';
+      const left = document.createElement('span');
+      left.style.cssText = 'display:flex; align-items:center; gap:8px;';
+      const posSpan = document.createElement('span');
+      posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
+      posSpan.textContent = medal;
+      left.appendChild(posSpan);
       const nickSpan = document.createElement('span');
       nickSpan.textContent = (g.members && g.members[uid] && g.members[uid].nick) || '?';
-      memberRow2.appendChild(nickSpan);
+      left.appendChild(nickSpan);
+      memberRow2.appendChild(left);
       const amtSpan = document.createElement('span');
-      amtSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700;';
+      amtSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700; flex-shrink:0;';
       amtSpan.innerHTML = `${amt}${pigmentIconSvg(12)}`;
       memberRow2.appendChild(amtSpan);
       list.appendChild(memberRow2);
@@ -727,7 +738,59 @@ function treasurySection(g) {
     wrap.appendChild(list);
   }
 
+  // histórico de doações (últimas 20, mais recente primeiro) — busca avulsa,
+  // não listener ao vivo (o chat já usa listener; aqui não precisa atualizar
+  // segundo a segundo, e renderGuildScreen já recarrega a aba inteira depois
+  // de uma doação sua, ver donateBtn.onclick acima)
+  const historyTitle = document.createElement('div');
+  historyTitle.innerHTML = `<b>${T[state.lang].guild_treasury_history_title}</b>`;
+  wrap.appendChild(historyTitle);
+  const historyList = document.createElement('div');
+  historyList.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+  historyList.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].loading_text}</div>`;
+  wrap.appendChild(historyList);
+  loadTreasuryHistory(g.id, historyList);
+
   return wrap;
+}
+
+async function loadTreasuryHistory(guildId, historyList) {
+  const myToken = guildRenderToken; // mesma trava de myRenderToken usada acima — evita pintar por cima de uma aba/clã diferente se a pessoa navegar enquanto isso carrega
+  try {
+    const snap = await getDocs(query(collection(db, 'guilds', guildId, 'treasuryLog'), orderBy('at', 'desc'), limit(20)));
+    if (myToken !== guildRenderToken) return;
+    historyList.innerHTML = '';
+    if (snap.empty) {
+      historyList.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].guild_treasury_history_empty}</div>`;
+      return;
+    }
+    snap.forEach(d => {
+      const data = d.data();
+      const row = document.createElement('div');
+      row.className = 'card';
+      row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px;';
+      const left = document.createElement('span');
+      left.style.cssText = 'display:flex; flex-direction:column;';
+      const nickSpan = document.createElement('span');
+      nickSpan.style.fontWeight = '700';
+      nickSpan.textContent = data.nick || '?';
+      left.appendChild(nickSpan);
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'muted';
+      dateSpan.style.fontSize = '0.7rem';
+      dateSpan.textContent = `${formatMsgFullDateTime(data.at)} ${formatMsgTime(data.at)}`;
+      left.appendChild(dateSpan);
+      row.appendChild(left);
+      const amtSpan = document.createElement('span');
+      amtSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700; flex-shrink:0;';
+      amtSpan.innerHTML = `+${data.amount || 0}${pigmentIconSvg(12)}`;
+      row.appendChild(amtSpan);
+      historyList.appendChild(row);
+    });
+  } catch (e) {
+    if (myToken !== guildRenderToken) return;
+    historyList.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].ranking_error}</div>`;
+  }
 }
 
 /* ================== Loja do Clã (aba "Loja") ================== */
@@ -737,8 +800,6 @@ function treasurySection(g) {
 // exibição/preview. Chaves das 8 básicas batem com COLORS[].key de propósito.
 const GUILD_TAG_STYLES_CATALOG = [
   ...COLORS.map(c => ({ id: c.key, price: 5000, name: c.name })),
-  { id: 'gold', price: 10000, name: { pt: 'Ouro', en: 'Gold', es: 'Oro' } },
-  { id: 'rgb', price: 10000, name: { pt: 'RGB', en: 'RGB', es: 'RGB' } },
   { id: 'espectro', price: 10000, name: { pt: 'Espectro', en: 'Spectrum', es: 'Espectro' } },
 ];
 

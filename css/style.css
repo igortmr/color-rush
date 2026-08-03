@@ -1009,19 +1009,9 @@
   }
   .guild-tag-link:hover { text-decoration: underline; }
   /* as 8 cores básicas do Cofre do Clã vão via style inline (ver
-     applyGuildTagStyle) — só as 3 especiais animadas precisam de classe */
-  .tag-style-gold { color: #ffd700 !important; text-shadow: 0 0 8px rgba(255,215,0,0.7); }
-  .tag-style-rgb { animation: tagStyleRgb 3s linear infinite; }
-  @keyframes tagStyleRgb {
-    0%   { color: #ff2d6b; text-shadow: 0 0 6px rgba(255,45,107,0.8); }
-    20%  { color: #ff9f1c; text-shadow: 0 0 6px rgba(255,159,28,0.8); }
-    40%  { color: #ffe93c; text-shadow: 0 0 6px rgba(255,233,60,0.8); }
-    60%  { color: #21e6a1; text-shadow: 0 0 6px rgba(33,230,161,0.8); }
-    80%  { color: #2dd6ff; text-shadow: 0 0 6px rgba(45,214,255,0.8); }
-    100% { color: #b14dff; text-shadow: 0 0 6px rgba(177,77,255,0.8); }
-  }
-  /* mais lenta e só entre 2 tons (roxo/ciano) que o rgb acima, de propósito
-     — puxa pra identidade do clã (Espectro), não é só "mais uma rainbow" */
+     applyGuildTagStyle) — só a especial animada (espectro) precisa de
+     classe. "gold"/"rgb" existiram e foram removidos (gold ficava parecido
+     com yellow, rgb com espectro). */
   .tag-style-espectro { animation: tagStyleEspectro 4s ease-in-out infinite; }
   @keyframes tagStyleEspectro {
     0%, 100% { color: #b14dff; text-shadow: 0 0 8px rgba(177,77,255,0.8); }
