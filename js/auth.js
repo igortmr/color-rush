@@ -1,6 +1,6 @@
 import {
   onAuthStateChanged, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, GoogleAuthProvider, OAuthProvider, signInWithPopup,
+  signInWithEmailAndPassword, signInWithCustomToken, GoogleAuthProvider, OAuthProvider, signInWithPopup,
   signInWithCredential, signOut, sendEmailVerification
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
@@ -22,6 +22,7 @@ const callSuggestFriendFromRef = callable('suggestFriendFromRef');
 const callRecomputeTotal = callable('recomputeMyTotal');
 const callDeleteMyAccount = callable('deleteMyAccount');
 const callRegisterPushToken = callable('registerPushToken');
+const callLoginWithNick = callable('loginWithNick');
 // troca o authorization code do login com Apple por um refresh token que o
 // servidor guarda pra poder revogar na exclusão de conta (exigência da Apple,
 // ver doApple/registerAppleAuthCode mais abaixo e functions/index.js)
@@ -73,19 +74,47 @@ const AUTH_ERRORS = {
 };
 const authErrMsg = e => (AUTH_ERRORS[state.lang][e.code]) || (state.lang === 'pt' ? 'Erro: ' : 'Error: ') + (e.code || e.message);
 
+// a tela inicial só loga em conta já existente — aceita e-mail OU nome de
+// usuário no mesmo campo (login por nick resolve nick -> uid no servidor,
+// ver loginWithNick em functions/index.js, sem nunca expor o e-mail da
+// conta pro client)
 window.doLogin = async () => {
   $('auth-error').textContent = '';
+  const login = $('auth-email').value.trim();
+  const isEmail = login.includes('@');
   try {
-    await signInWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    if (isEmail) {
+      await signInWithEmailAndPassword(auth, login, $('auth-pass').value);
+    } else {
+      const res = await callLoginWithNick({ nick: login, password: $('auth-pass').value });
+      await signInWithCustomToken(auth, res.data.token);
+    }
     track('login', { method: 'password' });
-  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+  } catch (e) {
+    // erro de login por nick é sempre a mesma mensagem genérica (o servidor
+    // também nunca diferencia "nick não existe" de "senha errada", ver
+    // loginWithNick) — só o fluxo por e-mail usa o mapeamento fino de erros
+    $('auth-error').textContent = isEmail ? authErrMsg(e) : T[state.lang].auth_nick_invalid;
+  }
+};
+// criar conta agora só acontece pela popup #signup-modal (campos próprios,
+// separados dos de login) — a tela inicial fica exclusiva pra quem já tem conta
+window.openSignupModal = () => {
+  $('signup-error').textContent = '';
+  $('signup-email').value = '';
+  $('signup-pass').value = '';
+  $('signup-modal').style.display = 'flex';
+};
+window.closeSignupModal = () => {
+  $('signup-modal').style.display = 'none';
 };
 window.doSignup = async () => {
-  $('auth-error').textContent = '';
+  $('signup-error').textContent = '';
   try {
-    const cred = await createUserWithEmailAndPassword(auth, $('auth-email').value.trim(), $('auth-pass').value);
+    const cred = await createUserWithEmailAndPassword(auth, $('signup-email').value.trim(), $('signup-pass').value);
     await sendEmailVerification(cred.user);
-  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+    closeSignupModal();
+  } catch (e) { $('signup-error').textContent = authErrMsg(e); }
 };
 window.resendVerification = async () => {
   $('verify-status').textContent = '';
@@ -145,8 +174,16 @@ async function initNativePush() {
 // solto o login com Apple não completa (WebKit derruba o resultado do
 // popup/redirect fora do app nativo). Fora do app, só Google/e-mail mesmo.
 if (!isNativeApp()) {
-  const appleBtn = $('btn-apple');
-  if (appleBtn) appleBtn.style.display = 'none';
+  // classe compartilhada pelo botão da tela inicial e pelo repetido na
+  // popup #signup-modal — os dois somem juntos fora do app nativo
+  document.querySelectorAll('.apple-login-btn').forEach(btn => { btn.style.display = 'none'; });
+}
+// Google/Apple são os mesmos botões repetidos na tela inicial e na popup de
+// criar conta — o erro tem que aparecer em cima de quem chamou, senão some
+// atrás da popup (ou fica escrito num #auth-error que não tá visível)
+function activeAuthErrorEl() {
+  const signupModal = $('signup-modal');
+  return (signupModal && signupModal.style.display !== 'none') ? $('signup-error') : $('auth-error');
 }
 // dentro do app nativo (Capacitor) o login precisa ser NATIVO, não WebView —
 // o Google recusa completar OAuth dentro de uma WebView embutida genérica
@@ -158,18 +195,21 @@ if (!isNativeApp()) {
 // signInWithCredential. Fora do app, popup no navegador continua funcionando
 // normal (era só dentro do WebView do app que isso quebrava).
 window.doGoogle = async () => {
-  $('auth-error').textContent = '';
+  const errEl = activeAuthErrorEl();
+  errEl.textContent = '';
   try {
     if (isNativeApp()) {
       const { FirebaseAuthentication } = window.Capacitor.Plugins;
       const result = await FirebaseAuthentication.signInWithGoogle();
       await signInWithCredential(auth, GoogleAuthProvider.credential(result.credential.idToken));
       track('login', { method: 'google' });
+      closeSignupModal();
       return;
     }
     await signInWithPopup(auth, new GoogleAuthProvider());
     track('login', { method: 'google' });
-  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+    closeSignupModal();
+  } catch (e) { errEl.textContent = authErrMsg(e); }
 };
 // exigido pela guideline 4.8 da Apple: como já oferecemos login de terceiro
 // (Google), precisamos oferecer "Sign in with Apple" como opção equivalente
@@ -179,7 +219,8 @@ window.doGoogle = async () => {
 // Apple nunca completa (WebKit derruba o resultado do popup/redirect fora
 // do app), então preferimos nem oferecer a opção ali.
 window.doApple = async () => {
-  $('auth-error').textContent = '';
+  const errEl = activeAuthErrorEl();
+  errEl.textContent = '';
   try {
     const { FirebaseAuthentication } = window.Capacitor.Plugins;
     const result = await FirebaseAuthentication.signInWithApple();
@@ -191,7 +232,8 @@ window.doApple = async () => {
     await signInWithCredential(auth, credential);
     registerAppleAuthCodeIfPresent(result.credential.authorizationCode);
     track('login', { method: 'apple' });
-  } catch (e) { $('auth-error').textContent = authErrMsg(e); }
+    closeSignupModal();
+  } catch (e) { errEl.textContent = authErrMsg(e); }
 };
 // a Apple exige (guideline 5.1.1(v)) revogar o token junto a ELES quando a
 // conta é excluída — isso precisa de um refresh token da Apple, que só dá pra
