@@ -22,7 +22,6 @@ import { dailyPlaying, dailyReplayMouse, dailyReplayStartMs } from './daily-chal
 // não é mais um simples write direto no Firestore vindo do navegador.
 const callStartSession = callable('startGameSession');
 const callSubmitResult = callable('submitGameResult');
-const callLogClientDebug = callable('logClientDebug'); // TEMPORÁRIO — ver maybeRequestAppReview
 // chamada "dispare e esqueça" a cada acerto: roda em segundo plano, não
 // passa pelo wrapper callable() de propósito (senão uma sequência rápida de
 // acertos deixaria pendingServerCalls sempre positivo, travando outros
@@ -534,25 +533,14 @@ function setOverButtonsEnabled(enabled) {
 // receberia .requestReview() em undefined (mesma causa do bug corrigido em
 // d96cc6b pros Universal Links).
 let reviewRequestedThisSession = false;
-// TEMPORÁRIO — manda cada etapa pro logClientDebug (functions/index.js) pra
-// diagnosticar remotamente se a chamada de avaliação está disparando de
-// verdade. Remover junto com logClientDebug assim que confirmado.
-function reviewDbg(step, extra) {
-  try { callLogClientDebug({ step: 'review_' + step, extra: extra != null ? String(extra) : null }).catch(() => {}); } catch {}
-}
 function maybeRequestAppReview() {
-  reviewDbg('called');
-  if (reviewRequestedThisSession) { reviewDbg('skip_already_this_session'); return; }
+  if (reviewRequestedThisSession) return;
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  if (!isNative) { reviewDbg('skip_not_native'); return; }
+  if (!isNative) return;
   const InAppReview = window.Capacitor.Plugins && window.Capacitor.Plugins.InAppReview;
-  if (!InAppReview) { reviewDbg('skip_no_plugin'); return; }
+  if (!InAppReview) return;
   reviewRequestedThisSession = true;
-  reviewDbg('calling_requestReview');
-  InAppReview.requestReview().then(
-    () => reviewDbg('requestReview_resolved'),
-    (e) => reviewDbg('requestReview_rejected', e && e.message)
-  );
+  InAppReview.requestReview().catch(() => {});
 }
 
 async function gameOver(reason) {
