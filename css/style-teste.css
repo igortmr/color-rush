@@ -516,6 +516,19 @@
   }
   .daily-badge-time { font-size: 1.3em; } /* só os números um pouco maiores que o "Termina em:" */
 
+  /* evento semanal "Batalha de Clãs" — mesmo tratamento "coming-soon" do
+     desafio diário (ver .daily-card acima), só que sempre nesse estado (não
+     tem regra/tela ainda) e com contorno vermelho em vez de dourado, pra não
+     confundir com o desafio diário. Ver js/guild-battle.js/index.html. */
+  .mode-card.guild-battle-card {
+    border-color: rgba(255,45,107,0.5);
+    background: linear-gradient(180deg, rgba(255,45,107,0.06), var(--bg-panel));
+    cursor: default;
+  }
+  .mode-card.guild-battle-card:hover { transform: none; border-color: rgba(255,45,107,0.5); box-shadow: none; }
+  .mode-card.guild-battle-card h2 { margin-bottom: 0; }
+  .guild-battle-badge { background: var(--neon-red); color: #fff; box-shadow: 0 0 10px rgba(255,45,107,0.6); }
+
   /* linhas de item da loja */
   .shop-item-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
   .shop-item-row:first-child { border-top: none; }

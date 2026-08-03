@@ -10,6 +10,7 @@ import { myRecord } from './game-core.js';
 import { refreshInboxBadge, updateDailyMenuCard } from './daily-challenge.js';
 import { equippedAvatar, renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
 import { refreshGuildMenuBadge } from './guilds.js';
+import { updateGuildBattleCard } from './guild-battle.js';
 
 /* ================== menu ================== */
 window.showMenu = () => {
@@ -43,6 +44,7 @@ window.showMenu = () => {
   }
   refreshInboxBadge();
   updateDailyMenuCard();
+  updateGuildBattleCard();
   renderMenuPigmentosBar();
   renderUserPigmentos();
   refreshBadgeNotifDot();

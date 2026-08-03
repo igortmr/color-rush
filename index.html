@@ -247,6 +247,14 @@
     <div class="xp-labels"><span id="menu-xp-lv">Lv 1</span><span id="menu-xp-nums">0/100</span></div>
     <div class="xp-track"><div class="xp-fill" id="menu-xp-fill"></div></div>
   </div>
+  <!-- evento semanal "Batalha de Clãs" (sexta 18h - domingo 23h59m59s de
+       Brasília, ver js/guild-battle.js) — regras ainda não definidas, então
+       o card fica só com título + cronômetro, sem descrição nem clique, só
+       pra avisar que o evento existe e incentivar formar clã antes dele -->
+  <div class="mode-card guild-battle-card coming-soon" id="card-guild-battle" style="display:none;">
+    <span class="daily-badge-today guild-battle-badge" id="guild-battle-countdown"><span id="guild-battle-countdown-label">Inicia em: </span><span class="daily-badge-time">--:--:--</span></span>
+    <h2 data-i18n="guild_battle_title">⚔️ Batalha de Clãs</h2>
+  </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
     <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
     <h2 data-i18n="tab_daily">📅 Desafio Diário</h2>
