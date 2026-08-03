@@ -654,7 +654,6 @@
   </div>
   <div class="profile-header">
     <div class="big-nick" id="profile-nick"><span id="profile-nick-avatar"></span><span id="profile-nick-text"></span><span id="profile-nick-lv"></span><span id="profile-nick-guild-tag"></span></div>
-    <div class="muted" id="profile-summary"></div>
   </div>
   <!-- "ficar invisível" — só aparece no PRÓPRIO perfil, ver toggleHideOnlineStatus
        em js/profile.js e a bolinha de online em js/dms.js -->
@@ -680,6 +679,9 @@
   <!-- botão "convidar pro clã" — só aparece pra quem lidera um clã, ver
        window.renderGuildInviteAction em js/guilds.js -->
   <div id="profile-guild-invite-action"></div>
+  <!-- "X de 36 conquistas desbloqueadas" — logo acima da lista de medalhas,
+       abaixo do código de indicação (ver renderProfile em js/profile.js) -->
+  <div class="muted" id="profile-summary"></div>
   <div id="profile-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
 </div>
 
