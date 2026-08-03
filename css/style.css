@@ -376,6 +376,19 @@
   .chat-bubble:hover { transform: scale(1.08); }
   .chat-bubble .menu-quick-badge { top: -4px; right: -4px; }
   #dm-chat-bubble { background: linear-gradient(135deg, var(--neon-green), var(--neon-blue)); }
+  /* reticências bem pequenas no canto inferior esquerdo do balão — como o
+     ícone principal virou escudo/pessoinhas (não é mais um balão de fala em
+     si), isso aqui é o que ainda entrega visualmente "é um chat" */
+  .chat-bubble-dots {
+    position: absolute;
+    bottom: 3px;
+    left: 9px;
+    font-size: 0.5rem;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.9);
+    line-height: 1;
+    pointer-events: none;
+  }
   .chat-popup {
     position: fixed;
     bottom: 88px;
