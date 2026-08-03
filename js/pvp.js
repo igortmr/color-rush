@@ -5,11 +5,12 @@ import { db, callable } from './firebase.js';
 import { $ } from './dom.js';
 import { state } from './state.js';
 import { show } from './nav.js';
-import { T } from './i18n.js';
-import { COLORS, ALL_MODES } from './constants.js';
+import { T, cName } from './i18n.js';
+import { COLORS, SHAPES, CAOS_POOL, ALL_MODES } from './constants.js';
 import { avatarOrDefaultIcon, lvChip, myXp, blockIfBanned, modeLabel, MODE_ICON, modeUnlockedForXp } from './levels.js';
 import { equippedAvatar } from './shop.js';
 import { showFriendActionError } from './friends.js';
+import { renderTrioSquare, renderCaosSquare } from './replay.js';
 
 // duelo ao vivo (PvP) — igual ao resto: quem decide o que aconteceu é sempre
 // a function (o servidor), nunca o navegador direto
@@ -328,28 +329,82 @@ function checkPvpBonusToast(m) {
   pvpBonusToastTimer = setTimeout(() => { el.style.display = 'none'; }, 2800);
 }
 
+// caixa de prompt acima da grade — mostra o que a pessoa precisa achar. Pra
+// clássico/reverso é uma cor (o retângulo colorido é só decoração, o que
+// vale é a palavra); pra formas/formas reverso é o nome da forma-alvo; pra
+// trio/caos são as DUAS informações a memorizar (ver generatePvpTrioRound/
+// generatePvpCaosRound em functions/index.js) — diferente do modo solo, aqui
+// elas ficam sempre visíveis (não precisa decorar sem lembrete), pra caber
+// no ritmo mais rápido e simultâneo do duelo.
+function renderPvpPromptBox(mode, round) {
+  const box = $('pvp-prompt-box');
+  if (mode === 'trio' || mode === 'caos') {
+    const pool = mode === 'trio' ? COLORS : CAOS_POOL;
+    const itemA = pool[round.pairA] || pool[0], itemB = pool[round.pairB] || pool[0];
+    box.textContent = T[state.lang].pvp_pair_prompt(cName(itemA), cName(itemB));
+    box.style.background = 'linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel))';
+    box.style.boxShadow = 'inset 0 0 14px rgba(255,255,255,0.08)';
+    return;
+  }
+  if (mode === 'shapes' || mode === 'shapes-reverse') {
+    const targetShape = SHAPES[round.promptShapeIdx] || SHAPES[0];
+    box.textContent = cName(targetShape);
+    box.style.background = 'linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel))';
+    box.style.boxShadow = 'inset 0 0 14px rgba(255,255,255,0.08)';
+    return;
+  }
+  // clássico/reverso: a cor do RETÂNGULO é só distração — o que vale é a cor
+  // que a PALAVRA diz
+  const boxColor = COLORS[round.promptColorIdx] || COLORS[0];
+  const targetColor = COLORS[round.promptWordIdx] || COLORS[0];
+  box.textContent = cName(targetColor); // conteúdo fixo (tabela COLORS), sem dado de usuário
+  box.style.background = boxColor.hex;
+  box.style.boxShadow = `0 0 18px ${boxColor.hex}99, 0 0 40px ${boxColor.hex}55, inset 0 0 14px rgba(255,255,255,0.15)`;
+}
+// desenha um quadrado da grade de acordo com a mecânica do modo do duelo —
+// espelha exatamente a lógica do modo solo equivalente (newRound/
+// newTrioRound/newCaosRound em js/game-core.js), só que a partir dos ÍNDICES
+// que o servidor manda (ver generatePvpColorRound/generatePvpShapeRound/
+// generatePvpTrioRound/generatePvpCaosRound em functions/index.js) em vez de
+// sortear no cliente — quem decide o que é certo continua sendo sempre o
+// servidor (ver submitPvpAnswer/isPvpAnswerCorrect lá).
+function renderPvpSquare(el, mode, sq) {
+  if (mode === 'shapes' || mode === 'shapes-reverse') {
+    const shapeSide = SHAPES[sq.shapeIdx] || SHAPES[0];
+    const wordSide = SHAPES[sq.wordIdx] || SHAPES[0];
+    el.className = `square shape-square ${shapeSide.shapeClass}`;
+    el.innerHTML = `<span class="shape-fill ${shapeSide.shapeClass}"></span><span class="word">${cName(wordSide)}</span>`;
+    return;
+  }
+  if (mode === 'trio') {
+    el.className = 'square';
+    renderTrioSquare(el, { bg: COLORS[sq.bg] || COLORS[0], tc: COLORS[sq.tc] || COLORS[0], word: COLORS[sq.word] || COLORS[0] });
+    return;
+  }
+  if (mode === 'caos') {
+    renderCaosSquare(el, { shape: CAOS_POOL[sq.shape] || CAOS_POOL[0], color: CAOS_POOL[sq.color] || CAOS_POOL[0], word: CAOS_POOL[sq.word] || CAOS_POOL[0] });
+    return;
+  }
+  // clássico/reverso
+  const bg = COLORS[sq.bgIdx] || COLORS[0];
+  const word = COLORS[sq.wordIdx] || COLORS[0];
+  el.className = 'square';
+  el.style.background = bg.hex;
+  el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+  el.innerHTML = `<span class="word">${cName(word)}</span>`; // conteúdo fixo (tabelas COLORS/SHAPES/CAOS_POOL), sem dado de usuário
+}
 function renderPvpBoard(m, myUid) {
   const round = m.round;
   if (!round) return;
-  // a cor do RETÂNGULO é só distração — o que vale é a cor que a PALAVRA diz
-  const boxColor = COLORS[round.promptColorIdx] || COLORS[0];
-  const targetColor = COLORS[round.promptWordIdx] || COLORS[0];
-  const box = $('pvp-prompt-box');
-  box.textContent = targetColor.name[state.lang]; // conteúdo fixo (tabela COLORS), sem dado de usuário
-  box.style.background = boxColor.hex;
-  box.style.boxShadow = `0 0 18px ${boxColor.hex}99, 0 0 40px ${boxColor.hex}55, inset 0 0 14px rgba(255,255,255,0.15)`;
+  const mode = m.mode || 'classic'; // duelos criados antes desse campo existir eram sempre esse comportamento
+  renderPvpPromptBox(mode, round);
 
   const myTurn = m.turnUid === myUid;
   const grid = $('pvp-grid');
   grid.innerHTML = '';
   round.squares.forEach((sq, i) => {
-    const bg = COLORS[sq.bgIdx] || COLORS[0];
-    const word = COLORS[sq.wordIdx] || COLORS[0];
     const el = document.createElement('div');
-    el.className = 'square';
-    el.style.background = bg.hex;
-    el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-    el.innerHTML = `<span class="word">${word.name[state.lang]}</span>`; // conteúdo fixo (tabela COLORS), sem dado de usuário
+    renderPvpSquare(el, mode, sq);
     if (myTurn) {
       el.onclick = () => uiSubmitPvpAnswer(i);
     } else {
