@@ -39,6 +39,7 @@ let joinReqUnsub = null;
 let inviteUnsub = null;
 let chatUnsub = null;
 let guildTab = 'members'; // 'members' | 'chat'
+let guildRenderToken = 0; // ver renderGuildScreen abaixo
 
 function stopGuildListeners() {
   if (guildUnsub) { guildUnsub(); guildUnsub = null; }
@@ -285,6 +286,14 @@ window.guildBack = () => {
 };
 
 async function renderGuildScreen() {
+  // essa função é async (por causa do await fetchAllScores() lá embaixo) e é
+  // chamada por 3 listeners diferentes (doc do clã, solicitações, convites)
+  // que costumam disparar quase juntos ao abrir a tela — sem esse token,
+  // cada chamada em voo terminava appendando de novo em cima da anterior
+  // (nenhuma delas limpa o body DEPOIS do await, só antes), triplicando a
+  // seção de convidar/desfazer clã. Só a chamada mais recente tem permissão
+  // de continuar depois do await
+  const myRenderToken = ++guildRenderToken;
   const body = $('guild-body');
   const header = $('guild-header');
   body.innerHTML = '';
@@ -345,6 +354,10 @@ async function renderGuildScreen() {
       const all = await fetchAllScores();
       all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
     } catch { /* sem nível não quebra a lista, só mostra sem o chip */ }
+    // uma renderização mais nova já assumiu enquanto essa esperava
+    // fetchAllScores (ver comentário no topo da função) — não appenda por
+    // cima, senão duplica/triplica a lista de membros e as seções de líder
+    if (myRenderToken !== guildRenderToken) return;
     // a pessoa pode ter trocado pra aba de chat enquanto isso carregava
     // (fetchAllScores já é cacheado, mas ainda é assíncrono) — sem essa
     // checagem, a lista de membros podia desenhar por cima do chat depois
@@ -650,10 +663,12 @@ function formatMsgTime(at) {
   const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
   return new Date(at.toMillis()).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
 }
+// só a data (sem hora) — a hora já aparece sempre visível em formatMsgTime,
+// então repeti-la aqui deixava a hora aparecendo duas vezes ao clicar
 function formatMsgFullDateTime(at) {
   if (!at || typeof at.toMillis !== 'function') return '';
   const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
-  return new Date(at.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(at.toMillis()).toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 // desenha o texto da mensagem destacando @menções a membros de verdade do
 // clã (nick sempre sem espaço, ver isValidNickServer — então "@\S+" já
