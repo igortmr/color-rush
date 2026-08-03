@@ -926,6 +926,8 @@
   .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
   .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
   .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+  .shape-fill.shape-pentagon      { clip-path: polygon(50% 2%, 97% 38%, 80% 96%, 20% 96%, 3% 38%); }
+  .shape-fill.shape-trapezoid     { clip-path: polygon(30% 15%, 70% 15%, 97% 90%, 3% 90%); }
   /* formas com override que usam glyph Unicode em vez de clip-path (ex.:
      naipes de baralho, DAILY_SHAPES_OVERRIDE em constants.js) -- curvas
      complexas demais (coração/pá/trevo) pra aproximar bem com polygon() como
