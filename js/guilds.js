@@ -408,7 +408,16 @@ async function renderGuildScreen() {
     body.appendChild(chatSection(g, myUid));
     ensureChatListener(g.id);
   } else if (guildTab === 'treasury') {
-    body.appendChild(treasurySection(g));
+    // nível de cada doador do lado do nick, mesmo padrão/cache de
+    // membersSection acima (aqui é buscado de novo pq essa aba é um else-if
+    // separado, fora daquele bloco)
+    let xpByUid = {};
+    try {
+      const all = await fetchAllScores();
+      all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
+    } catch { /* sem nível não quebra a lista, só mostra sem o chip */ }
+    if (myRenderToken !== guildRenderToken) return;
+    body.appendChild(treasurySection(g, xpByUid));
   } else if (guildTab === 'shop') {
     body.appendChild(guildShopSection(g, myUid, isLeader));
   }
@@ -677,7 +686,7 @@ function playDonateSound() {
   tone(1568, 0.16, 'sine', 0.16, 0.16);
 }
 
-function treasurySection(g) {
+function treasurySection(g, xpByUid) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:10px;';
 
@@ -771,6 +780,7 @@ function treasurySection(g) {
       posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
       posSpan.textContent = medal;
       left.appendChild(posSpan);
+      left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
       const nickSpan = document.createElement('span');
       nickSpan.textContent = (g.members && g.members[uid] && g.members[uid].nick) || '?';
       left.appendChild(nickSpan);
@@ -795,12 +805,12 @@ function treasurySection(g) {
   historyList.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
   historyList.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].loading_text}</div>`;
   wrap.appendChild(historyList);
-  loadTreasuryHistory(g.id, historyList);
+  loadTreasuryHistory(g.id, historyList, xpByUid);
 
   return wrap;
 }
 
-async function loadTreasuryHistory(guildId, historyList) {
+async function loadTreasuryHistory(guildId, historyList, xpByUid) {
   const myToken = guildRenderToken; // mesma trava de myRenderToken usada acima — evita pintar por cima de uma aba/clã diferente se a pessoa navegar enquanto isso carrega
   try {
     const snap = await getDocs(query(collection(db, 'guilds', guildId, 'treasuryLog'), orderBy('at', 'desc'), limit(20)));
@@ -817,10 +827,14 @@ async function loadTreasuryHistory(guildId, historyList) {
       row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px;';
       const left = document.createElement('span');
       left.style.cssText = 'display:flex; flex-direction:column;';
+      const nickRow = document.createElement('span');
+      nickRow.style.cssText = 'display:flex; align-items:center; gap:6px;';
+      nickRow.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[data.uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
       const nickSpan = document.createElement('span');
       nickSpan.style.fontWeight = '700';
       nickSpan.textContent = data.nick || '?';
-      left.appendChild(nickSpan);
+      nickRow.appendChild(nickSpan);
+      left.appendChild(nickRow);
       const dateSpan = document.createElement('span');
       dateSpan.className = 'muted';
       dateSpan.style.fontSize = '0.7rem';
