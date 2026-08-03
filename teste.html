@@ -544,6 +544,19 @@
   </div>
 </div>
 
+<!-- denunciar mensagem direta (DM): mesma popup temática de cima, sua
+     própria instância (ver uiReportDmMessage em js/dms.js) -->
+<div class="modal-overlay" id="report-dm-message-modal" style="display:none;" onclick="if(event.target===this) closeReportDmMessageModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-red); text-shadow:0 0 10px rgba(255,45,107,0.5);" data-i18n="guild_report_modal_title">🚩 Denunciar mensagem</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" id="report-dm-message-text"></p>
+    </div>
+    <button class="secondary" onclick="closeReportDmMessageModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
+    <button onclick="confirmReportDmMessage()" data-i18n="guild_report_modal_confirm_btn">Denunciar mensagem</button>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">
@@ -790,8 +803,9 @@
   <div id="dm-chat-list-view" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow-y:auto; padding:6px;"></div>
   <div id="dm-chat-conversation-view" style="display:none; flex-direction:column; flex:1; min-height:0;">
     <div id="dm-chat-messages" class="chat-popup-messages"></div>
+    <div class="muted chat-typing-indicator" id="dm-chat-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
     <div class="chat-popup-input-row">
-      <input type="text" id="dm-chat-input" maxlength="300" data-i18n-placeholder="dm_chat_ph" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter') sendDmChatMessage();">
+      <input type="text" id="dm-chat-input" maxlength="300" data-i18n-placeholder="dm_chat_ph" placeholder="Digite uma mensagem..." oninput="pingDmTyping(this)" onkeydown="if(event.key==='Enter') sendDmChatMessage();">
       <button onclick="sendDmChatMessage()" data-i18n="guild_chat_send">Enviar</button>
     </div>
   </div>

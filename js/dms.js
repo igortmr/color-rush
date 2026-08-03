@@ -14,6 +14,8 @@ import { fetchMyFriends } from './friends.js';
 // do navegador (sempre via Cloud Function, ver functions/index.js).
 const callSendDirectMessage = callable('sendDirectMessage');
 const callMarkDmRead = callable('markDmRead');
+const callSetDmTyping = callable('setDmTyping');
+const callReportDirectMessage = callable('reportDirectMessage');
 
 function dmChatIdFor(a, b) { return [a, b].sort().join('_'); }
 
@@ -119,11 +121,51 @@ function ensureDmChatListener(chatId) {
   }, () => {});
 }
 
+/* -------- "digitando..." (mesmo padrão do chat de clã, ver
+   ensureTypingListener/pingTyping em js/guilds.js), só que por conversa
+   (dmTyping/{chatId}) em vez de por clã -------- */
+let dmTypingUnsub = null;
+let dmTypingTickInterval = null;
+let dmTypingData = {};
+const DM_TYPING_STALE_MS = 6000;
+function ensureDmTypingListener(chatId) {
+  if (dmTypingUnsub) { dmTypingUnsub(); dmTypingUnsub = null; }
+  dmTypingData = {};
+  dmTypingUnsub = onSnapshot(doc(db, 'dmTyping', chatId), snap => {
+    dmTypingData = (snap.exists() && snap.data()) || {};
+    renderDmTypingIndicator();
+  }, () => {});
+  if (!dmTypingTickInterval) dmTypingTickInterval = setInterval(renderDmTypingIndicator, 2000);
+}
+function stopDmTypingListener() {
+  if (dmTypingUnsub) { dmTypingUnsub(); dmTypingUnsub = null; }
+  if (dmTypingTickInterval) { clearInterval(dmTypingTickInterval); dmTypingTickInterval = null; }
+  dmTypingData = {};
+}
+function renderDmTypingIndicator() {
+  const el = $('dm-chat-typing');
+  if (!el) return;
+  const entry = activeFriendUid && dmTypingData[activeFriendUid];
+  const isTyping = !!(entry && entry.at && typeof entry.at.toMillis === 'function' && (Date.now() - entry.at.toMillis()) < DM_TYPING_STALE_MS);
+  el.textContent = isTyping ? T[state.lang].dm_typing(entry.nick || '') : '';
+  el.style.display = isTyping ? '' : 'none';
+}
+// no máximo 1 aviso a cada ~2.5s enquanto a pessoa digita — chamado a cada
+// tecla, mas o debounce evita spammar a function (ver setDmTyping)
+let lastDmTypingPingAt = 0;
+window.pingDmTyping = (inputEl) => {
+  if (!inputEl.value.trim() || !activeFriendUid) return;
+  const now = Date.now();
+  if (now - lastDmTypingPingAt < 2500) return;
+  lastDmTypingPingAt = now;
+  callSetDmTyping({ toUid: activeFriendUid }).catch(() => {});
+};
+
 // bolha de mensagem — mesmo padrão visual do chat de clã (ver
-// renderChatMessages em js/guilds.js): hora curtinha sempre visível, data
-// completa (sem repetir a hora) só ao clicar. Sem nick acima da bolha (só
-// duas pessoas na conversa, óbvio quem é quem pelo lado) e sem denunciar
-// (conversa privada 1-pra-1, fora do escopo do balãozinho por enquanto)
+// renderChatMessages em js/guilds.js): hora curtinha sempre visível, clicar
+// na mensagem expande a data completa (sem repetir a hora, ver
+// formatMsgFullDateTime em js/utils.js) + o botão de denunciar (só nas
+// mensagens da outra pessoa, nunca nas próprias)
 function renderDmMessages() {
   const el = $('dm-chat-messages');
   if (!el) return;
@@ -144,16 +186,54 @@ function renderDmMessages() {
       timeEl.style.cssText = 'font-size:0.6rem; color:#6b76a8; text-align:right; margin-top:2px;';
       timeEl.textContent = formatMsgTime(m.at);
       bubble.appendChild(timeEl);
-      const fullDateEl = document.createElement('div');
-      fullDateEl.style.cssText = 'font-size:0.62rem; color:#8fa0d6; text-align:right; margin-top:2px; display:none;';
-      fullDateEl.textContent = formatMsgFullDateTime(m.at);
-      bubble.appendChild(fullDateEl);
-      bubble.onclick = () => { fullDateEl.style.display = fullDateEl.style.display === 'none' ? 'block' : 'none'; };
+      // data completa + denunciar — escondidos até clicar na mensagem, mesmo
+      // padrão do chat de clã (ver renderChatMessages em js/guilds.js)
+      const infoEl = document.createElement('div');
+      infoEl.style.cssText = 'display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; display:none;';
+      const fullDateSpan = document.createElement('span');
+      fullDateSpan.style.cssText = 'font-size:0.62rem; color:#8fa0d6;';
+      fullDateSpan.textContent = formatMsgFullDateTime(m.at);
+      infoEl.appendChild(fullDateSpan);
+      if (!mine) {
+        const reportBtn = document.createElement('button');
+        reportBtn.className = 'link';
+        reportBtn.style.cssText = 'padding:0; font-size:0.62rem; color:var(--neon-red); text-decoration:underline;';
+        reportBtn.textContent = T[state.lang].guild_chat_report;
+        reportBtn.onclick = (ev) => { ev.stopPropagation(); uiReportDmMessage(m.id, m.nick || ''); };
+        infoEl.appendChild(reportBtn);
+      }
+      bubble.appendChild(infoEl);
+      bubble.onclick = () => { infoEl.style.display = infoEl.style.display === 'none' ? 'flex' : 'none'; };
       el.appendChild(bubble);
     });
   }
   el.scrollTop = el.scrollHeight;
 }
+
+// denunciar mensagem direta usa a mesma popup temática do chat de clã (ver
+// #report-guild-message-modal em js/guilds.js), só que sua própria instância
+// (#report-dm-message-modal) — guarda messageId/chatId aqui até a pessoa
+// confirmar ou cancelar, mesmo padrão de reportMsgState em js/guilds.js
+let reportDmMsgState = null;
+function uiReportDmMessage(messageId, authorNick) {
+  if (!activeChatId) return;
+  reportDmMsgState = { messageId, chatId: activeChatId };
+  $('report-dm-message-text').textContent = T[state.lang].guild_confirm_report(authorNick);
+  $('report-dm-message-modal').style.display = 'flex';
+}
+window.closeReportDmMessageModal = () => {
+  $('report-dm-message-modal').style.display = 'none';
+  reportDmMsgState = null;
+};
+window.confirmReportDmMessage = async () => {
+  if (!reportDmMsgState) return;
+  const { messageId, chatId } = reportDmMsgState;
+  closeReportDmMessageModal();
+  try {
+    await callReportDirectMessage({ chatId, messageId });
+    alert(T[state.lang].guild_report_sent);
+  } catch (e) { alert((e && e.message) || T[state.lang].friend_action_error); }
+};
 
 function openDmConversation(uid, nick) {
   activeFriendUid = uid;
@@ -164,6 +244,7 @@ function openDmConversation(uid, nick) {
   $('dm-chat-list-view').style.display = 'none';
   $('dm-chat-conversation-view').style.display = 'flex';
   ensureDmChatListener(activeChatId);
+  ensureDmTypingListener(activeChatId);
   renderDmMessages();
   markDmChatRead();
 }
@@ -198,6 +279,7 @@ window.toggleDmChatPopup = () => {
     updateDmBubbleBadge();
   } else {
     if (dmChatUnsub) { dmChatUnsub(); dmChatUnsub = null; }
+    stopDmTypingListener();
     updateDmBubbleBadge();
   }
 };
@@ -207,6 +289,7 @@ window.backToDmFriendsList = () => {
   activeFriendUid = null;
   activeChatId = null;
   if (dmChatUnsub) { dmChatUnsub(); dmChatUnsub = null; }
+  stopDmTypingListener();
   $('dm-chat-back-btn').style.display = 'none';
   $('dm-chat-popup-title').textContent = T[state.lang].dm_chat_title;
   $('dm-chat-conversation-view').style.display = 'none';
@@ -284,6 +367,7 @@ setupDmChatBubbleWatcher();
 window.stopDmListeners = () => {
   if (dmSummaryUnsub) { dmSummaryUnsub(); dmSummaryUnsub = null; }
   if (dmChatUnsub) { dmChatUnsub(); dmChatUnsub = null; }
+  stopDmTypingListener();
   dmSummaries = {};
   dmMessages = [];
   activeChatId = null;
