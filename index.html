@@ -744,6 +744,28 @@
   </div>
 </div>
 
+<!-- balãozinho de chat do clã (flutuante, tipo o chat do Messenger) — fora
+     de qualquer .screen de propósito, pra continuar visível trocando de
+     tela. Só aparece se a pessoa for membro de um clã, nas telas
+     "principais" do jogo (fora de partida/duelo) — ver
+     refreshGuildChatBubble em js/guilds.js. A aba de chat dentro da tela do
+     clã continua existindo do mesmo jeito; isso aqui é só um segundo
+     acesso, sem precisar navegar até lá. -->
+<button id="guild-chat-bubble" style="display:none;" onclick="toggleGuildChatPopup()" aria-label="Chat do clã">
+  💬<span class="menu-quick-badge" id="guild-chat-bubble-badge" style="display:none;"></span>
+</button>
+<div id="guild-chat-popup" style="display:none;">
+  <div class="guild-chat-popup-head">
+    <b id="guild-chat-popup-title"></b>
+    <button onclick="toggleGuildChatPopup()" aria-label="Fechar">×</button>
+  </div>
+  <div id="guild-chat-popup-messages"></div>
+  <div class="guild-chat-popup-input-row">
+    <input type="text" id="guild-chat-popup-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter') sendGuildChatPopupMessage();">
+    <button onclick="sendGuildChatPopupMessage()" data-i18n="guild_chat_send">Enviar</button>
+  </div>
+</div>
+
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

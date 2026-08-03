@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
 import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg } from './levels.js';
+import { isMuted, tone } from './utils.js';
 
 // clãs (Espectro) — igual ao resto: nenhuma escrita de verdade (criar,
 // entrar, expulsar, transferir liderança, desfazer, mandar mensagem) sai
@@ -23,18 +24,23 @@ const callInitiateGuildLeaderTransfer = callable('initiateGuildLeaderTransfer');
 const callRespondGuildLeaderTransfer = callable('respondGuildLeaderTransfer');
 const callDisbandGuild = callable('disbandGuild');
 const callSendGuildMessage = callable('sendGuildMessage');
+const callInviteGuildMember = callable('inviteGuildMember');
+const callCancelGuildInvite = callable('cancelGuildInvite');
+const callRespondGuildInvite = callable('respondGuildInvite');
 
 /* ================== estado local da tela do clã aberto ================== */
 let currentGuildId = null;
 let currentGuildData = null;
 let guildUnsub = null;
 let joinReqUnsub = null;
+let inviteUnsub = null;
 let chatUnsub = null;
 let guildTab = 'members'; // 'members' | 'chat'
 
 function stopGuildListeners() {
   if (guildUnsub) { guildUnsub(); guildUnsub = null; }
   if (joinReqUnsub) { joinReqUnsub(); joinReqUnsub = null; }
+  if (inviteUnsub) { inviteUnsub(); inviteUnsub = null; }
   if (chatUnsub) { chatUnsub(); chatUnsub = null; }
   currentGuildId = null;
   currentGuildData = null;
@@ -50,6 +56,11 @@ window.showGuildHome = () => {
   if (state.myData.guildId) {
     pushScreenAndShow('guild-screen', 'menu-screen');
     openGuildScreen(state.myData.guildId);
+  } else if (state.myData.pendingGuildInvite) {
+    // convite pendente tem prioridade — leva direto pro clã que convidou,
+    // já mostrando o cartão de aceitar/recusar (ver nonMemberActionCard)
+    pushScreenAndShow('guild-screen', 'menu-screen');
+    openGuildScreen(state.myData.pendingGuildInvite.guildId);
   } else {
     window.showGuildList();
   }
@@ -127,7 +138,7 @@ function guildListRow(g) {
   left.style.cssText = 'display:flex; align-items:center; gap:8px;';
   const tagSpan = document.createElement('span');
   tagSpan.textContent = `[${g.tag}]`;
-  tagSpan.style.cssText = 'font-family:\'Orbitron\',sans-serif; font-weight:800; color:var(--neon-purple); text-shadow:0 0 6px rgba(177,77,255,0.5);';
+  tagSpan.style.cssText = 'font-family:\'Orbitron\',sans-serif; font-weight:800; color:#fff;';
   left.appendChild(tagSpan);
   const nameSpan = document.createElement('span');
   nameSpan.textContent = g.name;
@@ -227,12 +238,14 @@ function openGuildScreen(guildId) {
       state.myData.guildTag = null;
     }
     renderGuildScreen();
-    // se eu sou a líder, mantém o listener de solicitações em dia; se deixei
-    // de ser líder (ou saí), desliga
+    // se eu sou a líder, mantém os listeners de solicitações/convites em dia;
+    // se deixei de ser líder (ou saí), desliga os dois
     if (myUid && currentGuildData.leaderUid === myUid) {
       ensureJoinRequestsListener(guildId);
-    } else if (joinReqUnsub) {
-      joinReqUnsub(); joinReqUnsub = null;
+      ensureInvitesListener(guildId);
+    } else {
+      if (joinReqUnsub) { joinReqUnsub(); joinReqUnsub = null; }
+      if (inviteUnsub) { inviteUnsub(); inviteUnsub = null; }
     }
     // se deixei de ser membro (expulsa/saí em outra aba), desliga o chat
     if (!stillMember && chatUnsub) { chatUnsub(); chatUnsub = null; }
@@ -247,6 +260,17 @@ function ensureJoinRequestsListener(guildId) {
   }, () => {});
 }
 let currentJoinRequests = {};
+
+// convites que a líder já mandou (ver inviteGuildMember) — mesmo padrão do
+// listener de solicitações acima, só que na direção contrária
+function ensureInvitesListener(guildId) {
+  if (inviteUnsub) return;
+  inviteUnsub = onSnapshot(doc(db, 'guildInvites', guildId), snap => {
+    currentInvites = (snap.exists() && snap.data().outgoing) || {};
+    renderGuildScreen();
+  }, () => {});
+}
+let currentInvites = {};
 
 window.guildBack = () => {
   stopGuildListeners();
@@ -273,7 +297,7 @@ function renderGuildScreen() {
   const level = guildLevelFromXp(g.xp || 0);
 
   header.innerHTML = `
-    <span style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-purple); text-shadow:0 0 6px rgba(177,77,255,0.5);">[${g.tag}]</span>
+    <span style="font-family:'Orbitron',sans-serif; font-weight:800; color:#fff;">[${g.tag}]</span>
     <span style="font-weight:700; font-size:1.2rem;"></span>
     <span class="lv-chip" style="margin-left:6px; color:var(--neon-purple); border-color:var(--neon-purple); text-shadow:0 0 6px rgba(177,77,255,0.5);">${T[state.lang].guild_level_chip(level)}</span>`;
   header.children[1].textContent = g.name; // nome livre — sempre via textContent
@@ -308,6 +332,8 @@ function renderGuildScreen() {
   if (!isMember || guildTab === 'members') {
     body.appendChild(membersSection(g, myUid, isLeader));
     if (isLeader) body.appendChild(joinRequestsSection());
+    if (isLeader) body.appendChild(inviteMemberSection(g));
+    if (isLeader) body.appendChild(invitesSection());
     if (isLeader) body.appendChild(leaderToolsSection(g));
     else if (isMember) body.appendChild(leaveSection());
   } else {
@@ -327,6 +353,30 @@ function nonMemberActionCard(g, myUid) {
 
   if (state.offline || !state.currentUser) {
     wrap.innerHTML = `<p>${T[state.lang].profile_offline_msg1}</p><button onclick="goSignup()">${T[state.lang].btn_create_account}</button>`;
+    return wrap;
+  }
+  // convite recebido da líder desse clã (ver inviteGuildMember) — checado
+  // ANTES da solicitação enviada por mim, já que só dá pra ter uma das
+  // duas coisas de cada vez (não dá pra convidar quem já pediu, nem pedir
+  // pra entrar em outro depois de já ter um convite pendente)
+  const invite = state.myData.pendingGuildInvite;
+  if (invite && invite.guildId === g.id) {
+    wrap.innerHTML = `<p>${T[state.lang].guild_invite_received(g.name)}</p>`;
+    const row = document.createElement('div');
+    row.className = 'btn-row';
+    row.style.width = '100%';
+    const acceptBtn = document.createElement('button');
+    acceptBtn.style.flex = '1';
+    acceptBtn.textContent = T[state.lang].btn_accept;
+    acceptBtn.onclick = () => respondGuildInvite(true);
+    row.appendChild(acceptBtn);
+    const declineBtn = document.createElement('button');
+    declineBtn.className = 'secondary';
+    declineBtn.style.flex = '1';
+    declineBtn.textContent = T[state.lang].btn_decline;
+    declineBtn.onclick = () => respondGuildInvite(false);
+    row.appendChild(declineBtn);
+    wrap.appendChild(row);
     return wrap;
   }
   const pending = state.myData.pendingGuildRequest;
@@ -441,6 +491,52 @@ function joinRequestsSection() {
   return wrap;
 }
 
+// campo pra líder convidar alguém direto pelo nick — "adicionar" membro
+// (complementa joinRequestsSection acima, que é a pessoa PEDINDO pra
+// entrar; aqui é a líder CHAMANDO alguém, ver inviteGuildMember)
+function inviteMemberSection(g) {
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.style.cssText = 'margin-top:10px;';
+  const full = (g.memberCount || 0) >= GUILD_MAX_MEMBERS;
+  if (full) {
+    wrap.innerHTML = `<p class="muted" style="text-align:center;">${T[state.lang].guild_full}</p>`;
+    return wrap;
+  }
+  wrap.innerHTML = `
+    <p class="muted" style="text-align:center; margin:0 0 6px;">${T[state.lang].guild_invite_title}</p>
+    <div style="display:flex; gap:6px;">
+      <input type="text" id="guild-invite-nick" maxlength="16" placeholder="${T[state.lang].guild_invite_nick_ph}" style="flex:1;" onkeydown="if(event.key==='Enter') uiInviteGuildMember();">
+      <button style="padding:12px 16px;" onclick="uiInviteGuildMember()">${T[state.lang].guild_btn_invite}</button>
+    </div>
+    <div class="error" id="guild-invite-error"></div>`;
+  return wrap;
+}
+
+function invitesSection() {
+  const entries = Object.entries(currentInvites || {});
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:8px; margin-top:6px;';
+  if (!entries.length) return wrap;
+  wrap.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center; margin-top:6px;">${T[state.lang].guild_invites_sent_title}</div>`);
+  entries.forEach(([uid, data]) => {
+    const row = document.createElement('div');
+    row.className = 'card';
+    row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:10px 14px; gap:8px; flex-wrap:wrap;';
+    const nickSpan = document.createElement('span');
+    nickSpan.textContent = data.nick || '';
+    row.appendChild(nickSpan);
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'secondary';
+    cancelBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
+    cancelBtn.textContent = T[state.lang].btn_cancel_request;
+    cancelBtn.onclick = () => uiCancelGuildInvite(uid);
+    row.appendChild(cancelBtn);
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
 function leaderToolsSection() {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; text-align:center; margin-top:10px;';
@@ -464,14 +560,37 @@ function leaveSection() {
   return wrap;
 }
 
-/* ================== chat do clã ================== */
+/* ================== chat do clã (aba + balãozinho flutuante) ================== */
+// as duas formas de acessar o chat (a aba dentro da tela do clã e o balão
+// flutuante nas telas principais) compartilham o MESMO listener/estado —
+// só muda pra ONDE a lista de mensagens é desenhada (renderChatMessages
+// aceita o id do container). ensureChatListener é chamada tanto ao abrir a
+// aba quanto pelo balão (refreshGuildChatBubble), e é um no-op se já tiver
+// um listener rodando (ver "if (chatUnsub) return").
 let chatMessages = [];
 function ensureChatListener(guildId) {
   if (chatUnsub) return;
+  let firstSnapshot = true;
   const q = query(collection(db, 'guilds', guildId, 'chat'), orderBy('at', 'desc'), limit(50));
   chatUnsub = onSnapshot(q, snap => {
+    const prevLast = chatMessages.length ? chatMessages[chatMessages.length - 1] : null;
     chatMessages = snap.docs.map(d => d.data()).reverse();
-    if (guildTab === 'chat') renderChatMessages();
+    const newLast = chatMessages.length ? chatMessages[chatMessages.length - 1] : null;
+    // som de aviso só numa mensagem NOVA de verdade (não na primeira carga
+    // do listener, e não quando a mensagem nova é a que EU acabei de mandar)
+    const myUid = state.currentUser && state.currentUser.uid;
+    const isGenuinelyNew = !firstSnapshot && newLast && newLast !== prevLast && newLast.uid !== myUid;
+    firstSnapshot = false;
+    if (isGenuinelyNew && !isMuted()) tone(880, 0.08, 'sine', 0.12);
+
+    if (guildTab === 'chat' && document.querySelector('.screen.active') && document.querySelector('.screen.active').id === 'guild-screen') {
+      renderChatMessages('guild-chat-messages');
+    }
+    if (guildChatPopupOpen) {
+      renderChatMessages('guild-chat-popup-messages');
+      markChatRead(guildId);
+    }
+    updateChatBubbleBadge(guildId);
   }, () => {});
 }
 
@@ -481,15 +600,15 @@ function chatSection() {
   wrap.innerHTML = `
     <div id="guild-chat-messages" style="display:flex; flex-direction:column; gap:6px; max-height:340px; overflow-y:auto; padding:4px;"></div>
     <div style="display:flex; gap:6px;">
-      <input type="text" id="guild-chat-input" maxlength="${300}" data-i18n-placeholder="guild_chat_ph" placeholder="${T[state.lang].guild_chat_ph}" style="flex:1;" onkeydown="if(event.key==='Enter') sendGuildChatMessage();">
+      <input type="text" id="guild-chat-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="${T[state.lang].guild_chat_ph}" style="flex:1;" onkeydown="if(event.key==='Enter') sendGuildChatMessage();">
       <button style="padding:12px 16px;" onclick="sendGuildChatMessage()">${T[state.lang].guild_chat_send}</button>
     </div>`;
-  setTimeout(renderChatMessages, 0);
+  setTimeout(() => renderChatMessages('guild-chat-messages'), 0);
   return wrap;
 }
 
-function renderChatMessages() {
-  const el = $('guild-chat-messages');
+function renderChatMessages(elId) {
+  const el = $(elId);
   if (!el) return;
   const myUid = state.currentUser && state.currentUser.uid;
   el.innerHTML = '';
@@ -522,6 +641,83 @@ window.sendGuildChatMessage = async () => {
   try { await callSendGuildMessage({ text }); } catch (e) { /* melhor esforço — a mensagem só some da caixa se falhar mesmo */ }
 };
 
+/* -------- balãozinho flutuante (tipo o chat do Messenger) -------- */
+// telas "principais" do jogo — fora de partida/duelo, onde o balão pode
+// ficar por cima sem atrapalhar. Fora dessa lista, o balão some sozinho.
+const GUILD_CHAT_BUBBLE_SCREENS = new Set([
+  'menu-screen', 'shop-screen', 'ranking-screen', 'replay-screen',
+  'profile-screen', 'friends-screen', 'guild-list-screen',
+]);
+let guildChatPopupOpen = false;
+
+// "visto por último" é só local (localStorage), por conta — não precisa de
+// servidor pra isso, é puramente "já espiei essa conversa nesse aparelho"
+function guildChatStorageKey(guildId) { return `guildChatLastRead_${guildId}`; }
+function loadLastReadChatAt(guildId) {
+  try { return parseInt(localStorage.getItem(guildChatStorageKey(guildId)) || '0', 10); } catch { return 0; }
+}
+function markChatRead(guildId) {
+  try { localStorage.setItem(guildChatStorageKey(guildId), String(Date.now())); } catch {}
+  updateChatBubbleBadge(guildId);
+}
+function updateChatBubbleBadge(guildId) {
+  const badge = $('guild-chat-bubble-badge');
+  if (!badge) return;
+  const lastRead = loadLastReadChatAt(guildId);
+  const myUid = state.currentUser && state.currentUser.uid;
+  const unread = chatMessages.filter(m => m.uid !== myUid && m.at && typeof m.at.toMillis === 'function' && m.at.toMillis() > lastRead).length;
+  badge.textContent = unread;
+  badge.style.display = (unread > 0 && !guildChatPopupOpen) ? '' : 'none';
+}
+
+// chamada sempre que a tela ativa muda (ver MutationObserver no fim do
+// arquivo) — decide se o balão aparece e liga/desliga o listener de fundo
+function refreshGuildChatBubble() {
+  const bubble = $('guild-chat-bubble');
+  if (!bubble) return;
+  const active = document.querySelector('.screen.active');
+  const eligible = !!(active && GUILD_CHAT_BUBBLE_SCREENS.has(active.id) && !state.offline && state.currentUser && state.myData.guildId);
+  bubble.style.display = eligible ? 'flex' : 'none';
+  if (eligible) {
+    ensureChatListener(state.myData.guildId);
+    updateChatBubbleBadge(state.myData.guildId);
+  } else {
+    if (guildChatPopupOpen) window.toggleGuildChatPopup();
+  }
+}
+
+window.toggleGuildChatPopup = () => {
+  guildChatPopupOpen = !guildChatPopupOpen;
+  const popup = $('guild-chat-popup');
+  popup.style.display = guildChatPopupOpen ? 'flex' : 'none';
+  if (guildChatPopupOpen && state.myData.guildId) {
+    $('guild-chat-popup-title').textContent = state.myData.guildTag ? `💬 [${state.myData.guildTag}]` : '💬';
+    ensureChatListener(state.myData.guildId);
+    renderChatMessages('guild-chat-popup-messages');
+    markChatRead(state.myData.guildId);
+  } else {
+    updateChatBubbleBadge(state.myData.guildId);
+  }
+};
+
+window.sendGuildChatPopupMessage = async () => {
+  const input = $('guild-chat-popup-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  try { await callSendGuildMessage({ text }); } catch (e) { /* melhor esforço */ }
+};
+
+// observa a troca da classe "active" em qualquer .screen (é assim que
+// show(), em js/nav.js, navega entre telas) — um MutationObserver evita
+// precisar que nav.js importe algo daqui (guilds.js já importa de nav.js;
+// o caminho inverso criaria um ciclo de import)
+function setupGuildChatBubbleWatcher() {
+  const observer = new MutationObserver(() => refreshGuildChatBubble());
+  document.querySelectorAll('.screen').forEach(s => observer.observe(s, { attributes: true, attributeFilter: ['class'] }));
+}
+setupGuildChatBubbleWatcher();
+
 /* ================== ações (chamadas às Cloud Functions) ================== */
 async function uiRequestJoinGuild(guildId) {
   try {
@@ -540,6 +736,32 @@ window.uiCancelGuildRequest = async () => {
 async function uiRespondGuildRequest(applicantUid, accept) {
   try { await callRespondGuildJoinRequest({ applicantUid, accept }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 }
+window.uiInviteGuildMember = async () => {
+  const errEl = $('guild-invite-error');
+  const input = $('guild-invite-nick');
+  errEl.textContent = '';
+  const nick = input.value.trim();
+  if (!nick) return;
+  try {
+    await callInviteGuildMember({ nick });
+    input.value = '';
+  } catch (e) { errEl.textContent = (e && e.message) || T[state.lang].guild_err_generic; }
+};
+async function uiCancelGuildInvite(uid) {
+  try { await callCancelGuildInvite({ uid }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
+}
+window.respondGuildInvite = async (accept) => {
+  try {
+    const res = await callRespondGuildInvite({ accept });
+    state.myData.pendingGuildInvite = null;
+    if (accept && res.data && res.data.accepted) {
+      // já estamos vendo a tela desse clã (só dá pra aceitar de dentro
+      // dela) — o listener ao vivo do próprio clã vai atualizar sozinho,
+      // isso aqui só garante que o resto do app (menu etc.) saiba na hora
+      state.myData.guildId = currentGuildId;
+    }
+  } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
+};
 window.uiLeaveGuild = async () => {
   try {
     await callLeaveGuild();
@@ -596,7 +818,7 @@ export async function loadGuildRanking() {
       cell.style.cursor = 'pointer';
       const tagSpan = document.createElement('span');
       tagSpan.textContent = `[${g.tag}] `;
-      tagSpan.style.cssText = 'font-family:\'Orbitron\',sans-serif; font-weight:800; color:var(--neon-purple);';
+      tagSpan.style.cssText = 'font-family:\'Orbitron\',sans-serif; font-weight:800; color:#fff;';
       cell.appendChild(tagSpan);
       const nameSpan = document.createElement('span');
       nameSpan.textContent = g.name;
@@ -619,7 +841,15 @@ export async function loadGuildRanking() {
 export async function refreshGuildMenuBadge() {
   const badge = $('menu-quick-guild-badge');
   if (!badge) return;
-  if (state.offline || !state.currentUser || !state.myData.guildId) { badge.style.display = 'none'; return; }
+  if (state.offline || !state.currentUser) { badge.style.display = 'none'; return; }
+  // convite de clã pendente (recebido) conta mesmo sem estar em nenhum clã
+  // ainda — é justamente o que precisa de resposta
+  if (!state.myData.guildId) {
+    const n = state.myData.pendingGuildInvite ? 1 : 0;
+    badge.textContent = n;
+    badge.style.display = n > 0 ? '' : 'none';
+    return;
+  }
   try {
     const snap = await getDoc(doc(db, 'guilds', state.myData.guildId));
     if (!snap.exists()) { badge.style.display = 'none'; return; }
@@ -628,6 +858,8 @@ export async function refreshGuildMenuBadge() {
     let n = 0;
     if (g.pendingTransferToUid === myUid) n += 1;
     if (g.leaderUid === myUid) {
+      // convites que a própria líder mandou não entram na contagem — ela já
+      // sabe que mandou, isso aqui é só pra avisar de coisa NOVA esperando
       const reqSnap = await getDoc(doc(db, 'guildJoinRequests', state.myData.guildId));
       n += Object.keys((reqSnap.exists() && reqSnap.data().incoming) || {}).length;
     }

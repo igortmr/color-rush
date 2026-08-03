@@ -345,6 +345,82 @@
     z-index: 4000;
     padding: 20px;
   }
+  /* balãozinho de chat do clã (flutuante, tipo o chat do Messenger) — ver
+     refreshGuildChatBubble/toggleGuildChatPopup em js/guilds.js. z-index
+     abaixo dos modais (4000) de propósito, pra um modal aberto cobrir o
+     balão em vez de flutuar por cima dele. */
+  #guild-chat-bubble {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    border: none;
+    box-shadow: 0 4px 18px rgba(45,214,255,0.45), 0 0 0 3px rgba(255,255,255,0.08);
+    font-size: 1.6rem;
+    padding: 0;
+    cursor: pointer;
+    z-index: 3900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #guild-chat-bubble:hover { transform: scale(1.08); }
+  #guild-chat-bubble .menu-quick-badge { top: -4px; right: -4px; }
+  #guild-chat-popup {
+    position: fixed;
+    bottom: 88px;
+    right: 20px;
+    width: min(320px, calc(100vw - 32px));
+    max-height: 420px;
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    z-index: 3900;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .guild-chat-popup-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .guild-chat-popup-head button {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--neon-red);
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+  }
+  #guild-chat-popup-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 140px;
+  }
+  .guild-chat-popup-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .guild-chat-popup-input-row input { flex: 1; }
+  .guild-chat-popup-input-row button { padding: 10px 14px; font-size: 0.85rem; }
   .modal-card {
     width: 100%;
     max-width: 420px;
@@ -806,13 +882,14 @@
     flex-shrink: 0;
   }
   /* sigla [TAG] do clã, clicável ao lado do nick em qualquer ranking/lista
-     (ver buildRankRowNick em js/ranking-cache.js) */
+     (ver buildRankRowNick em js/ranking-cache.js) — branca/negrito por
+     enquanto; a cor vai virar um cosmético comprável na loja depois, ainda
+     não implementado */
   .guild-tag-link {
     font-family: 'Orbitron', sans-serif;
     font-weight: 800;
     font-size: 0.72rem;
-    color: var(--neon-purple);
-    text-shadow: 0 0 6px rgba(177,77,255,0.5);
+    color: #fff;
     cursor: pointer;
     flex-shrink: 0;
   }

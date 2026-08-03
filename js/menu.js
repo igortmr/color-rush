@@ -70,6 +70,17 @@ window.showMenu = () => {
     labelEl.innerHTML = '';
     labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 32) + ' ');
     labelEl.appendChild(document.createTextNode(T[state.lang].user_greeting(state.myData.nick || '')));
+    // sigla do clã (se tiver) do lado do nick, na tela principal — clicável,
+    // mesmo padrão de buildRankRowNick em js/ranking-cache.js
+    // (window.openGuildFromTag, ver js/guilds.js); stopPropagation pra não
+    // também disparar o showProfile() do botão em volta
+    if (state.myData.guildTag && state.myData.guildId) {
+      const tagSpan = document.createElement('span');
+      tagSpan.textContent = ` [${state.myData.guildTag}]`;
+      tagSpan.className = 'guild-tag-link';
+      tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(state.myData.guildId, 'menu-screen'); };
+      labelEl.appendChild(tagSpan);
+    }
     $('menu-logout-btn').textContent = T[state.lang].sair_label;
   }
   // menu é a "raiz" da navegação — zera a pilha de "voltar" (ver
