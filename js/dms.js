@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { T } from './i18n.js';
 import { formatMsgTime, formatMsgFullDateTime } from './utils.js';
 import { fetchMyFriends } from './friends.js';
+import { lvChip } from './levels.js';
 
 // mensagens diretas entre amigos — balãozinho flutuante igual ao do clã (ver
 // js/guilds.js), só que 1-pra-1: abre na lista de amigos (bolinha verde =
@@ -83,32 +84,36 @@ async function renderDmFriendsList() {
     el.innerHTML = `<div class="muted" style="text-align:center; padding:14px;">${T[state.lang].dm_chat_empty_friends}</div>`;
     return;
   }
-  const statuses = await Promise.all(entries.map(async ([uid]) => {
+  // aproveita a mesma leitura de scores/{uid} (já feita pra saber quem está
+  // online) pra trazer nível e admin também, sem gerar leitura extra —
+  // usados no chip de nível e no botão de desafiar (ver dmFriendRow abaixo)
+  const results = await Promise.all(entries.map(async ([uid]) => {
     try {
       const snap = await getDoc(doc(db, 'scores', uid));
       const data = snap.exists() ? snap.data() : {};
       // quem ativou "ficar invisível" no próprio perfil (ver
       // toggleHideOnlineStatus em js/profile.js) nunca aparece com a
       // bolinha verde aqui, mesmo se estiver de fato ativo agora
-      if (data.hideOnlineStatus === true) return false;
       const lastActiveAt = data.lastActiveAt && typeof data.lastActiveAt.toMillis === 'function' ? data.lastActiveAt.toMillis() : 0;
-      return (Date.now() - lastActiveAt) < DM_ONLINE_THRESHOLD_MS;
-    } catch { return false; }
+      const online = data.hideOnlineStatus !== true && (Date.now() - lastActiveAt) < DM_ONLINE_THRESHOLD_MS;
+      return { online, xp: data.xp || 0, admin: data.admin === true };
+    } catch { return { online: false, xp: 0, admin: false }; }
   }));
   if (dmView !== 'list') return;
   // online primeiro, depois ordem alfabética dentro de cada grupo
-  const rows = entries.map(([uid, data], i) => ({ uid, nick: data.nick || '', online: statuses[i] }));
+  const rows = entries.map(([uid, data], i) => ({ uid, nick: data.nick || '', ...results[i] }));
   rows.sort((a, b) => (b.online - a.online) || a.nick.localeCompare(b.nick));
   el.innerHTML = '';
-  rows.forEach(r => el.appendChild(dmFriendRow(r.uid, r.nick, r.online)));
+  rows.forEach(r => el.appendChild(dmFriendRow(r.uid, r.nick, r.online, r.xp, r.admin)));
 }
 
-function dmFriendRow(uid, nick, online) {
+function dmFriendRow(uid, nick, online, xp, isAdmin) {
   const row = document.createElement('div');
   row.className = 'dm-friend-row';
   const dot = document.createElement('span');
   dot.className = 'dm-online-dot' + (online ? ' online' : '');
   row.appendChild(dot);
+  row.insertAdjacentHTML('beforeend', lvChip(xp || 0)); // nível, mesmo padrão de friendRow em js/friends.js
   const nickSpan = document.createElement('span');
   nickSpan.className = 'nick';
   nickSpan.textContent = nick;
@@ -120,6 +125,20 @@ function dmFriendRow(uid, nick, online) {
     const unreadDot = document.createElement('span');
     unreadDot.className = 'dm-unread-dot';
     row.appendChild(unreadDot);
+  }
+  // desafiar pro duelo — só pra quem está online agora (não faz sentido
+  // desafiar alguém offline pra uma partida ao vivo). Ícone só, bem pequeno;
+  // reaproveita window.openChallengeModeModal (js/pvp.js), mesma function
+  // chamada pelo botão "⚔️ Desafiar" da tela de amigos (ver friendRow em
+  // js/friends.js)
+  if (online) {
+    const challengeBtn = document.createElement('button');
+    challengeBtn.className = 'secondary';
+    challengeBtn.textContent = '⚔️';
+    challengeBtn.title = T[state.lang].btn_challenge;
+    challengeBtn.style.cssText = 'padding:2px 5px; font-size:0.65rem; line-height:1; flex-shrink:0;';
+    challengeBtn.onclick = (ev) => { ev.stopPropagation(); window.openChallengeModeModal(uid, nick, xp || 0, isAdmin === true); };
+    row.appendChild(challengeBtn);
   }
   row.onclick = () => openDmConversation(uid, nick);
   return row;
