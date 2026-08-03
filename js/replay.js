@@ -19,6 +19,11 @@ import { openProfileFromRanking } from './profile-public.js';
 // esperando resposta — roda em segundo plano enquanto a pessoa já está vendo
 // a tela de resultado.
 const callSaveMatchReplay = httpsCallable(functions, 'saveMatchReplay');
+// conta (no servidor) esse replay como "assistido por outra pessoa" — dono
+// assistindo o próprio replay não conta, e assistir de novo o mesmo replay
+// também não soma de novo (ver markReplayWatched em functions/index.js).
+// Melhor esforço: nunca deve atrapalhar a exibição do replay em si.
+const callMarkReplayWatched = httpsCallable(functions, 'markReplayWatched');
 // tenta salvar o replay algumas vezes antes de desistir — cobre quedas de
 // rede de um instante bem na hora que a partida termina (upload silencioso
 // que nunca chega no servidor não deixa log nenhum, nem de erro, porque a
@@ -312,6 +317,9 @@ window.openReplay = async (sessionId, nick, stats) => {
     const data = snap.data();
     if (!Array.isArray(data.rounds) || data.rounds.length === 0) throw new Error('empty');
     replayData = data;
+    if (!state.offline && state.currentUser && state.currentUser.uid !== data.uid) {
+      callMarkReplayWatched({ sessionId }).catch(() => {});
+    }
     // nick, nível, modo e data/hora tudo na mesma linha — nick clicável (igual
     // aos outros nicks de ranking) abre o perfil de quem jogou, e volta pra
     // esta mesma tela de replay ao fechar. "stats" vem da própria linha do

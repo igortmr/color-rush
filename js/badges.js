@@ -81,8 +81,23 @@ export const BADGE_DEFS = {
       : state.lang === 'es' ? `Gana ${n} duelo${n > 1 ? 's' : ''} (desafía a un amigo)`
       : `Vença ${n} duelo${n > 1 ? 's' : ''} (desafiar amigo)`,
   },
+  replays: {
+    icon: '🎬',
+    label: { pt: 'Replays Assistidos', en: 'Watched Replays', es: 'Replays Vistos' },
+    tiers: [1, 5, 15, 30, 50, 100],
+    // nomes curtos (1 palavra, até 10 caracteres) pra não quebrar a pill no ranking
+    names: {
+      pt: ['Visto', 'Notado', 'Admirado', 'Aclamado', 'Reluzente', 'Ícone'],
+      en: ['Seen', 'Noticed', 'Admired', 'Acclaimed', 'Glowing', 'Iconic'],
+      es: ['Visto', 'Notado', 'Admirado', 'Aclamado', 'Reluciente', 'Icónico'],
+    },
+    metric: u => u.replaysWatchedCount || 0,
+    desc: n => state.lang === 'en' ? `Have ${n} of your replay${n > 1 ? 's' : ''} watched by other players`
+      : state.lang === 'es' ? `Haz que ${n} replay${n > 1 ? 's' : ''} tuyo${n > 1 ? 's' : ''} ${n > 1 ? 'sean' : 'sea'} visto${n > 1 ? 's' : ''} por otros jugadores`
+      : `Tenha ${n} replay${n > 1 ? 's' : ''} seu${n > 1 ? 's' : ''} assistido${n > 1 ? 's' : ''} por outras pessoas`,
+  },
 };
-export const BADGE_ORDER = ['points', 'games', 'streak', 'sharer', 'pvp'];
+export const BADGE_ORDER = ['points', 'games', 'streak', 'sharer', 'pvp', 'replays'];
 
 export function unlockedTier(def, stats) {
   const val = def.metric(stats);
