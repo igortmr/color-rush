@@ -41,6 +41,16 @@ function ensureDmSummaryListener() {
     snap.forEach(d => { dmSummaries[d.id] = d.data(); });
     updateDmBubbleBadge();
     if (dmPopupOpen && dmView === 'list') renderDmFriendsList();
+    // reforço: se a conversa aberta agora tem uma linha de resumo mas o
+    // listener de mensagens dela ainda não trouxe nada, é bem provável que
+    // seja a 1ª mensagem de uma conversa nova cujo listener foi assinado
+    // ANTES do doc dms/{chatId} existir (ver ensureDmChatListener/
+    // sendDirectMessage) — reabre o listener agora que o doc já existe de
+    // verdade, em vez de deixar a pessoa sem ver a própria mensagem até
+    // fechar e abrir a conversa de novo
+    if (dmPopupOpen && dmView === 'chat' && activeChatId && dmSummaries[activeChatId] && dmMessages.length === 0) {
+      ensureDmChatListener(activeChatId);
+    }
   }, () => {});
 }
 
