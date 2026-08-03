@@ -67,7 +67,13 @@ window.showGuildList = () => {
 async function fetchAllGuilds(force) {
   if (!force && guildListCache) return guildListCache;
   const snap = await getDocs(collection(db, 'guilds'));
-  guildListCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // clã criado por conta admin não aparece na listagem/ranking pra quem não
+  // é admin (mesmo filtro dos rankings de jogador — ver fetchScoresLive em
+  // js/ranking-cache.js); window.IS_TESTE (só true em teste.html) é a mesma
+  // exceção de sempre pra dar pra testar
+  guildListCache = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(g => !g.adminGuild || window.IS_TESTE);
   return guildListCache;
 }
 
