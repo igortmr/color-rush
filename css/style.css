@@ -421,6 +421,24 @@
   }
   .guild-chat-popup-input-row input { flex: 1; }
   .guild-chat-popup-input-row button { padding: 10px 14px; font-size: 0.85rem; }
+  /* "fulano está digitando..." (ver renderTypingIndicators em js/guilds.js) */
+  .chat-typing-indicator { font-style: italic; }
+  /* @menção destacada dentro de uma mensagem (ver renderMessageText) */
+  .chat-mention { color: var(--neon-blue); font-weight: 700; }
+  /* lista de sugestões ao digitar "@" (ver handleMentionInput) */
+  .chat-mention-list {
+    background: #0a0e1e;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    max-height: 140px;
+    overflow-y: auto;
+  }
+  .chat-mention-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .chat-mention-suggestion:hover { background: rgba(255,255,255,0.08); }
   .modal-card {
     width: 100%;
     max-width: 420px;

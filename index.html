@@ -760,8 +760,10 @@
     <button onclick="toggleGuildChatPopup()" aria-label="Fechar">×</button>
   </div>
   <div id="guild-chat-popup-messages"></div>
+  <div class="muted chat-typing-indicator" id="guild-chat-popup-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
+  <div class="chat-mention-list" id="guild-chat-popup-mentions" style="display:none;"></div>
   <div class="guild-chat-popup-input-row">
-    <input type="text" id="guild-chat-popup-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter') sendGuildChatPopupMessage();">
+    <input type="text" id="guild-chat-popup-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="Digite uma mensagem..." oninput="handleGuildChatInput(this,'guild-chat-popup-mentions')" onkeydown="if(event.key==='Enter') sendGuildChatPopupMessage();">
     <button onclick="sendGuildChatPopupMessage()" data-i18n="guild_chat_send">Enviar</button>
   </div>
 </div>

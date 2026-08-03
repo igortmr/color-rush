@@ -27,6 +27,7 @@ const callSendGuildMessage = callable('sendGuildMessage');
 const callInviteGuildMember = callable('inviteGuildMember');
 const callCancelGuildInvite = callable('cancelGuildInvite');
 const callRespondGuildInvite = callable('respondGuildInvite');
+const callSetGuildTyping = callable('setGuildTyping');
 
 /* ================== estado local da tela do clã aberto ================== */
 let currentGuildId = null;
@@ -42,6 +43,7 @@ function stopGuildListeners() {
   if (joinReqUnsub) { joinReqUnsub(); joinReqUnsub = null; }
   if (inviteUnsub) { inviteUnsub(); inviteUnsub = null; }
   if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+  stopTypingListener();
   currentGuildId = null;
   currentGuildData = null;
 }
@@ -248,7 +250,10 @@ function openGuildScreen(guildId) {
       if (inviteUnsub) { inviteUnsub(); inviteUnsub = null; }
     }
     // se deixei de ser membro (expulsa/saí em outra aba), desliga o chat
-    if (!stillMember && chatUnsub) { chatUnsub(); chatUnsub = null; }
+    if (!stillMember) {
+      if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+      stopTypingListener();
+    }
   }, () => {});
 }
 
@@ -569,6 +574,8 @@ function leaveSection() {
 // um listener rodando (ver "if (chatUnsub) return").
 let chatMessages = [];
 function ensureChatListener(guildId) {
+  ensureGuildMemberNicksCache(guildId);
+  ensureTypingListener(guildId);
   if (chatUnsub) return;
   let firstSnapshot = true;
   const q = query(collection(db, 'guilds', guildId, 'chat'), orderBy('at', 'desc'), limit(50));
@@ -596,15 +603,50 @@ function ensureChatListener(guildId) {
 
 function chatSection() {
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:8px;';
+  wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:8px; position:relative;';
   wrap.innerHTML = `
     <div id="guild-chat-messages" style="display:flex; flex-direction:column; gap:6px; max-height:340px; overflow-y:auto; padding:4px;"></div>
+    <div class="muted chat-typing-indicator" id="guild-chat-typing" style="display:none; font-size:0.75rem; padding:0 4px;"></div>
+    <div class="chat-mention-list" id="guild-chat-mentions" style="display:none;"></div>
     <div style="display:flex; gap:6px;">
-      <input type="text" id="guild-chat-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="${T[state.lang].guild_chat_ph}" style="flex:1;" onkeydown="if(event.key==='Enter') sendGuildChatMessage();">
+      <input type="text" id="guild-chat-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="${T[state.lang].guild_chat_ph}" style="flex:1;" oninput="handleGuildChatInput(this,'guild-chat-mentions')" onkeydown="if(event.key==='Enter') sendGuildChatMessage();">
       <button style="padding:12px 16px;" onclick="sendGuildChatMessage()">${T[state.lang].guild_chat_send}</button>
     </div>`;
   setTimeout(() => renderChatMessages('guild-chat-messages'), 0);
   return wrap;
+}
+
+// hora curtinha embaixo de cada mensagem — clicar na mensagem abre/fecha a
+// data completa (ver toggleMsgFullDate)
+function formatMsgTime(at) {
+  if (!at || typeof at.toMillis !== 'function') return '';
+  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
+  return new Date(at.toMillis()).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+}
+function formatMsgFullDateTime(at) {
+  if (!at || typeof at.toMillis !== 'function') return '';
+  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
+  return new Date(at.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+// desenha o texto da mensagem destacando @menções a membros de verdade do
+// clã (nick sempre sem espaço, ver isValidNickServer — então "@\S+" já
+// separa a menção certinho sem precisar de mais nada)
+function renderMessageText(container, text) {
+  const parts = (text || '').split(/(@\S+)/g);
+  parts.forEach(part => {
+    if (part.startsWith('@')) {
+      const nick = part.slice(1);
+      const isMember = guildMemberNicks.some(m => m.nick.toLowerCase() === nick.toLowerCase());
+      if (isMember) {
+        const span = document.createElement('span');
+        span.className = 'chat-mention';
+        span.textContent = part;
+        container.appendChild(span);
+        return;
+      }
+    }
+    if (part) container.appendChild(document.createTextNode(part));
+  });
 }
 
 function renderChatMessages(elId) {
@@ -618,19 +660,131 @@ function renderChatMessages(elId) {
     chatMessages.forEach(m => {
       const bubble = document.createElement('div');
       const mine = m.uid === myUid;
-      bubble.style.cssText = `align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:80%; background:${mine ? 'rgba(45,214,255,0.12)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${mine ? 'rgba(45,214,255,0.35)' : 'rgba(255,255,255,0.12)'}; border-radius:10px; padding:6px 10px;`;
+      bubble.style.cssText = `align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:80%; background:${mine ? 'rgba(45,214,255,0.12)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${mine ? 'rgba(45,214,255,0.35)' : 'rgba(255,255,255,0.12)'}; border-radius:10px; padding:6px 10px; cursor:pointer;`;
       const nickEl = document.createElement('div');
       nickEl.style.cssText = 'font-size:0.7rem; font-weight:700; color:#8fa0d6;';
       nickEl.textContent = m.nick || '';
       bubble.appendChild(nickEl);
       const textEl = document.createElement('div');
       textEl.style.cssText = 'font-size:0.9rem; word-break:break-word;';
-      textEl.textContent = m.text || '';
+      renderMessageText(textEl, m.text);
       bubble.appendChild(textEl);
+      // hora curtinha, sempre visível
+      const timeEl = document.createElement('div');
+      timeEl.style.cssText = 'font-size:0.6rem; color:#6b76a8; text-align:right; margin-top:2px;';
+      timeEl.textContent = formatMsgTime(m.at);
+      bubble.appendChild(timeEl);
+      // data completa — escondida até clicar na mensagem (ver onclick abaixo)
+      const fullEl = document.createElement('div');
+      fullEl.style.cssText = 'font-size:0.62rem; color:#8fa0d6; text-align:right; margin-top:2px; display:none;';
+      fullEl.textContent = formatMsgFullDateTime(m.at);
+      bubble.appendChild(fullEl);
+      bubble.onclick = () => { fullEl.style.display = fullEl.style.display === 'none' ? '' : 'none'; };
       el.appendChild(bubble);
     });
   }
   el.scrollTop = el.scrollHeight;
+}
+
+/* -------- "digitando..." -------- */
+let typingUnsub = null;
+let typingTickInterval = null;
+let typingData = {};
+const TYPING_STALE_MS = 6000;
+function ensureTypingListener(guildId) {
+  if (typingUnsub) return;
+  typingUnsub = onSnapshot(doc(db, 'guildTyping', guildId), snap => {
+    typingData = (snap.exists() && snap.data()) || {};
+    renderTypingIndicators();
+  }, () => {});
+  typingTickInterval = setInterval(renderTypingIndicators, 2000);
+}
+function stopTypingListener() {
+  if (typingUnsub) { typingUnsub(); typingUnsub = null; }
+  if (typingTickInterval) { clearInterval(typingTickInterval); typingTickInterval = null; }
+  typingData = {};
+}
+function renderTypingIndicators() {
+  const myUid = state.currentUser && state.currentUser.uid;
+  const now = Date.now();
+  const names = Object.entries(typingData)
+    .filter(([uid, d]) => uid !== myUid && d.at && typeof d.at.toMillis === 'function' && (now - d.at.toMillis()) < TYPING_STALE_MS)
+    .map(([, d]) => d.nick)
+    .filter(Boolean);
+  const text = names.length ? T[state.lang].guild_typing(names.join(', '), names.length) : '';
+  [$('guild-chat-typing'), $('guild-chat-popup-typing')].forEach(el => {
+    if (!el) return;
+    el.textContent = text;
+    el.style.display = text ? '' : 'none';
+  });
+}
+// no máximo 1 aviso a cada ~2.5s enquanto a pessoa digita — chamado a cada
+// tecla, mas o debounce evita spammar a function (ver setGuildTyping)
+let lastTypingPingAt = 0;
+function pingTyping() {
+  const now = Date.now();
+  if (now - lastTypingPingAt < 2500) return;
+  lastTypingPingAt = now;
+  callSetGuildTyping().catch(() => {});
+}
+
+/* -------- @menção -------- */
+// nicks dos membros do clã atual, pra sugerir ao digitar "@" — reaproveita
+// currentGuildData quando já carregado (dentro da tela do clã) ou busca uma
+// vez só (getDoc simples, não listener) quando o chat abre de fora dela
+// (balão flutuante nas outras telas)
+let guildMemberNicks = [];
+let guildMemberNicksGuildId = null;
+async function ensureGuildMemberNicksCache(guildId) {
+  if (guildMemberNicksGuildId === guildId && guildMemberNicks.length) return;
+  if (currentGuildData && currentGuildData.id === guildId && currentGuildData.members) {
+    guildMemberNicks = Object.entries(currentGuildData.members).map(([uid, d]) => ({ uid, nick: d.nick || '' }));
+    guildMemberNicksGuildId = guildId;
+    return;
+  }
+  try {
+    const snap = await getDoc(doc(db, 'guilds', guildId));
+    if (snap.exists()) {
+      guildMemberNicks = Object.entries(snap.data().members || {}).map(([uid, d]) => ({ uid, nick: d.nick || '' }));
+      guildMemberNicksGuildId = guildId;
+    }
+  } catch { /* melhor esforço — sem sugestão de @menção não quebra o chat */ }
+}
+// chamada a cada tecla no campo do chat — dispara o aviso de "digitando" E
+// checa se dá pra sugerir uma @menção agora
+window.handleGuildChatInput = (inputEl, suggestBoxId) => {
+  if (inputEl.value.trim()) pingTyping();
+  handleMentionInput(inputEl, suggestBoxId);
+};
+function handleMentionInput(inputEl, suggestBoxId) {
+  const box = $(suggestBoxId);
+  if (!box) return;
+  const val = inputEl.value;
+  const cursor = inputEl.selectionStart;
+  const beforeCursor = val.slice(0, cursor);
+  const match = beforeCursor.match(/(?:^|\s)@(\S*)$/);
+  if (!match) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const partial = match[1].toLowerCase();
+  const myUid = state.currentUser && state.currentUser.uid;
+  const matches = guildMemberNicks.filter(m => m.uid !== myUid && m.nick.toLowerCase().startsWith(partial)).slice(0, 5);
+  if (!matches.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.innerHTML = '';
+  box.style.display = '';
+  matches.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'chat-mention-suggestion';
+    item.textContent = `@${m.nick}`;
+    item.onclick = () => {
+      const newBefore = beforeCursor.replace(/@(\S*)$/, `@${m.nick} `);
+      inputEl.value = newBefore + val.slice(cursor);
+      inputEl.focus();
+      const pos = newBefore.length;
+      inputEl.setSelectionRange(pos, pos);
+      box.style.display = 'none';
+      box.innerHTML = '';
+    };
+    box.appendChild(item);
+  });
 }
 
 window.sendGuildChatMessage = async () => {
@@ -694,6 +848,7 @@ window.toggleGuildChatPopup = () => {
     $('guild-chat-popup-title').textContent = state.myData.guildTag ? `💬 [${state.myData.guildTag}]` : '💬';
     ensureChatListener(state.myData.guildId);
     renderChatMessages('guild-chat-popup-messages');
+    renderTypingIndicators();
     markChatRead(state.myData.guildId);
   } else {
     updateChatBubbleBadge(state.myData.guildId);
