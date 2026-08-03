@@ -55,6 +55,37 @@ function stopGuildListeners() {
 // deve sobreviver a uma troca de conta
 window.stopGuildListeners = stopGuildListeners;
 
+// convite de clã recebido (gravado em scores/{uid}.pendingGuildInvite por
+// inviteGuildMember, ver functions/index.js) — mesmo problema/solução da
+// bolinha de pedido de amizade (ver ensureFriendRequestsListener em
+// js/friends.js) e da caixa de mensagens do desafio diário (ver
+// ensureInboxBadgeListener em js/daily-challenge.js): sem isso, o convite só
+// aparecia (bolinha do menu + cartão de aceitar/recusar na tela do clã)
+// depois de sair/voltar a entrar no jogo. Diferente do resto do clã (guildUnsub/
+// joinReqUnsub/inviteUnsub acima), este listener não é preso à tela de um clã
+// específico — fica ativo a sessão toda, então NÃO entra em stopGuildListeners
+// (chamada toda vez que se navega pra longe de um clã, o que mataria o
+// listener à toa). Ouve o PRÓPRIO doc scores/{uid} inteiro (não existe uma
+// coleção dedicada pra "convites que EU recebi", diferente de
+// guildInvites/{guildId} que é do lado de quem convida), mas só aplica o
+// campo pendingGuildInvite em state.myData — nunca sobrescreve os outros
+// campos (xp, recordes, etc.), que já têm suas próprias atualizações
+// otimistas espalhadas pelo resto do jogo.
+let myScoreInviteUnsub = null;
+function ensureGuildInviteListener() {
+  if (myScoreInviteUnsub || state.offline || !state.currentUser) return;
+  const myUid = state.currentUser.uid;
+  myScoreInviteUnsub = onSnapshot(doc(db, 'scores', myUid), snap => {
+    const data = snap.exists() ? snap.data() : {};
+    state.myData.pendingGuildInvite = data.pendingGuildInvite || null;
+    refreshGuildMenuBadge();
+  }, () => {});
+}
+window.ensureGuildInviteListener = ensureGuildInviteListener;
+window.stopGuildInviteListener = () => {
+  if (myScoreInviteUnsub) { myScoreInviteUnsub(); myScoreInviteUnsub = null; }
+};
+
 /* ================== atalho do menu ================== */
 // "CLÃS" no menu vai direto pro próprio clã se a pessoa já estiver em um;
 // senão, abre a listagem geral pra procurar/criar um
