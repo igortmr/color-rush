@@ -22,6 +22,9 @@ const callAdminGetFlaggedAccounts = callable('adminGetFlaggedAccounts');
 const callAdminListPendingDeletions = callable('adminListPendingDeletions');
 const callAdminCancelAccountDeletion = callable('adminCancelAccountDeletion');
 const callAdminForcePurgeAccount = callable('adminForcePurgeAccount');
+const callAdminListMessageReports = callable('adminListMessageReports');
+const callAdminDismissMessageReport = callable('adminDismissMessageReport');
+const callAdminDeleteReportedMessage = callable('adminDeleteReportedMessage');
 
 /* ================== painel de admin (perfil de outra pessoa) ================== */
 // texto fixo em português de propósito — essa parte da tela só aparece pra
@@ -271,6 +274,12 @@ export function renderAdminToolsHtml() {
         <div id="flagged-accounts-list" style="margin-top:6px;"></div>
       </div>
       <div class="card" style="text-align:left;">
+        <b>🚩 Mensagens Denunciadas</b>
+        <p class="muted" style="margin-top:6px;">Denúncias de mensagens do chat de clã e de conversas diretas (ver reportGuildMessage/reportDirectMessage em functions/index.js) — essas coleções não dão pra ler pelo app normalmente, só por aqui (admin) ou direto no Firebase Console.</p>
+        <button class="secondary" onclick="runAdminListMessageReports(this)">Carregar denúncias</button>
+        <div id="message-reports-list" style="margin-top:6px;"></div>
+      </div>
+      <div class="card" style="text-align:left;">
         <b>🕒 Pedidos de Exclusão de Conta</b>
         <p class="muted" style="margin-top:6px;">Contas que pediram exclusão e ainda estão dentro da carência de 15 dias (exigência da Apple — ver deleteMyAccount em functions/index.js). "Desfazer" reativa o login e cancela o pedido; "Excluir agora" apaga os dados na hora, sem esperar o resto da carência.</p>
         <button class="secondary" onclick="runAdminListPendingDeletions(this)">Carregar pedidos de exclusão</button>
@@ -379,6 +388,103 @@ window.runAdminGetFlaggedAccounts = async (btn) => {
     }
   } catch (e) {
     if (list) list.innerHTML = '❌ ' + (e.message || 'Erro ao carregar.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// mostra as denúncias de mensagem (chat de clã + DM) mais recentes — ver
+// adminListMessageReports em functions/index.js. guildMessageReports/
+// dmMessageReports não dão pra ler pelo app fora daqui (firestore.rules
+// bloqueia leitura direta), só por essa function admin-only.
+window.runAdminListMessageReports = async (btn) => {
+  const list = $('message-reports-list');
+  btn.disabled = true;
+  if (list) list.innerHTML = '<div class="muted">Carregando...</div>';
+  try {
+    const res = await callAdminListMessageReports();
+    const reports = (res.data && res.data.reports) || [];
+    if (!reports.length) {
+      if (list) list.innerHTML = '<div class="muted">Nenhuma denúncia registrada ainda.</div>';
+    } else if (list) {
+      list.innerHTML = reports.map(r => {
+        const esc = s => (s || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+        const contextLabel = r.kind === 'guild'
+          ? `clã ${esc(r.guildName || '?')}${r.guildTag ? ' [' + esc(r.guildTag) + ']' : ''}`
+          : 'conversa direta';
+        // botão de banir só aparece se a mensagem ainda tiver um autor
+        // identificado (messageAuthorUid) — denúncias antigas de antes desse
+        // campo existir, ou mensagens já apagadas por fora, podem não ter
+        const banBtnHtml = r.messageAuthorUid
+          ? `<button class="secondary" style="flex:1; border-color:var(--neon-red); color:#ff8bab;" onclick="runAdminBanReportedAuthor('${r.messageAuthorUid}', this)">🚫 Banir autor</button>`
+          : '';
+        return `<div class="card" style="text-align:left; padding:10px 14px;">
+          <div class="muted" style="margin-bottom:4px;">${contextLabel} — ${fmtDateTime(r.reportedAt)}</div>
+          <div><b>${esc(r.messageAuthorNick) || '(sem nick)'}</b>: "${esc(r.messageText)}"</div>
+          <div class="muted" style="margin-top:2px;">Denunciado por ${esc(r.reporterNick) || '(sem nick)'}</div>
+          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            <button class="secondary" style="flex:1; border-color:var(--neon-red); color:#ff8bab;" onclick="runAdminDeleteReportedMessage('${r.kind}', '${r.id}', '${r.guildId || ''}', '${r.chatId || ''}', '${r.messageId}', this)">🗑️ Apagar mensagem</button>
+            ${banBtnHtml}
+            <button class="secondary" style="flex:1;" onclick="runAdminDismissMessageReport('${r.kind}', '${r.id}', this)">✅ Descartar denúncia</button>
+          </div>
+          <div class="muted message-report-status" style="margin-top:6px;"></div>
+        </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    if (list) list.innerHTML = '❌ ' + (e.message || 'Erro ao carregar.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// descarta a denúncia sem apagar a mensagem — admin decidiu que não precisa
+// de ação (ex.: mensagem já removida por outro motivo, ou denúncia infundada)
+window.runAdminDismissMessageReport = async (kind, reportId, btn) => {
+  if (!confirm('Descartar esta denúncia sem apagar a mensagem?')) return;
+  const row = btn.closest('.card');
+  const status = row && row.querySelector('.message-report-status');
+  btn.disabled = true;
+  try {
+    await callAdminDismissMessageReport({ kind, reportId });
+    if (row) row.remove();
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro.');
+    btn.disabled = false;
+  }
+};
+
+// apaga a mensagem denunciada de verdade (e já descarta a denúncia junto,
+// ver adminDeleteReportedMessage em functions/index.js) — não pode ser
+// desfeito, por isso o confirm() extra
+window.runAdminDeleteReportedMessage = async (kind, reportId, guildId, chatId, messageId, btn) => {
+  if (!confirm('Apagar esta mensagem definitivamente? Isso não pode ser desfeito.')) return;
+  const row = btn.closest('.card');
+  const status = row && row.querySelector('.message-report-status');
+  btn.disabled = true;
+  try {
+    await callAdminDeleteReportedMessage({ kind, reportId, guildId: guildId || undefined, chatId: chatId || undefined, messageId });
+    if (row) row.remove();
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro.');
+    btn.disabled = false;
+  }
+};
+
+// atalho de banir direto na linha da denúncia — reaproveita a mesma function
+// do painel de admin do perfil (callAdminSetBanned), só não mexe na
+// mensagem/denúncia em si (a pessoa pode querer apagar e/ou descartar
+// separadamente)
+window.runAdminBanReportedAuthor = async (authorUid, btn) => {
+  if (!confirm('Banir o autor desta mensagem? A pessoa não vai mais conseguir gravar pontuação nem jogar PvP.')) return;
+  const row = btn.closest('.card');
+  const status = row && row.querySelector('.message-report-status');
+  btn.disabled = true;
+  try {
+    await callAdminSetBanned({ uid: authorUid, banned: true });
+    if (status) status.textContent = '🚫 Autor banido.';
+  } catch (e) {
+    if (status) status.textContent = '❌ ' + (e.message || 'Erro.');
   } finally {
     btn.disabled = false;
   }
