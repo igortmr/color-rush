@@ -65,8 +65,22 @@ export const BADGE_DEFS = {
       ? `Consigue que ${n} amigo${n > 1 ? 's' : ''} se registre${n > 1 ? 'n' : ''} con tu enlace de invitación`
       : `Tenha ${n} amigo${n > 1 ? 's' : ''} cadastrado${n > 1 ? 's' : ''} pelo seu link de compartilhamento`,
   },
+  pvp: {
+    icon: '⚔️',
+    label: { pt: 'Vitórias em Duelo', en: 'Duel Wins', es: 'Victorias en Duelo' },
+    tiers: [1, 10, 25, 50, 100, 250],
+    names: {
+      pt: ['Desafiante', 'Duelista', 'Mestre do Duelo', 'Gladiador Cromático', 'Campeão dos Duelos', 'Lenda do Duelo'],
+      en: ['Challenger', 'Duelist', 'Duel Master', 'Chromatic Gladiator', 'Duel Champion', 'Duel Legend'],
+      es: ['Retador', 'Duelista', 'Maestro del Duelo', 'Gladiador Cromático', 'Campeón de Duelos', 'Leyenda del Duelo'],
+    },
+    metric: u => u.pvpWins || 0,
+    desc: n => state.lang === 'en' ? `Win ${n} duel${n > 1 ? 's' : ''} (challenge a friend)`
+      : state.lang === 'es' ? `Gana ${n} duelo${n > 1 ? 's' : ''} (desafía a un amigo)`
+      : `Vença ${n} duelo${n > 1 ? 's' : ''} (desafiar amigo)`,
+  },
 };
-export const BADGE_ORDER = ['points', 'games', 'streak', 'sharer'];
+export const BADGE_ORDER = ['points', 'games', 'streak', 'sharer', 'pvp'];
 
 export function unlockedTier(def, stats) {
   const val = def.metric(stats);
