@@ -910,8 +910,8 @@
   }
   /* sigla [TAG] do clã, clicável ao lado do nick em qualquer ranking/lista
      (ver buildRankRowNick em js/ranking-cache.js) — branca/negrito por
-     enquanto; a cor vai virar um cosmético comprável na loja depois, ainda
-     não implementado */
+     padrão; cor/animação vira cosmético comprável no Cofre do Clã (ver
+     applyGuildTagStyle em js/levels.js e .tag-style-* logo abaixo) */
   .guild-tag-link {
     font-family: 'Orbitron', sans-serif;
     font-weight: 800;
@@ -921,6 +921,21 @@
     flex-shrink: 0;
   }
   .guild-tag-link:hover { text-decoration: underline; }
+  .tag-style-gold { color: #ffd700 !important; text-shadow: 0 0 8px rgba(255,215,0,0.7); }
+  .tag-style-rgb { animation: tagStyleRgb 3s linear infinite; }
+  @keyframes tagStyleRgb {
+    0%   { color: #ff2d6b; text-shadow: 0 0 6px rgba(255,45,107,0.8); }
+    20%  { color: #ff9f1c; text-shadow: 0 0 6px rgba(255,159,28,0.8); }
+    40%  { color: #ffe93c; text-shadow: 0 0 6px rgba(255,233,60,0.8); }
+    60%  { color: #21e6a1; text-shadow: 0 0 6px rgba(33,230,161,0.8); }
+    80%  { color: #2dd6ff; text-shadow: 0 0 6px rgba(45,214,255,0.8); }
+    100% { color: #b14dff; text-shadow: 0 0 6px rgba(177,77,255,0.8); }
+  }
+  .tag-style-espectro { animation: tagStyleEspectro 4s ease-in-out infinite; }
+  @keyframes tagStyleEspectro {
+    0%, 100% { color: #b14dff; text-shadow: 0 0 8px rgba(177,77,255,0.8); }
+    50%      { color: #2dd6ff; text-shadow: 0 0 8px rgba(45,214,255,0.8); }
+  }
   .chip-wrap { position: relative; display: inline-flex; }
   .chip-lock {
     position: absolute;

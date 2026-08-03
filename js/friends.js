@@ -4,7 +4,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { show, resetScroll } from './nav.js';
-import { lvChip } from './levels.js';
+import { lvChip, applyGuildTagStyle } from './levels.js';
 import { openProfileFromRanking, profileSectionLabel } from './profile-public.js';
 import { fetchAllScores, rowData } from './ranking-cache.js';
 
@@ -203,7 +203,7 @@ function friendActionNode(rel, theirUid, theirNick) {
 // linha de amigo/pedido montada via DOM (nunca via innerHTML com o nick
 // interpolado — nick é livre em qualquer caractere não-espaço, então precisa
 // ir sempre por textContent, igual já é feito no resto do ranking)
-function friendRow(uid, nick, xp, isAdmin, guildTag, guildId) {
+function friendRow(uid, nick, xp, isAdmin, guildTag, guildId, guildTagStyle) {
   const row = document.createElement('div');
   row.className = 'card';
   row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
@@ -217,6 +217,7 @@ function friendRow(uid, nick, xp, isAdmin, guildTag, guildId) {
     const tagSpan = document.createElement('span');
     tagSpan.textContent = `[${guildTag}]`;
     tagSpan.className = 'guild-tag-link';
+    applyGuildTagStyle(tagSpan, guildTagStyle);
     tagSpan.onclick = () => window.openGuildFromTag(guildId, 'friends-screen');
     left.appendChild(tagSpan);
   }
@@ -335,10 +336,10 @@ async function renderFriendsScreen(force) {
     // pra não precisar de uma leitura extra por amigo
     const all = await fetchAllScores();
     const xpByUid = {}, adminByUid = {}, guildByUid = {};
-    all.forEach(r => { const d = rowData(r); xpByUid[r.uid] = d.xp || 0; adminByUid[r.uid] = d.admin === true; guildByUid[r.uid] = { tag: d.guildTag || null, id: d.guildId || null }; });
+    all.forEach(r => { const d = rowData(r); xpByUid[r.uid] = d.xp || 0; adminByUid[r.uid] = d.admin === true; guildByUid[r.uid] = { tag: d.guildTag || null, id: d.guildId || null, style: d.guildTagStyle || null }; });
     friendEntries.forEach(([uid, data]) => {
       const gu = guildByUid[uid] || {};
-      body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid], adminByUid[uid], gu.tag, gu.id));
+      body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid], adminByUid[uid], gu.tag, gu.id, gu.style));
     });
   }
 

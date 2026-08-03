@@ -6,7 +6,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { pushScreenAndShow, popScreenBack, resetScroll, show } from './nav.js';
-import { avatarOrDefaultIcon, applyNickFrame, lvChip, myXp } from './levels.js';
+import { avatarOrDefaultIcon, applyNickFrame, applyGuildTagStyle, lvChip, myXp } from './levels.js';
 import {
   BADGE_ORDER, BADGE_DEFS, TIER_COLORS, unlockedTier, badgePillHtml,
   newBadgeCountFor, markAllBadgesSeen
@@ -87,6 +87,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     const tagSpan = document.createElement('span');
     tagSpan.textContent = ` [${stats.guildTag}]`;
     tagSpan.className = 'guild-tag-link';
+    applyGuildTagStyle(tagSpan, stats.guildTagStyle);
     tagSpan.onclick = () => window.openGuildFromTag(stats.guildId, 'profile-screen');
     tagEl.appendChild(tagSpan);
   }

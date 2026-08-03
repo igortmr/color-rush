@@ -6,10 +6,11 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
-import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip } from './levels.js';
+import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip, applyGuildTagStyle } from './levels.js';
 import { isMuted, tone, formatMsgTime, formatMsgFullDateTime } from './utils.js';
 import { fetchAllScores, rowData } from './ranking-cache.js';
 import { openProfileByUid } from './friends.js';
+import { COLORS } from './constants.js';
 
 // clãs (Espectro) — igual ao resto: nenhuma escrita de verdade (criar,
 // entrar, expulsar, transferir liderança, desfazer, mandar mensagem) sai
@@ -31,6 +32,8 @@ const callCancelGuildInvite = callable('cancelGuildInvite');
 const callRespondGuildInvite = callable('respondGuildInvite');
 const callSetGuildTyping = callable('setGuildTyping');
 const callReportGuildMessage = callable('reportGuildMessage');
+const callDonateToGuildTreasury = callable('donateToGuildTreasury');
+const callBuyGuildTagStyle = callable('buyGuildTagStyle');
 
 /* ================== estado local da tela do clã aberto ================== */
 let currentGuildId = null;
@@ -39,7 +42,7 @@ let guildUnsub = null;
 let joinReqUnsub = null;
 let inviteUnsub = null;
 let chatUnsub = null;
-let guildTab = 'members'; // 'members' | 'chat'
+let guildTab = 'members'; // 'members' | 'chat' | 'treasury' | 'shop'
 let guildRenderToken = 0; // ver renderGuildScreen abaixo
 
 function stopGuildListeners() {
@@ -176,6 +179,7 @@ function guildListRow(g) {
   const tagSpan = document.createElement('span');
   tagSpan.textContent = `[${g.tag}]`;
   tagSpan.style.cssText = 'font-family:\'Orbitron\',sans-serif; font-weight:800; color:#fff;';
+  applyGuildTagStyle(tagSpan, g.tagStyle);
   left.appendChild(tagSpan);
   const nameSpan = document.createElement('span');
   nameSpan.textContent = g.name;
@@ -346,6 +350,7 @@ async function renderGuildScreen() {
     <span style="font-weight:700; font-size:1.2rem;"></span>
     <span class="lv-chip" style="margin-left:6px; color:var(--neon-purple); border-color:var(--neon-purple); text-shadow:0 0 6px rgba(177,77,255,0.5);">${T[state.lang].guild_level_chip(level)}</span>`;
   header.children[1].textContent = g.name; // nome livre — sempre via textContent
+  applyGuildTagStyle(header.children[0], g.tagStyle);
 
   // aviso de transferência de liderança pendente pra mim
   if (myUid && g.pendingTransferToUid === myUid) {
@@ -364,13 +369,15 @@ async function renderGuildScreen() {
     body.appendChild(nonMemberActionCard(g, myUid));
   }
 
-  // abas (só faz sentido pra quem é membro ver o chat)
+  // abas (só faz sentido pra quem é membro ver chat/cofre/loja)
   if (isMember) {
     const tabs = document.createElement('div');
     tabs.className = 'scope-tabs';
     tabs.innerHTML = `
       <button class="scope-tab ${guildTab === 'members' ? 'active' : ''}" onclick="setGuildTab('members')">${T[state.lang].guild_tab_members}</button>
-      <button class="scope-tab ${guildTab === 'chat' ? 'active' : ''}" onclick="setGuildTab('chat')">${T[state.lang].guild_tab_chat}</button>`;
+      <button class="scope-tab ${guildTab === 'chat' ? 'active' : ''}" onclick="setGuildTab('chat')">${T[state.lang].guild_tab_chat}</button>
+      <button class="scope-tab ${guildTab === 'treasury' ? 'active' : ''}" onclick="setGuildTab('treasury')">${T[state.lang].guild_tab_treasury}</button>
+      <button class="scope-tab ${guildTab === 'shop' ? 'active' : ''}" onclick="setGuildTab('shop')">${T[state.lang].guild_tab_shop}</button>`;
     body.appendChild(tabs);
   }
 
@@ -387,19 +394,23 @@ async function renderGuildScreen() {
     // fetchAllScores (ver comentário no topo da função) — não appenda por
     // cima, senão duplica/triplica a lista de membros e as seções de líder
     if (myRenderToken !== guildRenderToken) return;
-    // a pessoa pode ter trocado pra aba de chat enquanto isso carregava
-    // (fetchAllScores já é cacheado, mas ainda é assíncrono) — sem essa
-    // checagem, a lista de membros podia desenhar por cima do chat depois
-    // que a pessoa já tinha saído dessa aba
+    // a pessoa pode ter trocado de aba enquanto isso carregava (fetchAllScores
+    // já é cacheado, mas ainda é assíncrono) — sem essa checagem, a lista de
+    // membros podia desenhar por cima de outra aba depois que a pessoa já
+    // tinha saído dela
     if (guildTab !== 'members' && isMember) return;
 
     body.appendChild(membersSection(g, myUid, isLeader, xpByUid));
     if (isLeader) body.appendChild(joinRequestsSection(xpByUid));
     if (isLeader) body.appendChild(invitesSection(xpByUid));
     if (isLeader) body.appendChild(leaderToolsSection(g));
-  } else {
+  } else if (guildTab === 'chat') {
     body.appendChild(chatSection(g, myUid));
     ensureChatListener(g.id);
+  } else if (guildTab === 'treasury') {
+    body.appendChild(treasurySection(g));
+  } else if (guildTab === 'shop') {
+    body.appendChild(guildShopSection(g, myUid, isLeader));
   }
 
   resetScroll('guild-screen');
@@ -621,6 +632,232 @@ function leaderToolsSection() {
   wrap.appendChild(btn);
   return wrap;
 }
+
+/* ================== Cofre do Clã (aba "Cofre") ================== */
+// qualquer membro doa pigmentos da própria conta (ver donateToGuildTreasury
+// em functions/index.js); o saldo (g.treasury) é visível pra todo o clã.
+// treasuryContributions é só informativo (quem doou quanto no total), não
+// dá nenhum privilégio — só a líder gasta o saldo, na Loja do Clã abaixo.
+function treasurySection(g) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:10px;';
+
+  const balanceCard = document.createElement('div');
+  balanceCard.className = 'card';
+  balanceCard.style.textAlign = 'center';
+  balanceCard.innerHTML = `
+    <div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_treasury_balance_label}</div>
+    <div style="font-family:'Orbitron',sans-serif; font-weight:800; font-size:1.6rem; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px;">
+      <span>${g.treasury || 0}</span>${pigmentIconSvg(20)}
+    </div>`;
+  wrap.appendChild(balanceCard);
+
+  const donateCard = document.createElement('div');
+  donateCard.className = 'card';
+  donateCard.style.textAlign = 'center';
+  const myPigmentos = state.myData.pigmentos || 0;
+  const hint = document.createElement('div');
+  hint.className = 'muted';
+  hint.style.cssText = 'font-size:0.8rem; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:4px;';
+  hint.innerHTML = `${T[state.lang].guild_treasury_donate_hint}<b>${myPigmentos}</b>${pigmentIconSvg(12)}`;
+  donateCard.appendChild(hint);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; justify-content:center;';
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '1';
+  input.max = String(myPigmentos);
+  input.placeholder = '0';
+  input.style.cssText = 'width:100px; text-align:center; padding:8px;';
+  row.appendChild(input);
+  const donateBtn = document.createElement('button');
+  donateBtn.textContent = T[state.lang].guild_btn_donate;
+  donateBtn.style.cssText = 'padding:8px 18px; font-size:0.8rem;';
+  row.appendChild(donateBtn);
+  donateCard.appendChild(row);
+  const status = document.createElement('div');
+  status.className = 'muted';
+  status.style.cssText = 'margin-top:8px; min-height:1.2em; font-size:0.8rem;';
+  donateCard.appendChild(status);
+
+  donateBtn.onclick = async () => {
+    const amount = parseInt(input.value, 10);
+    status.textContent = '';
+    if (!Number.isInteger(amount) || amount <= 0) {
+      status.textContent = T[state.lang].guild_treasury_invalid_amount;
+      return;
+    }
+    if (amount > myPigmentos) {
+      status.textContent = T[state.lang].guild_treasury_not_enough_own;
+      return;
+    }
+    donateBtn.disabled = true;
+    try {
+      await callDonateToGuildTreasury({ amount });
+      state.myData.pigmentos = myPigmentos - amount; // otimista — atualiza local na hora, sem esperar o próximo fetch
+      renderGuildScreen(); // recarrega saldo do cofre + lista de contribuintes
+    } catch (e) {
+      status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
+      donateBtn.disabled = false;
+    }
+  };
+  wrap.appendChild(donateCard);
+
+  const contributions = g.treasuryContributions || {};
+  const entries = Object.entries(contributions).filter(([, amt]) => amt > 0).sort((a, b) => b[1] - a[1]);
+  if (entries.length) {
+    const listTitle = document.createElement('div');
+    listTitle.innerHTML = `<b>${T[state.lang].guild_treasury_contributors_title}</b>`;
+    wrap.appendChild(listTitle);
+    const list = document.createElement('div');
+    list.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+    entries.forEach(([uid, amt]) => {
+      const memberRow2 = document.createElement('div');
+      memberRow2.className = 'card';
+      memberRow2.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px;';
+      const nickSpan = document.createElement('span');
+      nickSpan.textContent = (g.members && g.members[uid] && g.members[uid].nick) || '?';
+      memberRow2.appendChild(nickSpan);
+      const amtSpan = document.createElement('span');
+      amtSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700;';
+      amtSpan.innerHTML = `${amt}${pigmentIconSvg(12)}`;
+      memberRow2.appendChild(amtSpan);
+      list.appendChild(memberRow2);
+    });
+    wrap.appendChild(list);
+  }
+
+  return wrap;
+}
+
+/* ================== Loja do Clã (aba "Loja") ================== */
+// catálogo de cores/animações pra [TAG] do clã — comprado com o saldo do
+// Cofre (não com pigmentos pessoais), só pela líder (ver buyGuildTagStyle em
+// functions/index.js). Preço é reconferido no servidor; isso aqui é só
+// exibição/preview. Chaves das 8 básicas batem com COLORS[].key de propósito.
+const GUILD_TAG_STYLES_CATALOG = [
+  ...COLORS.map(c => ({ id: c.key, price: 5000, name: c.name })),
+  { id: 'gold', price: 10000, name: { pt: 'Ouro', en: 'Gold', es: 'Oro' } },
+  { id: 'rgb', price: 10000, name: { pt: 'RGB', en: 'RGB', es: 'RGB' } },
+  { id: 'espectro', price: 10000, name: { pt: 'Espectro', en: 'Spectrum', es: 'Espectro' } },
+];
+
+function guildShopSection(g, myUid, isLeader) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:10px;';
+
+  const balanceLine = document.createElement('div');
+  balanceLine.className = 'muted';
+  balanceLine.style.cssText = 'text-align:center; display:flex; align-items:center; justify-content:center; gap:4px;';
+  balanceLine.innerHTML = `${T[state.lang].guild_shop_balance_label}<b>${g.treasury || 0}</b>${pigmentIconSvg(14)}`;
+  wrap.appendChild(balanceLine);
+
+  if (!isLeader) {
+    const hint = document.createElement('div');
+    hint.className = 'muted';
+    hint.style.cssText = 'text-align:center; font-size:0.78rem;';
+    hint.textContent = T[state.lang].guild_shop_leader_only_hint;
+    wrap.appendChild(hint);
+  }
+
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:10px;';
+  GUILD_TAG_STYLES_CATALOG.forEach(item => grid.appendChild(guildTagStyleCard(item, g, isLeader)));
+  wrap.appendChild(grid);
+
+  const status = document.createElement('div');
+  status.className = 'muted';
+  status.id = 'guild-shop-status';
+  status.style.cssText = 'text-align:center; min-height:1.2em; font-size:0.8rem;';
+  wrap.appendChild(status);
+
+  return wrap;
+}
+
+function guildTagStyleCard(item, g, isLeader) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.cssText = 'text-align:center; padding:14px 10px; gap:4px;';
+
+  // prévia — exatamente a mesma classe/função usada pra [TAG] de verdade em
+  // qualquer lugar do jogo (ver applyGuildTagStyle em js/levels.js), então
+  // já mostra certinho como vai ficar antes de comprar
+  const preview = document.createElement('span');
+  preview.className = 'guild-tag-link';
+  preview.style.cssText = 'font-size:1rem; cursor:default; pointer-events:none;';
+  preview.textContent = `[${g.tag}]`;
+  applyGuildTagStyle(preview, item.id);
+  card.appendChild(preview);
+
+  const name = document.createElement('div');
+  name.style.cssText = 'font-size:0.78rem; margin-top:4px;';
+  name.textContent = item.name[state.lang];
+  card.appendChild(name);
+
+  const priceLine = document.createElement('div');
+  priceLine.className = 'muted';
+  priceLine.style.cssText = 'font-size:0.72rem; display:flex; align-items:center; justify-content:center; gap:3px; margin-top:2px;';
+  priceLine.innerHTML = `${item.price}${pigmentIconSvg(11)}`;
+  card.appendChild(priceLine);
+
+  const isCurrent = g.tagStyle === item.id;
+  if (isCurrent) {
+    const badge = document.createElement('div');
+    badge.style.cssText = 'font-size:0.7rem; font-weight:700; color:var(--neon-green); margin-top:6px;';
+    badge.textContent = T[state.lang].guild_shop_current_label;
+    card.appendChild(badge);
+  } else if (isLeader) {
+    if ((g.treasury || 0) < item.price) {
+      const insuf = document.createElement('div');
+      insuf.className = 'muted';
+      insuf.style.cssText = 'font-size:0.68rem; margin-top:6px;';
+      insuf.textContent = T[state.lang].guild_shop_not_enough_treasury;
+      card.appendChild(insuf);
+    } else {
+      const buyBtn = document.createElement('button');
+      buyBtn.className = 'secondary';
+      buyBtn.style.cssText = 'padding:5px 14px; font-size:0.68rem; margin-top:6px;';
+      buyBtn.textContent = T[state.lang].guild_shop_buy_btn;
+      buyBtn.onclick = () => window.startBuyGuildTagStyle(item.id, g.tag);
+      card.appendChild(buyBtn);
+    }
+  }
+  return card;
+}
+
+// popup temática de confirmação — mesmo padrão de #buy-shop-modal (loja
+// pessoal, ver startBuyShopItem em js/shop.js): guarda o id pendente numa
+// variável de módulo até confirmar ou cancelar.
+let pendingGuildTagStyleId = null;
+window.startBuyGuildTagStyle = (styleId, guildTag) => {
+  const item = GUILD_TAG_STYLES_CATALOG.find(i => i.id === styleId);
+  if (!item) return;
+  pendingGuildTagStyleId = styleId;
+  const preview = $('buy-guild-tag-style-modal-preview');
+  preview.className = 'guild-tag-link';
+  preview.style.cssText = 'font-size:1.3rem; cursor:default;';
+  preview.textContent = `[${guildTag}]`;
+  applyGuildTagStyle(preview, styleId);
+  $('buy-guild-tag-style-modal-item').textContent = item.name[state.lang];
+  $('buy-guild-tag-style-modal-price').innerHTML = `${T[state.lang].guild_shop_price_label}<span style="font-size:1.35rem; color:var(--neon-yellow); text-shadow:0 0 8px rgba(255,233,60,0.4);">${item.price}</span>${pigmentIconSvg(20)}`;
+  $('buy-guild-tag-style-modal').style.display = 'flex';
+};
+window.closeBuyGuildTagStyleModal = () => {
+  $('buy-guild-tag-style-modal').style.display = 'none';
+  pendingGuildTagStyleId = null;
+};
+window.confirmBuyGuildTagStyle = async () => {
+  const styleId = pendingGuildTagStyleId;
+  const status = $('guild-shop-status');
+  closeBuyGuildTagStyleModal();
+  if (!styleId) return;
+  try {
+    await callBuyGuildTagStyle({ styleId });
+    renderGuildScreen();
+  } catch (e) {
+    if (status) status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
+  }
+};
 
 /* ================== chat do clã (aba + balãozinho flutuante) ================== */
 // as duas formas de acessar o chat (a aba dentro da tela do clã e o balão
@@ -1112,6 +1349,7 @@ export async function loadGuildRanking() {
       const tagSpan = document.createElement('span');
       tagSpan.textContent = `[${g.tag}] `;
       tagSpan.style.cssText = 'font-family:\'Orbitron\',sans-serif; font-weight:800; color:#fff;';
+      applyGuildTagStyle(tagSpan, g.tagStyle);
       cell.appendChild(tagSpan);
       const nameSpan = document.createElement('span');
       nameSpan.textContent = g.name;

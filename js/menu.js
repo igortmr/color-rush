@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { show, resetScreenBackStack } from './nav.js';
 import { T } from './i18n.js';
 import { isMuted } from './utils.js';
-import { MODE_UNLOCK, avatarOrDefaultIcon, xpInfo, myXp, modeUnlocked } from './levels.js';
+import { MODE_UNLOCK, avatarOrDefaultIcon, xpInfo, myXp, modeUnlocked, applyGuildTagStyle } from './levels.js';
 import { refreshBadgeNotifDot } from './badges.js';
 import { fetchMyFriendRequests } from './friends.js';
 import { myRecord } from './game-core.js';
@@ -81,6 +81,7 @@ window.showMenu = () => {
       const tagSpan = document.createElement('span');
       tagSpan.textContent = ` [${state.myData.guildTag}]`;
       tagSpan.className = 'guild-tag-link';
+      applyGuildTagStyle(tagSpan, state.myData.guildTagStyle);
       tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(state.myData.guildId, 'menu-screen'); };
       labelEl.appendChild(tagSpan);
     }

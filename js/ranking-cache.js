@@ -5,7 +5,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { db } from './firebase.js';
-import { lvChip, applyNickFrame, applyRowTheme, modeLabel } from './levels.js';
+import { lvChip, applyNickFrame, applyRowTheme, applyGuildTagStyle, modeLabel } from './levels.js';
 import { equippedBadgeLabel } from './badges.js';
 
 export const RANKING_PAGE_SIZE = 20;
@@ -42,6 +42,7 @@ export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
     const tagSpan = document.createElement('span');
     tagSpan.textContent = `[${r.stats.guildTag}]`; // sigla é sempre A-Z, mas por segurança vai via textContent também
     tagSpan.className = 'guild-tag-link';
+    applyGuildTagStyle(tagSpan, r.stats.guildTagStyle);
     tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(r.stats.guildId, backTarget); };
     nickCell.appendChild(tagSpan);
   }

@@ -1,6 +1,7 @@
 import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
+import { COLORS } from './constants.js';
 
 export function xpStreakMultiplier(streak) {
   if (streak <= 10) return 1;
@@ -99,6 +100,28 @@ export function applyNickFrame(el, stats) {
   el.classList.remove('nick-frame-gold', 'nick-frame-rainbow');
   if (frame === 'frame_gold') el.classList.add('nick-frame-gold');
   else if (frame === 'frame_rainbow') el.classList.add('nick-frame-rainbow');
+}
+// cor/animação da [TAG] do clã, comprada no Cofre do Clã (ver
+// buyGuildTagStyle em functions/index.js) — campo público (scores/{uid}.
+// guildTagStyle, espelhado em todo membro igual guildTag), então funciona
+// pra QUALQUER [TAG] renderizada, não só a sua. As 8 cores básicas são as
+// mesmas de COLORS (aplicadas via style inline, sem precisar de 8 classes
+// CSS); as especiais (ouro/rgb/espectro) usam classe + animação (ver
+// .tag-style-* em css/style.css).
+export function applyGuildTagStyle(el, tagStyle) {
+  el.classList.remove('tag-style-gold', 'tag-style-rgb', 'tag-style-espectro');
+  el.style.color = '';
+  el.style.textShadow = '';
+  if (!tagStyle) return;
+  const basic = COLORS.find(c => c.key === tagStyle);
+  if (basic) {
+    el.style.color = basic.hex;
+    el.style.textShadow = `0 0 6px ${basic.hex}99`;
+    return;
+  }
+  if (tagStyle === 'gold' || tagStyle === 'rgb' || tagStyle === 'espectro') {
+    el.classList.add(`tag-style-${tagStyle}`);
+  }
 }
 // linha temática da loja — fundo diferenciado na <tr> do jogador nas tabelas
 // de ranking, pra se destacar na lista. Mesmo raciocínio da moldura: campo

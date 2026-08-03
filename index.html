@@ -510,6 +510,22 @@
   </div>
 </div>
 
+<!-- confirmação de compra na Loja do Clã (Cofre do Clã) — mesmo padrão
+     temático do #buy-shop-modal acima, ver window.startBuyGuildTagStyle em
+     js/guilds.js -->
+<div class="modal-overlay" id="buy-guild-tag-style-modal" style="display:none;" onclick="if(event.target===this) closeBuyGuildTagStyleModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-yellow); text-shadow:0 0 10px rgba(255,233,60,0.5);">🎨 Confirmar compra</h1>
+    <div class="modal-card-body">
+      <p id="buy-guild-tag-style-modal-preview" style="font-size:1.3rem;"></p>
+      <p style="text-align:left; font-weight:700; font-size:1.05rem;" id="buy-guild-tag-style-modal-item"></p>
+      <p style="display:flex; align-items:center; justify-content:flex-end; gap:6px; font-weight:700;" id="buy-guild-tag-style-modal-price"></p>
+    </div>
+    <button class="secondary" onclick="closeBuyGuildTagStyleModal()">Cancelar</button>
+    <button onclick="confirmBuyGuildTagStyle()">Confirmar compra</button>
+  </div>
+</div>
+
 <!-- criar conta: popup própria (campos separados dos de login), aberta pelo
      botão CRIAR CONTA em #auth-screen — repete Google/Apple pra quem prefere
      entrar por eles em vez de e-mail+senha (ver openSignupModal em js/auth.js) -->
