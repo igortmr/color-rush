@@ -10,6 +10,7 @@ import { COLORS, SHAPES, CAOS_POOL, ALL_MODES } from './constants.js';
 import { avatarOrDefaultIcon, lvChip, myXp, blockIfBanned, modeLabel, MODE_ICON, modeUnlockedForXp } from './levels.js';
 import { equippedAvatar } from './shop.js';
 import { showFriendActionError } from './friends.js';
+import { refreshBadgeNotifDot } from './badges.js';
 import { renderTrioSquare, renderCaosSquare } from './replay.js';
 
 // duelo ao vivo (PvP) — igual ao resto: quem decide o que aconteceu é sempre
@@ -428,6 +429,16 @@ function playPvpResultSound(kind) {
   if (kind === 'win') window.sfx.pvpWin();
   else if (kind === 'lose') window.sfx.pvpLose();
   else window.sfx.pvpDraw();
+  // o servidor já incrementou pvpWins/pvpLosses/pvpDraws em scores/{uid} (ver
+  // applyPvpResultStats em functions/index.js), mas state.myData só
+  // é buscado de novo no próximo login (proceedAfterLogin) — sem espelhar
+  // aqui, a medalha "Vitórias em Duelo" (BADGE_DEFS.pvp em js/badges.js) e a
+  // bolinha de "medalha nova" só refletiam o duelo depois de sair/entrar de
+  // novo no jogo. Reaproveita o mesmo guard de pvpResultSoundPlayed acima —
+  // roda uma única vez por partida.
+  const field = kind === 'win' ? 'pvpWins' : kind === 'lose' ? 'pvpLosses' : 'pvpDraws';
+  state.myData[field] = (state.myData[field] || 0) + 1;
+  refreshBadgeNotifDot();
 }
 
 function renderPvpResult(m, myUid, oppUid) {
