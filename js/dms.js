@@ -71,7 +71,6 @@ async function renderDmFriendsList() {
     el.innerHTML = `<div class="muted" style="text-align:center; padding:14px;">${T[state.lang].dm_chat_empty_friends}</div>`;
     return;
   }
-  entries.sort((a, b) => (a[1].nick || '').localeCompare(b[1].nick || ''));
   const statuses = await Promise.all(entries.map(async ([uid]) => {
     try {
       const snap = await getDoc(doc(db, 'scores', uid));
@@ -81,8 +80,11 @@ async function renderDmFriendsList() {
     } catch { return false; }
   }));
   if (dmView !== 'list') return;
+  // online primeiro, depois ordem alfabética dentro de cada grupo
+  const rows = entries.map(([uid, data], i) => ({ uid, nick: data.nick || '', online: statuses[i] }));
+  rows.sort((a, b) => (b.online - a.online) || a.nick.localeCompare(b.nick));
   el.innerHTML = '';
-  entries.forEach(([uid, data], i) => el.appendChild(dmFriendRow(uid, data.nick || '', statuses[i])));
+  rows.forEach(r => el.appendChild(dmFriendRow(r.uid, r.nick, r.online)));
 }
 
 function dmFriendRow(uid, nick, online) {
