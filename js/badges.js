@@ -92,9 +92,9 @@ export const BADGE_DEFS = {
       es: ['Visto', 'Notado', 'Admirado', 'Aclamado', 'Reluciente', 'Icónico'],
     },
     metric: u => u.replaysWatchedCount || 0,
-    desc: n => state.lang === 'en' ? `Have ${n} of your replay${n > 1 ? 's' : ''} watched by other players`
-      : state.lang === 'es' ? `Haz que ${n} replay${n > 1 ? 's' : ''} tuyo${n > 1 ? 's' : ''} ${n > 1 ? 'sean' : 'sea'} visto${n > 1 ? 's' : ''} por otros jugadores`
-      : `Tenha ${n} replay${n > 1 ? 's' : ''} seu${n > 1 ? 's' : ''} assistido${n > 1 ? 's' : ''} por outras pessoas`,
+    desc: n => state.lang === 'en' ? `Have your replays watched ${n} time${n > 1 ? 's' : ''} by other players`
+      : state.lang === 'es' ? `Haz que tus replays sean vistos ${n} ve${n > 1 ? 'ces' : 'z'} por otros jugadores`
+      : `Tenha seus replays assistidos ${n} ve${n > 1 ? 'zes' : 'z'} por outras pessoas`,
   },
 };
 export const BADGE_ORDER = ['points', 'games', 'streak', 'sharer', 'pvp', 'replays'];
