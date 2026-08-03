@@ -1,5 +1,5 @@
 import {
-  doc, getDoc, getDocs, collection, query, where
+  doc, getDoc, getDocs, collection, query, where, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
 import { db, functions, callable } from './firebase.js';
@@ -369,6 +369,34 @@ export async function refreshInboxBadge() {
     badge.style.display = snap.size > 0 ? '' : 'none';
   } catch {}
 }
+
+// mesmo problema/solução da bolinha de pedido de amizade (ver
+// ensureFriendRequestsListener em js/friends.js): refreshInboxBadge acima só
+// roda quando algo específico chama (showMenu, resgatar prêmio, terminar uma
+// partida...), então um prêmio novo caindo na caixa por conta do cron
+// noturno (resolveDailyChallenge, ver functions/index.js) só aparecia depois
+// de sair/voltar do menu ou dar refresh na página. Este listener ouve a
+// query em tempo real e atualiza a bolinha assim que o documento aparece.
+let inboxBadgeUnsub = null;
+export function ensureInboxBadgeListener() {
+  if (inboxBadgeUnsub || state.offline || !state.currentUser) return;
+  const myUid = state.currentUser.uid;
+  const q = query(collection(db, 'dailyInbox', myUid, 'messages'), where('claimed', '==', false));
+  inboxBadgeUnsub = onSnapshot(q, snap => {
+    const btn = $('inbox-btn');
+    if (!btn) return;
+    btn.style.display = (!state.offline && state.currentUser && state.myData.nick) ? '' : 'none';
+    const badge = $('inbox-badge');
+    badge.textContent = snap.size;
+    badge.style.display = snap.size > 0 ? '' : 'none';
+  }, () => {});
+}
+window.ensureInboxBadgeListener = ensureInboxBadgeListener;
+
+window.stopInboxBadgeListener = () => {
+  if (inboxBadgeUnsub) { inboxBadgeUnsub(); inboxBadgeUnsub = null; }
+};
+
 window.claimOneDailyReward = async (dateStr) => {
   try {
     const res = await callClaimDailyReward({ dateStr });

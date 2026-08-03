@@ -253,6 +253,7 @@ window.doLogout = async () => {
   if (window.stopGuildListeners) window.stopGuildListeners();
   if (window.stopDmListeners) window.stopDmListeners();
   if (window.stopFriendRequestsListener) window.stopFriendRequestsListener();
+  if (window.stopInboxBadgeListener) window.stopInboxBadgeListener();
   await signOut(auth);
   show('auth-screen');
 };
@@ -359,6 +360,7 @@ async function proceedAfterLogin(user) {
     await submitPendingScore();
     startPvpListener();
     if (window.ensureFriendRequestsListener) window.ensureFriendRequestsListener();
+    if (window.ensureInboxBadgeListener) window.ensureInboxBadgeListener();
     touchActivityTick(); // atualiza "última vez online" na hora (o heartbeat cuida do resto enquanto a aba ficar aberta)
     initNativePush(); // sem await de propósito: nunca deve atrasar a entrada no menu
     // já tem conta — se chegou (ou já estava logada) com o link de convite de
