@@ -1,4 +1,4 @@
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { doc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { db, callable } from './firebase.js';
 import { $ } from './dom.js';
 import { state } from './state.js';
@@ -51,6 +51,42 @@ function invalidateFriendsCache() {
   myFriendsCache = null;
   myFriendReqCache = null;
 }
+
+// bolinha vermelha de pedido de amizade no menu — antes só era recalculada
+// quando showMenu() rodava (ver js/menu.js), então um pedido chegando
+// enquanto a pessoa já estava com o menu aberto (ou em outra tela) só
+// aparecia depois de sair e voltar pro menu (ou dar refresh). Este listener
+// ouve friendRequests/{uid} em tempo real e atualiza a bolinha na hora,
+// mesmo padrão de ensureDmSummaryListener em js/dms.js.
+let friendReqUnsub = null;
+export function ensureFriendRequestsListener() {
+  if (friendReqUnsub || state.offline || !state.currentUser) return;
+  const myUid = state.currentUser.uid;
+  friendReqUnsub = onSnapshot(doc(db, 'friendRequests', myUid), snap => {
+    const data = snap.exists() ? snap.data() : {};
+    myFriendReqCache = { incoming: data.incoming || {}, outgoing: data.outgoing || {} };
+    myFriendReqCacheAt = Date.now();
+    updateFriendRequestsBadge();
+  }, () => {});
+}
+window.ensureFriendRequestsListener = ensureFriendRequestsListener;
+
+function updateFriendRequestsBadge() {
+  const badge = $('menu-quick-friends-badge');
+  if (!badge) return;
+  const n = Object.keys((myFriendReqCache && myFriendReqCache.incoming) || {}).length;
+  badge.textContent = n;
+  badge.style.display = n > 0 ? '' : 'none';
+}
+
+// chamado no logout (ver doLogout em js/auth.js, mesmo padrão de
+// window.stopDmListeners/window.stopGuildListeners) — sem isso, trocar de
+// conta na mesma aba deixaria o listener da conta anterior vazando pedidos
+// de amizade dela pra dentro da sessão da conta nova
+window.stopFriendRequestsListener = () => {
+  if (friendReqUnsub) { friendReqUnsub(); friendReqUnsub = null; }
+  myFriendReqCache = null;
+};
 
 async function getFriendRelation(theirUid) {
   const [friends, reqs] = await Promise.all([fetchMyFriends(), fetchMyFriendRequests()]);
