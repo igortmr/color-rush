@@ -586,7 +586,7 @@
   .mode-card.daily-card .lock-badge { filter: grayscale(1); }
   .daily-badge-today {
     position: absolute;
-    top: 14px;
+    top: -10px; /* em cima da borda do card, não em cima do título */
     right: 16px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
