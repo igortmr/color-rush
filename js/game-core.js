@@ -658,7 +658,7 @@ async function persistGameResult(xpEarned = 0) {
     state.myData.totalPoints = (state.myData.totalPoints || 0) + score;
     state.myData.xp = (state.myData.xp || 0) + xpEarned;
     state.myData[PLAYED_FIELD[mode]] = true;
-    if (d.isNewRecord) {
+    if (d.scoreBeaten) {
       state.myData[mode] = score;
       // servidor grava [mode]+"At" com serverTimestamp() (ver submitGameResult em
       // functions/index.js), mas o valor resolvido não volta na resposta — sem
@@ -668,11 +668,18 @@ async function persistGameResult(xpEarned = 0) {
       // hora que mais importa: logo após bater um recorde novo
       state.myData[mode + 'At'] = Timestamp.now();
       if (d.total !== undefined) { state.myData.total = d.total; state.myData.totalAt = Timestamp.now(); } // mesmo motivo, pro ranking "Geral" (soma dos recordes)
+    }
+    if (d.isNewRecord) {
+      // d.isNewRecord também fica true quando só EMPATA o recorde de placar
+      // mas faz em menos tempo que a partida salva (ver fasterTie em
+      // submitGameResult) — o placar não muda, mas duração/replay têm que
+      // virar os dessa partida mais rápida, daí não depender de scoreBeaten
       $('sync-status').textContent = T[state.lang].sync_success;
       // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima)
-      // só agora que virou recorde — em segundo plano, não atrasa a tela de
-      // resultado. state.myData[mode+'ReplaySessionId'] atualiza na hora, sem
-      // esperar o próximo carregamento do ranking, mesmo motivo do +'At' acima
+      // só agora que virou (ou empatou mais rápido) o recorde — em segundo
+      // plano, não atrasa a tela de resultado. state.myData[mode+'ReplaySessionId']
+      // atualiza na hora, sem esperar o próximo carregamento do ranking, mesmo
+      // motivo do +'At' acima
       state.myData[mode + 'ReplaySessionId'] = sessionId;
       saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
