@@ -73,6 +73,17 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   $('profile-nick-text').textContent = T[state.lang].profile_nick_label(isOther ? (viewNick || '') : (state.myData.nick || ''));
   $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
+  // sigla do clã (se tiver) — clicável, mesmo padrão de buildRankRowNick em
+  // js/ranking-cache.js (window.openGuildFromTag, ver js/guilds.js)
+  const tagEl = $('profile-nick-guild-tag');
+  tagEl.innerHTML = '';
+  if (stats.guildTag && stats.guildId) {
+    const tagSpan = document.createElement('span');
+    tagSpan.textContent = ` [${stats.guildTag}]`;
+    tagSpan.className = 'guild-tag-link';
+    tagSpan.onclick = () => window.openGuildFromTag(stats.guildId, 'profile-screen');
+    tagEl.appendChild(tagSpan);
+  }
 
   if (isOther) {
     $('profile-summary').textContent = '';

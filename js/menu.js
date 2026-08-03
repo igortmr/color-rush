@@ -9,6 +9,7 @@ import { fetchMyFriendRequests } from './friends.js';
 import { myRecord } from './game-core.js';
 import { refreshInboxBadge, updateDailyMenuCard } from './daily-challenge.js';
 import { equippedAvatar, renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
+import { refreshGuildMenuBadge } from './guilds.js';
 
 /* ================== menu ================== */
 window.showMenu = () => {
@@ -44,6 +45,12 @@ window.showMenu = () => {
   renderMenuPigmentosBar();
   renderUserPigmentos();
   refreshBadgeNotifDot();
+
+  // clãs também precisam de conta — mesma lógica de amigos, mas a
+  // bolinha aqui cobre solicitações de entrada pendentes (se eu for
+  // líder) OU um convite de liderança esperando resposta
+  $('menu-quick-guild-btn').style.display = state.offline ? 'none' : '';
+  if (!state.offline && state.currentUser) refreshGuildMenuBadge();
 
   // bloqueio dos modos por nível
   for (const [m, minLv] of Object.entries(MODE_UNLOCK)) {

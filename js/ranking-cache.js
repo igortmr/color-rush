@@ -35,6 +35,16 @@ export function compareRankRows(a, b) {
 // chama (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
 export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+  // sigla do clã (se tiver) — clicável, abre a tela do clã (ver
+  // window.openGuildFromTag em js/guilds.js, chamado via window de
+  // propósito pelo mesmo motivo do uiChallengeFriend em js/friends.js)
+  if (r.stats && r.stats.guildTag && r.stats.guildId) {
+    const tagSpan = document.createElement('span');
+    tagSpan.textContent = `[${r.stats.guildTag}]`; // sigla é sempre A-Z, mas por segurança vai via textContent também
+    tagSpan.className = 'guild-tag-link';
+    tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(r.stats.guildId, backTarget); };
+    nickCell.appendChild(tagSpan);
+  }
   const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
   nickSpan.textContent = r.nick;
   nickSpan.className = 'nick-click';

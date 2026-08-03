@@ -8,6 +8,7 @@ import {
   fetchAllScores, rowData, compareRankRows, buildRankRowNick, RANKING_PAGE_SIZE
 } from './ranking-cache.js';
 import { loadDailyTodayRanking, resetDailyRankSubtabToToday } from './daily-ranking.js';
+import { loadGuildRanking } from './guilds.js';
 
 window.rankingBack = () => popScreenBack();
 
@@ -33,9 +34,10 @@ window.loadRanking = async (m) => {
   $('ranking-select').value = m;
 
   // desafio diário tem sua própria estrutura (2 abas, sem escopo amigos/todos
-  // — ver js/daily-ranking.js)
+  // — ver js/daily-ranking.js); clãs também tem estrutura própria (linhas de
+  // CLà, não de jogador — ver js/guilds.js)
   $('daily-subtabs').style.display = (m === 'daily') ? '' : 'none';
-  $('scope-tabs-row').style.display = (m === 'daily') ? 'none' : '';
+  $('scope-tabs-row').style.display = (m === 'daily' || m === 'guilds') ? 'none' : '';
   $('daily-prizes-legend').style.display = (m === 'daily') ? '' : 'none';
   if (m === 'daily') {
     renderDailyPrizesLegend();
@@ -45,6 +47,15 @@ window.loadRanking = async (m) => {
     $('ranking-table-card').style.display = '';
     $('daily-alltime-card').style.display = 'none';
     loadDailyTodayRanking();
+    return;
+  }
+  if (m === 'guilds') {
+    $('ranking-pagination').innerHTML = '';
+    $('ranking-explain').textContent = T[state.lang].guild_ranking_explain;
+    $('ranking-points-header').textContent = T[state.lang].points_header_guild_level;
+    $('ranking-table-card').style.display = '';
+    $('daily-alltime-card').style.display = 'none';
+    loadGuildRanking();
     return;
   }
 

@@ -26,6 +26,22 @@ export function myXp() { return state.offline ? 0 : (state.myData.xp || 0); } //
 // em js/pvp.js), não só da própria conta logada
 export function modeUnlockedForXp(m, xp, isAdmin) { return isAdmin === true || !MODE_UNLOCK[m] || levelFromXp(xp || 0) >= MODE_UNLOCK[m]; }
 export function modeUnlocked(m) { return modeUnlockedForXp(m, myXp(), state.myData.admin === true); }
+
+// clãs (Espectro) — mesmos limites de functions/index.js, espelhados aqui só
+// pra validar/mostrar mensagem amigável ANTES de chamar o servidor (que
+// sempre reconfere tudo de novo, ver createGuild/requestJoinGuild)
+export const GUILD_CREATE_MIN_LEVEL = 10;
+export const GUILD_JOIN_MIN_LEVEL = 5;
+export const GUILD_MAX_MEMBERS = 10;
+// curva de nível do clã — 2x mais lenta que a de jogador (ver
+// totalXpForGuildLevel/guildLevelFromXpSrv em functions/index.js); ninguém
+// concede XP de clã ainda, todo clã fica em level 1 por enquanto
+export const totalXpForGuildLevel = lv => 100 * lv * (lv - 1);
+export function guildLevelFromXp(xp) {
+  let lv = 1;
+  while (xp >= totalXpForGuildLevel(lv + 1)) lv++;
+  return lv;
+}
 // conta banida (campo "banned" setado à mão no Firebase Console, ver
 // checkNotBanned em functions/index.js) não pode jogar NENHUM modo — isso
 // aqui é só a trava do client (mensagem amigável antes de nem tentar); o

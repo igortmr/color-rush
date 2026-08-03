@@ -11,6 +11,7 @@ import './share.js';
 import './nick.js';
 import './menu.js';
 import './auth.js';
+import './guilds.js';
 
 // Universal Links (iOS): quando alguém toca um link de colorrush.com.br por
 // fora do app (WhatsApp, Mensagens etc.) com o app já instalado, o iOS abre

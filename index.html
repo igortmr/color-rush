@@ -210,6 +210,10 @@
       <span>🛍️ LOJA</span>
       <span class="notif-dot" id="shop-notif-dot" style="display:none;"></span>
     </button>
+    <button class="menu-quick-btn" id="menu-quick-guild-btn" onclick="showGuildHome()" style="display:none;">
+      <span data-i18n="btn_guild">🛡️ CLÃS</span>
+      <span class="menu-quick-badge" id="menu-quick-guild-badge" style="display:none;"></span>
+    </button>
   </div>
   <div class="user-bar">
     <span style="position:relative; display:inline-block;">
@@ -526,6 +530,21 @@
   </div>
 </div>
 
+<!-- criar clã: popup aberta pelo botão de criar em #guild-list-screen (ver
+     openCreateGuildModal em js/guilds.js) -->
+<div class="modal-overlay" id="create-guild-modal" style="display:none;" onclick="if(event.target===this) closeCreateGuildModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center; position:relative;">
+    <button onclick="closeCreateGuildModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 style="font-size:1.2rem;" data-i18n="guild_create_modal_title">🛡️ Criar Clã</h1>
+    <div class="modal-card-body">
+      <input type="text" id="create-guild-name" maxlength="24" data-i18n-placeholder="guild_name_ph" placeholder="Nome do clã (3 a 24 caracteres)">
+      <input type="text" id="create-guild-tag" maxlength="3" style="text-transform:uppercase;" data-i18n-placeholder="guild_tag_ph" placeholder="Sigla (2 a 3 letras)">
+      <div class="error" id="create-guild-error"></div>
+      <button onclick="submitCreateGuild()" data-i18n="guild_confirm_create_btn">Criar</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">
@@ -558,6 +577,7 @@
     <option value="level" data-i18n="tab_level">🆙 Nível</option>
     <option value="divulgador" data-i18n="tab_divulgador">📣 Divulgador</option>
     <option value="daily" data-i18n="tab_daily">📅 Desafio Diário</option>
+    <option value="guilds" data-i18n="tab_guilds">🛡️ Clãs</option>
   </select>
   <div class="scope-tabs" id="scope-tabs-row">
     <button class="scope-tab active" id="scope-geral-btn" onclick="setRankingScope('geral')" data-i18n="scope_all">Todos</button>
@@ -620,7 +640,7 @@
     <button class="pill-btn" id="profile-back-top-btn" onclick="profileBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="profile-header">
-    <div class="big-nick" id="profile-nick"><span id="profile-nick-avatar"></span><span id="profile-nick-text"></span><span id="profile-nick-lv"></span></div>
+    <div class="big-nick" id="profile-nick"><span id="profile-nick-avatar"></span><span id="profile-nick-text"></span><span id="profile-nick-lv"></span><span id="profile-nick-guild-tag"></span></div>
     <div class="muted" id="profile-summary"></div>
   </div>
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
@@ -657,6 +677,25 @@
   </div>
   <div class="muted" id="friends-refcode-status" style="display:none;"></div>
   <div id="friends-body" style="width:100%; display:flex; flex-direction:column; gap:14px;"></div>
+</div>
+
+<!-- CLÃS (Espectro) -->
+<div class="screen" id="guild-list-screen">
+  <div class="profile-top-row">
+    <h1 style="font-size:2rem;" data-i18n="guild_list_title">🛡️ CLÃS</h1>
+    <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  </div>
+  <button id="guild-create-btn" style="width:100%; display:none;" onclick="openCreateGuildModal()"></button>
+  <div class="muted" id="guild-create-hint" style="display:none; text-align:center;"></div>
+  <div id="guild-list-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
+</div>
+
+<div class="screen" id="guild-screen">
+  <div class="profile-top-row">
+    <h1 id="guild-header" style="font-size:1.5rem; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"></h1>
+    <button class="pill-btn" onclick="guildBack()" data-i18n="btn_back">VOLTAR</button>
+  </div>
+  <div id="guild-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
 </div>
 
 <!-- PVP (duelo ao vivo) -->

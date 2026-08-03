@@ -153,7 +153,7 @@ function friendActionNode(rel, theirUid) {
 // linha de amigo/pedido montada via DOM (nunca via innerHTML com o nick
 // interpolado — nick é livre em qualquer caractere não-espaço, então precisa
 // ir sempre por textContent, igual já é feito no resto do ranking)
-function friendRow(uid, nick, xp, isAdmin) {
+function friendRow(uid, nick, xp, isAdmin, guildTag, guildId) {
   const row = document.createElement('div');
   row.className = 'card';
   row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
@@ -161,6 +161,15 @@ function friendRow(uid, nick, xp, isAdmin) {
   const left = document.createElement('span');
   left.style.cssText = 'display:flex; align-items:center; gap:8px;';
   left.insertAdjacentHTML('beforeend', lvChip(xp || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
+  // sigla do clã (se tiver) — clicável, mesmo padrão de buildRankRowNick em
+  // js/ranking-cache.js (window.openGuildFromTag, ver js/guilds.js)
+  if (guildTag && guildId) {
+    const tagSpan = document.createElement('span');
+    tagSpan.textContent = `[${guildTag}]`;
+    tagSpan.className = 'guild-tag-link';
+    tagSpan.onclick = () => window.openGuildFromTag(guildId, 'friends-screen');
+    left.appendChild(tagSpan);
+  }
   const nickSpan = document.createElement('span');
   nickSpan.textContent = nick;
   nickSpan.className = 'nick-click';
@@ -275,9 +284,12 @@ async function renderFriendsScreen(force) {
     // amigo vem do cache geral de pontuações (mesmo já usado pelo ranking),
     // pra não precisar de uma leitura extra por amigo
     const all = await fetchAllScores();
-    const xpByUid = {}, adminByUid = {};
-    all.forEach(r => { const d = rowData(r); xpByUid[r.uid] = d.xp || 0; adminByUid[r.uid] = d.admin === true; });
-    friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid], adminByUid[uid])));
+    const xpByUid = {}, adminByUid = {}, guildByUid = {};
+    all.forEach(r => { const d = rowData(r); xpByUid[r.uid] = d.xp || 0; adminByUid[r.uid] = d.admin === true; guildByUid[r.uid] = { tag: d.guildTag || null, id: d.guildId || null }; });
+    friendEntries.forEach(([uid, data]) => {
+      const gu = guildByUid[uid] || {};
+      body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid], adminByUid[uid], gu.tag, gu.id));
+    });
   }
 
   // pedidos ENVIADOS (aguardando resposta do outro lado) ficam por último —

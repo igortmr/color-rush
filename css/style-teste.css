@@ -794,6 +794,18 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
+  /* sigla [TAG] do clã, clicável ao lado do nick em qualquer ranking/lista
+     (ver buildRankRowNick em js/ranking-cache.js) */
+  .guild-tag-link {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    font-size: 0.72rem;
+    color: var(--neon-purple);
+    text-shadow: 0 0 6px rgba(177,77,255,0.5);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .guild-tag-link:hover { text-decoration: underline; }
   .chip-wrap { position: relative; display: inline-flex; }
   .chip-lock {
     position: absolute;
