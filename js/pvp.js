@@ -6,8 +6,8 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { show } from './nav.js';
 import { T } from './i18n.js';
-import { COLORS } from './constants.js';
-import { avatarOrDefaultIcon, lvChip, myXp, blockIfBanned } from './levels.js';
+import { COLORS, ALL_MODES } from './constants.js';
+import { avatarOrDefaultIcon, lvChip, myXp, blockIfBanned, modeLabel, MODE_ICON, modeUnlockedForXp } from './levels.js';
 import { equippedAvatar } from './shop.js';
 import { showFriendActionError } from './friends.js';
 
@@ -155,7 +155,9 @@ function renderPvpChallengeBanner(m) {
   const fromNick = (m.nicks && m.nicks[m.challengerUid]) || '';
   box.style.display = '';
   box.dataset.matchId = m.id;
-  $('pvp-challenge-text').textContent = T[state.lang].pvp_challenge_received(fromNick);
+  // "|| 'classic'" cobre duelos criados antes desse campo existir (sem
+  // mode salvo) — era sempre esse o comportamento de qualquer forma
+  $('pvp-challenge-text').textContent = T[state.lang].pvp_challenge_received(fromNick, modeLabel(m.mode || 'classic'));
 }
 
 window.uiAcceptChallenge = async () => {
@@ -176,15 +178,40 @@ window.uiDeclineChallenge = async () => {
   try { await callRespondChallenge({ matchId, accept: false }); } catch {}
 };
 
-window.uiChallengeFriend = async (toUid) => {
+// popup de escolha de modo do duelo, aberta ao clicar em "desafiar" na tela
+// de amigos (ver friendRow em js/friends.js) — só mostra os modos que os
+// DOIS jogadores já desbloquearam (ex.: alguém level 30 desafiando um level
+// 1 só vê Clássico, único modo que o nível 1 ainda tem). "classic" nunca tem
+// entrada em MODE_UNLOCK, então está sempre disponível pros dois — a lista
+// nunca fica vazia. O servidor reconfere tudo de novo em challengeFriend,
+// isso aqui é só pra não nem oferecer uma opção que ia ser recusada.
+window.openChallengeModeModal = (toUid, nick, theirXp, theirAdmin) => {
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
+  $('challenge-mode-title').textContent = T[state.lang].challenge_mode_title(nick);
+  const myAdmin = state.myData.admin === true;
+  const body = $('challenge-mode-body');
+  body.innerHTML = '';
+  ALL_MODES.forEach(m => {
+    if (!modeUnlockedForXp(m, myXp(), myAdmin) || !modeUnlockedForXp(m, theirXp, theirAdmin === true)) return;
+    const btn = document.createElement('button');
+    btn.textContent = `${MODE_ICON[m]} ${modeLabel(m)}`;
+    btn.onclick = () => sendChallenge(toUid, m);
+    body.appendChild(btn);
+  });
+  $('challenge-mode-modal').style.display = 'flex';
+};
+window.closeChallengeModeModal = () => {
+  $('challenge-mode-modal').style.display = 'none';
+};
+async function sendChallenge(toUid, mode) {
+  closeChallengeModeModal();
   try {
-    const res = await callChallengeFriend({ toUid });
+    const res = await callChallengeFriend({ toUid, mode });
     const data = res.data || {};
     if (data.matchId) { openPvpScreen(data.matchId); return; }
   } catch {}
   showFriendActionError(); // "já existe um desafio" ou erro genérico — mesmo aviso da tela de amigos
-};
+}
 
 window.uiCancelChallenge = async () => {
   if (!pvpCurrentMatchId) return;
@@ -255,7 +282,7 @@ function renderPvpScreen(m) {
     stopPvpTicker();
     stopPvpCountdownTicker();
     $('pvp-waiting').style.display = '';
-    $('pvp-waiting-text').textContent = T[state.lang].pvp_waiting_text((m.nicks && m.nicks[oppUid]) || '');
+    $('pvp-waiting-text').textContent = T[state.lang].pvp_waiting_text((m.nicks && m.nicks[oppUid]) || '', modeLabel(m.mode || 'classic'));
     return;
   }
 

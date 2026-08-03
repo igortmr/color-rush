@@ -153,7 +153,7 @@ function friendActionNode(rel, theirUid) {
 // linha de amigo/pedido montada via DOM (nunca via innerHTML com o nick
 // interpolado — nick é livre em qualquer caractere não-espaço, então precisa
 // ir sempre por textContent, igual já é feito no resto do ranking)
-function friendRow(uid, nick, xp) {
+function friendRow(uid, nick, xp, isAdmin) {
   const row = document.createElement('div');
   row.className = 'card';
   row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:12px 16px; gap:10px; flex-wrap:wrap;';
@@ -174,10 +174,10 @@ function friendRow(uid, nick, xp) {
   const challengeBtn = document.createElement('button');
   challengeBtn.textContent = T[state.lang].btn_challenge;
   challengeBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
-  // uiChallengeFriend é do domínio de PvP, ainda não modularizado (fase
+  // openChallengeModeModal é do domínio de PvP, ainda não modularizado (fase
   // futura) — chamado via window de propósito, ver comentário equivalente
   // em js/tutorial.js sobre esse mesmo padrão
-  challengeBtn.onclick = () => window.uiChallengeFriend(uid);
+  challengeBtn.onclick = () => window.openChallengeModeModal(uid, nick, xp, isAdmin);
   actions.appendChild(challengeBtn);
 
   const btn = document.createElement('button');
@@ -271,12 +271,13 @@ async function renderFriendsScreen(force) {
   if (!friendEntries.length) {
     body.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[state.lang].friends_empty}</div>`);
   } else {
-    // nível de cada amigo vem do cache geral de pontuações (mesmo já usado
-    // pelo ranking), pra não precisar de uma leitura extra por amigo
+    // nível (e admin, pra checagem de modo desbloqueado ao desafiar) de cada
+    // amigo vem do cache geral de pontuações (mesmo já usado pelo ranking),
+    // pra não precisar de uma leitura extra por amigo
     const all = await fetchAllScores();
-    const xpByUid = {};
-    all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
-    friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid])));
+    const xpByUid = {}, adminByUid = {};
+    all.forEach(r => { const d = rowData(r); xpByUid[r.uid] = d.xp || 0; adminByUid[r.uid] = d.admin === true; });
+    friendEntries.forEach(([uid, data]) => body.appendChild(friendRow(uid, data.nick || '', xpByUid[uid], adminByUid[uid])));
   }
 
   // pedidos ENVIADOS (aguardando resposta do outro lado) ficam por último —

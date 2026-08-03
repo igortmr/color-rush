@@ -486,6 +486,17 @@
   </div>
 </div>
 
+<!-- escolha do modo do duelo: popup aberta ao clicar em "desafiar" na tela
+     de amigos (ver openChallengeModeModal em js/pvp.js) — só lista os modos
+     que os dois jogadores já desbloquearam -->
+<div class="modal-overlay" id="challenge-mode-modal" style="display:none;" onclick="if(event.target===this) closeChallengeModeModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center; position:relative;">
+    <button onclick="closeChallengeModeModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 id="challenge-mode-title" style="font-size:1.1rem;"></h1>
+    <div class="modal-card-body" id="challenge-mode-body"></div>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">

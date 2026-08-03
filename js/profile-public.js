@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { T } from './i18n.js';
 import { pushScreenAndShow } from './nav.js';
 import { ALL_MODES } from './constants.js';
-import { modeLabel } from './levels.js';
+import { modeLabel, MODE_ICON } from './levels.js';
 import { BADGE_ORDER, BADGE_DEFS, TIER_COLORS, unlockedTier } from './badges.js';
 import { fetchAllScores, rowData, compareRankRows } from './ranking-cache.js';
 import { RANK_FIELDS } from './ranking.js';
@@ -86,7 +86,6 @@ export function renderPublicProfileBadges(stats) {
 // posição no ranking de cada modo em que a pessoa já pontuou (medalha pro
 // top 3, número pros demais) — vazio se ela ainda não pontuou em nenhum modo
 export function renderPublicProfileRanks(stats, ranks) {
-  const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺', caos: '🌀' };
   // cada linha leva pra aba daquele ranking no clique (ver profileRankGoto)
   const row = (label, pos, key) => {
     const medal = pos === 1 ? '🥇 ' : pos === 2 ? '🥈 ' : pos === 3 ? '🥉 ' : '';

@@ -21,7 +21,11 @@ export function xpInfo(xp) {
   return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
 }
 export function myXp() { return state.offline ? 0 : (state.myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
-export function modeUnlocked(m) { return state.myData.admin === true || !MODE_UNLOCK[m] || levelFromXp(myXp()) >= MODE_UNLOCK[m]; }
+// versão genérica de modeUnlocked, pra checar o desbloqueio de QUALQUER
+// pessoa (ex.: o amigo sendo desafiado pra um duelo, ver openChallengeModeModal
+// em js/pvp.js), não só da própria conta logada
+export function modeUnlockedForXp(m, xp, isAdmin) { return isAdmin === true || !MODE_UNLOCK[m] || levelFromXp(xp || 0) >= MODE_UNLOCK[m]; }
+export function modeUnlocked(m) { return modeUnlockedForXp(m, myXp(), state.myData.admin === true); }
 // conta banida (campo "banned" setado à mão no Firebase Console, ver
 // checkNotBanned em functions/index.js) não pode jogar NENHUM modo — isso
 // aqui é só a trava do client (mensagem amigável antes de nem tentar); o
@@ -171,6 +175,7 @@ export function renderDailyPrizesLegend() {
     </div>`).join('');
   el.innerHTML = `<div style="margin-bottom:4px;">${cfg.title}</div>${rows}`;
 }
+export const MODE_ICON = { classic: '🎨', reverse: '🔄', shapes: '🔶', 'shapes-reverse': '🔸', trio: '🔺', caos: '🌀' };
 export function modeLabel(m) {
   return m === 'classic' ? T[state.lang].mode_name_classic
     : m === 'reverse' ? T[state.lang].mode_name_reverse
