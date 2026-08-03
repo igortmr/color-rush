@@ -84,7 +84,7 @@ export const BADGE_DEFS = {
   replays: {
     icon: '🎬',
     label: { pt: 'Replays Assistidos', en: 'Watched Replays', es: 'Replays Vistos' },
-    tiers: [1, 5, 15, 30, 50, 100],
+    tiers: [1, 25, 75, 150, 250, 500],
     // nomes curtos (1 palavra, até 10 caracteres) pra não quebrar a pill no ranking
     names: {
       pt: ['Visto', 'Notado', 'Admirado', 'Aclamado', 'Reluzente', 'Ícone'],
