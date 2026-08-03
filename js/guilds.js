@@ -6,8 +6,9 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
-import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg } from './levels.js';
+import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip } from './levels.js';
 import { isMuted, tone } from './utils.js';
+import { fetchAllScores, rowData } from './ranking-cache.js';
 
 // clãs (Espectro) — igual ao resto: nenhuma escrita de verdade (criar,
 // entrar, expulsar, transferir liderança, desfazer, mandar mensagem) sai
@@ -28,6 +29,7 @@ const callInviteGuildMember = callable('inviteGuildMember');
 const callCancelGuildInvite = callable('cancelGuildInvite');
 const callRespondGuildInvite = callable('respondGuildInvite');
 const callSetGuildTyping = callable('setGuildTyping');
+const callReportGuildMessage = callable('reportGuildMessage');
 
 /* ================== estado local da tela do clã aberto ================== */
 let currentGuildId = null;
@@ -183,7 +185,7 @@ window.submitCreateGuild = async () => {
   const errEl = $('create-guild-error');
   errEl.textContent = '';
   const name = $('create-guild-name').value.trim();
-  const tag = $('create-guild-tag').value.trim().toUpperCase();
+  const tag = $('create-guild-tag').value.trim(); // maiúscula/minúscula livre, do jeito que a pessoa digitou
   if (name.length < 3 || name.length > 24) { errEl.textContent = T[state.lang].guild_err_name_length; return; }
   if (!/^[A-Za-z]{2,3}$/.test(tag)) { errEl.textContent = T[state.lang].guild_err_tag_format; return; }
 
@@ -282,7 +284,7 @@ window.guildBack = () => {
   popScreenBack();
 };
 
-function renderGuildScreen() {
+async function renderGuildScreen() {
   const body = $('guild-body');
   const header = $('guild-header');
   body.innerHTML = '';
@@ -335,10 +337,24 @@ function renderGuildScreen() {
   }
 
   if (!isMember || guildTab === 'members') {
-    body.appendChild(membersSection(g, myUid, isLeader));
-    if (isLeader) body.appendChild(joinRequestsSection());
+    // nível de cada pessoa (membro ou solicitando entrada) do lado do nick,
+    // igual já é no resto do jogo — vem do mesmo cache de pontuações usado
+    // pelo ranking/amigos, sem leitura extra por pessoa
+    let xpByUid = {};
+    try {
+      const all = await fetchAllScores();
+      all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
+    } catch { /* sem nível não quebra a lista, só mostra sem o chip */ }
+    // a pessoa pode ter trocado pra aba de chat enquanto isso carregava
+    // (fetchAllScores já é cacheado, mas ainda é assíncrono) — sem essa
+    // checagem, a lista de membros podia desenhar por cima do chat depois
+    // que a pessoa já tinha saído dessa aba
+    if (guildTab !== 'members' && isMember) return;
+
+    body.appendChild(membersSection(g, myUid, isLeader, xpByUid));
+    if (isLeader) body.appendChild(joinRequestsSection(xpByUid));
     if (isLeader) body.appendChild(inviteMemberSection(g));
-    if (isLeader) body.appendChild(invitesSection());
+    if (isLeader) body.appendChild(invitesSection(xpByUid));
     if (isLeader) body.appendChild(leaderToolsSection(g));
     else if (isMember) body.appendChild(leaveSection());
   } else {
@@ -418,21 +434,22 @@ function nonMemberActionCard(g, myUid) {
   return wrap;
 }
 
-function membersSection(g, myUid, isLeader) {
+function membersSection(g, myUid, isLeader, xpByUid) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:8px;';
   const entries = Object.entries(g.members || {}).sort((a, b) => (a[1].joinedAt && b[1].joinedAt) ? a[1].joinedAt.toMillis() - b[1].joinedAt.toMillis() : 0);
-  entries.forEach(([uid, data]) => wrap.appendChild(memberRow(g, uid, data, myUid, isLeader)));
+  entries.forEach(([uid, data]) => wrap.appendChild(memberRow(g, uid, data, myUid, isLeader, xpByUid)));
   return wrap;
 }
 
-function memberRow(g, uid, data, myUid, isLeader) {
+function memberRow(g, uid, data, myUid, isLeader, xpByUid) {
   const row = document.createElement('div');
   row.className = 'card';
   row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:10px 14px; gap:8px; flex-wrap:wrap;';
 
   const left = document.createElement('span');
   left.style.cssText = 'display:flex; align-items:center; gap:6px;';
+  left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
   if (uid === g.leaderUid) {
     const crown = document.createElement('span');
     crown.textContent = '👑';
@@ -464,7 +481,7 @@ function memberRow(g, uid, data, myUid, isLeader) {
   return row;
 }
 
-function joinRequestsSection() {
+function joinRequestsSection(xpByUid) {
   const entries = Object.entries(currentJoinRequests || {});
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:8px; margin-top:6px;';
@@ -474,9 +491,13 @@ function joinRequestsSection() {
     const row = document.createElement('div');
     row.className = 'card';
     row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:10px 14px; gap:8px; flex-wrap:wrap;';
+    const left = document.createElement('span');
+    left.style.cssText = 'display:flex; align-items:center; gap:6px;';
+    left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[uid]) || 0));
     const nickSpan = document.createElement('span');
     nickSpan.textContent = data.nick || '';
-    row.appendChild(nickSpan);
+    left.appendChild(nickSpan);
+    row.appendChild(left);
     const actions = document.createElement('span');
     actions.style.cssText = 'display:flex; gap:5px;';
     const acceptBtn = document.createElement('button');
@@ -518,7 +539,7 @@ function inviteMemberSection(g) {
   return wrap;
 }
 
-function invitesSection() {
+function invitesSection(xpByUid) {
   const entries = Object.entries(currentInvites || {});
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:8px; margin-top:6px;';
@@ -528,9 +549,13 @@ function invitesSection() {
     const row = document.createElement('div');
     row.className = 'card';
     row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:10px 14px; gap:8px; flex-wrap:wrap;';
+    const left = document.createElement('span');
+    left.style.cssText = 'display:flex; align-items:center; gap:6px;';
+    left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[uid]) || 0));
     const nickSpan = document.createElement('span');
     nickSpan.textContent = data.nick || '';
-    row.appendChild(nickSpan);
+    left.appendChild(nickSpan);
+    row.appendChild(left);
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'secondary';
     cancelBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
@@ -573,7 +598,9 @@ function leaveSection() {
 // aba quanto pelo balão (refreshGuildChatBubble), e é um no-op se já tiver
 // um listener rodando (ver "if (chatUnsub) return").
 let chatMessages = [];
+let currentChatGuildId = null; // pra saber de qual clã denunciar uma mensagem (ver uiReportGuildMessage)
 function ensureChatListener(guildId) {
+  currentChatGuildId = guildId;
   ensureGuildMemberNicksCache(guildId);
   ensureTypingListener(guildId);
   if (chatUnsub) return;
@@ -581,7 +608,7 @@ function ensureChatListener(guildId) {
   const q = query(collection(db, 'guilds', guildId, 'chat'), orderBy('at', 'desc'), limit(50));
   chatUnsub = onSnapshot(q, snap => {
     const prevLast = chatMessages.length ? chatMessages[chatMessages.length - 1] : null;
-    chatMessages = snap.docs.map(d => d.data()).reverse();
+    chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
     const newLast = chatMessages.length ? chatMessages[chatMessages.length - 1] : null;
     // som de aviso só numa mensagem NOVA de verdade (não na primeira carga
     // do listener, e não quando a mensagem nova é a que EU acabei de mandar)
@@ -674,12 +701,25 @@ function renderChatMessages(elId) {
       timeEl.style.cssText = 'font-size:0.6rem; color:#6b76a8; text-align:right; margin-top:2px;';
       timeEl.textContent = formatMsgTime(m.at);
       bubble.appendChild(timeEl);
-      // data completa — escondida até clicar na mensagem (ver onclick abaixo)
-      const fullEl = document.createElement('div');
-      fullEl.style.cssText = 'font-size:0.62rem; color:#8fa0d6; text-align:right; margin-top:2px; display:none;';
-      fullEl.textContent = formatMsgFullDateTime(m.at);
-      bubble.appendChild(fullEl);
-      bubble.onclick = () => { fullEl.style.display = fullEl.style.display === 'none' ? '' : 'none'; };
+      // data completa + denunciar — escondidos até clicar na mensagem (ver
+      // onclick abaixo); ambos juntos porque os dois só fazem sentido depois
+      // que a pessoa já demonstrou interesse "abrindo" a mensagem
+      const infoEl = document.createElement('div');
+      infoEl.style.cssText = 'display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; display:none;';
+      const fullDateSpan = document.createElement('span');
+      fullDateSpan.style.cssText = 'font-size:0.62rem; color:#8fa0d6;';
+      fullDateSpan.textContent = formatMsgFullDateTime(m.at);
+      infoEl.appendChild(fullDateSpan);
+      if (!mine) {
+        const reportBtn = document.createElement('button');
+        reportBtn.className = 'link';
+        reportBtn.style.cssText = 'padding:0; font-size:0.62rem; color:var(--neon-red); text-decoration:underline;';
+        reportBtn.textContent = T[state.lang].guild_chat_report;
+        reportBtn.onclick = (ev) => { ev.stopPropagation(); uiReportGuildMessage(m.id, m.nick || ''); };
+        infoEl.appendChild(reportBtn);
+      }
+      bubble.appendChild(infoEl);
+      bubble.onclick = () => { infoEl.style.display = infoEl.style.display === 'none' ? 'flex' : 'none'; };
       el.appendChild(bubble);
     });
   }
@@ -794,6 +834,15 @@ window.sendGuildChatMessage = async () => {
   input.value = '';
   try { await callSendGuildMessage({ text }); } catch (e) { /* melhor esforço — a mensagem só some da caixa se falhar mesmo */ }
 };
+
+async function uiReportGuildMessage(messageId, authorNick) {
+  if (!currentChatGuildId) return;
+  if (!confirm(T[state.lang].guild_confirm_report(authorNick))) return;
+  try {
+    await callReportGuildMessage({ guildId: currentChatGuildId, messageId });
+    alert(T[state.lang].guild_report_sent);
+  } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
+}
 
 /* -------- balãozinho flutuante (tipo o chat do Messenger) -------- */
 // telas "principais" do jogo — fora de partida/duelo, onde o balão pode
