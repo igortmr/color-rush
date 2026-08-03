@@ -559,6 +559,20 @@
   </div>
 </div>
 
+<!-- denunciar mensagem do chat do clã: popup temática (mesmo padrão de
+     #disband-guild-modal) em vez do confirm() genérico do navegador (ver
+     uiReportGuildMessage em js/guilds.js) -->
+<div class="modal-overlay" id="report-guild-message-modal" style="display:none;" onclick="if(event.target===this) closeReportGuildMessageModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-red); text-shadow:0 0 10px rgba(255,45,107,0.5);" data-i18n="guild_report_modal_title">🚩 Denunciar mensagem</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" id="report-guild-message-text"></p>
+    </div>
+    <button class="secondary" onclick="closeReportGuildMessageModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
+    <button onclick="confirmReportGuildMessage()" data-i18n="guild_report_modal_confirm_btn">Denunciar mensagem</button>
+  </div>
+</div>
+
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">

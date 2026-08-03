@@ -833,14 +833,31 @@ window.sendGuildChatMessage = async () => {
   try { await callSendGuildMessage({ text }); } catch (e) { /* melhor esforço — a mensagem só some da caixa se falhar mesmo */ }
 };
 
-async function uiReportGuildMessage(messageId, authorNick) {
+// denunciar mensagem usa a popup temática #report-guild-message-modal em vez
+// do confirm() genérico do navegador — mesmo padrão de #disband-guild-modal.
+// guarda messageId/guildId aqui (não dá pra passar direto no onclick do botão
+// "Confirmar", que é HTML estático) — reportMsgState só existe entre abrir e
+// fechar a popup, nunca fica velho porque cada abertura sobrescreve o anterior
+let reportMsgState = null;
+function uiReportGuildMessage(messageId, authorNick) {
   if (!currentChatGuildId) return;
-  if (!confirm(T[state.lang].guild_confirm_report(authorNick))) return;
+  reportMsgState = { messageId, guildId: currentChatGuildId };
+  $('report-guild-message-text').textContent = T[state.lang].guild_confirm_report(authorNick);
+  $('report-guild-message-modal').style.display = 'flex';
+}
+window.closeReportGuildMessageModal = () => {
+  $('report-guild-message-modal').style.display = 'none';
+  reportMsgState = null;
+};
+window.confirmReportGuildMessage = async () => {
+  if (!reportMsgState) return;
+  const { messageId, guildId } = reportMsgState;
+  closeReportGuildMessageModal();
   try {
-    await callReportGuildMessage({ guildId: currentChatGuildId, messageId });
+    await callReportGuildMessage({ guildId, messageId });
     alert(T[state.lang].guild_report_sent);
   } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
-}
+};
 
 /* -------- balãozinho flutuante (tipo o chat do Messenger) -------- */
 // telas "principais" do jogo — fora de partida/duelo, onde o balão pode
