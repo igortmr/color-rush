@@ -638,6 +638,45 @@ function leaderToolsSection() {
 // em functions/index.js); o saldo (g.treasury) é visível pra todo o clã.
 // treasuryContributions é só informativo (quem doou quanto no total), não
 // dá nenhum privilégio — só a líder gasta o saldo, na Loja do Clã abaixo.
+
+// splash de pigmentos coloridos (mesma silhueta de gota do pigmentIconSvg em
+// js/levels.js, só que em cores sólidas da paleta do jogo em vez do
+// gradiente fixo) — toca ao confirmar uma doação, mesmo padrão visual do
+// confetti de recorde (ver spawnConfettiVariant em js/game-core.js), só que
+// estourando do centro da tela em vez de caindo do topo (ver .pigment-splash-*
+// em css/style.css)
+const PIGMENT_DROP_PATH = 'M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z';
+function spawnPigmentSplash() {
+  const layer = document.createElement('div');
+  layer.className = 'pigment-splash-layer';
+  const palette = COLORS.map(c => c.hex);
+  for (let i = 0; i < 24; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 60 + Math.random() * 140;
+    const size = 14 + Math.random() * 14;
+    const drop = document.createElement('div');
+    drop.className = 'pigment-splash-bit';
+    drop.style.setProperty('--dx', (Math.cos(angle) * dist) + 'px');
+    drop.style.setProperty('--dy', (Math.sin(angle) * dist) + 'px');
+    drop.style.width = size + 'px';
+    drop.style.height = size + 'px';
+    drop.style.animationDelay = (Math.random() * 0.15) + 's';
+    drop.style.animationDuration = (0.9 + Math.random() * 0.5) + 's';
+    drop.innerHTML = `<svg viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><path d="${PIGMENT_DROP_PATH}" fill="${palette[i % palette.length]}" stroke="rgba(255,255,255,0.5)" stroke-width="1"/></svg>`;
+    layer.appendChild(drop);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 1700);
+}
+// "cha-ching" curtinho (arpejo ascendente C-E-G bem agudo) — mesma técnica
+// de tone() já usada pro aviso sonoro do chat de clã (ver ensureChatListener
+// acima), sem precisar de nenhum arquivo de áudio
+function playDonateSound() {
+  tone(1046.5, 0.09, 'sine', 0.18, 0);
+  tone(1318.5, 0.12, 'sine', 0.18, 0.08);
+  tone(1568, 0.16, 'sine', 0.16, 0.16);
+}
+
 function treasurySection(g) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:10px;';
@@ -699,6 +738,8 @@ function treasurySection(g) {
       try {
         await callDonateToGuildTreasury({ amount });
         state.myData.pigmentos = myPigmentos - amount; // otimista — atualiza local na hora, sem esperar o próximo fetch
+        spawnPigmentSplash();
+        playDonateSound();
         renderGuildScreen(); // recarrega saldo do cofre + lista/histórico de doações
       } catch (e) {
         status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
