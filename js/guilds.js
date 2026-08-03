@@ -1003,6 +1003,10 @@ window.renderGuildInviteAction = async (theirUid, theirNick) => {
   wrap.style.textAlign = 'center';
   const btn = document.createElement('button');
   btn.textContent = T[state.lang].guild_btn_invite;
+  // botão bem menor que o padrão (que ocupa o card inteiro) — é uma ação
+  // secundária no perfil de outra pessoa, não precisa do mesmo destaque dos
+  // botões principais (adicionar amigo, iniciar chat etc.)
+  btn.style.cssText = 'align-self:center; padding:6px 16px; font-size:0.75rem;';
   const statusEl = document.createElement('div');
   statusEl.className = 'muted';
   statusEl.style.marginTop = '6px';
