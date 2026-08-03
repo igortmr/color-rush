@@ -6,7 +6,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { formatMsgTime, formatMsgFullDateTime } from './utils.js';
-import { fetchMyFriends } from './friends.js';
+import { fetchMyFriends, openProfileByUid } from './friends.js';
 import { lvChip } from './levels.js';
 
 // mensagens diretas entre amigos — balãozinho flutuante igual ao do clã (ver
@@ -272,7 +272,7 @@ function openDmConversation(uid, nick) {
   activeFriendUid = uid;
   activeChatId = dmChatIdFor(state.currentUser.uid, uid);
   dmView = 'chat';
-  $('dm-chat-popup-title').textContent = nick;
+  setDmChatTitle(uid, nick);
   $('dm-chat-back-btn').style.display = '';
   $('dm-chat-list-view').style.display = 'none';
   $('dm-chat-conversation-view').style.display = 'flex';
@@ -280,6 +280,30 @@ function openDmConversation(uid, nick) {
   ensureDmTypingListener(activeChatId);
   renderDmMessages();
   markDmChatRead();
+}
+
+// título da conversa: nível + nick clicável (abre o perfil da pessoa) — só
+// recebemos uid/nick de quem chama (dmFriendRow / window.openDmChatWithFriend),
+// então o nível vem de uma leitura avulsa em scores/{uid} (doc público, mesmo
+// padrão de renderDmFriendsList acima). Nick aparece na hora com o textContent
+// simples; o chip de nível é trocado depois que a leitura resolver.
+async function setDmChatTitle(uid, nick) {
+  const el = $('dm-chat-popup-title');
+  el.textContent = nick;
+  let xp = 0;
+  try {
+    const snap = await getDoc(doc(db, 'scores', uid));
+    xp = (snap.exists() && snap.data().xp) || 0;
+  } catch {}
+  if (activeFriendUid !== uid || dmView !== 'chat') return; // trocou de conversa enquanto isso carregava
+  el.innerHTML = '';
+  el.insertAdjacentHTML('beforeend', lvChip(xp));
+  const nickSpan = document.createElement('span');
+  nickSpan.className = 'nick-click';
+  nickSpan.style.marginLeft = '6px';
+  nickSpan.textContent = nick;
+  nickSpan.onclick = () => openProfileByUid(uid, nick, 'friends-screen');
+  el.appendChild(nickSpan);
 }
 
 async function markDmChatRead() {
