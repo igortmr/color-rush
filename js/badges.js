@@ -40,9 +40,9 @@ export const BADGE_DEFS = {
     label: { pt: 'Sequência de Dias', en: 'Day Streak', es: 'Racha de Días' },
     tiers: [3, 7, 14, 30, 100, 365],
     names: {
-      pt: ['Compromissado', 'Semana Cheia', 'Quinzenal', 'Mensal', 'Inabalável', 'Chama Eterna'],
-      en: ['Committed', 'Full Week', 'Fortnightly', 'Monthly', 'Unshakable', 'Eternal Flame'],
-      es: ['Comprometido', 'Semana Completa', 'Quincenal', 'Mensual', 'Inquebrantable', 'Llama Eterna'],
+      pt: ['Faísca', 'Chama', 'Fogueira', 'Fornalha', 'Inferno', 'Eterna'],
+      en: ['Spark', 'Flame', 'Bonfire', 'Furnace', 'Inferno', 'Eternal'],
+      es: ['Chispa', 'Llama', 'Fogata', 'Horno', 'Infierno', 'Eterna'],
     },
     metric: u => u.bestStreak || 0,
     desc: n => state.lang === 'en' ? `Play ${n} days in a row`
