@@ -44,6 +44,11 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   const showOwnRefCode = !isOther && !state.offline && !!state.myData.refCode;
   $('profile-refcode-row').style.display = showOwnRefCode ? 'flex' : 'none';
   if (showOwnRefCode) $('profile-refcode-value').textContent = state.myData.refCode;
+  // "ficar invisível" — só no próprio perfil (ver toggleHideOnlineStatus
+  // abaixo e a bolinha de online em js/dms.js)
+  const showOnlineToggle = !isOther && !state.offline;
+  $('profile-online-toggle-row').style.display = showOnlineToggle ? 'flex' : 'none';
+  if (showOnlineToggle) updateHideOnlineToggleUI();
 
   if (!isOther && state.offline) {
     $('profile-nick-avatar').innerHTML = '';
@@ -131,21 +136,6 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   if (state.myData.admin === true) {
     $('profile-body').insertAdjacentHTML('beforeend', renderAdminToolsHtml());
   }
-  // ficar "invisível" — some da bolinha verde de online na lista de amigos
-  // do balãozinho de DM (ver renderDmFriendsList em js/dms.js), mas continua
-  // podendo mandar/receber mensagem normalmente (não afeta o chat em si)
-  const onlineVisible = !state.myData.hideOnlineStatus;
-  $('profile-body').insertAdjacentHTML('beforeend', `
-    <div class="card" style="text-align:left;">
-      <b data-i18n="privacy_online_title">👁️ Status online</b>
-      <p class="muted" style="margin-top:6px;" data-i18n="privacy_online_desc">Controla se sua bolinha verde de "online" aparece pros seus amigos na lista de chat. Mensagens continuam funcionando normalmente do mesmo jeito.</p>
-      <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-        <button class="icon-toggle${onlineVisible ? ' on' : ''}" id="hide-online-toggle" onclick="toggleHideOnlineStatus()">
-          <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">${onlineVisible ? '👁️' : '🙈'}</span></span></span>
-        </button>
-        <span class="muted" id="hide-online-label">${onlineVisible ? T[state.lang].privacy_online_visible : T[state.lang].privacy_online_hidden}</span>
-      </div>
-    </div>`);
   $('profile-body').insertAdjacentHTML('beforeend', `
     <div class="card" style="text-align:left;">
       <b data-i18n="delete_account_title">⚠️ Excluir conta</b>
@@ -269,20 +259,22 @@ window.setEquippedBadgeTier = async (key, tierIdx) => {
 // scoreClientFields no firestore.rules). Só afeta a bolinha de online que
 // js/dms.js mostra na lista de amigos do balãozinho — enviar/receber
 // mensagem continua funcionando normalmente pra quem está invisível.
+function updateHideOnlineToggleUI() {
+  const btn = $('hide-online-toggle');
+  if (!btn) return;
+  const visible = !state.myData.hideOnlineStatus;
+  btn.classList.toggle('on', visible);
+  const icon = btn.querySelector('.tgl-icon');
+  if (icon) icon.textContent = visible ? '👁️' : '🙈';
+  const label = $('hide-online-label');
+  if (label) label.textContent = visible ? T[state.lang].privacy_online_visible : T[state.lang].privacy_online_hidden;
+}
 window.toggleHideOnlineStatus = async () => {
   if (state.offline || !state.currentUser) return;
-  const nextHide = !state.myData.hideOnlineStatus;
-  state.myData.hideOnlineStatus = nextHide;
-  const btn = $('hide-online-toggle');
-  if (btn) {
-    btn.classList.toggle('on', !nextHide);
-    const icon = btn.querySelector('.tgl-icon');
-    if (icon) icon.textContent = nextHide ? '🙈' : '👁️';
-  }
-  const label = $('hide-online-label');
-  if (label) label.textContent = nextHide ? T[state.lang].privacy_online_hidden : T[state.lang].privacy_online_visible;
+  state.myData.hideOnlineStatus = !state.myData.hideOnlineStatus;
+  updateHideOnlineToggleUI();
   try {
-    await setDoc(doc(db, 'scores', state.currentUser.uid), { hideOnlineStatus: nextHide, updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, 'scores', state.currentUser.uid), { hideOnlineStatus: state.myData.hideOnlineStatus, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {
     // não foi possível salvar agora — a escolha fica só localmente até a próxima tentativa
   }

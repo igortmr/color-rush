@@ -656,6 +656,14 @@
     <div class="big-nick" id="profile-nick"><span id="profile-nick-avatar"></span><span id="profile-nick-text"></span><span id="profile-nick-lv"></span><span id="profile-nick-guild-tag"></span></div>
     <div class="muted" id="profile-summary"></div>
   </div>
+  <!-- "ficar invisível" — só aparece no PRÓPRIO perfil, ver toggleHideOnlineStatus
+       em js/profile.js e a bolinha de online em js/dms.js -->
+  <div id="profile-online-toggle-row" style="display:none; align-items:center; justify-content:center; gap:8px; margin-top:-10px;">
+    <button class="icon-toggle" id="hide-online-toggle" onclick="toggleHideOnlineStatus()">
+      <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon"></span></span></span>
+    </button>
+    <span class="muted" id="hide-online-label"></span>
+  </div>
   <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
   <div class="muted" id="profile-invite-status" style="display:none;"></div>
   <!-- código de indicação da própria pessoa, pra passar direto (de viva voz,
