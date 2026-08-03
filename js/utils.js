@@ -1,5 +1,23 @@
+import { state } from './state.js';
+
 export const shuffle = a => a.sort(() => Math.random() - 0.5);
 export const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/* ================== formatação de hora nas mensagens de chat ==================
+   compartilhado entre o chat de clã (js/guilds.js) e as mensagens diretas
+   entre amigos (js/dms.js) — hora curtinha sempre visível embaixo da
+   mensagem; a data completa (sem repetir a hora, ver comentário original
+   junto de renderChatMessages em js/guilds.js) só aparece ao clicar */
+export function formatMsgTime(at) {
+  if (!at || typeof at.toMillis !== 'function') return '';
+  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
+  return new Date(at.toMillis()).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+}
+export function formatMsgFullDateTime(at) {
+  if (!at || typeof at.toMillis !== 'function') return '';
+  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
+  return new Date(at.toMillis()).toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
 
 // eventos pro Google Analytics (se o gtag não estiver na página, vira um no-op silencioso)
 export const track = (name, params) => { try { if (window.gtag) window.gtag('event', name, params || {}); } catch {} };

@@ -88,7 +88,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
 
   if (isOther) {
     $('profile-summary').textContent = '';
-    renderProfileFriendAction(viewUid);
+    renderProfileFriendAction(viewUid, viewNick || '');
     // botão "convidar pro clã" — window.renderGuildInviteAction vem de
     // js/guilds.js (perfil ainda não conhece o domínio de clãs, mesmo padrão
     // de window.openGuildFromTag logo acima)

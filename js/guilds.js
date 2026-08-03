@@ -7,7 +7,7 @@ import { state } from './state.js';
 import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
 import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip } from './levels.js';
-import { isMuted, tone } from './utils.js';
+import { isMuted, tone, formatMsgTime, formatMsgFullDateTime } from './utils.js';
 import { fetchAllScores, rowData } from './ranking-cache.js';
 import { openProfileByUid } from './friends.js';
 
@@ -639,20 +639,6 @@ function chatSection() {
   return wrap;
 }
 
-// hora curtinha embaixo de cada mensagem — clicar na mensagem abre/fecha a
-// data completa (ver toggleMsgFullDate)
-function formatMsgTime(at) {
-  if (!at || typeof at.toMillis !== 'function') return '';
-  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
-  return new Date(at.toMillis()).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
-}
-// só a data (sem hora) — a hora já aparece sempre visível em formatMsgTime,
-// então repeti-la aqui deixava a hora aparecendo duas vezes ao clicar
-function formatMsgFullDateTime(at) {
-  if (!at || typeof at.toMillis !== 'function') return '';
-  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
-  return new Date(at.toMillis()).toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
 // desenha o texto da mensagem destacando @menções a membros de verdade do
 // clã (nick sempre sem espaço, ver isValidNickServer — então "@\S+" já
 // separa a menção certinho sem precisar de mais nada)

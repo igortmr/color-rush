@@ -345,11 +345,16 @@
     z-index: 4000;
     padding: 20px;
   }
-  /* balãozinho de chat do clã (flutuante, tipo o chat do Messenger) — ver
-     refreshGuildChatBubble/toggleGuildChatPopup em js/guilds.js. z-index
-     abaixo dos modais (4000) de propósito, pra um modal aberto cobrir o
-     balão em vez de flutuar por cima dele. */
-  #guild-chat-bubble {
+  /* balãozinho de chat flutuante (tipo o chat do Messenger) — compartilhado
+     pelo chat do clã (#guild-chat-bubble, ver refreshGuildChatBubble/
+     toggleGuildChatPopup em js/guilds.js) e pelo chat de amigos
+     (#dm-chat-bubble, ver refreshDmChatBubble/toggleDmChatPopup em
+     js/dms.js). Os dois moram no canto inferior direito; quando os dois
+     ficam visíveis ao mesmo tempo, js/dms.js empurra o seu pra cima do de
+     clã via "bottom" inline, pra não sobrepor. z-index abaixo dos modais
+     (4000) de propósito, pra um modal aberto cobrir o balão em vez de
+     flutuar por cima dele. */
+  .chat-bubble {
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -366,10 +371,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: bottom 0.15s ease;
   }
-  #guild-chat-bubble:hover { transform: scale(1.08); }
-  #guild-chat-bubble .menu-quick-badge { top: -4px; right: -4px; }
-  #guild-chat-popup {
+  .chat-bubble:hover { transform: scale(1.08); }
+  .chat-bubble .menu-quick-badge { top: -4px; right: -4px; }
+  #dm-chat-bubble { background: linear-gradient(135deg, var(--neon-green), var(--neon-blue)); }
+  .chat-popup {
     position: fixed;
     bottom: 88px;
     right: 20px;
@@ -383,16 +390,39 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transition: bottom 0.15s ease;
   }
-  .guild-chat-popup-head {
+  .chat-popup-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 12px 14px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0;
+    gap: 8px;
+    min-width: 0;
   }
-  .guild-chat-popup-head button {
+  .chat-popup-head-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .chat-popup-head-title b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat-popup-back-btn {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0 2px 0 0;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .chat-popup-head button:not(.chat-popup-back-btn) {
     background: transparent;
     border: none;
     box-shadow: none;
@@ -402,8 +432,9 @@
     line-height: 1;
     padding: 0;
     cursor: pointer;
+    flex-shrink: 0;
   }
-  #guild-chat-popup-messages {
+  .chat-popup-messages {
     flex: 1;
     overflow-y: auto;
     padding: 10px 12px;
@@ -412,15 +443,42 @@
     gap: 6px;
     min-height: 140px;
   }
-  .guild-chat-popup-input-row {
+  .chat-popup-input-row {
     display: flex;
     gap: 6px;
     padding: 10px 12px;
     border-top: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0;
   }
-  .guild-chat-popup-input-row input { flex: 1; }
-  .guild-chat-popup-input-row button { padding: 10px 14px; font-size: 0.85rem; }
+  .chat-popup-input-row input { flex: 1; }
+  .chat-popup-input-row button { padding: 10px 14px; font-size: 0.85rem; }
+  /* lista de amigos dentro do balãozinho de DM (ver renderDmFriendsList em
+     js/dms.js) — bolinha verde/cinza de online ao lado do nick */
+  .dm-friend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .dm-friend-row:hover { background: rgba(255,255,255,0.06); }
+  .dm-online-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #4a5178;
+  }
+  .dm-online-dot.online { background: var(--neon-green); box-shadow: 0 0 6px rgba(46,213,115,0.7); }
+  .dm-friend-row .nick { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dm-unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--neon-red);
+    flex-shrink: 0;
+  }
   /* "fulano está digitando..." (ver renderTypingIndicators em js/guilds.js) */
   .chat-typing-indicator { font-style: italic; }
   /* @menção destacada dentro de uma mensagem (ver renderMessageText) */

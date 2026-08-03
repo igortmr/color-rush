@@ -251,6 +251,7 @@ window.doLogout = async () => {
   state.offline = false;
   stopPvpListener();
   if (window.stopGuildListeners) window.stopGuildListeners();
+  if (window.stopDmListeners) window.stopDmListeners();
   await signOut(auth);
   show('auth-screen');
 };

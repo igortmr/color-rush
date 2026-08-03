@@ -25,7 +25,7 @@ let myFriendsCache = null, myFriendsCacheAt = 0;
 let myFriendReqCache = null, myFriendReqCacheAt = 0;
 const FRIENDS_CACHE_MS = 20 * 1000;
 
-async function fetchMyFriends(force) {
+export async function fetchMyFriends(force) {
   if (state.offline || !state.currentUser) return {};
   if (!force && myFriendsCache && (Date.now() - myFriendsCacheAt) < FRIENDS_CACHE_MS) return myFriendsCache;
   const snap = await getDoc(doc(db, 'friends', state.currentUser.uid));
@@ -93,7 +93,7 @@ export function showFriendActionError() {
 // botão de ação no perfil de outra pessoa (adicionar / já é amigo / pedido
 // enviado / pedido recebido) — atualizado sempre que o perfil abre e depois
 // de qualquer ação de amizade feita nessa tela
-export async function renderProfileFriendAction(theirUid) {
+export async function renderProfileFriendAction(theirUid, theirNick) {
   const box = $('profile-friend-action');
   if (!box) return;
   box.dataset.uid = theirUid;
@@ -103,17 +103,29 @@ export async function renderProfileFriendAction(theirUid) {
   const rel = await getFriendRelation(theirUid);
   if (box.dataset.uid !== theirUid) return; // perfil trocou enquanto isso carregava
   box.innerHTML = '';
-  box.appendChild(friendActionNode(rel, theirUid));
+  box.appendChild(friendActionNode(rel, theirUid, theirNick));
 }
 
-function friendActionNode(rel, theirUid) {
+function friendActionNode(rel, theirUid, theirNick) {
   if (rel === 'friends') {
+    const wrap = document.createElement('div');
+    wrap.className = 'btn-row';
+    wrap.style.width = '100%';
+    // "iniciar chat" — abre o balãozinho de DM (js/dms.js) já direto na
+    // conversa com essa pessoa; exposta via window porque o perfil ainda
+    // não conhece o domínio de DMs, mesmo padrão de window.openGuildFromTag
+    const chatBtn = document.createElement('button');
+    chatBtn.style.cssText = 'flex:1; padding:9px 12px; font-size:0.85rem;';
+    chatBtn.textContent = T[state.lang].dm_chat_start_btn;
+    chatBtn.onclick = () => window.openDmChatWithFriend(theirUid, theirNick || '');
+    wrap.appendChild(chatBtn);
     const btn = document.createElement('button');
     btn.className = 'secondary';
     btn.textContent = T[state.lang].btn_remove_friend_profile;
-    btn.style.cssText = 'padding:9px 18px; font-size:0.85rem;';
+    btn.style.cssText = 'flex:1; padding:9px 12px; font-size:0.85rem;';
     btn.onclick = () => uiRemoveFriend(theirUid);
-    return btn;
+    wrap.appendChild(btn);
+    return wrap;
   }
   if (rel === 'sent') {
     const wrap = document.createElement('div');
