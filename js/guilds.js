@@ -469,6 +469,9 @@ function nonMemberActionCard(g, myUid) {
   }
   const btn = document.createElement('button');
   btn.textContent = T[state.lang].guild_btn_request_join;
+  // menor e centralizado em vez de esticar o card inteiro (mesmo tratamento
+  // do botão de convidar pro clã, ver renderGuildInviteAction)
+  btn.style.cssText = 'align-self:center; padding:6px 16px; font-size:0.75rem;';
   btn.onclick = () => uiRequestJoinGuild(g.id);
   wrap.appendChild(btn);
   return wrap;
