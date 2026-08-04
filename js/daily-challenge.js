@@ -498,10 +498,10 @@ export async function updateDailyMenuCard() {
     dailyAttemptsUsed = 0;
     dailyBestScore = 0;
   }
-  // Xº do lado do 🎯 — mesma posição mostrada no ranking "Hoje" do desafio
-  // diário (ver computeMyDailyTodayRank), mesmo padrão dos cards de modo
+  // Xº do lado do 📊 (mesmo emoji dos cards de modo) — mesma posição
+  // mostrada no ranking "Hoje" do desafio diário (ver computeMyDailyTodayRank)
   const myDailyRank = await computeMyDailyTodayRank();
-  $('daily-card-best').innerHTML = `${myDailyRank ? myDailyRank + 'º ' : ''}🎯 ${T[state.lang].daily_card_best(dailyBestScore)}`;
+  $('daily-card-best').innerHTML = `${myDailyRank ? myDailyRank + 'º ' : ''}📊 ${T[state.lang].daily_card_best(dailyBestScore)}`;
   $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
     ? T[state.lang].daily_card_already_played
     : T[state.lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
