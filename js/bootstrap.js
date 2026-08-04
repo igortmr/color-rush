@@ -182,7 +182,11 @@ window.setLang = (l) => {
 /* ================== versão (commit real do GitHub) + auto-atualização ================== */
 let loadedSha = null;
 async function fetchLatestSha() {
-  const res = await fetch('https://api.github.com/repos/igortmr/color-rush/commits?path=index.html&per_page=1');
+  // sem "path=" de propósito — antes só contava commit que tocasse
+  // index.html, então mudança só em CSS/outro JS (ex.: css/style-teste.css,
+  // js/ranking-cache.js) nunca aparecia aqui nem disparava o auto-reload
+  // abaixo, mesmo já estando no ar
+  const res = await fetch('https://api.github.com/repos/igortmr/color-rush/commits?per_page=1');
   const data = await res.json();
   return (data && data[0]) ? data[0].sha : null;
 }
