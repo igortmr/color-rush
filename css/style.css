@@ -899,6 +899,12 @@
      cor de destaque da posição deixava o número quase ilegível */
   td.pos { text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7), 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
+  /* coluna de vitórias do Salão da Fama usa a mesma célula .pts da coluna de
+     pigmentos ao lado — as duas alinhadas à direita ficavam grudadas
+     (ex.: "5 3400" quase virando um número só). Centralizada só nessa
+     coluna (3ª de #daily-alltime-body) resolve sem mexer na pontuação
+     normal do resto do ranking, que continua à direita */
+  #daily-alltime-body td:nth-child(3) { text-align: center; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
   th:first-child { text-align: center; }
 
