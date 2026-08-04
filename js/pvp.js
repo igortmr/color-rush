@@ -196,10 +196,15 @@ window.openChallengeModeModal = (toUid, nick, theirXp, theirAdmin) => {
   body.innerHTML = '';
   ALL_MODES.forEach(m => {
     if (!modeUnlockedForXp(m, myXp(), myAdmin) || !modeUnlockedForXp(m, theirXp, theirAdmin === true)) return;
-    const btn = document.createElement('button');
-    btn.textContent = `${MODE_ICON[m]} ${modeLabel(m)}`;
-    btn.onclick = () => sendChallenge(toUid, m);
-    body.appendChild(btn);
+    // mesmo cartão de modo da tela inicial (.mode-card), só que compacto —
+    // ver .challenge-mode-card em css/style.css
+    const card = document.createElement('div');
+    card.className = 'mode-card challenge-mode-card';
+    const h2 = document.createElement('h2');
+    h2.textContent = `${MODE_ICON[m]} ${modeLabel(m)}`;
+    card.appendChild(h2);
+    card.onclick = () => sendChallenge(toUid, m);
+    body.appendChild(card);
   });
   $('challenge-mode-modal').style.display = 'flex';
 };

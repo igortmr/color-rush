@@ -542,11 +542,13 @@
      colado na borda (ex: Google/Apple na popup de criar conta) fazia a
      barra de rolagem aparecer/sumir e a popup "pular" de tamanho */
   .modal-card-body button:hover { transform: none; }
-  /* botões de modo do duelo (ver openChallengeModeModal em js/pvp.js) — só
-     esse popup não precisa dos botões esticados; align-items:center desliga
-     o stretch padrão de flex-direction:column, cada botão fica do tamanho
-     do próprio texto, centralizado */
-  #challenge-mode-body { align-items: center; }
+  /* opções de modo do duelo (ver openChallengeModeModal em js/pvp.js) — cada
+     uma é um .mode-card igual aos da tela inicial (mesmo fundo/borda/hover),
+     só que compacto: sem o parágrafo de descrição nem o rodapé de
+     recorde/tutorial, já que aqui é só "escolha o modo", não explica como
+     jogar */
+  .challenge-mode-card { padding: 14px 20px; }
+  .challenge-mode-card h2 { margin-bottom: 0; }
 
   .mode-card {
     width: 100%;

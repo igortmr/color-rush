@@ -461,6 +461,14 @@
      barra de rolagem aparecer/sumir e a popup "pular" de tamanho */
   .modal-card-body button:hover { transform: none; }
 
+  /* opções de modo do duelo (ver openChallengeModeModal em js/pvp.js) — cada
+     uma é um .mode-card igual aos da tela inicial (mesmo fundo/borda/hover),
+     só que compacto: sem o parágrafo de descrição nem o rodapé de
+     recorde/tutorial, já que aqui é só "escolha o modo", não explica como
+     jogar */
+  .challenge-mode-card { padding: 14px 20px; }
+  .challenge-mode-card h2 { margin-bottom: 0; }
+
   .mode-card {
     width: 100%;
     background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
