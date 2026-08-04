@@ -281,6 +281,14 @@ window.showDailyIntro = () => {
    qualquer aviso futuro do jogo, não só do desafio diário. */
 window.showInbox = async () => {
   if (state.offline || !state.currentUser) return;
+  // a renderização da caixa de entrada mudou de formato junto com o campo
+  // "type" (ver renderInboxList) — quem ainda está com o JS antigo em
+  // memória (aba aberta de antes de um deploy, sem ter dado refresh) não
+  // sabe ler mensagens de tipos novos e mostra texto quebrado (ex.:
+  // "undefinedº lugar"). Em vez de arriscar exibir isso, recarrega a página
+  // na hora — não é um meio de partida pra proteger, então não precisa do
+  // modal com botão (ver window.startGame), só reinicia direto.
+  if (!(await window.isClientUpToDate())) { window.forceReloadNow(); return; }
   $('inbox-modal').style.display = 'flex';
   await loadInbox();
 };
