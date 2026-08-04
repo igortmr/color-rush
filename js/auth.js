@@ -192,6 +192,25 @@ async function registerPushTokenWithRetry(token, attemptsLeft = 3) {
     throw e;
   }
 }
+// tenta de novo toda vez que o app volta do segundo plano (não só na
+// abertura do zero) — sem isso, alguém que sai do Color Rush, vai nos
+// Ajustes do iOS ligar a permissão de notificação, e só troca de volta pro
+// app (sem fechar de verdade) nunca teria o token registrado:
+// initNativePush() só roda 1x por abertura NOVA do processo (nativePushInitDone
+// acima trava isso), e "voltar do segundo plano" não é uma abertura nova —
+// o app inteiro continua rodando, com a mesma trava já acionada da vez
+// anterior (mesmo que aquela vez tenha falhado por permissão negada).
+// @capacitor/app já é dependência do projeto (usado só pra isso agora).
+if (isNativeApp()) {
+  const CapApp = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  if (CapApp && CapApp.addListener) {
+    CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) return;
+      nativePushInitDone = false;
+      initNativePush();
+    });
+  }
+}
 // "Sign in with Apple" só aparece dentro do app empacotado — a Apple só
 // exige isso no APP (guideline 4.8), não no site avulso, e no navegador
 // solto o login com Apple não completa (WebKit derruba o resultado do
