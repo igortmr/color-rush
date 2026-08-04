@@ -99,9 +99,13 @@ export function spawnConfetti() { spawnConfettiVariant(equippedConfetti); }
 
 window.playAgain = () => window.startGame(mode);
 
-window.startGame = (m) => {
+window.startGame = async (m) => {
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   if (!modeUnlocked(m)) return; // modo ainda bloqueado pelo nível
+  // barra o início de QUALQUER partida (Clássico/Reverso/Mosaico/Trio/Caos,
+  // e também Batalha de Clã, que chama window.startGame por baixo — ver
+  // guild-battle.js) se saiu build nova no GitHub — ver isClientUpToDate
+  if (!(await window.isClientUpToDate())) { window.showOutdatedVersionModal(); return; }
   track('game_start', { mode: m });
   mode = m;
   score = 0;

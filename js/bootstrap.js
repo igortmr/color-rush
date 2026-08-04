@@ -200,14 +200,16 @@ async function fetchLatestSha() {
   }
 })();
 
-// confere se o client está na versão mais nova antes de liberar o desafio
-// diário — o desafio precisa que todo mundo rode a MESMA lógica (paleta de
-// cores do dia, modo sorteado, RNG determinística etc. — ver DAILY_COLORS/
-// dailyModeForToday), então uma versão desatualizada pode mostrar um desafio
-// diferente do que o servidor espera. Fail-open: se não der pra confirmar
-// (1ª busca do load ainda não terminou, ou a requisição falha agora), deixa
-// jogar — só barra quando dá pra confirmar de verdade que saiu versão nova.
-async function isDailyClientUpToDate() {
+// confere se o client está na versão mais nova antes de liberar QUALQUER
+// partida (modos livres, diário, duelo PvP...) — toda pontuação depende da
+// lógica do cliente bater com a que o servidor espera (paleta de cores,
+// modo sorteado, RNG determinística, regras de pontuação etc.), então uma
+// versão desatualizada pode gerar um resultado que o servidor rejeita, ou
+// pior, uma forma antiga de pontuar que já foi corrigida/removida por bug.
+// Fail-open: se não der pra confirmar (1ª busca do load ainda não terminou,
+// ou a requisição falha agora), deixa jogar — só barra quando dá pra
+// confirmar de verdade que saiu versão nova.
+async function isClientUpToDate() {
   try {
     const sha = await fetchLatestSha();
     if (!sha || !loadedSha) return true;
@@ -216,10 +218,34 @@ async function isDailyClientUpToDate() {
     return true;
   }
 }
-// exposta em window pra js/daily-challenge.js poder conferir a versão antes
-// de liberar uma tentativa, sem esperar a auto-atualização ganhar seu
-// próprio módulo (fase futura)
-window.isDailyClientUpToDate = isDailyClientUpToDate;
+// exposta em window pra qualquer domínio que inicia uma partida (game-core.js,
+// pvp.js, daily-challenge.js) poder conferir a versão antes de liberar
+window.isClientUpToDate = isClientUpToDate;
+
+// recarrega a página buscando a versão mais nova (bypassa o cache do HTML
+// via ?v=) — usada tanto pelo auto-reload silencioso abaixo quanto pelo
+// botão "Atualizar agora" do #outdated-version-modal
+function reloadToLatest(sha) {
+  document.getElementById('version-tag').textContent = '🔄 atualizando...';
+  setTimeout(() => location.replace(`${location.pathname}?v=${sha ? sha.slice(0, 7) : Date.now()}`), 600);
+}
+// chamada pelo #outdated-version-modal (ver isClientUpToDate acima) — busca
+// a sha mais nova de novo na hora do clique, não confia em loadedSha (que
+// nunca é atualizado fora do reload de verdade, de propósito)
+window.forceReloadNow = async () => {
+  let sha = null;
+  try { sha = await fetchLatestSha(); } catch {}
+  reloadToLatest(sha);
+};
+// mostrada por qualquer início de partida bloqueado (ver isClientUpToDate) —
+// avisa e deixa a pessoa decidir quando recarregar, em vez de arrancar a
+// página debaixo dela sem avisar
+window.showOutdatedVersionModal = () => {
+  document.getElementById('outdated-version-modal').style.display = 'flex';
+};
+window.closeOutdatedVersionModal = () => {
+  document.getElementById('outdated-version-modal').style.display = 'none';
+};
 
 // se sair versão nova no GitHub, recarrega sozinho — mas nunca no meio de uma partida
 async function checkForUpdate() {
@@ -228,11 +254,7 @@ async function checkForUpdate() {
     const sha = await fetchLatestSha();
     if (!sha) return;
     if (!loadedSha) { loadedSha = sha; return; } // primeira busca falhou no load; só registra
-    if (sha !== loadedSha) {
-      document.getElementById('version-tag').textContent = '🔄 atualizando...';
-      // ?v= força o navegador a buscar o HTML novo em vez do cache
-      setTimeout(() => location.replace(`${location.pathname}?v=${sha.slice(0, 7)}`), 1000);
-    }
+    if (sha !== loadedSha) reloadToLatest(sha);
   } catch {}
 }
 setInterval(checkForUpdate, 5 * 60 * 1000); // a cada 5 minutos

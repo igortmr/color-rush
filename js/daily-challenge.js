@@ -314,16 +314,33 @@ function renderInboxList(msgs) {
   allBtn.style.display = pendingCount > 1 ? '' : 'none';
   list.innerHTML = '';
   msgs.forEach(msg => {
-    const pos = msg.position;
-    const posLabel = pos === 1 ? T[state.lang].daily_pos_1 : pos === 2 ? T[state.lang].daily_pos_2 : pos === 3 ? T[state.lang].daily_pos_3 : T[state.lang].daily_pos_n(pos);
     const box = document.createElement('div');
     box.className = 'daily-inbox-msg';
     if (msg.claimed) box.style.opacity = '0.6';
 
-    const posLine = document.createElement('div');
-    posLine.className = 'pos-line';
-    posLine.textContent = T[state.lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
-    box.appendChild(posLine);
+    // "admin_message": aviso avulso escrito por um admin (ex.: compensação de
+    // bug corrigido), com título/corpo livres já prontos no próprio
+    // documento — não segue o formato fixo de "parabéns, você ficou em Nº"
+    // do prêmio do desafio diário abaixo. Mesma linha de resgate (coins/
+    // botão) pras duas, só a parte de texto muda.
+    if (msg.type === 'admin_message') {
+      const titleLine = document.createElement('div');
+      titleLine.className = 'pos-line';
+      titleLine.textContent = msg.title || '';
+      box.appendChild(titleLine);
+      const bodyLine = document.createElement('div');
+      bodyLine.className = 'muted';
+      bodyLine.style.cssText = 'text-align:left; margin-top:4px; white-space:pre-line;';
+      bodyLine.textContent = msg.body || '';
+      box.appendChild(bodyLine);
+    } else {
+      const pos = msg.position;
+      const posLabel = pos === 1 ? T[state.lang].daily_pos_1 : pos === 2 ? T[state.lang].daily_pos_2 : pos === 3 ? T[state.lang].daily_pos_3 : T[state.lang].daily_pos_n(pos);
+      const posLine = document.createElement('div');
+      posLine.className = 'pos-line';
+      posLine.textContent = T[state.lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
+      box.appendChild(posLine);
+    }
 
     const claimRow = document.createElement('div');
     claimRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px;';
@@ -345,7 +362,12 @@ function renderInboxList(msgs) {
       const claimBtn = document.createElement('button');
       claimBtn.className = 'secondary';
       claimBtn.textContent = T[state.lang].btn_claim;
-      claimBtn.onclick = () => claimOneDailyReward(msg.dateStr);
+      // usa o id do documento (não msg.dateStr) — pro prêmio do desafio
+      // diário os dois sempre coincidem (o doc é salvo com o dateStr como id
+      // em resolveDailyChallenge), mas um admin_message pode ter um id fixo
+      // que não é uma data (ex.: "admin_mosaic_bugfix"), então só o id serve
+      // de referência confiável pro resgate
+      claimBtn.onclick = () => claimOneDailyReward(msg.id);
       claimRow.appendChild(claimBtn);
     }
 
@@ -476,7 +498,7 @@ export async function updateDailyMenuCard() {
 /* -------- jogo do desafio (mesmo modo Clássico, RNG determinística) -------- */
 window.startDailyChallenge = async () => {
   if (state.offline || !state.currentUser || !state.myData.nick) { window.goSignup(); return; }
-  if (!(await window.isDailyClientUpToDate())) {
+  if (!(await window.isClientUpToDate())) {
     $('daily-blocked-msg').textContent = T[state.lang].daily_update_required;
     $('daily-intro').style.display = 'none';
     $('daily-play').style.display = 'none';

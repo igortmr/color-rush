@@ -463,6 +463,19 @@
   </div>
 </div>
 
+<!-- barra o início de qualquer partida (modos livres, diário fora da tela
+     própria de bloqueio, PvP) quando o build atual está desatualizado — ver
+     isClientUpToDate/showOutdatedVersionModal em js/bootstrap.js -->
+<div class="modal-overlay" id="outdated-version-modal" style="display:none;" onclick="if(event.target===this) closeOutdatedVersionModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-orange); text-shadow:0 0 10px rgba(255,159,28,0.5);" data-i18n="outdated_version_title">🔄 Versão desatualizada</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" data-i18n="outdated_version_msg">Uma nova versão do jogo foi lançada. Atualize a página pra continuar jogando — sua versão atual pode não pontuar corretamente.</p>
+    </div>
+    <button onclick="forceReloadNow()" data-i18n="outdated_version_update_btn">🔄 Atualizar agora</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="buy-shop-modal" style="display:none;" onclick="if(event.target===this) closeBuyShopModal();">
   <div class="modal-card" style="max-width:380px; text-align:center;">
     <h1 style="font-size:1.2rem; color:var(--neon-yellow); text-shadow:0 0 10px rgba(255,233,60,0.5);">🛍️ Confirmar compra</h1>
