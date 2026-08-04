@@ -9,6 +9,7 @@ import { lvChip, modeLabel } from './levels.js';
 import {
   CAOS_POOL, DAILY_COLORS, DAILY_PALETTE_OVERRIDE, DAILY_SHAPES_OVERRIDE, poolFor, poolItemById
 } from './constants.js';
+import { jitterHex } from './utils.js';
 import { openProfileFromRanking } from './profile-public.js';
 
 // envia o "filme" (rodadas + rastro do mouse) de uma partida que acabou de
@@ -50,9 +51,11 @@ export async function saveMatchReplayWithRetry(payload, attemptsLeft = 3) {
 // replay (renderReplaySquares) e, no futuro, um tutorial dedicado, pra nunca
 // desenhar esse quadrado especial de 2 jeitos diferentes por engano
 export function renderTrioSquare(el, sq) {
-  el.style.background = sq.bg.hex;
-  el.style.boxShadow = `0 0 18px ${sq.bg.hex}99, 0 0 40px ${sq.bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
-  el.innerHTML = `<span class="word word-trio" style="color:${sq.tc.hex}">${cName(sq.word)}</span>`;
+  const bgHex = jitterHex(sq.bg.hex);
+  const tcHex = jitterHex(sq.tc.hex);
+  el.style.background = bgHex;
+  el.style.boxShadow = `0 0 18px ${bgHex}99, 0 0 40px ${bgHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+  el.innerHTML = `<span class="word word-trio" style="color:${tcHex}">${cName(sq.word)}</span>`;
 }
 
 // desenha um quadrado do modo Caos (forma + cor de preenchimento + palavra,
@@ -63,7 +66,8 @@ export function renderCaosSquare(el, sq) {
   el.className = 'square shape-square ' + sq.shape.shapeClass;
   el.style.background = '';
   el.style.boxShadow = '';
-  el.innerHTML = `<span class="shape-fill ${sq.shape.shapeClass}" style="background:${sq.color.hex}; filter: drop-shadow(0 0 14px ${sq.color.hex}88) drop-shadow(0 0 26px ${sq.color.hex}44);"></span><span class="word">${cName(sq.word)}</span>`;
+  const colorHex = jitterHex(sq.color.hex);
+  el.innerHTML = `<span class="shape-fill ${sq.shape.shapeClass}" style="background:${colorHex}; filter: drop-shadow(0 0 14px ${colorHex}88) drop-shadow(0 0 26px ${colorHex}44);"></span><span class="word">${cName(sq.word)}</span>`;
 }
 
 /* ================== tela de replay ==================

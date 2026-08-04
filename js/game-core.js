@@ -5,7 +5,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { show } from './nav.js';
 import { T, cName } from './i18n.js';
-import { track, shuffle, pick, getLocalRecord, setLocalRecord } from './utils.js';
+import { track, shuffle, pick, getLocalRecord, setLocalRecord, jitterHex } from './utils.js';
 import {
   COLORS, CONFETTI_COLORS, SQUARES, CAOS_POOL, isColorItem, poolItemId,
   PLAYED_FIELD, poolFor, squaresFor
@@ -455,8 +455,9 @@ function newRound(first) {
     } else {
       const bg   = (mode === 'classic' || mode === 'mosaic') ? item : paired;
       const word = (mode === 'classic' || mode === 'mosaic') ? paired : item;
-      el.style.background = bg.hex;
-      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      const bgHex = jitterHex(bg.hex);
+      el.style.background = bgHex;
+      el.style.boxShadow = `0 0 18px ${bgHex}99, 0 0 40px ${bgHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
     el.onclick = (e) => handleClick(item, e);

@@ -7,7 +7,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { show, resetScroll } from './nav.js';
 import { T, cName } from './i18n.js';
-import { track, seededPick, seededShuffle, mulberry32, hashSeed } from './utils.js';
+import { track, seededPick, seededShuffle, mulberry32, hashSeed, jitterHex } from './utils.js';
 import {
   SQUARES, poolItemId, DAILY_ROTATION_MODES, DAILY_MAX_ATTEMPTS, DAILY_COLORS,
   DAILY_PALETTE_OVERRIDE, DAILY_SHAPES_OVERRIDE, poolFor
@@ -640,8 +640,9 @@ function dailyNewRound(first) {
     } else {
       const bg   = (dailyMode === 'classic') ? item : paired;
       const word = (dailyMode === 'classic') ? paired : item;
-      el.style.background = bg.pattern || bg.hex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
-      el.style.boxShadow = `0 0 18px ${bg.hex}99, 0 0 40px ${bg.hex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
+      const bgHex = jitterHex(bg.hex);
+      el.style.background = bg.pattern || bgHex; // "zebra" (só no desafio diário) usa listras em vez de hex sólido
+      el.style.boxShadow = `0 0 18px ${bgHex}99, 0 0 40px ${bgHex}55, inset 0 0 20px rgba(255,255,255,0.12)`;
       el.innerHTML = `<span class="word">${cName(word)}</span>`;
     }
     el.onclick = (e) => dailyHandleClick(item, e);

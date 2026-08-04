@@ -19,6 +19,23 @@ export function shuffle(a) {
 }
 export const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
+// pequena variação aleatória por quadrado a cada rodada — muda cada canal
+// RGB em até ±JITTER (imperceptível ao olho no tabuleiro), pra que um bot
+// que capture a tela e procure por um valor de cor exato/memorizado de uma
+// rodada pra outra não consiga confiar em correspondência de pixel idêntica.
+// Só mexe no valor exibido, nunca na cor "lógica" (key/name) que decide
+// quem é o quadrado certo — a mecânica do jogo não muda em nada.
+const COLOR_JITTER = 6;
+export function jitterHex(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const clamp = v => Math.max(0, Math.min(255, v));
+  const j = () => Math.round((Math.random() * 2 - 1) * COLOR_JITTER);
+  const r = clamp(((n >> 16) & 255) + j());
+  const g = clamp(((n >> 8) & 255) + j());
+  const b = clamp((n & 255) + j());
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
 /* ================== formatação de hora nas mensagens de chat ==================
    compartilhado entre o chat de clã (js/guilds.js) e as mensagens diretas
    entre amigos (js/dms.js) — hora curtinha sempre visível embaixo da
