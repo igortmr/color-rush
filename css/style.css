@@ -547,8 +547,8 @@
      só que compacto: sem o parágrafo de descrição nem o rodapé de
      recorde/tutorial, já que aqui é só "escolha o modo", não explica como
      jogar */
-  .challenge-mode-card { padding: 14px 20px; }
-  .challenge-mode-card h2 { margin-bottom: 0; }
+  .challenge-mode-card { padding: 8px 16px; border-radius: 12px; }
+  .challenge-mode-card h2 { margin-bottom: 0; font-size: 0.95rem; }
 
   .mode-card {
     width: 100%;
