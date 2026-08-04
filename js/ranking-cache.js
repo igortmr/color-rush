@@ -238,6 +238,15 @@ export async function renderRankPreview(field, bodyElId, myPts) {
   }
 }
 
+// chame assim que a over-screen aparecer, ANTES do sync/persist assíncrono
+// do resultado (que pode levar alguns segundos) — sem isso o #mini-ranking-body
+// fica com o HTML da última vez que essa tabela foi preenchida (partida
+// anterior) visível até renderMiniRankings rodar no fim de gameOver()
+export function clearRankPreview(m) {
+  $('mini-mode').textContent = modeLabel(m);
+  $('mini-ranking-body').innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
+}
+
 // myScore: pontuação da rodada que acabou de terminar (só importa em modo
 // offline, quando ainda não tem nada salvo em state.myData) — vem de quem
 // chama porque a variável "score" do loop principal do jogo ainda não é

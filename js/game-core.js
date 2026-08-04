@@ -14,7 +14,7 @@ import {
   levelFromXp, myXp, xpInfo, xpStreakMultiplier, modeUnlocked, blockIfBanned
 } from './levels.js';
 import { renderTrioSquare, renderCaosSquare, saveMatchReplayWithRetry } from './replay.js';
-import { renderMiniRankings } from './ranking-cache.js';
+import { renderMiniRankings, clearRankPreview } from './ranking-cache.js';
 import { equippedConfetti } from './shop.js';
 import { dailyPlaying, dailyReplayMouse, dailyReplayStartMs } from './daily-challenge.js';
 
@@ -577,6 +577,7 @@ async function gameOver(reason) {
   $('share-status').textContent = '';
   if (isNewRecord) { window.sfx.record(); spawnConfetti(); maybeRequestAppReview(); }
   show('over-screen');
+  if (!state.playingForGuildBattle) clearRankPreview(mode);
 
   // trava os botões e espera os sinais de progresso desta partida
   // "assentarem" no servidor (ver pendingRoundSync/callSyncProgress)
