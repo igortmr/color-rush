@@ -513,6 +513,29 @@
   </div>
 </div>
 
+<!-- popup "sem clã" ao clicar no card da Batalha sem estar em nenhum (ver
+     guildBattleCardClick em js/guild-battle.js) -->
+<div class="modal-overlay" id="guild-battle-no-guild-modal" style="display:none;" onclick="if(event.target===this) closeGuildBattleNoGuildModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center; position:relative;">
+    <button onclick="closeGuildBattleNoGuildModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 style="font-size:1.2rem; color:var(--neon-red); text-shadow:0 0 10px rgba(255,45,107,0.5);" data-i18n="guild_battle_no_guild_title">⚔️ Você não tem clã</h1>
+    <div class="modal-card-body">
+      <p style="text-align:left;" data-i18n="guild_battle_no_guild_text">Entre em um clã (ou crie o seu) pra poder participar da Batalha de Clãs.</p>
+    </div>
+    <button onclick="guildBattleGoToGuilds()" data-i18n="guild_battle_no_guild_cta">🛡️ Ver Clãs</button>
+  </div>
+</div>
+
+<!-- popup de detalhe de um clã na Batalha — top-5 dos 2 modos + replay (ver
+     openGuildBattleDetail em js/guild-battle.js) -->
+<div class="modal-overlay" id="guild-battle-detail-modal" style="display:none;" onclick="if(event.target===this) closeGuildBattleDetailModal();">
+  <div class="modal-card" style="max-width:420px; text-align:center; position:relative;">
+    <button onclick="closeGuildBattleDetailModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 id="guild-battle-detail-title" style="font-size:1.2rem;"></h1>
+    <div class="modal-card-body" id="guild-battle-detail-body"></div>
+  </div>
+</div>
+
 <!-- criar conta: popup própria (campos separados dos de login), aberta pelo
      botão CRIAR CONTA em #auth-screen — repete Google/Apple pra quem prefere
      entrar por eles em vez de e-mail+senha (ver openSignupModal em js/auth.js) -->
@@ -771,6 +794,16 @@
     <button class="pill-btn" onclick="guildBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div id="guild-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
+</div>
+
+<!-- Batalha de Clã: tela própria, fora da tela do clã (ver js/guild-battle.js)
+     — só acessada pelo card do menu quando o evento está rolando -->
+<div class="screen" id="guild-battle-screen">
+  <div class="profile-top-row">
+    <h1 style="font-size:1.7rem;" data-i18n="guild_battle_page_title">⚔️ Batalha de Clãs</h1>
+    <button class="pill-btn" onclick="guildBattleBack()" data-i18n="btn_back">VOLTAR</button>
+  </div>
+  <div id="guild-battle-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
 </div>
 
 <!-- PVP (duelo ao vivo) -->

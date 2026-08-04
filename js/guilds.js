@@ -6,7 +6,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
-import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip, applyGuildTagStyle, modeLabel, MODE_ICON } from './levels.js';
+import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip, applyGuildTagStyle } from './levels.js';
 import { isMuted, tone, formatMsgTime, formatMsgFullDateTime } from './utils.js';
 import { fetchAllScores, rowData } from './ranking-cache.js';
 import { openProfileByUid } from './friends.js';
@@ -42,7 +42,7 @@ let guildUnsub = null;
 let joinReqUnsub = null;
 let inviteUnsub = null;
 let chatUnsub = null;
-let guildTab = 'members'; // 'members' | 'chat' | 'treasury' | 'battle' | 'shop'
+let guildTab = 'members'; // 'members' | 'chat' | 'treasury' | 'shop'
 let guildRenderToken = 0; // ver renderGuildScreen abaixo
 
 function stopGuildListeners() {
@@ -91,19 +91,16 @@ window.stopGuildInviteListener = () => {
 
 /* ================== atalho do menu ================== */
 // "CLÃS" no menu vai direto pro próprio clã se a pessoa já estiver em um;
-// senão, abre a listagem geral pra procurar/criar um. initialTab (opcional)
-// deixa o card da Batalha de Clãs no menu (ver js/guild-battle.js) abrir já
-// na aba certa em vez de sempre cair em "Membros" — se a pessoa ainda não
-// tiver clã, cai na listagem normalmente (initialTab não faz sentido lá)
-window.showGuildHome = (initialTab = 'members') => {
+// senão, abre a listagem geral pra procurar/criar um
+window.showGuildHome = () => {
   if (state.myData.guildId) {
     pushScreenAndShow('guild-screen', 'menu-screen');
-    openGuildScreen(state.myData.guildId, initialTab);
+    openGuildScreen(state.myData.guildId);
   } else if (state.myData.pendingGuildInvite) {
     // convite pendente tem prioridade — leva direto pro clã que convidou,
     // já mostrando o cartão de aceitar/recusar (ver nonMemberActionCard)
     pushScreenAndShow('guild-screen', 'menu-screen');
-    openGuildScreen(state.myData.pendingGuildInvite.guildId, initialTab);
+    openGuildScreen(state.myData.pendingGuildInvite.guildId);
   } else {
     window.showGuildList();
   }
@@ -250,10 +247,10 @@ window.openGuildFromTag = (guildId, backScreenId) => {
 };
 
 /* ================== tela do clã ================== */
-function openGuildScreen(guildId, initialTab = 'members') {
+function openGuildScreen(guildId) {
   stopGuildListeners();
   currentGuildId = guildId;
-  guildTab = initialTab;
+  guildTab = 'members';
   show('guild-screen');
   $('guild-body').innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].loading_text}</div>`;
 
@@ -380,7 +377,6 @@ async function renderGuildScreen() {
       <button class="scope-tab ${guildTab === 'members' ? 'active' : ''}" onclick="setGuildTab('members')">${T[state.lang].guild_tab_members}</button>
       <button class="scope-tab ${guildTab === 'chat' ? 'active' : ''}" onclick="setGuildTab('chat')">${T[state.lang].guild_tab_chat}</button>
       <button class="scope-tab ${guildTab === 'treasury' ? 'active' : ''}" onclick="setGuildTab('treasury')">${T[state.lang].guild_tab_treasury}</button>
-      <button class="scope-tab ${guildTab === 'battle' ? 'active' : ''}" onclick="setGuildTab('battle')">${T[state.lang].guild_tab_battle}</button>
       <button class="scope-tab ${guildTab === 'shop' ? 'active' : ''}" onclick="setGuildTab('shop')">${T[state.lang].guild_tab_shop}</button>`;
     body.appendChild(tabs);
   }
@@ -422,16 +418,6 @@ async function renderGuildScreen() {
     } catch { /* sem nível não quebra a lista, só mostra sem o chip */ }
     if (myRenderToken !== guildRenderToken) return;
     body.appendChild(treasurySection(g, xpByUid));
-  } else if (guildTab === 'battle') {
-    // mesmo padrão/cache de nível das outras abas (ver comentário na aba
-    // 'treasury' acima — cada else-if busca de novo pq são ramos separados)
-    let xpByUid = {};
-    try {
-      const all = await fetchAllScores();
-      all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
-    } catch { /* sem nível não quebra a lista, só mostra sem o chip */ }
-    if (myRenderToken !== guildRenderToken) return;
-    body.appendChild(battleSection(g, xpByUid));
   } else if (guildTab === 'shop') {
     body.appendChild(guildShopSection(g, myUid, isLeader));
   }
@@ -865,173 +851,6 @@ async function loadTreasuryHistory(guildId, historyList, xpByUid) {
     if (myToken !== guildRenderToken) return;
     historyList.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].ranking_error}</div>`;
   }
-}
-
-/* ================== Batalha de Clã (aba "Batalha") ================== */
-// evento semanal (sexta 18h a domingo 23:59:59, ver startGuildBattleEvent em
-// functions/index.js): 2 modos sorteados, ranking próprio por clã em cada
-// um (top 5, no máx. 2 por pessoa — automático, ver comentário no servidor),
-// nota final = média das 2 médias. Fetch avulso (não listener ao vivo),
-// mesmo raciocínio já usado em loadTreasuryHistory.
-function battleSection(g, xpByUid) {
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:10px;';
-  const body = document.createElement('div');
-  body.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].loading_text}</div>`;
-  wrap.appendChild(body);
-  loadGuildBattleData(g, body, xpByUid);
-  return wrap;
-}
-
-async function loadGuildBattleData(g, body, xpByUid) {
-  const myToken = guildRenderToken;
-  // teste.html (window.IS_TESTE, mesmo flag de ranking-cache.js/guild list
-  // acima) lê a coleção paralela de teste — nunca a de dados reais, e
-  // vice-versa (ver comentário em creditGuildBattleScore no servidor)
-  const eventsCollection = window.IS_TESTE ? 'guildBattleEventsTest' : 'guildBattleEvents';
-  const battleSubcollection = window.IS_TESTE ? 'battleScoresTest' : 'battleScores';
-  try {
-    const eventSnap = await getDocs(query(collection(db, eventsCollection), orderBy('startsAt', 'desc'), limit(1)));
-    if (myToken !== guildRenderToken) return;
-    if (eventSnap.empty) {
-      body.innerHTML = `<div class="card muted" style="text-align:center;">${T[state.lang].guild_battle_no_event}</div>`;
-      return;
-    }
-    const eventDoc = eventSnap.docs[0];
-    const event = eventDoc.data();
-    const eventId = eventDoc.id;
-
-    const battleSnap = await getDoc(doc(db, 'guilds', g.id, battleSubcollection, eventId));
-    if (myToken !== guildRenderToken) return;
-    const battleData = battleSnap.exists() ? battleSnap.data() : {};
-    const perUser = battleData.perUser || {};
-    const modeAverages = battleData.modeAverages || {};
-
-    body.innerHTML = '';
-
-    const statusCard = document.createElement('div');
-    statusCard.className = 'card';
-    statusCard.style.textAlign = 'center';
-    const endsAtMs = event.endsAt && event.endsAt.toMillis ? event.endsAt.toMillis() : 0;
-    const isActive = event.status === 'active' && Date.now() <= endsAtMs;
-    statusCard.innerHTML = isActive
-      ? `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_active_until}</div><div style="font-weight:700;">${formatMsgFullDateTime(event.endsAt)} ${formatMsgTime(event.endsAt)}</div>`
-      : `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ended}</div>`;
-    body.appendChild(statusCard);
-
-    (event.modes || []).forEach(mode => {
-      body.appendChild(battleModeCard(mode, perUser, modeAverages[mode] || 0, xpByUid));
-    });
-
-    const modeA = event.modes && event.modes[0];
-    const modeB = event.modes && event.modes[1];
-    const finalScore = ((modeAverages[modeA] || 0) + (modeAverages[modeB] || 0)) / 2;
-    const finalCard = document.createElement('div');
-    finalCard.className = 'card';
-    finalCard.style.textAlign = 'center';
-    finalCard.innerHTML = `
-      <div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_final_score}</div>
-      <div style="font-family:'Orbitron',sans-serif; font-weight:800; font-size:1.4rem;">${finalScore.toFixed(1)}</div>`;
-    body.appendChild(finalCard);
-
-    // ranking geral entre TODOS os clãs (não só o meu) — vem denormalizado
-    // no próprio doc do evento (guildScores), atualizado a cada pontuação
-    // válida (ver creditGuildBattleScore em functions/index.js); mapa pequeno
-    // (1 entrada por clã participante), ordena/renderiza direto no cliente,
-    // mesmo espírito do ranking de doações do Cofre
-    const guildScores = event.guildScores || {};
-    const rankedGuilds = Object.entries(guildScores).sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
-    if (rankedGuilds.length) {
-      const rankTitle = document.createElement('div');
-      rankTitle.innerHTML = `<b>${T[state.lang].guild_battle_overall_ranking}</b>`;
-      body.appendChild(rankTitle);
-      const rankList = document.createElement('div');
-      rankList.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
-      rankedGuilds.forEach(([guildId, gs], i) => {
-        const pos = i + 1;
-        const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-        const row = document.createElement('div');
-        row.className = 'card';
-        row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px;'
-          + (guildId === g.id ? ' border-color:var(--neon-purple);' : '');
-        const left = document.createElement('span');
-        left.style.cssText = 'display:flex; align-items:center; gap:8px;';
-        const posSpan = document.createElement('span');
-        posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
-        posSpan.textContent = medal;
-        left.appendChild(posSpan);
-        const tagSpan = document.createElement('span');
-        tagSpan.style.fontWeight = '700';
-        tagSpan.textContent = `[${gs.tag || '?'}]`;
-        left.appendChild(tagSpan);
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = gs.name || '';
-        left.appendChild(nameSpan);
-        row.appendChild(left);
-        const scoreSpan = document.createElement('span');
-        scoreSpan.style.fontWeight = '700';
-        scoreSpan.textContent = (gs.score || 0).toFixed(1);
-        row.appendChild(scoreSpan);
-        rankList.appendChild(row);
-      });
-      body.appendChild(rankList);
-    }
-  } catch (e) {
-    if (myToken !== guildRenderToken) return;
-    body.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].ranking_error}</div>`;
-  }
-}
-
-// top 5 (no máx. 2 por pessoa, saindo de graça — ver comentário em
-// creditGuildBattleScore) de um dos 2 modos do evento, montado a partir do
-// mesmo perUser[uid][mode] que o servidor usa (não confia só na média já
-// calculada, recomputa as linhas aqui pra exibir cada pontuação individual)
-function battleModeCard(mode, perUser, modeAvg, xpByUid) {
-  const card = document.createElement('div');
-  card.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:6px;';
-  const title = document.createElement('div');
-  title.innerHTML = `<b>${MODE_ICON[mode] || ''} ${modeLabel(mode)}</b> <span class="muted" style="font-size:0.8rem;">(${T[state.lang].guild_battle_mode_avg}: ${modeAvg.toFixed(1)})</span>`;
-  card.appendChild(title);
-
-  const pool = [];
-  Object.entries(perUser).forEach(([uid, u]) => {
-    const arr = (u && Array.isArray(u[mode])) ? u[mode] : [];
-    arr.forEach(score => pool.push({ uid, nick: (u && u.nick) || '?', score }));
-  });
-  pool.sort((a, b) => b.score - a.score);
-  const top5 = pool.slice(0, 5);
-
-  const list = document.createElement('div');
-  list.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
-  if (!top5.length) {
-    list.innerHTML = `<div class="muted" style="text-align:center; font-size:0.8rem;">${T[state.lang].guild_battle_no_scores_yet}</div>`;
-  } else {
-    top5.forEach((entry, i) => {
-      const pos = i + 1;
-      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
-      const row = document.createElement('div');
-      row.className = 'card';
-      row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px;';
-      const left = document.createElement('span');
-      left.style.cssText = 'display:flex; align-items:center; gap:8px;';
-      const posSpan = document.createElement('span');
-      posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
-      posSpan.textContent = medal;
-      left.appendChild(posSpan);
-      left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[entry.uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
-      const nickSpan = document.createElement('span');
-      nickSpan.textContent = entry.nick;
-      left.appendChild(nickSpan);
-      row.appendChild(left);
-      const scoreSpan = document.createElement('span');
-      scoreSpan.style.fontWeight = '700';
-      scoreSpan.textContent = entry.score;
-      row.appendChild(scoreSpan);
-      list.appendChild(row);
-    });
-  }
-  card.appendChild(list);
-  return card;
 }
 
 /* ================== Loja do Clã (aba "Loja") ================== */

@@ -306,7 +306,13 @@ function formatReplayDateTime(ts) {
   return new Date(ts.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-window.openReplay = async (sessionId, nick, stats) => {
+// pra onde "VOLTAR" no replay deve mandar quando fechar — quase sempre o
+// ranking (comportamento de sempre), mas quem abre o replay a partir da
+// popup de detalhe da Batalha de Clã (ver js/guild-battle.js) passa
+// 'guild-battle-screen' aqui pra não perder o usuário no ranking
+let replayReturnScreenId = 'ranking-screen';
+window.openReplay = async (sessionId, nick, stats, returnScreenId = 'ranking-screen') => {
+  replayReturnScreenId = returnScreenId;
   show('replay-screen');
   $('replay-meta').innerHTML = '';
   $('replay-loading').style.display = '';
@@ -364,7 +370,7 @@ window.openReplay = async (sessionId, nick, stats) => {
 window.closeReplay = () => {
   stopReplayClock();
   replayData = null;
-  show('ranking-screen');
+  show(replayReturnScreenId);
 };
 
 window.toggleReplayPlayback = () => {

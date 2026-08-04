@@ -682,14 +682,20 @@ async function persistGameResult(xpEarned = 0) {
       // d.isNewRecord também fica true quando só EMPATA o recorde de placar
       // mas faz em menos tempo que a partida salva (ver fasterTie em
       // submitGameResult) — o placar não muda, mas duração/replay têm que
-      // virar os dessa partida mais rápida, daí não depender de scoreBeaten
+      // virar os dessa partida mais rápida, daí não depender de scoreBeaten.
+      // state.myData[mode+'ReplaySessionId'] atualiza na hora, sem esperar o
+      // próximo carregamento do ranking, mesmo motivo do +'At' acima
       $('sync-status').textContent = T[state.lang].sync_success;
-      // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima)
-      // só agora que virou (ou empatou mais rápido) o recorde — em segundo
-      // plano, não atrasa a tela de resultado. state.myData[mode+'ReplaySessionId']
-      // atualiza na hora, sem esperar o próximo carregamento do ranking, mesmo
-      // motivo do +'At' acima
       state.myData[mode + 'ReplaySessionId'] = sessionId;
+    }
+    // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima) —
+    // por recorde pessoal (isNewRecord) OU porque essa pontuação entrou no
+    // top-2 da Batalha de Clã (d.guildBattleReplaySave, ver submitGameResult),
+    // que pode acontecer sem bater recorde geral do jogador. Sem o segundo
+    // caso, uma pontuação de Batalha nunca teria replay pra "provar" o placar
+    // na popup de detalhe (ver js/guild-battle.js). Em segundo plano, não
+    // atrasa a tela de resultado.
+    if (d.isNewRecord || d.guildBattleReplaySave) {
       saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
   } catch (e) {
