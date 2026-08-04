@@ -71,7 +71,17 @@
     background-clip: text;
     color: transparent;
     text-align: center;
-    filter: drop-shadow(0 0 6px rgba(177,77,255,0.55)) drop-shadow(0 0 16px rgba(45,214,255,0.35));
+    /* camadas empilhadas em diagonal (não some com o fill transparente, o
+       text-shadow desenha independente do preenchimento em gradiente) pra
+       dar profundidade tipo "extrudado 3D", + o brilho neon que já existia
+       por cima via filter:drop-shadow */
+    text-shadow:
+      1px 1px 0 rgba(0,0,0,0.55),
+      2px 2px 0 rgba(0,0,0,0.5),
+      3px 3px 0 rgba(0,0,0,0.45),
+      4px 4px 0 rgba(0,0,0,0.4),
+      5px 5px 8px rgba(0,0,0,0.45);
+    filter: drop-shadow(0 0 6px rgba(177,77,255,0.55)) drop-shadow(0 0 16px rgba(45,214,255,0.35)) drop-shadow(0 8px 12px rgba(0,0,0,0.35));
   }
 
   /* indicador de "carregando" temático — 4 quadradinhos (o mesmo número de
