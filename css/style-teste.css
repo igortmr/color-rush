@@ -949,20 +949,21 @@
      título de conquista embaixo do nick, em linha separada e mais discreta.
      Nível vira uma coluna própria (grid) ocupando as duas linhas de altura,
      pra ficar alinhado à esquerda de tudo — o título fica embaixo só do
-     NICK (coluna 2), não embaixo do "Lv" (coluna 1) */
-  .nick-cell.nick-cell-v2 {
+     NICK (coluna 2), não embaixo do "Lv" (coluna 1).
+     O grid fica num <div> (.nick-cell-v2-inner) DENTRO do <td>, não no <td>
+     em si — um <td> com display:grid vira uma célula de tabela anônima por
+     baixo (regra do próprio CSS de tabelas), o que fazia o min-height dar
+     resultado diferente conforme o conteúdo, mesmo com o número "certo". */
+  .nick-cell.nick-cell-v2 { display: block; padding-left: 2px; }
+  .nick-cell-v2-inner {
     display: grid;
     grid-template-columns: auto 1fr;
     column-gap: 8px;
     row-gap: 2px;
     align-content: center;
-    /* precisa ser MAIOR que a altura natural de uma linha COM título (nick +
-       gap + pill ≈ 36-37px) — min-height só vira "a altura de todo mundo"
-       se for o lado que perde a conta dos dois casos; 34px tava menor que o
-       natural da linha com título, por isso ainda ficava diferente */
-    min-height: 40px;
+    min-height: 40px; /* mesma altura com ou sem linha de título, ver .no-title abaixo */
   }
-  .nick-cell.nick-cell-v2 > .lv-chip { grid-column: 1; grid-row: 1 / 3; align-self: center; }
+  .nick-cell-v2-inner > .lv-chip { grid-column: 1; grid-row: 1 / 3; align-self: center; }
   .nick-top-row { grid-column: 2; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   /* altura reservada mesmo quando vazia (sem conquista equipada) — senão a
      linha fica visivelmente mais baixa que uma linha com título. O pill em
@@ -975,7 +976,7 @@
      relação ao nível (que sempre centraliza na altura toda, ver regra
      acima). Aqui o próprio nick+nível também passa a ocupar as duas linhas
      e centraliza, ficando alinhado com o nível igual pedido */
-  .nick-cell.nick-cell-v2.no-title > .nick-top-row { grid-row: 1 / 3; align-self: center; }
+  .nick-cell-v2-inner.no-title > .nick-top-row { grid-row: 1 / 3; align-self: center; }
   .nick-title-row .class-pill { font-size: 0.6rem; padding: 1px 7px; opacity: 0.85; }
   .nick-click { cursor: pointer; font-weight: 800; }
   .nick-click:hover { color: var(--neon-blue); }

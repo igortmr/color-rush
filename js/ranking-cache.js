@@ -43,13 +43,21 @@ export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   // no layout de teste, o nível vira uma coluna própria (grid) que ocupa a
   // altura das duas linhas — daí o título ficar alinhado embaixo do NICK,
   // não embaixo do nível (pedido explícito depois de ver o protótipo v1,
-  // onde o título começava lá da esquerda, debaixo do "Lv")
+  // onde o título começava lá da esquerda, debaixo do "Lv"). O grid mora
+  // num <div> DENTRO do <td>, nunca no <td> em si — colocar display:grid
+  // direto no <td> faz o navegador gerar uma célula de tabela anônima por
+  // baixo pra manter o layout da tabela, e min-height nessas condições
+  // ficava inconsistente entre navegador/linha (era por isso que as linhas
+  // com e sem título não batiam de altura, mesmo com min-height certo).
+  const gridWrap = window.IS_TESTE ? document.createElement('div') : nickCell;
   const topRow = window.IS_TESTE ? document.createElement('div') : nickCell;
   if (window.IS_TESTE) {
     nickCell.classList.add('nick-cell-v2');
-    nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+    gridWrap.className = 'nick-cell-v2-inner';
+    nickCell.appendChild(gridWrap);
+    gridWrap.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
     topRow.className = 'nick-top-row';
-    nickCell.appendChild(topRow);
+    gridWrap.appendChild(topRow);
   } else {
     topRow.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   }
@@ -75,13 +83,13 @@ export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
       const titleRow = document.createElement('div');
       titleRow.className = 'nick-title-row';
       titleRow.innerHTML = badgeHtml;
-      nickCell.appendChild(titleRow);
+      gridWrap.appendChild(titleRow);
     } else {
       // sem conquista equipada: não sobra uma 2ª linha vazia — em vez
       // disso centraliza nível+nick juntos na altura toda da linha (ver
       // .no-title em css/style-teste.css), pra ficar alinhado com o nível
       // igual pediram, em vez de ficar "puxado pra cima"
-      nickCell.classList.add('no-title');
+      gridWrap.classList.add('no-title');
     }
   } else if (badgeHtml) {
     nickCell.insertAdjacentHTML('beforeend', badgeHtml);
