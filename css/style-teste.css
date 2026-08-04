@@ -1005,7 +1005,12 @@
   .nick-title-row .class-pill {
     font-weight: 800;
     text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7), 0 0 6px currentColor;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45);
+    /* o "inset ... 30px" preenche todo o miolo do chip com um véu escuro —
+       não dá pra usar background normal aqui: o .lv-chip já usa background
+       (gradiente) pra colorir o próprio texto via background-clip:text, e
+       trocar isso quebraria a cor do texto. Sombra interna não mexe nisso,
+       só escurece o fundo por baixo das palavras/números/emoji */
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45), inset 0 0 0 30px rgba(0,0,0,0.4);
   }
   .nick-click { cursor: pointer; font-weight: 800; }
   .nick-click:hover { color: var(--neon-blue); }
