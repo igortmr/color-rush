@@ -513,7 +513,7 @@
   .modal-card {
     width: 100%;
     max-width: 420px;
-    max-height: 85vh;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -524,7 +524,19 @@
     box-shadow: 0 0 30px rgba(0,0,0,0.5);
     overflow: hidden;
   }
-  .modal-card-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  /* mesma barra de rolagem escondida do body (ver scrollbar-width acima) —
+     listas longas (ex.: #inbox-list, com o histórico inteiro de prêmios do
+     desafio diário) continuam roláveis, só sem a barra feia por cima do
+     tema escuro */
+  .modal-card-body {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .modal-card-body::-webkit-scrollbar { display: none; }
   /* o scale() do hover normal do botão conta como overflow rolável dentro
      de um container com overflow-y:auto, então passar o mouse num botão
      colado na borda (ex: Google/Apple na popup de criar conta) fazia a
