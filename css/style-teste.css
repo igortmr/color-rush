@@ -1010,12 +1010,9 @@
   .nick-cell-v2-inner .lv-chip,
   .nick-title-row .class-pill {
     font-weight: 800;
-    /* contato escuro e fino bem colado na letra (legibilidade) + DUAS camadas
-       de brilho na própria cor, uma mais perto e outra mais espalhada — é o
-       que dá aquele "neon" que destaca, em vez de só ficar escuro/apagado */
-    text-shadow: 0 1px 1px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.85), 0 0 6px currentColor, 0 0 12px currentColor;
-    /* só o contorno escuro da borda (sem escurecer o miolo/fundo do chip —
-       o contorno da fonte acima já resolve a legibilidade sozinho) */
+    /* só o contato escuro e fino bem colado na letra, sem brilho nenhum */
+    text-shadow: 0 1px 1px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.85);
+    /* só o contorno escuro da borda, sem escurecer o miolo/fundo do chip */
     box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45);
   }
   .nick-click { cursor: pointer; font-weight: 800; }
