@@ -77,6 +77,11 @@ function renderGuildBattleCountdown() {
   const timeEl = card.querySelector('.daily-badge-time');
   if (labelEl) labelEl.textContent = live ? T[state.lang].daily_ends_in : T[state.lang].daily_starts_in;
   if (timeEl) timeEl.textContent = formatGuildBattleCountdown(msLeft);
+  // só é clicável enquanto a batalha está rolando de verdade — antes disso
+  // (contando pro início) ou depois (contando pra próxima sexta) o card
+  // volta a ser só informativo, mesmo tratamento "coming-soon" do card do
+  // desafio diário (ver .mode-card.daily-card.coming-soon em css/style.css)
+  card.classList.toggle('coming-soon', !live);
 }
 function startGuildBattleTicker() {
   if (guildBattleTicker) return;
@@ -97,3 +102,13 @@ export function updateGuildBattleCard() {
   card.style.display = '';
   renderGuildBattleCountdown();
 }
+
+// onclick do card (ver index.html/teste.html) — só navega enquanto a
+// batalha está rolando (guildBattleIsLive), senão não faz nada; o toggle de
+// .coming-soon acima já tira o cursor de "clicável" nesse caso, então o
+// clique nem deveria chegar aqui fora da janela, mas confere de novo por
+// segurança (ex.: clique disparado bem no instante em que a janela fecha)
+window.guildBattleCardClick = () => {
+  if (!guildBattleIsLive()) return;
+  window.showGuildHome('battle');
+};
