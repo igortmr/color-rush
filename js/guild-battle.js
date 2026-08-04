@@ -216,7 +216,10 @@ function renderGuildBattleBody(body) {
   // creditGuildBattleScore em functions/index.js); mapa pequeno, ordena/
   // renderiza direto no cliente
   const guildScores = event.guildScores || {};
-  const ranked = Object.entries(guildScores).sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
+  // empate de nota final → menor soma de tempo dos dois top-5 vence (mesmo
+  // critério calculado no servidor, ver compareBattleEntries em functions/index.js)
+  const ranked = Object.entries(guildScores).sort((a, b) =>
+    (b[1].score || 0) - (a[1].score || 0) || (a[1].totalDurationMs || 0) - (b[1].totalDurationMs || 0));
   const rankTitle = document.createElement('div');
   rankTitle.innerHTML = `<b>${T[state.lang].guild_battle_overall_ranking}</b>`;
   body.appendChild(rankTitle);
@@ -359,9 +362,19 @@ function battleDetailModeTable(mode, perUser, modeAvg, xpByUid) {
   const pool = [];
   Object.entries(perUser).forEach(([uid, u]) => {
     const arr = (u && Array.isArray(u[mode])) ? u[mode] : [];
-    arr.forEach(entry => pool.push({ uid, nick: (u && u.nick) || '?', score: entry.score, sessionId: entry.sessionId || null }));
+    arr.forEach(entry => pool.push({
+      uid, nick: (u && u.nick) || '?', score: entry.score,
+      sessionId: entry.sessionId || null, durationMs: entry.durationMs,
+    }));
   });
-  pool.sort((a, b) => b.score - a.score);
+  // mesmo critério de desempate do servidor (compareBattleEntries em
+  // functions/index.js): pontuação maior vence; empatando, menor tempo
+  pool.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const da = Number.isFinite(a.durationMs) ? a.durationMs : Infinity;
+    const db_ = Number.isFinite(b.durationMs) ? b.durationMs : Infinity;
+    return da - db_;
+  });
   const top5 = pool.slice(0, 5);
 
   const list = document.createElement('div');
