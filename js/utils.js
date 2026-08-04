@@ -1,6 +1,22 @@
 import { state } from './state.js';
 
-export const shuffle = a => a.sort(() => Math.random() - 0.5);
+// Fisher-Yates de verdade — `a.sort(() => Math.random() - 0.5)` (versão
+// antiga) NÃO embaralha uniforme: sort() faz um número de comparações
+// baseado na ordem ORIGINAL do array, e um comparador aleatório quebra as
+// premissas do algoritmo, enviesando o resultado (algumas posições finais
+// saem favorecidas). Isso é exatamente o motivo de certos quadrados do
+// Mosaico (array de 9) quase nunca serem a resposta certa — viés real,
+// confirmado e reproduzível, não impressão. Continua mutando IN PLACE e
+// devolvendo a mesma referência, igual a versão antiga (ver comentário em
+// game-core.js sobre sempre chamar com array descartável, tipo .slice()/
+// .filter()) — só o algoritmo por dentro mudou.
+export function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 export const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
 /* ================== formatação de hora nas mensagens de chat ==================
