@@ -146,19 +146,20 @@ function friendActionNode(rel, theirUid, theirNick) {
   if (rel === 'friends') {
     const wrap = document.createElement('div');
     wrap.className = 'btn-row';
-    wrap.style.width = '100%';
     // "iniciar chat" — abre o balãozinho de DM (js/dms.js) já direto na
     // conversa com essa pessoa; exposta via window porque o perfil ainda
     // não conhece o domínio de DMs, mesmo padrão de window.openGuildFromTag
+    // botões pequenos/centralizados (não esticados) — mesmo padrão do botão
+    // "convidar pro clã" (ver renderGuildInviteAction em js/guilds.js)
     const chatBtn = document.createElement('button');
-    chatBtn.style.cssText = 'flex:1; padding:9px 12px; font-size:0.85rem;';
+    chatBtn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
     chatBtn.textContent = T[state.lang].dm_chat_start_btn;
     chatBtn.onclick = () => window.openDmChatWithFriend(theirUid, theirNick || '');
     wrap.appendChild(chatBtn);
     const btn = document.createElement('button');
     btn.className = 'secondary';
     btn.textContent = T[state.lang].btn_remove_friend_profile;
-    btn.style.cssText = 'flex:1; padding:9px 12px; font-size:0.85rem;';
+    btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
     btn.onclick = () => uiRemoveFriend(theirUid);
     wrap.appendChild(btn);
     return wrap;
