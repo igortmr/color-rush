@@ -87,8 +87,12 @@ function renderGuildBattleCountdown() {
   // só é clicável enquanto a batalha está rolando de verdade — antes disso
   // (contando pro início) ou depois (contando pra próxima sexta) o card
   // volta a ser só informativo, mesmo tratamento "coming-soon" do card do
-  // desafio diário (ver .mode-card.daily-card.coming-soon em css/style.css)
-  card.classList.toggle('coming-soon', !live);
+  // desafio diário (ver .mode-card.daily-card.coming-soon em css/style.css).
+  // Em teste.html (window.IS_TESTE) essa trava de calendário é ignorada —
+  // guildBattleIsLive só sabe calcular a janela REAL (sexta 18h-domingo),
+  // sem olhar o Firestore, então travaria o teste em qualquer outro dia da
+  // semana mesmo com um evento de teste já criado via adminForceStartGuildBattle
+  card.classList.toggle('coming-soon', !window.IS_TESTE && !live);
 }
 function startGuildBattleTicker() {
   if (guildBattleTicker) return;
@@ -114,10 +118,13 @@ export function updateGuildBattleCard() {
 // batalha está rolando (guildBattleIsLive); o toggle de .coming-soon acima
 // já tira o cursor de "clicável" fora da janela, mas confere de novo por
 // segurança (ex.: clique disparado bem no instante em que a janela fecha).
+// Mesma exceção de teste.html do toggle acima — window.IS_TESTE ignora a
+// trava de calendário, senão não dava pra testar em nenhum dia que não
+// fosse sexta/fim de semana de verdade.
 // Sem clã → popup avisando que precisa entrar num primeiro; com clã → tela
 // cheia da Batalha.
 window.guildBattleCardClick = () => {
-  if (!guildBattleIsLive()) return;
+  if (!window.IS_TESTE && !guildBattleIsLive()) return;
   if (!state.myData.guildId) {
     $('guild-battle-no-guild-modal').style.display = 'flex';
     return;
