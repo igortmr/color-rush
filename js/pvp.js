@@ -190,7 +190,7 @@ window.uiDeclineChallenge = async () => {
 // isso aqui é só pra não nem oferecer uma opção que ia ser recusada.
 window.openChallengeModeModal = (toUid, nick, theirXp, theirAdmin) => {
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
-  $('challenge-mode-title').textContent = T[state.lang].challenge_mode_title(nick);
+  $('challenge-mode-subtitle').textContent = T[state.lang].challenge_mode_title(nick);
   const myAdmin = state.myData.admin === true;
   const body = $('challenge-mode-body');
   body.innerHTML = '';
