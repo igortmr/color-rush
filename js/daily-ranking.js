@@ -24,53 +24,75 @@ let dailyRankSubtab = 'today'; // 'today' | 'alltime'
 let dailyTodayRows = [], dailyTodayPage = 0;
 let dailyAlltimeRows = [], dailyAlltimePage = 0;
 
+// linhas do ranking "Hoje" do desafio diário, já ordenadas — extraído de
+// loadDailyTodayRanking pra poder ser reaproveitado por computeMyDailyTodayRank
+// (card do menu) sem duplicar a consulta/filtro/desempate
+async function fetchDailyTodayRows() {
+  const dateStr = window.dailyLocalDateStr();
+  const snap = await getDocs(query(collection(db, 'dailyScores'), where('dateStr', '==', dateStr)));
+  const all = await fetchAllScores(); // só pra enriquecer com nível/chip de quem já está no cache (2 min)
+  const statsByUid = {};
+  all.forEach(r => { statsByUid[r.uid] = rowData(r); });
+  const rows = [];
+  snap.forEach(d => {
+    const data = d.data();
+    if ((data.attempts || 0) <= 0 || !data.nick) return;
+    const isMe = state.currentUser && data.uid === state.currentUser.uid;
+    // aproveita que a própria linha já vem nesse mesmo snap (é só mais um
+    // documento de dailyScores) pra atualizar o nº de tentativas usadas com
+    // dado fresco direto do servidor — usado logo abaixo em
+    // renderDailyTodayPage pra decidir se os botões de replay já podem
+    // aparecer (ver comentário lá)
+    if (isMe) window.setDailyAttemptsUsed(data.attempts || 0);
+    // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
+    // testar/depurar o ranking do desafio diário com a própria conta) — no
+    // index.html (produção, window.IS_TESTE undefined) a exclusão de admin
+    // continua valendo
+    const stats = statsByUid[data.uid] || (isMe ? state.myData : null);
+    // banido não aparece nem no próprio ranking dele: statsByUid já veio
+    // filtrado (fetchAllScores exclui banned), então isso só cobre o caso
+    // isMe acima, que usa state.myData direto e não passa por esse filtro
+    if (!stats || stats.banned === true) return;
+    // idem pra admin: statsByUid já vem filtrado por fetchAllScores em
+    // produção, mas o caso isMe (state.myData direto) não passa por lá
+    if (!window.IS_TESTE && stats.admin === true) return;
+    // bestScoreAt/bestScoreDurationMs só avançam no servidor quando a
+    // tentativa bate um recorde novo do dia (ver submitDailyResult em
+    // functions/index.js) — não é só "última tentativa enviada", então dá
+    // pra usar de verdade pro desempate por menos tempo gasto, igual já é
+    // feito nos outros rankings (compareRankRows)
+    rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, durationMs: data.bestScoreDurationMs, stats, replaySessionId: data.bestScoreSessionId });
+  });
+  rows.sort(compareRankRows);
+  return rows;
+}
+
 export async function loadDailyTodayRanking() {
   const body = $('ranking-body');
   body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
   try {
-    const dateStr = window.dailyLocalDateStr();
-    const snap = await getDocs(query(collection(db, 'dailyScores'), where('dateStr', '==', dateStr)));
-    const all = await fetchAllScores(); // só pra enriquecer com nível/chip de quem já está no cache (2 min)
-    const statsByUid = {};
-    all.forEach(r => { statsByUid[r.uid] = rowData(r); });
-    const rows = [];
-    snap.forEach(d => {
-      const data = d.data();
-      if ((data.attempts || 0) <= 0 || !data.nick) return;
-      const isMe = state.currentUser && data.uid === state.currentUser.uid;
-      // aproveita que a própria linha já vem nesse mesmo snap (é só mais um
-      // documento de dailyScores) pra atualizar o nº de tentativas usadas com
-      // dado fresco direto do servidor — usado logo abaixo em
-      // renderDailyTodayPage pra decidir se os botões de replay já podem
-      // aparecer (ver comentário lá)
-      if (isMe) window.setDailyAttemptsUsed(data.attempts || 0);
-      // TESTE.HTML: admin aparece normalmente aqui de propósito (pra dar pra
-      // testar/depurar o ranking do desafio diário com a própria conta) — no
-      // index.html (produção, window.IS_TESTE undefined) a exclusão de admin
-      // continua valendo
-      const stats = statsByUid[data.uid] || (isMe ? state.myData : null);
-      // banido não aparece nem no próprio ranking dele: statsByUid já veio
-      // filtrado (fetchAllScores exclui banned), então isso só cobre o caso
-      // isMe acima, que usa state.myData direto e não passa por esse filtro
-      if (!stats || stats.banned === true) return;
-      // idem pra admin: statsByUid já vem filtrado por fetchAllScores em
-      // produção, mas o caso isMe (state.myData direto) não passa por lá
-      if (!window.IS_TESTE && stats.admin === true) return;
-      // bestScoreAt/bestScoreDurationMs só avançam no servidor quando a
-      // tentativa bate um recorde novo do dia (ver submitDailyResult em
-      // functions/index.js) — não é só "última tentativa enviada", então dá
-      // pra usar de verdade pro desempate por menos tempo gasto, igual já é
-      // feito nos outros rankings (compareRankRows)
-      rows.push({ uid: data.uid, nick: data.nick, pts: data.bestScore || 0, at: data.bestScoreAt || null, durationMs: data.bestScoreDurationMs, stats, replaySessionId: data.bestScoreSessionId });
-    });
-    rows.sort(compareRankRows);
-    dailyTodayRows = rows;
+    dailyTodayRows = await fetchDailyTodayRows();
     dailyTodayPage = 0;
     renderDailyTodayPage();
   } catch (e) {
     body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error}</td></tr>`;
   }
 }
+
+// posição de hoje no desafio diário (mesmo critério do sub-ranking "Hoje"
+// acima) — usada só pelo card do menu (Xº do lado do 🎯 Melhor), sem
+// paginar/montar linha nenhuma, só a posição de quem tá logado
+export async function computeMyDailyTodayRank() {
+  if (state.offline || !state.currentUser) return null;
+  try {
+    const rows = await fetchDailyTodayRows();
+    const idx = rows.findIndex(r => r.uid === state.currentUser.uid);
+    return idx === -1 ? null : idx + 1;
+  } catch {
+    return null;
+  }
+}
+
 function renderDailyTodayPage() {
   const body = $('ranking-body');
   const start = dailyTodayPage * RANKING_PAGE_SIZE;
