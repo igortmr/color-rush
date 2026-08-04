@@ -81,6 +81,15 @@
     background-clip: text;
     color: transparent;
     text-align: center;
+    /* camadas empilhadas em diagonal (não some com o fill transparente, o
+       text-shadow desenha independente do preenchimento em gradiente) pra
+       dar profundidade tipo "extrudado 3D", + o brilho neon que já existia
+       por cima via filter:drop-shadow — opacidade baixa nas camadas pra não
+       escurecer a letra em si, só sugerir o relevo por trás dela */
+    text-shadow:
+      2px 2px 0 rgba(0,0,0,0.18),
+      4px 4px 0 rgba(0,0,0,0.14),
+      6px 6px 10px rgba(0,0,0,0.25);
     filter: drop-shadow(0 0 6px rgba(177,77,255,0.55)) drop-shadow(0 0 16px rgba(45,214,255,0.35));
   }
 
