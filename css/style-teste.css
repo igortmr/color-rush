@@ -735,10 +735,10 @@
      linhas de tabela sempre ficam coladas uma na outra, não tem como dar
      esse espaçamento com border-collapse:collapse (padrão de antes) */
   table { width: 100%; border-collapse: separate; border-spacing: 0 3px; table-layout: fixed; }
-  /* cartão do ranking um pouco mais claro que o .card padrão (--bg-panel/
+  /* cartão do ranking bem mais claro que o .card padrão (--bg-panel/
      --bg-panel-2), só pra essa tela — pedido depois de comparar com a
-     referência */
-  #ranking-table-card { background: linear-gradient(180deg, #1a2140, #141a30); }
+     referência (aprovado depois de ver a prévia com as cores exatas) */
+  #ranking-table-card { background: linear-gradient(180deg, #333f78, #242d58); }
   th, td { padding: 8px 8px; text-align: left; font-size: 0.95rem; }
   th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; overflow-wrap: break-word; }
   tbody tr { background: #0e1224; }
