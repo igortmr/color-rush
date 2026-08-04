@@ -71,12 +71,18 @@ export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   nickSpan.onclick = () => window.openProfileFromRanking(r, backTarget);
   topRow.appendChild(nickSpan);
   if (window.IS_TESTE) {
-    // sempre cria a linha do título (mesmo vazia) — mantém as 2 linhas do
-    // grid consistentes entre as linhas COM e SEM conquista equipada
-    const titleRow = document.createElement('div');
-    titleRow.className = 'nick-title-row';
-    if (badgeHtml) titleRow.innerHTML = badgeHtml; // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
-    nickCell.appendChild(titleRow);
+    if (badgeHtml) { // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
+      const titleRow = document.createElement('div');
+      titleRow.className = 'nick-title-row';
+      titleRow.innerHTML = badgeHtml;
+      nickCell.appendChild(titleRow);
+    } else {
+      // sem conquista equipada: não sobra uma 2ª linha vazia — em vez
+      // disso centraliza nível+nick juntos na altura toda da linha (ver
+      // .no-title em css/style-teste.css), pra ficar alinhado com o nível
+      // igual pediram, em vez de ficar "puxado pra cima"
+      nickCell.classList.add('no-title');
+    }
   } else if (badgeHtml) {
     nickCell.insertAdjacentHTML('beforeend', badgeHtml);
   }

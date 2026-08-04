@@ -955,6 +955,8 @@
     grid-template-columns: auto 1fr;
     column-gap: 8px;
     row-gap: 2px;
+    align-content: center;
+    min-height: 34px; /* mesma altura com ou sem linha de título, ver .no-title abaixo */
   }
   .nick-cell.nick-cell-v2 > .lv-chip { grid-column: 1; grid-row: 1 / 3; align-self: center; }
   .nick-top-row { grid-column: 2; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -964,6 +966,12 @@
      título" ficar pequena dos dois lados, sem exagerar nem pra mais nem
      pra menos */
   .nick-title-row { grid-column: 2; display: flex; min-height: 15px; align-items: center; }
+  /* sem conquista equipada (ver .no-title em js/ranking-cache.js) — não tem
+     .nick-title-row nenhuma, então o nível ficaria "puxado pra cima" em
+     relação ao nível (que sempre centraliza na altura toda, ver regra
+     acima). Aqui o próprio nick+nível também passa a ocupar as duas linhas
+     e centraliza, ficando alinhado com o nível igual pedido */
+  .nick-cell.nick-cell-v2.no-title > .nick-top-row { grid-row: 1 / 3; align-self: center; }
   .nick-title-row .class-pill { font-size: 0.6rem; padding: 1px 7px; opacity: 0.85; }
   .nick-click { cursor: pointer; font-weight: 800; }
   .nick-click:hover { color: var(--neon-blue); }
