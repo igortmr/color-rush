@@ -25,7 +25,7 @@ function refreshMenuRankPositions() {
   computeModeRanks(state.currentUser.uid).then(ranks => {
     for (const m of ALL_MODES) {
       const el = $('rankpos-' + m);
-      if (el) el.textContent = ranks[m] ? `#${ranks[m]}` : '';
+      if (el) el.textContent = ranks[m] ? `${ranks[m]}º` : '';
     }
   }).catch(() => {});
 }
