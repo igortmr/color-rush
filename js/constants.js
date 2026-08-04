@@ -124,6 +124,23 @@ export const DAILY_PALETTE_OVERRIDE = {
     { key: 'white',  name: { pt: 'BRANCO',   en: 'WHITE',  es: 'BLANCO'   }, hex: '#ffffff' },
     { key: 'black',  name: { pt: 'PRETO',    en: 'BLACK',  es: 'NEGRO'    }, hex: '#1a1a1a' },
   ],
+  // 04/08/2026: paleta "tons neutros" a pedido — branco/preto/cinza sólidos
+  // + zebra (listrado), que usa "pattern" em vez de "hex" pro fundo real do
+  // quadrado (ver bg.pattern || bg.hex em daily-challenge.js/replay.js —
+  // já suportado há tempo, só nunca tinha sido usado). "hex" da zebra ainda
+  // precisa existir pra dar cor ao brilho (box-shadow), que não entende
+  // gradiente — branco escolhido por ser a listra mais clara/visível.
+  '2026-08-04': [
+    { key: 'white',  name: { pt: 'BRANCO', en: 'WHITE', es: 'BLANCO' }, hex: '#ffffff' },
+    { key: 'black',  name: { pt: 'PRETO',  en: 'BLACK', es: 'NEGRO'  }, hex: '#1a1a1a' },
+    { key: 'gray',   name: { pt: 'CINZA',  en: 'GRAY',  es: 'GRIS'   }, hex: '#8a8a8a' },
+    {
+      key: 'zebra',
+      name: { pt: 'ZEBRA', en: 'ZEBRA', es: 'CEBRA' },
+      hex: '#ffffff',
+      pattern: 'repeating-linear-gradient(45deg, #1a1a1a 0px, #1a1a1a 10px, #ffffff 10px, #ffffff 20px)',
+    },
+  ],
 };
 // DAILY_SHAPES_OVERRIDE: mesma ideia do DAILY_PALETTE_OVERRIDE (acima), só
 // que pro pool de FORMAS do desafio diário -- força um dia específico a usar
