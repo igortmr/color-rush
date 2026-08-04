@@ -195,10 +195,14 @@ function friendActionNode(rel, theirUid, theirNick) {
     wrap.appendChild(declineBtn);
     return wrap;
   }
+  const wrap = document.createElement('div');
+  wrap.style.textAlign = 'center';
   const btn = document.createElement('button');
   btn.textContent = T[state.lang].btn_add_friend;
+  btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
   btn.onclick = () => uiSendFriendRequest(theirUid);
-  return btn;
+  wrap.appendChild(btn);
+  return wrap;
 }
 
 // linha de amigo/pedido montada via DOM (nunca via innerHTML com o nick
