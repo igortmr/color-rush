@@ -882,8 +882,13 @@ function battleSection(g, xpByUid) {
 
 async function loadGuildBattleData(g, body, xpByUid) {
   const myToken = guildRenderToken;
+  // teste.html (window.IS_TESTE, mesmo flag de ranking-cache.js/guild list
+  // acima) lê a coleção paralela de teste — nunca a de dados reais, e
+  // vice-versa (ver comentário em creditGuildBattleScore no servidor)
+  const eventsCollection = window.IS_TESTE ? 'guildBattleEventsTest' : 'guildBattleEvents';
+  const battleSubcollection = window.IS_TESTE ? 'battleScoresTest' : 'battleScores';
   try {
-    const eventSnap = await getDocs(query(collection(db, 'guildBattleEvents'), orderBy('startsAt', 'desc'), limit(1)));
+    const eventSnap = await getDocs(query(collection(db, eventsCollection), orderBy('startsAt', 'desc'), limit(1)));
     if (myToken !== guildRenderToken) return;
     if (eventSnap.empty) {
       body.innerHTML = `<div class="card muted" style="text-align:center;">${T[state.lang].guild_battle_no_event}</div>`;
@@ -893,7 +898,7 @@ async function loadGuildBattleData(g, body, xpByUid) {
     const event = eventDoc.data();
     const eventId = eventDoc.id;
 
-    const battleSnap = await getDoc(doc(db, 'guilds', g.id, 'battleScores', eventId));
+    const battleSnap = await getDoc(doc(db, 'guilds', g.id, battleSubcollection, eventId));
     if (myToken !== guildRenderToken) return;
     const battleData = battleSnap.exists() ? battleSnap.data() : {};
     const perUser = battleData.perUser || {};
