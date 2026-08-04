@@ -201,7 +201,13 @@ window.openChallengeModeModal = (toUid, nick, theirXp, theirAdmin) => {
     const card = document.createElement('div');
     card.className = 'mode-card challenge-mode-card';
     const h2 = document.createElement('h2');
-    h2.textContent = `${MODE_ICON[m]} ${modeLabel(m)}`;
+    // "shapes-reverse" usa o mesmo ícone composto (losango + seta, ver
+    // .combo-icon em css/style.css) do card dele na tela inicial — o
+    // MODE_ICON normal (🔸) é só um emoji parecido, não o ícone de verdade
+    const icon = m === 'shapes-reverse'
+      ? '<span class="combo-icon"><span class="combo-bg"></span><span class="combo-fg">↺</span></span>'
+      : MODE_ICON[m];
+    h2.innerHTML = `${icon} ${modeLabel(m)}`;
     card.appendChild(h2);
     card.onclick = () => sendChallenge(toUid, m);
     body.appendChild(card);
