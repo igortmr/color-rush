@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { show, resetScreenBackStack } from './nav.js';
 import { T } from './i18n.js';
 import { isMuted } from './utils.js';
+import { ALL_MODES } from './constants.js';
 import { MODE_UNLOCK, avatarOrDefaultIcon, xpInfo, myXp, modeUnlocked, applyGuildTagStyle } from './levels.js';
 import { refreshBadgeNotifDot } from './badges.js';
 import { fetchMyFriendRequests } from './friends.js';
@@ -11,6 +12,23 @@ import { refreshInboxBadge, updateDailyMenuCard } from './daily-challenge.js';
 import { equippedAvatar, renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
 import { refreshGuildMenuBadge } from './guilds.js';
 import { updateGuildBattleCard } from './guild-battle.js';
+import { computeModeRanks } from './profile-public.js';
+
+// posição no ranking de cada modo, do lado do 📊 nos cards da tela principal
+// (só #número, sem escrever "posição") — reaproveita computeModeRanks, que já
+// usa o cache de fetchAllScores() dos rankings normais, sem consulta extra
+function refreshMenuRankPositions() {
+  if (state.offline || !state.currentUser) {
+    for (const m of ALL_MODES) { const el = $('rankpos-' + m); if (el) el.textContent = ''; }
+    return;
+  }
+  computeModeRanks(state.currentUser.uid).then(ranks => {
+    for (const m of ALL_MODES) {
+      const el = $('rankpos-' + m);
+      if (el) el.textContent = ranks[m] ? `#${ranks[m]}` : '';
+    }
+  }).catch(() => {});
+}
 
 /* ================== menu ================== */
 window.showMenu = () => {
@@ -25,6 +43,7 @@ window.showMenu = () => {
   $('record-trio').textContent = myRecord('trio');
   $('record-caos').textContent = myRecord('caos');
   $('record-mosaic').textContent = myRecord('mosaic');
+  refreshMenuRankPositions();
   $('mute-btn').classList.toggle('on', !isMuted());
   $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
 
