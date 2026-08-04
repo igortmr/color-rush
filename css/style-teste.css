@@ -1010,11 +1010,6 @@
   .nick-cell-v2-inner .lv-chip,
   .nick-title-row .class-pill {
     font-weight: 800;
-    /* contorno fino de verdade (não só sombra borrada) contornando cada
-       letra — funciona junto com o gradiente recortado no texto do nível
-       (-webkit-text-stroke não mexe no "color"/fill, só desenha um traço
-       por fora do glifo) */
-    -webkit-text-stroke: 0.6px rgba(0,0,0,0.9);
     /* contato escuro e fino bem colado na letra (legibilidade) + DUAS camadas
        de brilho na própria cor, uma mais perto e outra mais espalhada — é o
        que dá aquele "neon" que destaca, em vez de só ficar escuro/apagado */
