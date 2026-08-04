@@ -994,7 +994,19 @@
      acima). Aqui o próprio nick+nível também passa a ocupar as duas linhas
      e centraliza, ficando alinhado com o nível igual pedido */
   .nick-cell-v2-inner.no-title > .nick-top-row { grid-row: 1 / 3; align-self: center; }
-  .nick-title-row .class-pill { font-size: 0.6rem; padding: 1px 7px; opacity: 0.85; }
+  .nick-title-row .class-pill { font-size: 0.6rem; padding: 1px 7px; }
+  /* nível e título usam texto/borda transparentes com brilho na PRÓPRIA cor
+     (ver lvChip/badgePillHtml em js/levels.js e js/badges.js) — em cima de
+     um fundo de tema parecido (ex.: pill amarelo num row-theme-yellow) isso
+     lava tudo, sem contraste nenhum. Uma sombra ESCURA (não colorida) atrás
+     do texto/emoji + um contorno escuro na borda resolve isso em qualquer
+     fundo, sem precisar mudar as cores originais de cada nível/conquista */
+  .nick-cell-v2-inner .lv-chip,
+  .nick-title-row .class-pill {
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7), 0 0 6px currentColor;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45);
+  }
   .nick-click { cursor: pointer; font-weight: 800; }
   .nick-click:hover { color: var(--neon-blue); }
   /* moldura da loja — usa borda/glow em vez de gradiente de fundo, pra ficar
