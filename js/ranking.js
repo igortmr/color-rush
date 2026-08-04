@@ -151,7 +151,7 @@ function renderRankingPage() {
       replayBtn.textContent = '▶️';
       replayBtn.title = T[state.lang].btn_watch_replay;
       replayBtn.onclick = (ev) => { ev.stopPropagation(); window.openReplay(r.replaySessionId, r.nick, r.stats); };
-      ptsCell.appendChild(replayBtn);
+      ptsCell.insertBefore(replayBtn, ptsCell.firstChild); // à ESQUERDA da pontuação, não à direita
     }
     body.appendChild(tr);
   });

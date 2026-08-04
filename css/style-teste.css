@@ -835,7 +835,7 @@
      linhas de ranking que têm um replay salvo (ver saveMatchReplay) */
   .replay-btn {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; margin-left: 6px;
+    width: 28px; height: 28px; margin-right: 6px;
     font-size: 0.85rem; line-height: 1; padding: 0;
     background: rgba(45,214,255,0.1); border: none; border-radius: 8px;
     box-shadow: none; vertical-align: middle;

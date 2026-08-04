@@ -413,7 +413,7 @@ function battleDetailModeTable(mode, perUser, modeAvg, xpByUid) {
           window.closeGuildBattleDetailModal();
           window.openReplay(entry.sessionId, entry.nick, {}, 'guild-battle-screen');
         };
-        right.appendChild(replayBtn);
+        right.insertBefore(replayBtn, scoreSpan); // à ESQUERDA da pontuação, não à direita
       }
       row.appendChild(right);
       list.appendChild(row);
