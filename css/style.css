@@ -547,8 +547,15 @@
      só que compacto: sem o parágrafo de descrição nem o rodapé de
      recorde/tutorial, já que aqui é só "escolha o modo", não explica como
      jogar */
-  .challenge-mode-card { padding: 8px 16px; border-radius: 12px; }
-  .challenge-mode-card h2 { margin-bottom: 0; font-size: 0.95rem; }
+  /* seletor composto (".mode-card.challenge-mode-card", não só
+     ".challenge-mode-card") de propósito: mesma especificidade de
+     ".mode-card"/".mode-card:hover" sozinhos faria a ordem no arquivo
+     decidir quem ganha, e ".mode-card"/".mode-card:hover" vêm DEPOIS destas
+     regras — sem o ".mode-card." extra aqui, essas regras perdiam pra base
+     e o card continuava com o scale()+glow de fora, cortado pelo
+     overflow-y:auto de #challenge-mode-body (ver comentário abaixo) */
+  .mode-card.challenge-mode-card { padding: 8px 16px; border-radius: 12px; }
+  .mode-card.challenge-mode-card h2 { margin-bottom: 0; font-size: 0.95rem; }
   /* o hover padrão do .mode-card (scale(1.03) + glow de 22px PRA FORA da
      borda) foi pensado pros cards grandes da tela inicial, que têm espaço à
      vontade ao redor — aqui dentro do popup, #challenge-mode-body tem
@@ -559,7 +566,7 @@
      padding sobrando. Solução: glow "inset" (pra DENTRO), que nunca
      ultrapassa a própria caixa do card, então não tem como ser cortado
      nunca, não importa o overflow do pai. */
-  .challenge-mode-card:hover { transform: none; box-shadow: inset 0 0 10px rgba(177,77,255,0.35); }
+  .mode-card.challenge-mode-card:hover { transform: none; box-shadow: inset 0 0 10px rgba(177,77,255,0.35); }
 
   .mode-card {
     width: 100%;
