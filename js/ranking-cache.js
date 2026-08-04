@@ -33,8 +33,20 @@ export function compareRankRows(a, b) {
 // ranking (mini-ranking, ranking completo, desafio diário hoje e Salão da
 // Fama) pra não duplicar essa estrutura 4x. badgeHtml já vem pronto de quem
 // chama (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
+//
+// window.IS_TESTE (só teste.html) experimenta um layout novo: nível+clã+nick
+// numa linha, título de conquista numa linha separada embaixo (mais
+// discreto), em vez de tudo espremido numa linha só — protótipo visual, só
+// tem CSS correspondente em css/style-teste.css de propósito, pra não
+// arriscar nada na produção enquanto ainda tá em avaliação.
 export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
-  nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+  const topRow = window.IS_TESTE ? document.createElement('div') : nickCell;
+  if (window.IS_TESTE) {
+    topRow.className = 'nick-top-row';
+    nickCell.classList.add('nick-cell-v2');
+    nickCell.appendChild(topRow);
+  }
+  topRow.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   // sigla do clã (se tiver) — clicável, abre a tela do clã (ver
   // window.openGuildFromTag em js/guilds.js, chamado via window de
   // propósito pelo mesmo motivo do uiChallengeFriend em js/friends.js)
@@ -44,15 +56,24 @@ export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
     tagSpan.className = 'guild-tag-link';
     applyGuildTagStyle(tagSpan, r.stats.guildTagStyle);
     tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(r.stats.guildId, backTarget); };
-    nickCell.appendChild(tagSpan);
+    topRow.appendChild(tagSpan);
   }
   const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
   nickSpan.textContent = r.nick;
   nickSpan.className = 'nick-click';
   applyNickFrame(nickSpan, r.stats);
   nickSpan.onclick = () => window.openProfileFromRanking(r, backTarget);
-  nickCell.appendChild(nickSpan);
-  if (badgeHtml) nickCell.insertAdjacentHTML('beforeend', badgeHtml); // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
+  topRow.appendChild(nickSpan);
+  if (badgeHtml) { // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
+    if (window.IS_TESTE) {
+      const titleRow = document.createElement('div');
+      titleRow.className = 'nick-title-row';
+      titleRow.innerHTML = badgeHtml;
+      nickCell.appendChild(titleRow);
+    } else {
+      nickCell.insertAdjacentHTML('beforeend', badgeHtml);
+    }
+  }
   return nickSpan;
 }
 
