@@ -174,6 +174,7 @@ function friendActionNode(rel, theirUid, theirNick) {
     const btn = document.createElement('button');
     btn.className = 'secondary';
     btn.textContent = T[state.lang].btn_cancel_request;
+    btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
     btn.onclick = () => uiCancelFriendRequest(theirUid);
     wrap.appendChild(btn);
     return wrap;
