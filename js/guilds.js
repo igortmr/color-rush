@@ -91,16 +91,19 @@ window.stopGuildInviteListener = () => {
 
 /* ================== atalho do menu ================== */
 // "CLÃS" no menu vai direto pro próprio clã se a pessoa já estiver em um;
-// senão, abre a listagem geral pra procurar/criar um
-window.showGuildHome = () => {
+// senão, abre a listagem geral pra procurar/criar um. initialTab (opcional)
+// deixa o card da Batalha de Clãs no menu (ver js/guild-battle.js) abrir já
+// na aba certa em vez de sempre cair em "Membros" — se a pessoa ainda não
+// tiver clã, cai na listagem normalmente (initialTab não faz sentido lá)
+window.showGuildHome = (initialTab = 'members') => {
   if (state.myData.guildId) {
     pushScreenAndShow('guild-screen', 'menu-screen');
-    openGuildScreen(state.myData.guildId);
+    openGuildScreen(state.myData.guildId, initialTab);
   } else if (state.myData.pendingGuildInvite) {
     // convite pendente tem prioridade — leva direto pro clã que convidou,
     // já mostrando o cartão de aceitar/recusar (ver nonMemberActionCard)
     pushScreenAndShow('guild-screen', 'menu-screen');
-    openGuildScreen(state.myData.pendingGuildInvite.guildId);
+    openGuildScreen(state.myData.pendingGuildInvite.guildId, initialTab);
   } else {
     window.showGuildList();
   }
@@ -247,10 +250,10 @@ window.openGuildFromTag = (guildId, backScreenId) => {
 };
 
 /* ================== tela do clã ================== */
-function openGuildScreen(guildId) {
+function openGuildScreen(guildId, initialTab = 'members') {
   stopGuildListeners();
   currentGuildId = guildId;
-  guildTab = 'members';
+  guildTab = initialTab;
   show('guild-screen');
   $('guild-body').innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].loading_text}</div>`;
 

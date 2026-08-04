@@ -3,13 +3,13 @@ import { state } from './state.js';
 import { T } from './i18n.js';
 
 /* ================== evento semanal "Batalha de Clãs" ==================
-   Sexta 18h (Brasília) até domingo 23h59m59s (Brasília), toda semana. As
-   regras da batalha em si ainda não existem — por enquanto o card do menu
-   só mostra o título + um cronômetro contando pro próximo início (ou pro
-   fim, se já estiver rolando), igual ao "coming-soon" do desafio diário
-   antes da estreia (ver renderDailyCardCountdown em js/daily-challenge.js),
-   só que sem NENHUMA outra informação (nem descrição, nem dado nenhum) —
-   de propósito, só pra incentivar formar clã antes do evento começar.
+   Sexta 18h (Brasília) até domingo 23h59m59s (Brasília), toda semana. Este
+   módulo só cuida do card do MENU (título + cronômetro contando pro próximo
+   início, ou pro fim se já estiver rolando — mesmo estilo do card do
+   desafio diário, ver renderDailyCardCountdown em js/daily-challenge.js). O
+   card é clicável (onclick="showGuildHome('battle')" em index.html/
+   teste.html) e leva pra aba "Batalha" de verdade dentro do clã — essa aba
+   (rankings, pontuação, premiação futura) vive em js/guilds.js, não aqui.
 */
 
 // meia-noite de Brasília = 03h UTC (sem horário de verão desde 2019 — mesma

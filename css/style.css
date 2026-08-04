@@ -602,16 +602,19 @@
   }
   .daily-badge-time { font-size: 1.3em; } /* só os números um pouco maiores que o "Termina em:" */
 
-  /* evento semanal "Batalha de Clãs" — mesmo tratamento "coming-soon" do
-     desafio diário (ver .daily-card acima), só que sempre nesse estado (não
-     tem regra/tela ainda) e com contorno vermelho em vez de dourado, pra não
-     confundir com o desafio diário. Ver js/guild-battle.js/index.html. */
+  /* evento semanal "Batalha de Clãs" — mesmo cartão de modo do desafio
+     diário (ver .daily-card acima), com contorno vermelho em vez de dourado
+     pra não confundir com o desafio diário. Clicável (ver showGuildHome em
+     js/guilds.js e onclick em index.html/teste.html); .coming-soon (não
+     usada hoje, mas mantida pro mesmo padrão do daily-card) desativaria o
+     clique/hover se algum dia precisar pausar o evento sem tirar o card do ar. */
   .mode-card.guild-battle-card {
     border-color: rgba(255,45,107,0.5);
     background: linear-gradient(180deg, rgba(255,45,107,0.06), var(--bg-panel));
-    cursor: default;
   }
-  .mode-card.guild-battle-card:hover { transform: none; border-color: rgba(255,45,107,0.5); box-shadow: none; }
+  .mode-card.guild-battle-card:hover { border-color: var(--neon-red); box-shadow: 0 0 22px rgba(255,45,107,0.35); }
+  .mode-card.guild-battle-card.coming-soon { cursor: default; }
+  .mode-card.guild-battle-card.coming-soon:hover { transform: none; border-color: rgba(255,45,107,0.5); box-shadow: none; }
   .mode-card.guild-battle-card h2 { margin-bottom: 0; }
   .guild-battle-badge { background: var(--neon-red); color: #fff; box-shadow: 0 0 10px rgba(255,45,107,0.6); }
 
