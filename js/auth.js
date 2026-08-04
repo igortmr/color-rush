@@ -164,9 +164,32 @@ async function initNativePush() {
     if (perm.receive !== 'granted') return;
     const { token } = await FirebaseMessaging.getToken();
     if (!token) return;
-    callRegisterPushToken({ token }).catch(() => {});
+    await registerPushTokenWithRetry(token);
   } catch (e) {
     console.warn('[push] indisponível', e);
+  }
+}
+// tenta registrar o token algumas vezes antes de desistir — mesmo padrão de
+// saveMatchReplayWithRetry em js/replay.js: cobre uma falha passageira de
+// rede/App Check bem no momento do login, que sem retry silenciaria o
+// registro pelo resto da sessão (só tenta 1x por abertura do app, ver
+// nativePushInitDone acima). Loga de verdade em vez do catch(()=>{}) vazio
+// de antes — sem log nenhum, um caso real (permissão concedida mas token
+// nunca registrado) fica impossível de diagnosticar depois: nem o cliente
+// nem o servidor deixam rastro quando o App Check barra a chamada antes da
+// function sequer rodar.
+async function registerPushTokenWithRetry(token, attemptsLeft = 3) {
+  try {
+    const res = await callRegisterPushToken({ token });
+    if (!res.data || res.data.status !== 'ok') console.warn('[push] registro não confirmou sucesso', res.data);
+    return res;
+  } catch (e) {
+    if (attemptsLeft > 1) {
+      await new Promise(r => setTimeout(r, 1200));
+      return registerPushTokenWithRetry(token, attemptsLeft - 1);
+    }
+    console.warn('[push] falha ao registrar token (sem mais tentativas)', e);
+    throw e;
   }
 }
 // "Sign in with Apple" só aparece dentro do app empacotado — a Apple só
