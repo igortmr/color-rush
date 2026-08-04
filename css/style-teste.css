@@ -730,8 +730,12 @@
     text-shadow: 0 0 6px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.9);
   }
   #pvp-grid .square { opacity: 1; }
-  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  th, td { padding: 12px 8px; text-align: left; font-size: 0.95rem; }
+  /* border-collapse:separate + border-spacing dá um respiro pequeno entre
+     as linhas (pedido depois de comparar com a referência) — sem isso,
+     linhas de tabela sempre ficam coladas uma na outra, não tem como dar
+     esse espaçamento com border-collapse:collapse (padrão de antes) */
+  table { width: 100%; border-collapse: separate; border-spacing: 0 3px; table-layout: fixed; }
+  th, td { padding: 8px 8px; text-align: left; font-size: 0.95rem; }
   th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; overflow-wrap: break-word; }
   tbody tr { background: #0e1224; }
   tbody tr:nth-child(odd) { background: #0a0e1e; }
@@ -961,7 +965,12 @@
     column-gap: 8px;
     row-gap: 2px;
     align-content: center;
-    min-height: 40px; /* mesma altura com ou sem linha de título, ver .no-title abaixo */
+    /* mesma altura com ou sem linha de título, ver .no-title abaixo —
+       reduzida (era 40px) pra linha ficar mais fina, mas sem passar do que o
+       conteúdo da linha COM título realmente precisa (~35px: nick em negrito
+       + gap + pill do título) — menos que isso e o min-height deixa de ser
+       quem manda nas duas linhas, voltando a ficar diferente uma da outra */
+    min-height: 35px;
   }
   .nick-cell-v2-inner > .lv-chip { grid-column: 1; grid-row: 1 / 3; align-self: center; }
   .nick-top-row { grid-column: 2; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
