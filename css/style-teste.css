@@ -965,8 +965,8 @@
      pra menos */
   .nick-title-row { grid-column: 2; display: flex; min-height: 15px; align-items: center; }
   .nick-title-row .class-pill { font-size: 0.6rem; padding: 1px 7px; opacity: 0.85; }
-  .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
-  .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
+  .nick-click { cursor: pointer; font-weight: 800; }
+  .nick-click:hover { color: var(--neon-blue); }
   /* moldura da loja — usa borda/glow em vez de gradiente de fundo, pra ficar
      bonita em qualquer fundo (linha listrada do ranking, perfil, etc.) */
   .nick-frame-gold, .nick-frame-rainbow { display: inline-block; padding: 2px 10px; border-radius: 14px; border: 1.5px solid; }
