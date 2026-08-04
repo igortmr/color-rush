@@ -351,13 +351,21 @@
   </div>
   <div class="muted" id="sync-status"></div>
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
-  <div class="card" style="padding:10px; gap:4px;">
+  <div class="card" id="over-mini-ranking-card" style="padding:10px; gap:4px;">
     <table>
       <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
       <thead><tr><th>#</th><th><span data-i18n="ranking_dash">Ranking —</span> <span id="mini-mode"></span></th><th style="text-align:right;" data-i18n="points_header">Pontos</th></tr></thead>
       <tbody id="mini-ranking-body"></tbody>
     </table>
     <button class="link" onclick="showRanking()" data-i18n="link_view_full">ver ranking completo</button>
+  </div>
+  <!-- substitui o card acima quando a partida foi jogada pela tela da
+       Batalha de Clã (ver state.playingForGuildBattle em js/state.js e
+       gameOver em js/game-core.js) — o mini-ranking normal não faz sentido
+       nesse contexto -->
+  <div class="card" id="over-guild-battle-card" style="display:none; text-align:center;">
+    <p id="over-guild-battle-text"></p>
+    <button class="secondary" style="padding:8px 18px; font-size:0.8rem;" onclick="guildBattleCardClick()" data-i18n="guild_battle_over_view_btn">⚔️ Ver Batalha</button>
   </div>
   <div class="btn-row">
     <button onclick="playAgain()" data-i18n="btn_play_again">JOGAR DE NOVO</button>

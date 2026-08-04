@@ -286,7 +286,12 @@ function battlePlayCard(mode) {
     // ações primárias reais (ver preferência já registrada no projeto)
     btn.style.cssText = 'padding:8px 18px; font-size:0.8rem; margin-top:4px;';
     btn.textContent = T[state.lang].guild_battle_play_btn;
-    btn.onclick = () => window.startGame(mode); // mesmo fluxo de sempre — a pontuação credita sozinha em submitGameResult
+    btn.onclick = () => {
+      // avisa a tela de fim de partida (ver gameOver em js/game-core.js) pra
+      // mostrar o aviso da Batalha em vez do mini-ranking normal do modo
+      state.playingForGuildBattle = true;
+      window.startGame(mode); // mesmo fluxo de sempre — a pontuação credita sozinha em submitGameResult
+    };
     card.appendChild(btn);
   }
   return card;

@@ -593,10 +593,11 @@ async function gameOver(reason) {
     $('over-xp-wrap').style.display = 'none';
   }
 
+  let guildBattleCredited = false;
   if (state.offline) {
     if (isNewRecord) setLocalRecord(mode, score);
   } else if (state.currentUser && state.myData.nick) {
-    await persistGameResult(xpEarned);
+    guildBattleCredited = await persistGameResult(xpEarned);
   }
   setOverButtonsEnabled(true);
 
@@ -607,7 +608,19 @@ async function gameOver(reason) {
     $('signup-cta').style.display = '';
   }
 
-  renderMiniRankings(mode, score);
+  // partida jogada pela tela da Batalha de Clã (ver js/guild-battle.js) —
+  // o mini-ranking normal do modo não faz sentido nesse contexto (é sobre o
+  // recorde pessoal global, não sobre a Batalha), mostra um aviso da Batalha
+  // no lugar (ver #over-guild-battle-card em index.html/teste.html)
+  $('over-mini-ranking-card').style.display = state.playingForGuildBattle ? 'none' : '';
+  $('over-guild-battle-card').style.display = state.playingForGuildBattle ? '' : 'none';
+  if (state.playingForGuildBattle) {
+    $('over-guild-battle-text').textContent = guildBattleCredited
+      ? T[state.lang].guild_battle_over_credited
+      : T[state.lang].guild_battle_over_not_credited;
+  } else {
+    renderMiniRankings(mode, score);
+  }
 }
 
 // anima o número de XP subindo e a barra de progresso enchendo (com virada de nível se houver)
@@ -645,6 +658,9 @@ function showLevelUp(newLv) {
 }
 window.dismissLevelUp = () => $('levelup-banner').classList.remove('show');
 
+// retorna se essa pontuação foi creditada na Batalha de Clã (d.guildBattleReplaySave)
+// — gameOver() usa isso pra decidir o texto do aviso quando
+// state.playingForGuildBattle (ver js/state.js)
 async function persistGameResult(xpEarned = 0) {
   // a pontuação final agora é validada no servidor (Cloud Function), que checa
   // se o tempo real de jogo é compatível com a pontuação alegada antes de gravar.
@@ -652,13 +668,18 @@ async function persistGameResult(xpEarned = 0) {
     // sem sessão validada (ex.: caiu a internet bem no início da partida) —
     // não há como confirmar no servidor, então não grava essa partida.
     $('sync-status').textContent = T[state.lang].sync_fail;
-    return;
+    return false;
   }
   const sessionId = state.currentSessionId;
   state.currentSessionId = null; // cada sessão só pode ser usada uma vez
 
   try {
-    const res = await callSubmitResult({ sessionId, mode, score, xpGain: xpEarned });
+    // testMode avisa o servidor pra creditar a pontuação da Batalha de Clã
+    // (se der) na coleção de TESTE em vez da real — sem isso, jogar de
+    // verdade em teste.html creditava sempre na coleção real (que não tem
+    // evento ativo fora da janela de verdade), e a pontuação sumia sem erro
+    // nenhum (ver creditGuildBattleScore em functions/index.js)
+    const res = await callSubmitResult({ sessionId, mode, score, xpGain: xpEarned, testMode: window.IS_TESTE === true });
     const d = res.data || {};
     state.myData.lastPlayedDate = todayStr();
     state.myData.currentStreak = d.currentStreak;
@@ -698,7 +719,9 @@ async function persistGameResult(xpEarned = 0) {
     if (d.isNewRecord || d.guildBattleReplaySave) {
       saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
+    return d.guildBattleReplaySave === true;
   } catch (e) {
     $('sync-status').textContent = T[state.lang].sync_fail;
+    return false;
   }
 }

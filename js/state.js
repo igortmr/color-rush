@@ -33,6 +33,13 @@ export const state = {
   // (perfil, amigos, ranking, loja, pvp...), por isso vivem aqui também
   currentUser: null,
   offline: false,
+  // true entre clicar "Jogar" na tela da Batalha de Clã (ver js/guild-battle.js)
+  // e voltar pro menu — faz a tela de fim de partida mostrar um aviso da
+  // Batalha em vez do mini-ranking normal do modo (ver gameOver em
+  // js/game-core.js). Reseta em showMenu() (js/menu.js), não logo após o
+  // resultado, de propósito: "jogar de novo" direto do fim de partida
+  // continua contando como partida da Batalha até a pessoa voltar ao menu.
+  playingForGuildBattle: false,
   // pontuação feita sem conta, aguardando cadastro pra ser reivindicada
   // (ver claimPendingScore em functions/index.js)
   pendingScore: null,

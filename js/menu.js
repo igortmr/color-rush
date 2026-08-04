@@ -14,6 +14,10 @@ import { updateGuildBattleCard } from './guild-battle.js';
 
 /* ================== menu ================== */
 window.showMenu = () => {
+  // qualquer volta ao menu encerra o "modo Batalha" da tela de fim de
+  // partida (ver state.playingForGuildBattle em js/state.js) — "jogar de
+  // novo" direto do fim de partida continua contando, só reseta aqui
+  state.playingForGuildBattle = false;
   $('record-classic').textContent = myRecord('classic');
   $('record-reverse').textContent = myRecord('reverse');
   $('record-shapes').textContent = myRecord('shapes');
