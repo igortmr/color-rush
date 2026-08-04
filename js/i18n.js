@@ -291,7 +291,7 @@ export const T = {
     daily_subtab_today: '📅 Hoje',
     daily_subtab_alltime: '🏆 Salão da Fama',
     daily_col_wins: 'Vitórias',
-    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeader" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeader)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeader" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeader)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg>',
     daily_prizes_legend: {
       title: '🏆 Premiação (creditada em Pigmentos no dia seguinte)',
       rows: [
@@ -648,7 +648,7 @@ export const T = {
     daily_subtab_today: '📅 Today',
     daily_subtab_alltime: '🏆 Hall of Fame',
     daily_col_wins: 'Wins',
-    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigments',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEn)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg>',
     daily_prizes_legend: {
       title: '🏆 Prizes (credited as Pigments the next day)',
       rows: [
@@ -1005,7 +1005,7 @@ export const T = {
     daily_subtab_today: '📅 Hoy',
     daily_subtab_alltime: '🏆 Salón de la Fama',
     daily_col_wins: 'Victorias',
-    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg> Pigmentos',
+    daily_col_pigmentos: '<svg class="pigment-icon" width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pigGradColHeaderEs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a55eea"/><stop offset="35%" stop-color="#1e90ff"/><stop offset="65%" stop-color="#2ed573"/><stop offset="100%" stop-color="#ffd32a"/></linearGradient></defs><path d="M12 2C12 2 5 11 5 15.5C5 19.6 8.13 22 12 22C15.87 22 19 19.6 19 15.5C19 11 12 2 12 2Z" fill="url(#pigGradColHeaderEs)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><ellipse cx="9.5" cy="14" rx="1.6" ry="2.2" fill="rgba(255,255,255,0.35)"/></svg>',
     daily_prizes_legend: {
       title: '🏆 Premios (acreditados en Pigmentos al día siguiente)',
       rows: [
