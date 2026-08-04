@@ -6,8 +6,8 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { pushScreenAndShow } from './nav.js';
-import { lvChip, modeLabel, MODE_ICON, MODE_UNLOCK, modeUnlocked } from './levels.js';
-import { fetchAllScores, rowData } from './ranking-cache.js';
+import { modeLabel, MODE_ICON, MODE_UNLOCK, modeUnlocked } from './levels.js';
+import { fetchAllScores, rowData, buildLevelNickBlock } from './ranking-cache.js';
 
 /* ================== evento semanal "Batalha de Clãs" ==================
    Sexta 18h (Brasília) até domingo 23h59m59s (Brasília), toda semana. Este
@@ -389,15 +389,12 @@ function battleDetailModeTable(mode, perUser, modeAvg, xpByUid) {
       row.className = 'card';
       row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px;';
       const left = document.createElement('span');
-      left.style.cssText = 'display:flex; align-items:center; gap:8px;';
+      left.style.cssText = 'display:flex; align-items:center; gap:8px; min-width:0;';
       const posSpan = document.createElement('span');
       posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
       posSpan.textContent = medal;
       left.appendChild(posSpan);
-      left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[entry.uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
-      const nickSpan = document.createElement('span');
-      nickSpan.textContent = entry.nick;
-      left.appendChild(nickSpan);
+      left.appendChild(buildLevelNickBlock((xpByUid && xpByUid[entry.uid]) || 0, entry.nick, ''));
       row.appendChild(left);
       const right = document.createElement('span');
       right.style.cssText = 'display:flex; align-items:center; gap:8px;';

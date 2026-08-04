@@ -816,12 +816,20 @@
     text-shadow: 0 0 6px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.9);
   }
   #pvp-grid .square { opacity: 1; }
-  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  th, td { padding: 10px 8px; text-align: left; font-size: 0.95rem; }
+  /* border-collapse:separate + border-spacing dá um respiro pequeno entre
+     as linhas do ranking — com collapse (padrão antigo) as linhas ficam
+     sempre coladas, não tem como dar esse espaçamento */
+  table { width: 100%; border-collapse: separate; border-spacing: 0 3px; table-layout: fixed; }
+  /* cartão do ranking/mini-ranking um pouco mais claro que o .card padrão */
+  #ranking-table-card, #over-mini-ranking-card { background: linear-gradient(180deg, #19203e, #11162b); }
+  th, td { padding: 8px 8px; text-align: left; font-size: 0.95rem; }
   th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; overflow-wrap: break-word; }
   tbody tr { background: #0e1224; }
   tbody tr:nth-child(odd) { background: #0a0e1e; }
-  tbody tr.me { outline: 2px solid var(--neon-yellow); box-shadow: 0 0 12px rgba(255,233,60,0.4); }
+  /* borda de "essa linha é sua" por dentro da linha (inset), não outline por
+     fora — outline não respeita o espaçamento entre linhas (border-spacing
+     acima) nem cantos, ficava cortado/deslocado */
+  tbody tr.me { box-shadow: inset 0 0 0 2px var(--neon-yellow), 0 0 12px rgba(255,233,60,0.4); }
   /* linha temática da loja — sobrepõe o fundo padrão/listrado da tabela;
      combina normalmente com .me (que só usa outline, não background).
      Camada "padrão" (1000 pigmentos): só gradiente, sem padrão/animação.
@@ -886,7 +894,10 @@
       radial-gradient(circle at 94% 40%, rgba(255,45,107,0.9) 0%, rgba(255,45,107,0) 6%),
       #0e1224;
   }
-  td.pos { text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  /* sombra escura de contato + brilho da própria cor — sem isso, um tema de
+     linha (row-theme-*, cor de fundo escolhida pela pessoa) parecido com a
+     cor de destaque da posição deixava o número quase ilegível */
+  td.pos { text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7), 0 0 8px rgba(255,159,28,0.5); }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
   th:first-child { text-align: center; }
@@ -1036,8 +1047,49 @@
     box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
   }
   .nick-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 2px; }
-  .nick-click { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; }
-  .nick-click:hover { color: var(--neon-blue); text-decoration-color: var(--neon-blue); }
+  /* nível vira uma coluna própria (grid) ocupando a altura das duas linhas,
+     nick em cima e título de conquista embaixo dele (não do nível) — ver
+     buildLevelNickBlock/buildRankRowNick em js/ranking-cache.js. O grid mora
+     num <div> (.nick-cell-v2-inner) DENTRO do <td>, não no <td> em si — um
+     <td> com display:grid vira uma célula de tabela anônima por baixo
+     (regra do próprio CSS de tabelas), o que dava altura inconsistente
+     entre linha com/sem título mesmo com min-height "certo". */
+  .nick-cell.nick-cell-v2 { display: block; padding-left: 2px; }
+  .nick-cell-v2-inner {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 2px;
+    align-content: center;
+    /* mesma altura com ou sem linha de título — precisa ser >= altura
+       natural da linha COM título (nick em negrito + gap + pill), senão
+       min-height deixa de ser quem manda nas duas linhas */
+    min-height: 35px;
+  }
+  .nick-cell-v2-inner > .lv-chip { grid-column: 1; grid-row: 1 / 3; align-self: center; }
+  .nick-top-row { grid-column: 2; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  /* altura reservada mesmo quando vazia (sem conquista equipada) — senão a
+     linha fica mais baixa que uma linha com título */
+  .nick-title-row { grid-column: 2; display: flex; min-height: 15px; align-items: center; }
+  /* sem conquista equipada: nick+nível também ocupam as duas linhas e
+     centralizam juntos, em vez de ficar "puxado pra cima" com uma 2ª linha
+     vazia embaixo */
+  .nick-cell-v2-inner.no-title > .nick-top-row { grid-row: 1 / 3; align-self: center; }
+  .nick-title-row .class-pill { font-size: 0.6rem; padding: 1px 7px; }
+  /* nível e título usam texto/borda transparentes com brilho na PRÓPRIA cor
+     (ver lvChip/badgePillHtml em js/levels.js e js/badges.js) — em cima de
+     um fundo de tema parecido (ex.: pill amarelo num row-theme-yellow) isso
+     lava tudo, sem contraste nenhum. Uma sombra ESCURA (não colorida) atrás
+     do texto/emoji + um contorno escuro na borda resolve isso em qualquer
+     fundo, sem precisar mudar as cores originais de cada nível/conquista */
+  .nick-cell-v2-inner .lv-chip,
+  .nick-title-row .class-pill {
+    font-weight: 800;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.85);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45);
+  }
+  .nick-click { cursor: pointer; font-weight: 800; }
+  .nick-click:hover { color: var(--neon-blue); }
   /* moldura da loja — usa borda/glow em vez de gradiente de fundo, pra ficar
      bonita em qualquer fundo (linha listrada do ranking, perfil, etc.) */
   .nick-frame-gold, .nick-frame-rainbow { display: inline-block; padding: 2px 10px; border-radius: 14px; border: 1.5px solid; }

@@ -738,7 +738,7 @@
   /* cartão do ranking bem mais claro que o .card padrão (--bg-panel/
      --bg-panel-2), só pra essa tela — pedido depois de comparar com a
      referência (aprovado depois de ver a prévia com as cores exatas) */
-  #ranking-table-card { background: linear-gradient(180deg, #19203e, #11162b); }
+  #ranking-table-card, #over-mini-ranking-card { background: linear-gradient(180deg, #19203e, #11162b); }
   th, td { padding: 8px 8px; text-align: left; font-size: 0.95rem; }
   th { color: #6b76a8; font-family: 'Orbitron', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; overflow-wrap: break-word; }
   tbody tr { background: #0e1224; }

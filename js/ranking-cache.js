@@ -28,72 +28,67 @@ export function compareRankRows(a, b) {
   return at - bt;
 }
 
-// monta o conteúdo de uma célula de ranking: nível, nick e conquista/classe
-// tudo numa coluna só (ver .nick-cell no <style>). Usado nas 4 tabelas de
-// ranking (mini-ranking, ranking completo, desafio diário hoje e Salão da
-// Fama) pra não duplicar essa estrutura 4x. badgeHtml já vem pronto de quem
-// chama (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
-//
-// window.IS_TESTE (só teste.html) experimenta um layout novo: nível+clã+nick
-// numa linha, título de conquista numa linha separada embaixo (mais
-// discreto), em vez de tudo espremido numa linha só — protótipo visual, só
-// tem CSS correspondente em css/style-teste.css de propósito, pra não
-// arriscar nada na produção enquanto ainda tá em avaliação.
-export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
-  // no layout de teste, o nível vira uma coluna própria (grid) que ocupa a
-  // altura das duas linhas — daí o título ficar alinhado embaixo do NICK,
-  // não embaixo do nível (pedido explícito depois de ver o protótipo v1,
-  // onde o título começava lá da esquerda, debaixo do "Lv"). O grid mora
-  // num <div> DENTRO do <td>, nunca no <td> em si — colocar display:grid
-  // direto no <td> faz o navegador gerar uma célula de tabela anônima por
-  // baixo pra manter o layout da tabela, e min-height nessas condições
-  // ficava inconsistente entre navegador/linha (era por isso que as linhas
-  // com e sem título não batiam de altura, mesmo com min-height certo).
-  const gridWrap = window.IS_TESTE ? document.createElement('div') : nickCell;
-  const topRow = window.IS_TESTE ? document.createElement('div') : nickCell;
-  if (window.IS_TESTE) {
-    nickCell.classList.add('nick-cell-v2');
-    gridWrap.className = 'nick-cell-v2-inner';
-    nickCell.appendChild(gridWrap);
-    gridWrap.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
-    topRow.className = 'nick-top-row';
-    gridWrap.appendChild(topRow);
+// bloco reutilizável "nível + nick (+ título opcional)" em 2 linhas — nível
+// numa coluna própria (grid) ocupando a altura das duas linhas, título
+// alinhado embaixo só do NICK (não do nível). Sem título, nick+nível
+// centralizam juntos em vez de sobrar espaço vazio embaixo (ver .no-title
+// no CSS). Usado por buildRankRowNick abaixo E por qualquer lista parecida
+// que não precise de link pro clã/perfil (Batalha de Clã, ranking de
+// doações do Cofre — ver js/guild-battle.js, js/guilds.js).
+// O grid mora num <div> próprio, nunca direto num <td> — um <td> com
+// display:grid vira uma célula de tabela anônima por baixo (regra do CSS de
+// tabelas), o que fazia a altura mínima dar resultado inconsistente entre
+// linha com/sem título, mesmo com o número "certo" (bug real, já corrigido).
+export function buildLevelNickBlock(xp, nickText, badgeHtml) {
+  const inner = document.createElement('div');
+  inner.className = 'nick-cell-v2-inner';
+  inner.insertAdjacentHTML('beforeend', lvChip(xp));
+  const topRow = document.createElement('div');
+  topRow.className = 'nick-top-row';
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = nickText; // nick sempre via textContent, nunca interpolado
+  nickSpan.style.fontWeight = '800';
+  topRow.appendChild(nickSpan);
+  inner.appendChild(topRow);
+  if (badgeHtml) {
+    const titleRow = document.createElement('div');
+    titleRow.className = 'nick-title-row';
+    titleRow.innerHTML = badgeHtml;
+    inner.appendChild(titleRow);
   } else {
-    topRow.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+    inner.classList.add('no-title');
   }
-  // sigla do clã (se tiver) — clicável, abre a tela do clã (ver
-  // window.openGuildFromTag em js/guilds.js, chamado via window de
-  // propósito pelo mesmo motivo do uiChallengeFriend em js/friends.js)
+  return inner;
+}
+
+// monta o conteúdo de uma célula de ranking: nível, nick, sigla do clã e
+// conquista/classe, usando o bloco de buildLevelNickBlock acima + os extras
+// que só o ranking de verdade precisa (sigla do clã clicável, nick clicável
+// pro perfil, moldura da loja). Usado nas 4 tabelas de ranking (mini-ranking,
+// ranking completo, desafio diário hoje e Salão da Fama) pra não duplicar
+// essa estrutura 4x. badgeHtml já vem pronto de quem chama
+// (equippedBadgeLabel/sharerTierLabel/'' variam conforme a tabela/aba).
+export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
+  nickCell.classList.add('nick-cell-v2');
+  const gridWrap = buildLevelNickBlock(r.stats && r.stats.xp, r.nick, badgeHtml);
+  nickCell.appendChild(gridWrap);
+  const topRow = gridWrap.querySelector('.nick-top-row');
+  const nickSpan = topRow.querySelector('span');
+  // buildLevelNickBlock só sabe montar um nick "mudo" (texto simples) — aqui
+  // em cima disso entram os extras que só o ranking de verdade precisa:
+  // sigla do clã clicável (antes do nick) e o próprio nick virando link pro
+  // perfil + moldura da loja (frame comprado)
   if (r.stats && r.stats.guildTag && r.stats.guildId) {
     const tagSpan = document.createElement('span');
     tagSpan.textContent = `[${r.stats.guildTag}]`; // sigla é sempre A-Z, mas por segurança vai via textContent também
     tagSpan.className = 'guild-tag-link';
     applyGuildTagStyle(tagSpan, r.stats.guildTagStyle);
     tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(r.stats.guildId, backTarget); };
-    topRow.appendChild(tagSpan);
+    topRow.insertBefore(tagSpan, nickSpan);
   }
-  const nickSpan = document.createElement('span'); // nick sempre via textContent, nunca interpolado
-  nickSpan.textContent = r.nick;
   nickSpan.className = 'nick-click';
   applyNickFrame(nickSpan, r.stats);
   nickSpan.onclick = () => window.openProfileFromRanking(r, backTarget);
-  topRow.appendChild(nickSpan);
-  if (window.IS_TESTE) {
-    if (badgeHtml) { // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
-      const titleRow = document.createElement('div');
-      titleRow.className = 'nick-title-row';
-      titleRow.innerHTML = badgeHtml;
-      gridWrap.appendChild(titleRow);
-    } else {
-      // sem conquista equipada: não sobra uma 2ª linha vazia — em vez
-      // disso centraliza nível+nick juntos na altura toda da linha (ver
-      // .no-title em css/style-teste.css), pra ficar alinhado com o nível
-      // igual pediram, em vez de ficar "puxado pra cima"
-      gridWrap.classList.add('no-title');
-    }
-  } else if (badgeHtml) {
-    nickCell.insertAdjacentHTML('beforeend', badgeHtml);
-  }
   return nickSpan;
 }
 

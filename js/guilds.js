@@ -8,7 +8,7 @@ import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
 import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip, applyGuildTagStyle } from './levels.js';
 import { isMuted, tone, formatMsgTime, formatMsgFullDateTime } from './utils.js';
-import { fetchAllScores, rowData } from './ranking-cache.js';
+import { fetchAllScores, rowData, buildLevelNickBlock } from './ranking-cache.js';
 import { openProfileByUid } from './friends.js';
 import { COLORS } from './constants.js';
 
@@ -780,10 +780,7 @@ function treasurySection(g, xpByUid) {
       posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
       posSpan.textContent = medal;
       left.appendChild(posSpan);
-      left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
-      const nickSpan = document.createElement('span');
-      nickSpan.textContent = (g.members && g.members[uid] && g.members[uid].nick) || '?';
-      left.appendChild(nickSpan);
+      left.appendChild(buildLevelNickBlock((xpByUid && xpByUid[uid]) || 0, (g.members && g.members[uid] && g.members[uid].nick) || '?', ''));
       memberRow2.appendChild(left);
       const amtSpan = document.createElement('span');
       amtSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700; flex-shrink:0;';
