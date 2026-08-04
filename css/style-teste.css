@@ -804,7 +804,11 @@
       radial-gradient(circle at 94% 40%, rgba(255,45,107,0.9) 0%, rgba(255,45,107,0) 6%),
       #0e1224;
   }
-  td.pos { text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); }
+  /* fundo sólido próprio, sempre por cima do fundo/tema da linha (row-theme-*
+     é aplicado no <tr>, e um <td> sem background deixa ele aparecer por
+     baixo) — a posição fica isolada, igual a coluna de referência, em vez
+     de herdar cor/textura de qualquer tema equipado pela pessoa */
+  td.pos { text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-orange); text-shadow: 0 0 8px rgba(255,159,28,0.5); background: #0a0e1e; }
   td.pts { text-align: right; font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,233,60,0.5); white-space: nowrap; }
   td.pos, th:first-child, td.pts, th:last-child { padding-left: 6px; padding-right: 6px; }
   th:first-child { text-align: center; }
