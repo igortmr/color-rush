@@ -40,13 +40,19 @@ export function compareRankRows(a, b) {
 // tem CSS correspondente em css/style-teste.css de propósito, pra não
 // arriscar nada na produção enquanto ainda tá em avaliação.
 export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
+  // no layout de teste, o nível vira uma coluna própria (grid) que ocupa a
+  // altura das duas linhas — daí o título ficar alinhado embaixo do NICK,
+  // não embaixo do nível (pedido explícito depois de ver o protótipo v1,
+  // onde o título começava lá da esquerda, debaixo do "Lv")
   const topRow = window.IS_TESTE ? document.createElement('div') : nickCell;
   if (window.IS_TESTE) {
-    topRow.className = 'nick-top-row';
     nickCell.classList.add('nick-cell-v2');
+    nickCell.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
+    topRow.className = 'nick-top-row';
     nickCell.appendChild(topRow);
+  } else {
+    topRow.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   }
-  topRow.insertAdjacentHTML('beforeend', lvChip(r.stats && r.stats.xp));
   // sigla do clã (se tiver) — clicável, abre a tela do clã (ver
   // window.openGuildFromTag em js/guilds.js, chamado via window de
   // propósito pelo mesmo motivo do uiChallengeFriend em js/friends.js)
@@ -64,15 +70,15 @@ export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   applyNickFrame(nickSpan, r.stats);
   nickSpan.onclick = () => window.openProfileFromRanking(r, backTarget);
   topRow.appendChild(nickSpan);
-  if (badgeHtml) { // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
-    if (window.IS_TESTE) {
-      const titleRow = document.createElement('div');
-      titleRow.className = 'nick-title-row';
-      titleRow.innerHTML = badgeHtml;
-      nickCell.appendChild(titleRow);
-    } else {
-      nickCell.insertAdjacentHTML('beforeend', badgeHtml);
-    }
+  if (window.IS_TESTE) {
+    // sempre cria a linha do título (mesmo vazia) — mantém as 2 linhas do
+    // grid consistentes entre as linhas COM e SEM conquista equipada
+    const titleRow = document.createElement('div');
+    titleRow.className = 'nick-title-row';
+    if (badgeHtml) titleRow.innerHTML = badgeHtml; // conteúdo fixo/confiável (ver equippedBadgeLabel/sharerTierLabel)
+    nickCell.appendChild(titleRow);
+  } else if (badgeHtml) {
+    nickCell.insertAdjacentHTML('beforeend', badgeHtml);
   }
   return nickSpan;
 }
