@@ -956,7 +956,11 @@
     column-gap: 8px;
     row-gap: 2px;
     align-content: center;
-    min-height: 34px; /* mesma altura com ou sem linha de título, ver .no-title abaixo */
+    /* precisa ser MAIOR que a altura natural de uma linha COM título (nick +
+       gap + pill ≈ 36-37px) — min-height só vira "a altura de todo mundo"
+       se for o lado que perde a conta dos dois casos; 34px tava menor que o
+       natural da linha com título, por isso ainda ficava diferente */
+    min-height: 40px;
   }
   .nick-cell.nick-cell-v2 > .lv-chip { grid-column: 1; grid-row: 1 / 3; align-self: center; }
   .nick-top-row { grid-column: 2; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
