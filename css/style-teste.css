@@ -1014,13 +1014,16 @@
        de brilho na própria cor, uma mais perto e outra mais espalhada — é o
        que dá aquele "neon" que destaca, em vez de só ficar escuro/apagado */
     text-shadow: 0 1px 1px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.85), 0 0 6px currentColor, 0 0 12px currentColor;
-    /* o "inset ... 30px" preenche o miolo do chip com um véu escuro bem mais
-       leve que antes (0.4→0.22) — só o suficiente pra não lavar em cima de
-       um fundo parecido, sem apagar o brilho da cor. Não dá pra usar
-       background normal aqui: o .lv-chip já usa background (gradiente) pra
-       colorir o próprio texto via background-clip:text, e trocar isso
-       quebraria a cor do texto — sombra interna não mexe nisso */
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45), inset 0 0 0 30px rgba(0,0,0,0.22);
+    /* o "inset ... 30px" preenche o miolo do chip com um fundo bem mais
+       ESCURO de novo (0.22 deixava passar demais o fundo por trás — em
+       fundos claros/parecidos com a cor do nível, tipo Lv 20/30 em cima de
+       roxo/azul claro, ficava quase ilegível). Um miolo bem escuro de
+       verdade + as duas camadas de brilho acima é o que dá o efeito "neon
+       numa placa preta", que funciona em qualquer fundo por trás. Não dá
+       pra usar background normal aqui: o .lv-chip já usa background
+       (gradiente) pra colorir o próprio texto via background-clip:text, e
+       trocar isso quebraria a cor do texto — sombra interna não mexe nisso */
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45), inset 0 0 0 30px rgba(0,0,0,0.72);
   }
   .nick-click { cursor: pointer; font-weight: 800; }
   .nick-click:hover { color: var(--neon-blue); }
