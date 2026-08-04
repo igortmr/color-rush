@@ -1010,13 +1010,17 @@
   .nick-cell-v2-inner .lv-chip,
   .nick-title-row .class-pill {
     font-weight: 800;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7), 0 0 6px currentColor;
-    /* o "inset ... 30px" preenche todo o miolo do chip com um véu escuro —
-       não dá pra usar background normal aqui: o .lv-chip já usa background
-       (gradiente) pra colorir o próprio texto via background-clip:text, e
-       trocar isso quebraria a cor do texto. Sombra interna não mexe nisso,
-       só escurece o fundo por baixo das palavras/números/emoji */
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45), inset 0 0 0 30px rgba(0,0,0,0.4);
+    /* contato escuro e fino bem colado na letra (legibilidade) + DUAS camadas
+       de brilho na própria cor, uma mais perto e outra mais espalhada — é o
+       que dá aquele "neon" que destaca, em vez de só ficar escuro/apagado */
+    text-shadow: 0 1px 1px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.85), 0 0 6px currentColor, 0 0 12px currentColor;
+    /* o "inset ... 30px" preenche o miolo do chip com um véu escuro bem mais
+       leve que antes (0.4→0.22) — só o suficiente pra não lavar em cima de
+       um fundo parecido, sem apagar o brilho da cor. Não dá pra usar
+       background normal aqui: o .lv-chip já usa background (gradiente) pra
+       colorir o próprio texto via background-clip:text, e trocar isso
+       quebraria a cor do texto — sombra interna não mexe nisso */
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45), inset 0 0 0 30px rgba(0,0,0,0.22);
   }
   .nick-click { cursor: pointer; font-weight: 800; }
   .nick-click:hover { color: var(--neon-blue); }
