@@ -935,18 +935,25 @@
   // só teste.html — deliberadamente NÃO entra em js/main-teste.js (que
   // precisa continuar espelhando js/main.js linha por linha, ver comentário
   // lá) nem em nenhum módulo compartilhado (game-core.js/replay.js/pvp.js).
-  // Dá aos quadrados (Clássico/Reverso/Trio/Caos-fundo/Mosaico) o MESMO
-  // tratamento visual dos botões do menu (.menu-quick-btn): "base" sólida
-  // colorida (0 blur) + sombra suave, sem o glow neon difuso de antes. As
-  // formas (Formas/Formas Reverso/Caos) NÃO entram nisso — só o glow neon
-  // simples de sempre, ver css/style-teste.css. Pra isso precisa:
+  // Dá aos quadrados (Clássico/Reverso/Trio/Mosaico, retangulares, E
+  // Formas/Formas Reverso/Caos, recortados em forma) o MESMO tratamento
+  // visual dos botões do menu (.menu-quick-btn): "base" sólida colorida (0
+  // blur) + sombra suave, sem o glow neon difuso de antes — nas formas isso
+  // sai via drop-shadow (não box-shadow) no .shape-fill, pra acompanhar o
+  // clip-path em vez de ficar um retângulo fantasma (ver css/style-teste.css).
+  // Pra isso precisa:
   // 1) limpar o box-shadow neon que o jogo já define inline por cor a cada
   //    rodada (ver el.style.boxShadow em js/game-core.js, compartilhado com
   //    index.html) — inline sempre ganha de regra de CSS externo, então sem
   //    isso o box-shadow novo do .square (ver css/style-teste.css) nunca
-  //    apareceria de verdade;
-  // 2) expor essa mesma cor como --sq-color (custom property), que o CSS
-  //    usa pra colorir a "base"/borda-no-hover/glow-no-hover;
+  //    apareceria de verdade; no Caos o equivalente é o background/filter
+  //    inline do .shape-fill (ver renderCaosSquare em js/replay.js) — mesmo
+  //    problema, mesma solução, só que limpando os dois em vez de um;
+  // 2) expor essa mesma cor como --sq-color (quadrado retangular) ou
+  //    --sf-color (.shape-fill do Caos) — custom property que o CSS usa pra
+  //    colorir a "base"/borda-no-hover/glow-no-hover. Formas/Formas Reverso
+  //    não têm cor própria por figura (sempre o mesmo azul/roxo neon), então
+  //    nunca setam --sf-color — o CSS já cai no fallback certo sozinho;
   // 3) controlar hover/pressionado via .sq-hover/.sq-pressed (JS puro,
   //    pointerenter/leave/down/up) em vez de :hover/:active — a media query
   //    (hover:hover)+(pointer:fine) sozinha não bastou pra sumir de vez com
@@ -966,6 +973,19 @@
         if (node.style.background) {
           node.style.boxShadow = '';
           node.style.setProperty('--sq-color', node.style.background);
+        }
+        // Caos: quem carrega a cor por figura é o <span class="shape-fill">
+        // dentro do .square, não o .square em si (ver renderCaosSquare em
+        // js/replay.js) — mesma troca inline→custom property, só que no
+        // filho. Formas/Formas Reverso não setam background inline aqui
+        // (sempre o mesmo gradiente neon fixo do CSS), então esse "if" nunca
+        // dispara pra eles — --sf-color fica sem valor e o CSS usa o
+        // fallback (ver .shape-fill em css/style-teste.css).
+        const fill = node.querySelector('.shape-fill');
+        if (fill && fill.style.background) {
+          fill.style.setProperty('--sf-color', fill.style.background);
+          fill.style.background = '';
+          fill.style.filter = '';
         }
         node.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') node.classList.add('sq-hover'); });
         node.addEventListener('pointerleave', () => node.classList.remove('sq-hover', 'sq-pressed'));
