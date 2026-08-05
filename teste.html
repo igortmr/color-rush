@@ -233,7 +233,7 @@
   </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
     <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
-    <h2 style="display:flex; align-items:center; gap:8px;"><img class="page-title-icon" style="width:28px; height:28px;" src="img/menu-icons/daily.png" alt=""><span data-i18n="tab_daily_plain">Desafio Diário</span></h2>
+    <h2 data-i18n="tab_daily">📅 Desafio Diário</h2>
     <p id="daily-card-desc" data-i18n-html="daily_card_desc">O mesmo desafio pra todo mundo, todos os dias! Você tem <b>3 tentativas</b> pra fazer a maior pontuação. Os melhores colocados ganham <span class="pigment-word">💧 Pigmentos</span>, que podem ser usados na loja do jogo.</p>
     <div class="mode-card-footer" id="daily-card-footer">
       <span class="record-badge clickable" id="daily-card-best" onclick="event.stopPropagation(); showRanking('daily');" title="Ver ranking do desafio">📊 Seu recorde: 0</span>
@@ -382,7 +382,7 @@
 <!-- DESAFIO DIÁRIO -->
 <div class="screen" id="daily-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:1.7rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" src="img/menu-icons/daily.png" alt=""><span data-i18n="daily_screen_title_plain">DESAFIO DIÁRIO</span></h1>
+    <h1 style="font-size:1.7rem;" data-i18n="daily_screen_title">📅 DESAFIO DIÁRIO</h1>
     <button class="pill-btn" onclick="dailyExitScreen()" data-i18n="btn_back">VOLTAR</button>
   </div>
 
