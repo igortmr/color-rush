@@ -445,7 +445,7 @@
 <div class="modal-overlay" id="inbox-modal" style="display:none;" onclick="if(event.target===this) closeInbox();">
   <div class="modal-card">
     <div class="profile-top-row" style="margin-bottom:0;">
-      <h1 style="font-size:1.3rem;" data-i18n="daily_inbox_title">📬 Caixa de Entrada</h1>
+      <h1 style="font-size:1.3rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" style="width:26px; height:26px;" src="img/menu-icons/inbox.png" alt=""><span data-i18n="daily_inbox_title_plain">Caixa de Entrada</span></h1>
       <button class="pill-btn" onclick="closeInbox()" data-i18n="btn_close">FECHAR</button>
     </div>
     <div class="modal-card-body" id="inbox-list"></div>
