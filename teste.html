@@ -931,5 +931,25 @@
 </div>
 
 <script type="module" src="js/main-teste.js"></script>
+<script type="module">
+  // só teste.html — deliberadamente NÃO entra em js/main-teste.js (que
+  // precisa continuar espelhando js/main.js linha por linha, ver comentário
+  // lá) nem em nenhum módulo compartilhado (game-core.js/replay.js/pvp.js):
+  // colore a BORDA de cada quadrado igual à própria cor de fundo dele (que
+  // já vem inline por rodada, ver el.style.background em js/game-core.js/
+  // js/replay.js). O glow colorido (box-shadow) já existe e é compartilhado
+  // com o index.html; isso aqui só reforça a mesma cor na borda, puro
+  // reforço visual, sem mexer em pontuação/lógica nenhuma. Observa os 3
+  // tabuleiros (#grid, #replay-grid, #pvp-grid) de uma vez via subtree.
+  new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType === 1 && node.classList && node.classList.contains('square') && node.style.background) {
+          node.style.borderColor = node.style.background;
+        }
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+</script>
 </body>
 </html>
