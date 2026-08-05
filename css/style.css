@@ -294,6 +294,11 @@
   .menu-quick-btn {
     position: relative;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
     background: linear-gradient(180deg, #131a34, #0a0e1e);
     border: 1px solid rgba(255,255,255,0.15);
     color: #cfd8ff;
@@ -307,6 +312,25 @@
     cursor: pointer;
     box-shadow: 0 3px 0 var(--mb-shadow, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.35);
     transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  /* ícone temático (imagem) no lugar do emoji — mesmo esquema de cor de
+     --mb-glow do botão (definido por id logo abaixo) reforçado num
+     drop-shadow suave atrás do ícone */
+  .menu-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 6px var(--mb-glow, transparent));
+  }
+  /* mesmos ícones dos botões do menu, agora no título de cada tela (RANKING/
+     AMIGOS/LOJA/CLÃS) — maior, já que aqui não divide espaço com 3 outros
+     botões numa fileira */
+  .page-title-icon {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
   }
   .menu-quick-btn:hover {
     border-color: var(--mb-color, var(--neon-blue));
@@ -358,6 +382,7 @@
   }
   .inbox-icon-btn:hover { box-shadow: none; transform: none; }
   .inbox-icon-btn .menu-quick-badge { top: -4px; right: -2px; }
+  .inbox-icon-img { width: 26px; height: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
 
   /* popup genérico (usado pela caixa de entrada, pode servir pra outros
      avisos no futuro) */
