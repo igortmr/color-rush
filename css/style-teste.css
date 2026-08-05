@@ -1368,55 +1368,36 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
-    /* mesmo padrão "degrau + sombra suave" do .square (ver box-shadow lá
-       em cima), só que via drop-shadow (não box-shadow) porque isso aqui
-       respeita o clip-path da forma — sem o glow neon difuso de antes.
-       --shape-color (definida por forma, logo abaixo de cada clip-path) dá
-       uma "base" colorida própria pra cada forma, igual a cor de cada
-       quadrado normal — só pra Formas/Formas Reverso (cor de PREENCHIMENTO
-       fixa, gradiente acima, não muda). O Caos define cor E filter inline
-       por item (ver renderCaosSquare em js/replay.js, compartilhado), que
-       sempre ganha de regra externa; o script no fim do teste.html
-       reescreve esse filter inline pra essa MESMA receita, com a cor real
-       do item em vez de --shape-color. */
-    /* 4 camadas SEMPRE, mesmo em repouso (a última entra com blur 0/
-       transparente, invisível) — só troca de VALOR no hover/pressionado
-       (ver .sq-hover/.sq-pressed logo abaixo), nunca de QUANTIDADE de
-       camada (lista de tamanho variável quebra a interpolação do filter
-       em alguns navegadores). Quando o degrau colorido é a MESMA cor do
-       preenchimento (caso do Caos, ver script no fim do teste.html), ele
-       se mistura na própria forma e some — por isso a 1ª camada é um
-       contorno claro fino ao redor de TODA a silhueta (drop-shadow com
-       blur bem pequeno segue o alpha exato da forma, funciona como um
-       "border" que clip-path não permite de verdade), garantindo que a
-       forma sempre se destaque do fundo preto e do próprio degrau. */
-    filter:
-      drop-shadow(0 0 2px rgba(255,255,255,0.6))
-      drop-shadow(0 6px 0px var(--shape-color, rgba(0,0,0,0.5)))
-      drop-shadow(0 8px 10px rgba(0,0,0,0.5))
-      drop-shadow(0 0 0px transparent);
-    transition: filter 0.15s;
+    transition: transform 0.15s;
   }
-  /* mesma reação de hover/toque do .square (ver .sq-hover/.sq-pressed lá em
-     cima) — só que aplicada no .shape-fill (o filho recortado), já que o
-     wrapper .square.shape-square em si é transparente/sem sombra própria.
-     Só cobre Formas/Formas Reverso: no Caos, o script no fim do teste.html
-     ajusta o filter inline do próprio .shape-fill nesses mesmos momentos
-     (pointerenter/down/etc), porque inline sempre ganha desta regra aqui. */
-  .square.shape-square.sq-hover .shape-fill {
-    filter:
-      drop-shadow(0 0 2px rgba(255,255,255,0.6))
-      drop-shadow(0 6px 0px var(--shape-color, rgba(0,0,0,0.5)))
-      drop-shadow(0 8px 10px rgba(0,0,0,0.5))
-      drop-shadow(0 0 14px var(--shape-color, rgba(45,214,255,0.4)));
+  /* profundidade 3D das formas SEM filter:drop-shadow — testado e confirmado
+     que filter+clip-path no mesmo elemento não renderiza em vários
+     navegadores mobile reais (Safari/WebKit tem bug antigo e conhecido
+     nessa combinação específica; o Chromium usado nos meus testes locais
+     não reproduz, por isso passou no teste daqui mas não no celular de
+     verdade). Troca de abordagem: duas CÓPIAS da própria forma (mesmas
+     classes .shape-fill.shape-X, então herdam o MESMO clip-path via regra
+     abaixo), sem filter nenhum — só clip-path + transform + background
+     sólida, tudo isso com suporte robusto em qualquer navegador:
+     - .shape-outline-copy: cópia branca, escalada um pouco maior, atrás de
+       tudo — os únicos pixels dela que aparecem são a "borda" que sobra ao
+       redor da forma de cima, funcionando como o "border" que clip-path não
+       permite de verdade.
+     - .shape-shadow-copy: cópia na cor de identidade (--shape-color, ou a
+       cor real do item no Caos), descida alguns px — mesmo efeito do degrau
+       colorido de antes, sem depender de filter.
+     Inseridas via JS (script no fim do teste.html) ANTES do .shape-fill de
+     verdade, então pintam por baixo dele. */
+  .shape-fill.shape-outline-copy {
+    background: rgba(255,255,255,0.85);
+    transform: scale(1.08);
   }
-  .square.shape-square.sq-pressed .shape-fill {
-    filter:
-      drop-shadow(0 0 2px rgba(255,255,255,0.6))
-      drop-shadow(0 2px 0px var(--shape-color, rgba(0,0,0,0.5)))
-      drop-shadow(0 3px 4px rgba(0,0,0,0.4))
-      drop-shadow(0 0 0px transparent);
+  .shape-fill.shape-shadow-copy {
+    background: var(--shape-color, rgba(0,0,0,0.55));
+    transform: translateY(6px);
   }
+  .square.shape-square.sq-hover .shape-fill.shape-shadow-copy { transform: translateY(8px); }
+  .square.shape-square.sq-pressed .shape-fill.shape-shadow-copy { transform: translateY(2px); }
   /* mesmo brilho "de vidro" do .square normal (ver .square::before), agora
      DENTRO do .shape-fill em vez do quadrado por fora — um clip-path num
      elemento recorta TODO o conteúdo renderizado dele, pseudo-elemento
@@ -1424,7 +1405,8 @@
      forma (círculo, estrela, cruz...), sem vazar nos cantos. Funciona até no
      Caos, que define a cor do .shape-fill inline por item (ver
      renderCaosSquare em js/replay.js) — o inline só afeta o elemento em si,
-     nunca o pseudo-elemento dele. */
+     nunca o pseudo-elemento dele. Só na cópia de CIMA (a forma de verdade)
+     — as cópias de baixo (contorno/degrau) não precisam de brilho próprio. */
   .shape-fill::before {
     content: '';
     position: absolute;
@@ -1438,6 +1420,8 @@
      caixa retangular atrás do glyph. Melhor não mostrar aqui do que mostrar
      errado. */
   .shape-fill.shape-glyph::before { content: none; }
+  .shape-fill.shape-outline-copy::before,
+  .shape-fill.shape-shadow-copy::before { content: none; }
   /* --shape-color: cor de identidade própria por forma, só pro degrau/glow
      do filter acima (ver .shape-fill base) — o PREENCHIMENTO continua o
      mesmo gradiente azul/roxo fixo pra todas, não muda por forma */
