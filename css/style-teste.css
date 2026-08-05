@@ -1371,12 +1371,35 @@
     /* mesmo padrão "degrau + sombra suave" do .square (ver box-shadow lá
        em cima), só que via drop-shadow (não box-shadow) porque isso aqui
        respeita o clip-path da forma — sem o glow neon difuso de antes.
-       Vale só pra Formas/Formas Reverso (cor fixa, gradiente CSS acima) —
-       o Caos define cor E filter inline por item (ver renderCaosSquare em
-       js/replay.js, compartilhado), que sempre ganha de regra externa; um
-       script no fim do teste.html reescreve esse filter inline pra essa
-       MESMA receita, só que colorido com a cor real do item */
-    filter: drop-shadow(0 3px 0px rgba(0,0,0,0.5)) drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+       --shape-color (definida por forma, logo abaixo de cada clip-path) dá
+       uma "base" colorida própria pra cada forma, igual a cor de cada
+       quadrado normal — só pra Formas/Formas Reverso (cor de PREENCHIMENTO
+       fixa, gradiente acima, não muda). O Caos define cor E filter inline
+       por item (ver renderCaosSquare em js/replay.js, compartilhado), que
+       sempre ganha de regra externa; o script no fim do teste.html
+       reescreve esse filter inline pra essa MESMA receita, com a cor real
+       do item em vez de --shape-color. */
+    /* 3 camadas SEMPRE, mesmo em repouso (a 3ª entra com blur 0/transparente,
+       invisível) — só troca de VALOR no hover/pressionado (ver .sq-hover/
+       .sq-pressed logo abaixo), nunca de QUANTIDADE de camada. Descoberto
+       testando: com a 3ª camada só aparecendo no hover (lista de 2 virando
+       3), o Chrome não interpola/computa esse filter direito (a cor do
+       glow ficava transparente pra sempre, mesmo esperando a transição
+       acabar) — parece bug de engine com listas de tamanho diferente. */
+    filter: drop-shadow(0 4px 0px var(--shape-color, rgba(0,0,0,0.5))) drop-shadow(0 5px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 0px transparent);
+    transition: filter 0.15s;
+  }
+  /* mesma reação de hover/toque do .square (ver .sq-hover/.sq-pressed lá em
+     cima) — só que aplicada no .shape-fill (o filho recortado), já que o
+     wrapper .square.shape-square em si é transparente/sem sombra própria.
+     Só cobre Formas/Formas Reverso: no Caos, o script no fim do teste.html
+     ajusta o filter inline do próprio .shape-fill nesses mesmos momentos
+     (pointerenter/down/etc), porque inline sempre ganha desta regra aqui. */
+  .square.shape-square.sq-hover .shape-fill {
+    filter: drop-shadow(0 4px 0px var(--shape-color, rgba(0,0,0,0.5))) drop-shadow(0 5px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 14px var(--shape-color, rgba(45,214,255,0.4)));
+  }
+  .square.shape-square.sq-pressed .shape-fill {
+    filter: drop-shadow(0 1px 0px var(--shape-color, rgba(0,0,0,0.5))) drop-shadow(0 2px 3px rgba(0,0,0,0.35)) drop-shadow(0 0 0px transparent);
   }
   /* mesmo brilho "de vidro" do .square normal (ver .square::before), agora
      DENTRO do .shape-fill em vez do quadrado por fora — um clip-path num
@@ -1399,14 +1422,17 @@
      caixa retangular atrás do glyph. Melhor não mostrar aqui do que mostrar
      errado. */
   .shape-fill.shape-glyph::before { content: none; }
-  .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); }
-  .shape-fill.shape-square-shape  { clip-path: inset(6%); }
-  .shape-fill.shape-triangle      { clip-path: polygon(50% 4%, 4% 96%, 96% 96%); }
-  .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
-  .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
-  .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
-  .shape-fill.shape-pentagon      { clip-path: polygon(50% 2%, 97% 38%, 80% 96%, 20% 96%, 3% 38%); }
-  .shape-fill.shape-trapezoid     { clip-path: polygon(30% 15%, 70% 15%, 97% 90%, 3% 90%); }
+  /* --shape-color: cor de identidade própria por forma, só pro degrau/glow
+     do filter acima (ver .shape-fill base) — o PREENCHIMENTO continua o
+     mesmo gradiente azul/roxo fixo pra todas, não muda por forma */
+  .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); --shape-color: var(--neon-blue); }
+  .shape-fill.shape-square-shape  { clip-path: inset(6%); --shape-color: var(--neon-red); }
+  .shape-fill.shape-triangle      { clip-path: polygon(50% 4%, 4% 96%, 96% 96%); --shape-color: var(--neon-green); }
+  .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); --shape-color: var(--neon-purple); }
+  .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); --shape-color: var(--neon-yellow); }
+  .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); --shape-color: var(--neon-orange); }
+  .shape-fill.shape-pentagon      { clip-path: polygon(50% 2%, 97% 38%, 80% 96%, 20% 96%, 3% 38%); --shape-color: var(--neon-blue); }
+  .shape-fill.shape-trapezoid     { clip-path: polygon(30% 15%, 70% 15%, 97% 90%, 3% 90%); --shape-color: var(--neon-purple); }
   /* formas com override que usam glyph Unicode em vez de clip-path (ex.:
      naipes de baralho, DAILY_SHAPES_OVERRIDE em constants.js) -- curvas
      complexas demais (coração/pá/trevo) pra aproximar bem com polygon() como
