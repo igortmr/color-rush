@@ -771,8 +771,40 @@
     cursor: pointer;
     transition: transform 0.1s, filter 0.1s, box-shadow 0.2s;
     border: 3px solid rgba(255,255,255,0.35);
+    /* sombra de profundidade via filter, NÃO box-shadow — o box-shadow desse
+       elemento é sobrescrito inline a cada rodada com o glow neon por cor
+       (ver el.style.boxShadow em js/game-core.js, compartilhado com
+       index.html: "0 0 18px COR, 0 0 40px COR, inset..."), então um
+       box-shadow daqui nunca apareceria de verdade. filter é uma propriedade
+       diferente, então convive com esse glow sem brigar nem duplicar lógica
+       no JS. */
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
   }
-  .square:hover { transform: scale(1.04); filter: brightness(1.12); }
+  /* brilho "de vidro" no canto superior esquerdo, esmaecendo pro canto
+     oposto — funciona em cima de QUALQUER cor de fundo porque não depende
+     de saber a cor (a cor real do quadrado fica embaixo, no elemento em si,
+     não nesse pseudo-elemento) */
+  .square::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(160deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 45%, rgba(0,0,0,0.15) 100%);
+    pointer-events: none;
+  }
+  /* quadrado do modo Formas: quem desenha a forma de verdade é o .shape-fill
+     (clip-path) por dentro — o filter/glass acima ficariam sobrando como uma
+     caixa retangular fantasma ao redor da forma recortada (drop-shadow de um
+     PAI considera o retângulo inteiro renderizado, forma+transparência, então
+     duplicaria a sombra que o .shape-fill já desenha na forma certa mais
+     abaixo), então saem daqui */
+  .square.shape-square { filter: none; }
+  .square.shape-square::before { content: none; }
+  .square:hover { transform: scale(1.04) translateY(-2px); filter: brightness(1.12) drop-shadow(0 6px 10px rgba(0,0,0,0.45)); }
+  .square.shape-square:hover { filter: brightness(1.12); }
+  /* aperta de verdade ao clicar — mesma ideia dos botões do menu */
+  .square:active { transform: scale(0.98) translateY(1px); filter: brightness(1.05) drop-shadow(0 2px 3px rgba(0,0,0,0.35)); }
+  .square.shape-square:active { filter: brightness(1.05); }
   .word {
     background: rgba(6,10,22,0.88);
     color: #fff;
@@ -782,6 +814,7 @@
     border-radius: 8px;
     letter-spacing: 1px;
     border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
   }
   /* modo Trio: a cor da palavra (tc) é uma das 3 informações do quadrado, então
      precisa ficar bem legível — mais grossa (peso 900 + contorno reforçando o
@@ -1317,7 +1350,10 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
-    filter: drop-shadow(0 0 14px rgba(45,214,255,0.55)) drop-shadow(0 0 26px rgba(177,77,255,0.35));
+    /* drop-shadow (não box-shadow) respeita o clip-path da forma — a
+       sombra escura por baixo dá o mesmo relevo 3D do .square normal, sem
+       aparecer como caixa retangular atrás da forma recortada */
+    filter: drop-shadow(0 0 14px rgba(45,214,255,0.55)) drop-shadow(0 0 26px rgba(177,77,255,0.35)) drop-shadow(0 4px 5px rgba(0,0,0,0.45));
   }
   .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); }
   .shape-fill.shape-square-shape  { clip-path: inset(6%); }
