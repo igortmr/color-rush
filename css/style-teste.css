@@ -769,16 +769,18 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.1s, filter 0.1s, box-shadow 0.2s;
-    border: 3px solid rgba(255,255,255,0.35);
-    /* sombra de profundidade via filter, NÃO box-shadow — o box-shadow desse
-       elemento é sobrescrito inline a cada rodada com o glow neon por cor
-       (ver el.style.boxShadow em js/game-core.js, compartilhado com
-       index.html: "0 0 18px COR, 0 0 40px COR, inset..."), então um
-       box-shadow daqui nunca apareceria de verdade. filter é uma propriedade
-       diferente, então convive com esse glow sem brigar nem duplicar lógica
-       no JS. */
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+    border: 1px solid rgba(255,255,255,0.15);
+    /* MESMO padrão dos botões do menu (.menu-quick-btn): borda neutra em
+       repouso, "base" sólida colorida embaixo (0 blur = parece um degrau,
+       não um brilho difuso) + sombra suave de leveza. --sq-color vem de um
+       script inline no fim do teste.html (fora de qualquer módulo
+       compartilhado) que lê a cor de fundo que o próprio jogo já define por
+       rodada e also LIMPA o box-shadow neon difuso que vinha inline (ver
+       el.style.boxShadow em js/game-core.js/replay.js, compartilhado com
+       index.html) — sem isso o box-shadow daqui nunca apareceria (inline
+       sempre ganha de regra externa). */
+    box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4);
+    transition: transform 0.1s, filter 0.1s, box-shadow 0.15s, border-color 0.15s;
   }
   /* brilho "de vidro" no canto superior esquerdo, esmaecendo pro canto
      oposto — funciona em cima de QUALQUER cor de fundo porque não depende
@@ -793,18 +795,24 @@
     pointer-events: none;
   }
   /* quadrado do modo Formas: quem desenha a forma de verdade é o .shape-fill
-     (clip-path) por dentro — o filter/glass acima ficariam sobrando como uma
-     caixa retangular fantasma ao redor da forma recortada (drop-shadow de um
-     PAI considera o retângulo inteiro renderizado, forma+transparência, então
-     duplicaria a sombra que o .shape-fill já desenha na forma certa mais
-     abaixo), então saem daqui */
-  .square.shape-square { filter: none; }
+     (clip-path) por dentro — o box-shadow/glass acima ficariam sobrando como
+     uma caixa retangular fantasma ao redor da forma recortada, então saem
+     daqui; o .shape-fill tem seu próprio tratamento equivalente mais abaixo */
+  .square.shape-square { box-shadow: none; }
   .square.shape-square::before { content: none; }
-  .square:hover { transform: scale(1.04) translateY(-2px); filter: brightness(1.12) drop-shadow(0 6px 10px rgba(0,0,0,0.45)); }
-  .square.shape-square:hover { filter: brightness(1.12); }
+  .square:hover {
+    border-color: var(--sq-color, var(--neon-blue));
+    box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px var(--sq-color, rgba(45,214,255,0.35));
+    transform: scale(1.04) translateY(-2px);
+    filter: brightness(1.08);
+  }
+  .square.shape-square:hover { box-shadow: none; filter: brightness(1.12); }
   /* aperta de verdade ao clicar — mesma ideia dos botões do menu */
-  .square:active { transform: scale(0.98) translateY(1px); filter: brightness(1.05) drop-shadow(0 2px 3px rgba(0,0,0,0.35)); }
-  .square.shape-square:active { filter: brightness(1.05); }
+  .square:active {
+    transform: scale(0.98) translateY(1px);
+    box-shadow: 0 1px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 2px 4px rgba(0,0,0,0.35);
+  }
+  .square.shape-square:active { box-shadow: none; }
   .word {
     background: rgba(6,10,22,0.88);
     color: #fff;
@@ -1350,10 +1358,15 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
-    /* drop-shadow (não box-shadow) respeita o clip-path da forma — a
-       sombra escura por baixo dá o mesmo relevo 3D do .square normal, sem
-       aparecer como caixa retangular atrás da forma recortada */
-    filter: drop-shadow(0 0 14px rgba(45,214,255,0.55)) drop-shadow(0 0 26px rgba(177,77,255,0.35)) drop-shadow(0 4px 5px rgba(0,0,0,0.45));
+    /* mesmo padrão "degrau + sombra suave" do .square (ver box-shadow lá
+       em cima), só que via drop-shadow (não box-shadow) porque isso aqui
+       respeita o clip-path da forma — sem o glow neon difuso de antes.
+       Vale só pra Formas/Formas Reverso (cor fixa, gradiente CSS acima) —
+       o Caos define cor E filter inline por item (ver renderCaosSquare em
+       js/replay.js, compartilhado), que sempre ganha de regra externa; um
+       script no fim do teste.html reescreve esse filter inline pra essa
+       MESMA receita, só que colorido com a cor real do item */
+    filter: drop-shadow(0 3px 0px rgba(0,0,0,0.5)) drop-shadow(0 4px 6px rgba(0,0,0,0.4));
   }
   /* mesmo brilho "de vidro" do .square normal (ver .square::before), agora
      DENTRO do .shape-fill em vez do quadrado por fora — um clip-path num
