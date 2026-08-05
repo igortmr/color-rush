@@ -372,6 +372,7 @@
   }
   .inbox-icon-btn:hover { box-shadow: none; transform: none; }
   .inbox-icon-btn .menu-quick-badge { top: -4px; right: -2px; }
+  .inbox-icon-img { width: 26px; height: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
 
   /* popup genérico (usado pela caixa de entrada, pode servir pra outros
      avisos no futuro) */
