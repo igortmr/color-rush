@@ -977,13 +977,18 @@
           // Formas/Formas Reverso não têm essa cor inline (fill.style.
           // background vazio), então o CSS puro (.sq-hover/.sq-pressed +
           // --shape-color) já resolve sozinho.
-          // 3 camadas sempre (a de repouso/pressionado com a 3ª "apagada",
+          // 4 camadas sempre (repouso/pressionado com a última "apagada",
           // blur 0 transparente) — mesmo motivo do comentário em .shape-fill
           // no css/style-teste.css: lista de tamanho variável quebra a
-          // interpolação do filter no Chrome
-          const restFilter  = (c) => `drop-shadow(0 4px 0px ${c}) drop-shadow(0 5px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 0px transparent)`;
-          const hoverFilter = (c) => `drop-shadow(0 4px 0px ${c}) drop-shadow(0 5px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 14px ${c})`;
-          const pressFilter = (c) => `drop-shadow(0 1px 0px ${c}) drop-shadow(0 2px 3px rgba(0,0,0,0.35)) drop-shadow(0 0 0px transparent)`;
+          // interpolação do filter em alguns navegadores. A 1ª camada
+          // (contorno branco fino) é o que faz a forma se destacar mesmo
+          // quando o degrau usa a MESMA cor do preenchimento (que é sempre
+          // o caso no Caos) — sem ela, degrau e preenchimento se misturam e
+          // o "3D" some, ficando só a sombra escura por baixo (quase
+          // invisível no fundo já escuro do jogo).
+          const restFilter  = (c) => `drop-shadow(0 0 2px rgba(255,255,255,0.6)) drop-shadow(0 6px 0px ${c}) drop-shadow(0 8px 10px rgba(0,0,0,0.5)) drop-shadow(0 0 0px transparent)`;
+          const hoverFilter = (c) => `drop-shadow(0 0 2px rgba(255,255,255,0.6)) drop-shadow(0 6px 0px ${c}) drop-shadow(0 8px 10px rgba(0,0,0,0.5)) drop-shadow(0 0 14px ${c})`;
+          const pressFilter = (c) => `drop-shadow(0 0 2px rgba(255,255,255,0.6)) drop-shadow(0 2px 0px ${c}) drop-shadow(0 3px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 0px transparent)`;
           const caosFill = () => node.querySelector('.shape-fill');
           node.addEventListener('pointerenter', (e) => {
             if (e.pointerType !== 'mouse') return;
@@ -1014,7 +1019,7 @@
           : (node.querySelectorAll ? [...node.querySelectorAll('.shape-fill')] : []);
         for (const fill of fills) {
           if (fill.style.background) {
-            fill.style.filter = `drop-shadow(0 4px 0px ${fill.style.background}) drop-shadow(0 5px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 0px transparent)`;
+            fill.style.filter = `drop-shadow(0 0 2px rgba(255,255,255,0.6)) drop-shadow(0 6px 0px ${fill.style.background}) drop-shadow(0 8px 10px rgba(0,0,0,0.5)) drop-shadow(0 0 0px transparent)`;
           }
         }
       }

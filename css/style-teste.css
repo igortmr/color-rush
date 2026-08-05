@@ -1379,14 +1379,22 @@
        sempre ganha de regra externa; o script no fim do teste.html
        reescreve esse filter inline pra essa MESMA receita, com a cor real
        do item em vez de --shape-color. */
-    /* 3 camadas SEMPRE, mesmo em repouso (a 3ª entra com blur 0/transparente,
-       invisível) — só troca de VALOR no hover/pressionado (ver .sq-hover/
-       .sq-pressed logo abaixo), nunca de QUANTIDADE de camada. Descoberto
-       testando: com a 3ª camada só aparecendo no hover (lista de 2 virando
-       3), o Chrome não interpola/computa esse filter direito (a cor do
-       glow ficava transparente pra sempre, mesmo esperando a transição
-       acabar) — parece bug de engine com listas de tamanho diferente. */
-    filter: drop-shadow(0 4px 0px var(--shape-color, rgba(0,0,0,0.5))) drop-shadow(0 5px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 0px transparent);
+    /* 4 camadas SEMPRE, mesmo em repouso (a última entra com blur 0/
+       transparente, invisível) — só troca de VALOR no hover/pressionado
+       (ver .sq-hover/.sq-pressed logo abaixo), nunca de QUANTIDADE de
+       camada (lista de tamanho variável quebra a interpolação do filter
+       em alguns navegadores). Quando o degrau colorido é a MESMA cor do
+       preenchimento (caso do Caos, ver script no fim do teste.html), ele
+       se mistura na própria forma e some — por isso a 1ª camada é um
+       contorno claro fino ao redor de TODA a silhueta (drop-shadow com
+       blur bem pequeno segue o alpha exato da forma, funciona como um
+       "border" que clip-path não permite de verdade), garantindo que a
+       forma sempre se destaque do fundo preto e do próprio degrau. */
+    filter:
+      drop-shadow(0 0 2px rgba(255,255,255,0.6))
+      drop-shadow(0 6px 0px var(--shape-color, rgba(0,0,0,0.5)))
+      drop-shadow(0 8px 10px rgba(0,0,0,0.5))
+      drop-shadow(0 0 0px transparent);
     transition: filter 0.15s;
   }
   /* mesma reação de hover/toque do .square (ver .sq-hover/.sq-pressed lá em
@@ -1396,10 +1404,18 @@
      ajusta o filter inline do próprio .shape-fill nesses mesmos momentos
      (pointerenter/down/etc), porque inline sempre ganha desta regra aqui. */
   .square.shape-square.sq-hover .shape-fill {
-    filter: drop-shadow(0 4px 0px var(--shape-color, rgba(0,0,0,0.5))) drop-shadow(0 5px 8px rgba(0,0,0,0.45)) drop-shadow(0 0 14px var(--shape-color, rgba(45,214,255,0.4)));
+    filter:
+      drop-shadow(0 0 2px rgba(255,255,255,0.6))
+      drop-shadow(0 6px 0px var(--shape-color, rgba(0,0,0,0.5)))
+      drop-shadow(0 8px 10px rgba(0,0,0,0.5))
+      drop-shadow(0 0 14px var(--shape-color, rgba(45,214,255,0.4)));
   }
   .square.shape-square.sq-pressed .shape-fill {
-    filter: drop-shadow(0 1px 0px var(--shape-color, rgba(0,0,0,0.5))) drop-shadow(0 2px 3px rgba(0,0,0,0.35)) drop-shadow(0 0 0px transparent);
+    filter:
+      drop-shadow(0 0 2px rgba(255,255,255,0.6))
+      drop-shadow(0 2px 0px var(--shape-color, rgba(0,0,0,0.5)))
+      drop-shadow(0 3px 4px rgba(0,0,0,0.4))
+      drop-shadow(0 0 0px transparent);
   }
   /* mesmo brilho "de vidro" do .square normal (ver .square::before), agora
      DENTRO do .shape-fill em vez do quadrado por fora — um clip-path num
