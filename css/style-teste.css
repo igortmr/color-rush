@@ -284,6 +284,11 @@
   .menu-quick-btn {
     position: relative;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
     background: linear-gradient(180deg, #131a34, #0a0e1e);
     border: 1px solid rgba(255,255,255,0.15);
     color: #cfd8ff;
@@ -297,6 +302,15 @@
     cursor: pointer;
     box-shadow: 0 3px 0 var(--mb-shadow, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.35);
     transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  /* ícone temático (imagem) no lugar do emoji — mesmo esquema de cor de
+     --mb-glow do botão (definido por id logo abaixo) reforçado num
+     drop-shadow suave atrás do ícone */
+  .menu-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 6px var(--mb-glow, transparent));
   }
   .menu-quick-btn:hover {
     border-color: var(--mb-color, var(--neon-blue));
