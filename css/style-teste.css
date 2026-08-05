@@ -800,28 +800,29 @@
      daqui; o .shape-fill tem seu próprio tratamento equivalente mais abaixo */
   .square.shape-square { box-shadow: none; }
   .square.shape-square::before { content: none; }
-  /* :hover só em dispositivo com mouse de verdade (hover:hover) — em touch
-     (celular) não existe "sair" do hover depois de tocar, então o próximo
-     quadrado que nasce na MESMA posição na tela (rodada seguinte) herdava
-     visualmente o estado "hover"/"pressionado" do toque anterior mesmo sem
-     ninguém tocando nele ainda ("sticky hover", bug clássico de touch).
-     Sem essa media query o hover nem existe em celular, então não tem como
-     grudar. */
-  @media (hover: hover) and (pointer: fine) {
-    .square:hover {
-      border-color: var(--sq-color, var(--neon-blue));
-      box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px var(--sq-color, rgba(45,214,255,0.35));
-      transform: scale(1.04) translateY(-2px);
-      filter: brightness(1.08);
-    }
-    .square.shape-square:hover { box-shadow: none; filter: brightness(1.12); }
+  /* .sq-hover/.sq-pressed em vez de :hover/:active — a media query
+     (hover:hover)+(pointer:fine) sozinha não bastou pra sumir de vez com o
+     "sticky hover"/"pressionado fantasma" no celular (relatado mesmo depois
+     dela): quando a rodada troca, o quadrado novo nasce exatamente embaixo
+     do dedo que acabou de tocar o quadrado anterior, e alguns navegadores
+     transferem o estado :active/:hover pro elemento que agora está sob o
+     toque, mesmo sem ninguém ter tocado NELE ainda. Como pseudo-classe não
+     dá pra controlar isso com certeza, essas classes são adicionadas/
+     removidas via JS (ver script no fim do teste.html) com pointerdown/up
+     em CADA quadrado novo — sempre um listener novo num elemento novo, é
+     fisicamente impossível herdar estado do quadrado anterior. */
+  .square.sq-hover {
+    border-color: var(--sq-color, var(--neon-blue));
+    box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px var(--sq-color, rgba(45,214,255,0.35));
+    transform: scale(1.04) translateY(-2px);
+    filter: brightness(1.08);
   }
-  /* aperta de verdade ao clicar — mesma ideia dos botões do menu */
-  .square:active {
+  .square.shape-square.sq-hover { box-shadow: none; filter: brightness(1.12); }
+  .square.sq-pressed {
     transform: scale(0.98) translateY(1px);
     box-shadow: 0 1px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 2px 4px rgba(0,0,0,0.35);
   }
-  .square.shape-square:active { box-shadow: none; }
+  .square.shape-square.sq-pressed { box-shadow: none; }
   .word {
     background: rgba(6,10,22,0.88);
     color: #fff;

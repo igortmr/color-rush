@@ -948,16 +948,32 @@
   // 3) no modo Caos, cuja cor E filter (glow) já vêm inline por item (ver
   //    renderCaosSquare em js/replay.js), reescrever esse filter inline pra
   //    a MESMA receita "degrau + sombra suave" do .shape-fill normal, só
-  //    que usando a cor real do item em vez do cinza neutro do CSS.
+  //    que usando a cor real do item em vez do cinza neutro do CSS;
+  // 4) controlar hover/pressionado via .sq-hover/.sq-pressed (JS puro,
+  //    pointerenter/leave/down/up) em vez de :hover/:active — a media query
+  //    (hover:hover)+(pointer:fine) sozinha não bastou pra sumir de vez com
+  //    o "pressionado fantasma" relatado no celular: quando a rodada troca,
+  //    o quadrado novo nasce embaixo do dedo que acabou de tocar o anterior,
+  //    e alguns navegadores transferem :active/:hover pro elemento que
+  //    agora está sob o toque. Como cada quadrado é um elemento novo com
+  //    listener novo (sempre começa sem nenhuma das duas classes), não tem
+  //    como herdar estado do quadrado da rodada anterior.
   // Observa os 3 tabuleiros (#grid/#replay-grid/#pvp-grid) de uma vez via
   // subtree — cobre partida normal, replay e duelo (PvP) igual.
   new MutationObserver((mutations) => {
     for (const m of mutations) {
       for (const node of m.addedNodes) {
         if (node.nodeType !== 1) continue;
-        if (node.classList && node.classList.contains('square') && node.style.background) {
-          node.style.boxShadow = '';
-          node.style.setProperty('--sq-color', node.style.background);
+        if (node.classList && node.classList.contains('square')) {
+          if (node.style.background) {
+            node.style.boxShadow = '';
+            node.style.setProperty('--sq-color', node.style.background);
+          }
+          node.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') node.classList.add('sq-hover'); });
+          node.addEventListener('pointerleave', () => node.classList.remove('sq-hover', 'sq-pressed'));
+          node.addEventListener('pointerdown', () => node.classList.add('sq-pressed'));
+          node.addEventListener('pointerup', () => node.classList.remove('sq-pressed'));
+          node.addEventListener('pointercancel', () => node.classList.remove('sq-pressed'));
         }
         const fills = node.classList && node.classList.contains('shape-fill')
           ? [node]
