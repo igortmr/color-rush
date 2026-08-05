@@ -882,6 +882,50 @@
   @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
   .record-line { color: #a9b4e0; font-size: 1rem; }
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  /* JOGAR DE NOVO/COMPARTILHAR/MENU (tela de fim de jogo): mesmo material
+     "3D + vidro" do .menu-quick-btn/.square (degrau sólido + sombra de
+     leveza + brilho diagonal + levanta no hover/desce no clique), só que
+     ESCOPADO em #over-screen .btn-row — .btn-row também é usado noutras
+     telas (aceitar/recusar duelo, resultado do desafio diário) que não
+     entraram nesse pedido, e o button/button.secondary base (usado no app
+     inteiro: login, criar conta, etc.) também não deveria mudar por
+     tabela. Mantém a cor/gradiente de fundo de cada botão (isso já vem do
+     button/button.secondary base) — só troca o glow difuso de sempre pelo
+     degrau+vidro. Botões estáticos (não recriados a cada rodada como os
+     .square), então :hover/:active puro já basta, sem precisar do
+     sq-hover/sq-pressed via JS que os quadrados precisam (ver comentário
+     nas correspondentes no final do teste.html). */
+  #over-screen .btn-row button {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 3px 0 rgba(255,255,255,0.12), 0 4px 8px rgba(0,0,0,0.4);
+    transition: transform 0.12s ease, box-shadow 0.15s ease;
+  }
+  #over-screen .btn-row button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(160deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 45%, rgba(0,0,0,0.15) 100%);
+    pointer-events: none;
+  }
+  #over-screen .btn-row button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 0 rgba(255,255,255,0.12), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px rgba(255,45,107,0.4);
+  }
+  #over-screen .btn-row button:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.12), 0 2px 4px rgba(0,0,0,0.35);
+  }
+  #over-screen .btn-row button.secondary {
+    box-shadow: 0 3px 0 rgba(177,77,255,0.35), 0 4px 8px rgba(0,0,0,0.4);
+  }
+  #over-screen .btn-row button.secondary:hover {
+    box-shadow: 0 3px 0 rgba(177,77,255,0.35), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px rgba(177,77,255,0.4);
+  }
+  #over-screen .btn-row button.secondary:active {
+    box-shadow: 0 1px 0 rgba(177,77,255,0.35), 0 2px 4px rgba(0,0,0,0.35);
+  }
 
   /* ranking */
   .ranking-select {
