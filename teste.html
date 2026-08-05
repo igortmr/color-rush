@@ -935,9 +935,11 @@
   // só teste.html — deliberadamente NÃO entra em js/main-teste.js (que
   // precisa continuar espelhando js/main.js linha por linha, ver comentário
   // lá) nem em nenhum módulo compartilhado (game-core.js/replay.js/pvp.js).
-  // Dá aos quadrados/formas o MESMO tratamento visual dos botões do menu
-  // (.menu-quick-btn): "base" sólida colorida (0 blur) + sombra suave, sem
-  // o glow neon difuso de antes. Pra isso precisa:
+  // Dá aos quadrados (Clássico/Reverso/Trio/Caos-fundo/Mosaico) o MESMO
+  // tratamento visual dos botões do menu (.menu-quick-btn): "base" sólida
+  // colorida (0 blur) + sombra suave, sem o glow neon difuso de antes. As
+  // formas (Formas/Formas Reverso/Caos) NÃO entram nisso — só o glow neon
+  // simples de sempre, ver css/style-teste.css. Pra isso precisa:
   // 1) limpar o box-shadow neon que o jogo já define inline por cor a cada
   //    rodada (ver el.style.boxShadow em js/game-core.js, compartilhado com
   //    index.html) — inline sempre ganha de regra de CSS externo, então sem
@@ -945,12 +947,7 @@
   //    apareceria de verdade;
   // 2) expor essa mesma cor como --sq-color (custom property), que o CSS
   //    usa pra colorir a "base"/borda-no-hover/glow-no-hover;
-  // 3) nas formas (Formas/Formas Reverso/Caos), inserir duas cópias de cada
-  //    .shape-fill (contorno branco + degrau colorido) em vez de usar
-  //    filter:drop-shadow, que não renderiza junto com clip-path em vários
-  //    navegadores mobile reais — ver comentário mais abaixo, perto de onde
-  //    isso acontece;
-  // 4) controlar hover/pressionado via .sq-hover/.sq-pressed (JS puro,
+  // 3) controlar hover/pressionado via .sq-hover/.sq-pressed (JS puro,
   //    pointerenter/leave/down/up) em vez de :hover/:active — a media query
   //    (hover:hover)+(pointer:fine) sozinha não bastou pra sumir de vez com
   //    o "pressionado fantasma" relatado no celular: quando a rodada troca,
@@ -965,42 +962,16 @@
     for (const m of mutations) {
       for (const node of m.addedNodes) {
         if (node.nodeType !== 1) continue;
-        if (node.classList && node.classList.contains('square')) {
-          if (node.style.background) {
-            node.style.boxShadow = '';
-            node.style.setProperty('--sq-color', node.style.background);
-          }
-          node.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') node.classList.add('sq-hover'); });
-          node.addEventListener('pointerleave', () => node.classList.remove('sq-hover', 'sq-pressed'));
-          node.addEventListener('pointerdown', () => node.classList.add('sq-pressed'));
-          node.addEventListener('pointerup', () => node.classList.remove('sq-pressed'));
-          node.addEventListener('pointercancel', () => node.classList.remove('sq-pressed'));
+        if (!node.classList || !node.classList.contains('square')) continue;
+        if (node.style.background) {
+          node.style.boxShadow = '';
+          node.style.setProperty('--sq-color', node.style.background);
         }
-        // profundidade 3D das formas: NÃO usa filter (drop-shadow+clip-path
-        // no mesmo elemento não renderiza em vários navegadores mobile reais
-        // — bug antigo do Safari/WebKit; testei local em Chromium, que não
-        // reproduz o bug, por isso passava aqui mas não no celular de
-        // verdade). Em vez disso, insere duas CÓPIAS do próprio .shape-fill
-        // (mesmas classes de forma, então herdam o mesmo clip-path via CSS)
-        // ANTES dele: uma branca escalada (vira o contorno que sobra ao
-        // redor, já que clip-path não permite border de verdade) e uma na
-        // cor de identidade descida uns px (vira o degrau) — hover/
-        // pressionado só mudam a distância dessa 2ª cópia via CSS puro (ver
-        // .sq-hover/.sq-pressed em css/style-teste.css), sem filter nenhum.
-        const fills = node.classList && node.classList.contains('shape-fill')
-          ? [node]
-          : (node.querySelectorAll ? [...node.querySelectorAll('.shape-fill')] : []);
-        for (const fill of fills) {
-          if (fill.classList.contains('shape-outline-copy') || fill.classList.contains('shape-shadow-copy')) continue;
-          const shapeClasses = [...fill.classList].filter(c => c !== 'shape-fill');
-          const outline = document.createElement('span');
-          outline.className = ['shape-fill', 'shape-outline-copy', ...shapeClasses].join(' ');
-          const shadow = document.createElement('span');
-          shadow.className = ['shape-fill', 'shape-shadow-copy', ...shapeClasses].join(' ');
-          if (fill.style.background) shadow.style.background = fill.style.background; // Caos: cor real do item
-          fill.parentNode.insertBefore(outline, fill);
-          fill.parentNode.insertBefore(shadow, fill);
-        }
+        node.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') node.classList.add('sq-hover'); });
+        node.addEventListener('pointerleave', () => node.classList.remove('sq-hover', 'sq-pressed'));
+        node.addEventListener('pointerdown', () => node.classList.add('sq-pressed'));
+        node.addEventListener('pointerup', () => node.classList.remove('sq-pressed'));
+        node.addEventListener('pointercancel', () => node.classList.remove('sq-pressed'));
       }
     }
   }).observe(document.body, { childList: true, subtree: true });

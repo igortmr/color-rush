@@ -1368,71 +1368,16 @@
     position: absolute;
     inset: 0;
     background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
-    transition: transform 0.15s;
+    filter: drop-shadow(0 0 14px rgba(45,214,255,0.55)) drop-shadow(0 0 26px rgba(177,77,255,0.35));
   }
-  /* profundidade 3D das formas SEM filter:drop-shadow — testado e confirmado
-     que filter+clip-path no mesmo elemento não renderiza em vários
-     navegadores mobile reais (Safari/WebKit tem bug antigo e conhecido
-     nessa combinação específica; o Chromium usado nos meus testes locais
-     não reproduz, por isso passou no teste daqui mas não no celular de
-     verdade). Troca de abordagem: duas CÓPIAS da própria forma (mesmas
-     classes .shape-fill.shape-X, então herdam o MESMO clip-path via regra
-     abaixo), sem filter nenhum — só clip-path + transform + background
-     sólida, tudo isso com suporte robusto em qualquer navegador:
-     - .shape-outline-copy: cópia branca, escalada um pouco maior, atrás de
-       tudo — os únicos pixels dela que aparecem são a "borda" que sobra ao
-       redor da forma de cima, funcionando como o "border" que clip-path não
-       permite de verdade.
-     - .shape-shadow-copy: cópia na cor de identidade (--shape-color, ou a
-       cor real do item no Caos), descida alguns px — mesmo efeito do degrau
-       colorido de antes, sem depender de filter.
-     Inseridas via JS (script no fim do teste.html) ANTES do .shape-fill de
-     verdade, então pintam por baixo dele. */
-  .shape-fill.shape-outline-copy {
-    background: rgba(255,255,255,0.85);
-    transform: scale(1.08);
-  }
-  .shape-fill.shape-shadow-copy {
-    background: var(--shape-color, rgba(0,0,0,0.55));
-    transform: translateY(6px);
-  }
-  .square.shape-square.sq-hover .shape-fill.shape-shadow-copy { transform: translateY(8px); }
-  .square.shape-square.sq-pressed .shape-fill.shape-shadow-copy { transform: translateY(2px); }
-  /* mesmo brilho "de vidro" do .square normal (ver .square::before), agora
-     DENTRO do .shape-fill em vez do quadrado por fora — um clip-path num
-     elemento recorta TODO o conteúdo renderizado dele, pseudo-elemento
-     incluso, então esse ::before sai automaticamente com a mesma silhueta da
-     forma (círculo, estrela, cruz...), sem vazar nos cantos. Funciona até no
-     Caos, que define a cor do .shape-fill inline por item (ver
-     renderCaosSquare em js/replay.js) — o inline só afeta o elemento em si,
-     nunca o pseudo-elemento dele. Só na cópia de CIMA (a forma de verdade)
-     — as cópias de baixo (contorno/degrau) não precisam de brilho próprio. */
-  .shape-fill::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(160deg, rgba(255,255,255,0.5), rgba(255,255,255,0) 45%, rgba(0,0,0,0.2) 100%);
-    pointer-events: none;
-  }
-  /* naipes/coração (DAILY_SHAPES_OVERRIDE) não usam clip-path — são um glyph
-     de texto com background-clip:text (ver .shape-fill.shape-glyph acima) —
-     então esse ::before NÃO teria como saber que forma seguir e ficaria uma
-     caixa retangular atrás do glyph. Melhor não mostrar aqui do que mostrar
-     errado. */
-  .shape-fill.shape-glyph::before { content: none; }
-  .shape-fill.shape-outline-copy::before,
-  .shape-fill.shape-shadow-copy::before { content: none; }
-  /* --shape-color: cor de identidade própria por forma, só pro degrau/glow
-     do filter acima (ver .shape-fill base) — o PREENCHIMENTO continua o
-     mesmo gradiente azul/roxo fixo pra todas, não muda por forma */
-  .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); --shape-color: var(--neon-blue); }
-  .shape-fill.shape-square-shape  { clip-path: inset(6%); --shape-color: var(--neon-red); }
-  .shape-fill.shape-triangle      { clip-path: polygon(50% 4%, 4% 96%, 96% 96%); --shape-color: var(--neon-green); }
-  .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); --shape-color: var(--neon-purple); }
-  .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); --shape-color: var(--neon-yellow); }
-  .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); --shape-color: var(--neon-orange); }
-  .shape-fill.shape-pentagon      { clip-path: polygon(50% 2%, 97% 38%, 80% 96%, 20% 96%, 3% 38%); --shape-color: var(--neon-blue); }
-  .shape-fill.shape-trapezoid     { clip-path: polygon(30% 15%, 70% 15%, 97% 90%, 3% 90%); --shape-color: var(--neon-purple); }
+  .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); }
+  .shape-fill.shape-square-shape  { clip-path: inset(6%); }
+  .shape-fill.shape-triangle      { clip-path: polygon(50% 4%, 4% 96%, 96% 96%); }
+  .shape-fill.shape-diamond       { clip-path: polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%); }
+  .shape-fill.shape-star          { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .shape-fill.shape-cross         { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+  .shape-fill.shape-pentagon      { clip-path: polygon(50% 2%, 97% 38%, 80% 96%, 20% 96%, 3% 38%); }
+  .shape-fill.shape-trapezoid     { clip-path: polygon(30% 15%, 70% 15%, 97% 90%, 3% 90%); }
   /* formas com override que usam glyph Unicode em vez de clip-path (ex.:
      naipes de baralho, DAILY_SHAPES_OVERRIDE em constants.js) -- curvas
      complexas demais (coração/pá/trevo) pra aproximar bem com polygon() como
