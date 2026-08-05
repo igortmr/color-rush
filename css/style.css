@@ -153,32 +153,67 @@
      forçava o placeholder pra maiúsculo, deixando o "ex:" errado — o
      ::placeholder é o único jeito de excluir só ele da transformação */
   #ref-code-input::placeholder { text-transform: none; }
+  /* mesmo material "3D + vidro" do .menu-quick-btn/.square em TODOS os
+     botões do app (entrar, criar conta, aceitar/recusar duelo, resultado do
+     desafio diário, fim de jogo etc.) — degrau sólido + sombra de leveza +
+     brilho diagonal + levanta no hover/desce no clique, num formato mais
+     quadrado/retangular (12px, não mais pill de 50px) e um pouco menor que
+     antes. button.google/button.apple/button.link/button.pill-btn/
+     button.icon-toggle têm identidade visual própria (guideline da Apple,
+     redes sociais, texto puro) e sobrescrevem box-shadow/border-radius
+     depois daqui, então não são afetados pela mudança. Botões são estáticos
+     (não recriados a cada rodada como os .square), então :hover/:active
+     puro já basta, sem precisar do sq-hover/sq-pressed via JS que os
+     quadrados precisam (ver script no fim do index.html). */
   button {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: 1px;
-    padding: 13px 24px;
+    padding: 12px 22px;
     border: none;
-    border-radius: 50px;
+    border-radius: 12px;
     background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
     color: #fff;
     cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 0 14px rgba(255,45,107,0.45), 0 0 3px rgba(255,159,28,0.6);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 3px 0 rgba(255,255,255,0.12), 0 4px 8px rgba(0,0,0,0.4);
+    transition: transform 0.12s ease, box-shadow 0.15s ease;
   }
-  button:hover { transform: scale(1.04); box-shadow: 0 0 22px rgba(255,45,107,0.65), 0 0 6px rgba(255,159,28,0.8); }
+  button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(160deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 45%, rgba(0,0,0,0.15) 100%);
+    pointer-events: none;
+  }
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 0 rgba(255,255,255,0.12), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px rgba(255,45,107,0.4);
+  }
+  button:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.12), 0 2px 4px rgba(0,0,0,0.35);
+  }
   /* usado enquanto o placar do fim de jogo ainda está sendo confirmado com o
      servidor (ver setOverButtonsEnabled/setDailyResultButtonsEnabled) —
      trava clique e some com o efeito de hover pra ficar claro que tá parado */
   button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
-  button:disabled:hover { transform: none; box-shadow: none; }
+  button:disabled:hover { transform: none; box-shadow: 0 3px 0 rgba(255,255,255,0.12), 0 4px 8px rgba(0,0,0,0.4); }
   button.secondary {
     background: #0a0e1e;
     border: 1.5px solid var(--neon-purple);
-    box-shadow: 0 0 12px rgba(177,77,255,0.45), inset 0 0 10px rgba(177,77,255,0.08);
+    box-shadow: 0 3px 0 rgba(177,77,255,0.35), 0 4px 8px rgba(0,0,0,0.4);
   }
-  button.secondary:hover { box-shadow: 0 0 20px rgba(177,77,255,0.7), inset 0 0 14px rgba(177,77,255,0.15); }
+  button.secondary:hover {
+    box-shadow: 0 3px 0 rgba(177,77,255,0.35), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px rgba(177,77,255,0.4);
+  }
+  button.secondary:active {
+    box-shadow: 0 1px 0 rgba(177,77,255,0.35), 0 2px 4px rgba(0,0,0,0.35);
+  }
+  button.secondary:disabled:hover { box-shadow: 0 3px 0 rgba(177,77,255,0.35), 0 4px 8px rgba(0,0,0,0.4); }
   button.google {
     background: #fff;
     color: #333;
@@ -201,6 +236,10 @@
     justify-content: center;
     gap: 10px;
   }
+  /* .link/.icon-toggle/.pill-btn (abaixo) são todos "flat" de propósito
+     (box-shadow: none) — o brilho de vidro do button::before base ficaria
+     sobrando como uma caixa fantasma atrás de um texto/ícone sem nenhum
+     outro chrome, então sai igual o box-shadow */
   button.link {
     background: none;
     border: none;
@@ -212,6 +251,7 @@
     text-decoration: underline;
     padding: 4px;
   }
+  button.link::before { content: none; }
   button.link:hover { box-shadow: none; }
   .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
 
@@ -230,6 +270,7 @@
     box-shadow: none;
     letter-spacing: 0.3px;
   }
+  button.pill-btn::before { content: none; }
   button.pill-btn:hover {
     box-shadow: 0 0 14px rgba(255,45,107,0.5);
     border-color: var(--neon-red);
@@ -248,6 +289,8 @@
     vertical-align: middle;
     line-height: 1;
   }
+  /* ver comentário em button.link — mesma lógica, fica flat */
+  button.icon-toggle::before { content: none; }
   button.icon-toggle:hover { box-shadow: none; transform: none; }
   .tgl-track {
     position: relative;
