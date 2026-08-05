@@ -226,10 +226,12 @@
     justify-content: center;
     gap: 10px;
   }
-  /* .link/.icon-toggle/.pill-btn (abaixo) são todos "flat" de propósito
-     (box-shadow: none) — o brilho de vidro do button::before base ficaria
-     sobrando como uma caixa fantasma atrás de um texto/ícone sem nenhum
-     outro chrome, então sai igual o box-shadow */
+  /* .link/.icon-toggle (e outros ícones/chips minimalistas espalhados pelo
+     app — inbox, ▶️ de replay, ‹ de voltar do popup de chat, "Como jogar")
+     são "flat" de propósito (box-shadow: none): controle pequeno, sem fundo
+     nem borda. O brilho de vidro do button::before base ficaria sobrando
+     como uma caixa fantasma atrás de um texto/ícone sem nenhum outro
+     chrome, então sai onde quer que o box-shadow já saía. */
   button.link {
     background: none;
     border: none;
@@ -243,10 +245,25 @@
   }
   button.link::before { content: none; }
   button.link:hover { box-shadow: none; }
+  /* botões de fechar (×/✕) — usam aria-label="Fechar" em todo o app (não
+     uma classe comum: alguns têm classe própria, outros são inline), então
+     esse seletor cobre os 6 modais + os 2 popups de chat de uma vez só.
+     Voltam a ser só um "×" solto sem nenhum chrome de botão — diferente do
+     .pill-btn (mais abaixo), que É uma ação de navegação de verdade
+     (voltar/sair/fechar por extenso) e por isso ganha o efeito. */
+  button[aria-label="Fechar"] {
+    box-shadow: none;
+  }
+  button[aria-label="Fechar"]::before { content: none; }
+  button[aria-label="Fechar"]:hover { box-shadow: none; transform: none; }
+  button[aria-label="Fechar"]:active { box-shadow: none; transform: none; }
   .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
 
 
-  /* botão de sair */
+  /* botão de sair/voltar/fechar (texto) — mesmo degrau+vidro dos outros
+     botões (herda o button::before de cima), só que na cor vermelha própria
+     dele e mantendo o formato pill (20px) em vez do 12px mais quadrado do
+     button padrão */
   button.pill-btn {
     background: #0a0e1e;
     border: 1px solid rgba(255,45,107,0.4);
@@ -257,14 +274,18 @@
     text-decoration: none;
     padding: 5px 14px;
     border-radius: 20px;
-    box-shadow: none;
+    box-shadow: 0 3px 0 rgba(255,45,107,0.35), 0 4px 8px rgba(0,0,0,0.35);
     letter-spacing: 0.3px;
+    transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
-  button.pill-btn::before { content: none; }
   button.pill-btn:hover {
-    box-shadow: 0 0 14px rgba(255,45,107,0.5);
+    box-shadow: 0 3px 0 rgba(255,45,107,0.35), 0 4px 8px rgba(0,0,0,0.35), 0 0 14px rgba(255,45,107,0.5);
     border-color: var(--neon-red);
-    transform: none;
+    transform: translateY(-2px);
+  }
+  button.pill-btn:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 1px 0 rgba(255,45,107,0.35), 0 2px 4px rgba(0,0,0,0.3);
   }
 
   /* toggle de som (mute) */
@@ -413,6 +434,7 @@
     vertical-align: middle;
     line-height: 1;
   }
+  .inbox-icon-btn::before { content: none; }
   .inbox-icon-btn:hover { box-shadow: none; transform: none; }
   .inbox-icon-btn .menu-quick-badge { top: -4px; right: -2px; }
   .inbox-icon-img { width: 26px; height: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
@@ -525,6 +547,7 @@
     cursor: pointer;
     flex-shrink: 0;
   }
+  .chat-popup-back-btn::before { content: none; }
   .chat-popup-head button:not(.chat-popup-back-btn) {
     background: transparent;
     border: none;
@@ -964,6 +987,7 @@
     cursor: pointer;
     box-shadow: none;
   }
+  .scope-tab::before { content: none; }
   .scope-tab.active {
     border-color: var(--neon-purple);
     color: #fff;
@@ -1108,6 +1132,7 @@
     background: rgba(45,214,255,0.1); border: none; border-radius: 8px;
     box-shadow: none; vertical-align: middle;
   }
+  .replay-btn::before { content: none; }
   .replay-btn:hover { background: rgba(45,214,255,0.22); box-shadow: none; transform: none; }
 
   /* tela de "assistir replay" — cursor reproduzindo o rastro do mouse
@@ -1544,6 +1569,7 @@
     white-space: nowrap;
     box-shadow: none;
   }
+  .tut-link-btn::before { content: none; }
   .tut-link-btn:hover { background: rgba(45,214,255,0.18); box-shadow: none; transform: none; }
   #tutorial-screen .card { padding: 18px; gap: 14px; }
   .tut-header { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-shrink: 0; }
