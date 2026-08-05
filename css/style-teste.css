@@ -1355,6 +1355,27 @@
        aparecer como caixa retangular atrás da forma recortada */
     filter: drop-shadow(0 0 14px rgba(45,214,255,0.55)) drop-shadow(0 0 26px rgba(177,77,255,0.35)) drop-shadow(0 4px 5px rgba(0,0,0,0.45));
   }
+  /* mesmo brilho "de vidro" do .square normal (ver .square::before), agora
+     DENTRO do .shape-fill em vez do quadrado por fora — um clip-path num
+     elemento recorta TODO o conteúdo renderizado dele, pseudo-elemento
+     incluso, então esse ::before sai automaticamente com a mesma silhueta da
+     forma (círculo, estrela, cruz...), sem vazar nos cantos. Funciona até no
+     Caos, que define a cor do .shape-fill inline por item (ver
+     renderCaosSquare em js/replay.js) — o inline só afeta o elemento em si,
+     nunca o pseudo-elemento dele. */
+  .shape-fill::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.5), rgba(255,255,255,0) 45%, rgba(0,0,0,0.2) 100%);
+    pointer-events: none;
+  }
+  /* naipes/coração (DAILY_SHAPES_OVERRIDE) não usam clip-path — são um glyph
+     de texto com background-clip:text (ver .shape-fill.shape-glyph acima) —
+     então esse ::before NÃO teria como saber que forma seguir e ficaria uma
+     caixa retangular atrás do glyph. Melhor não mostrar aqui do que mostrar
+     errado. */
+  .shape-fill.shape-glyph::before { content: none; }
   .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); }
   .shape-fill.shape-square-shape  { clip-path: inset(6%); }
   .shape-fill.shape-triangle      { clip-path: polygon(50% 4%, 4% 96%, 96% 96%); }
