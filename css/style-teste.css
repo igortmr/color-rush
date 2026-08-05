@@ -800,13 +800,22 @@
      daqui; o .shape-fill tem seu próprio tratamento equivalente mais abaixo */
   .square.shape-square { box-shadow: none; }
   .square.shape-square::before { content: none; }
-  .square:hover {
-    border-color: var(--sq-color, var(--neon-blue));
-    box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px var(--sq-color, rgba(45,214,255,0.35));
-    transform: scale(1.04) translateY(-2px);
-    filter: brightness(1.08);
+  /* :hover só em dispositivo com mouse de verdade (hover:hover) — em touch
+     (celular) não existe "sair" do hover depois de tocar, então o próximo
+     quadrado que nasce na MESMA posição na tela (rodada seguinte) herdava
+     visualmente o estado "hover"/"pressionado" do toque anterior mesmo sem
+     ninguém tocando nele ainda ("sticky hover", bug clássico de touch).
+     Sem essa media query o hover nem existe em celular, então não tem como
+     grudar. */
+  @media (hover: hover) and (pointer: fine) {
+    .square:hover {
+      border-color: var(--sq-color, var(--neon-blue));
+      box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px var(--sq-color, rgba(45,214,255,0.35));
+      transform: scale(1.04) translateY(-2px);
+      filter: brightness(1.08);
+    }
+    .square.shape-square:hover { box-shadow: none; filter: brightness(1.12); }
   }
-  .square.shape-square:hover { box-shadow: none; filter: brightness(1.12); }
   /* aperta de verdade ao clicar — mesma ideia dos botões do menu */
   .square:active {
     transform: scale(0.98) translateY(1px);
