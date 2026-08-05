@@ -312,6 +312,16 @@
     object-fit: contain;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 6px var(--mb-glow, transparent));
   }
+  /* mesmos ícones dos botões do menu, agora no título de cada tela (RANKING/
+     AMIGOS/LOJA/CLÃS) — maior, já que aqui não divide espaço com 3 outros
+     botões numa fileira */
+  .page-title-icon {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+  }
   .menu-quick-btn:hover {
     border-color: var(--mb-color, var(--neon-blue));
     box-shadow: 0 3px 0 var(--mb-shadow, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.35), 0 0 14px var(--mb-glow, rgba(45,214,255,0.35));

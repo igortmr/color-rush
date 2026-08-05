@@ -658,7 +658,7 @@
 <!-- LOJA -->
 <div class="screen" id="shop-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:1.7rem;">🛍️ LOJA</h1>
+    <h1 style="font-size:1.7rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" src="img/menu-icons/shop.png" alt=""><span>LOJA</span></h1>
     <button class="pill-btn" onclick="showMenu()">VOLTAR</button>
   </div>
   <div class="card" style="flex-direction:row; align-items:center; justify-content:center; gap:8px;">
@@ -673,7 +673,7 @@
 <!-- RANKING -->
 <div class="screen" id="ranking-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:2rem;" data-i18n="ranking_title">🏆 RANKING</h1>
+    <h1 style="font-size:2rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" src="img/menu-icons/ranking.png" alt=""><span data-i18n="ranking_title_plain">RANKING</span></h1>
     <button class="pill-btn" onclick="rankingBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <select class="ranking-select" id="ranking-select" onchange="loadRanking(this.value)">
@@ -786,7 +786,7 @@
 <!-- AMIGOS -->
 <div class="screen" id="friends-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:2rem;" data-i18n="friends_title">👥 AMIGOS</h1>
+    <h1 style="font-size:2rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" src="img/menu-icons/friends.png" alt=""><span data-i18n="friends_title_plain">AMIGOS</span></h1>
     <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="muted" id="friends-status"></div>
@@ -806,7 +806,7 @@
 <!-- CLÃS (Espectro) -->
 <div class="screen" id="guild-list-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:2rem;" data-i18n="guild_list_title">🛡️ CLÃS</h1>
+    <h1 style="font-size:2rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" src="img/menu-icons/guild.png" alt=""><span data-i18n="guild_list_title_plain">CLÃS</span></h1>
     <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <button id="guild-create-btn" style="display:none;" onclick="openCreateGuildModal()"></button>
