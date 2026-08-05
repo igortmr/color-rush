@@ -773,10 +773,60 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.1s, filter 0.1s, box-shadow 0.2s;
-    border: 3px solid rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.15);
+    /* MESMO padrão dos botões do menu (.menu-quick-btn): borda neutra em
+       repouso, "base" sólida colorida embaixo (0 blur = parece um degrau,
+       não um brilho difuso) + sombra suave de leveza. --sq-color vem de um
+       script inline no fim do index.html (fora de qualquer módulo
+       compartilhado) que lê a cor de fundo que o próprio jogo já define por
+       rodada e também LIMPA o box-shadow neon difuso que vinha inline (ver
+       el.style.boxShadow em js/game-core.js/replay.js) — sem isso o
+       box-shadow daqui nunca apareceria (inline sempre ganha de regra
+       externa). */
+    box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4);
+    transition: transform 0.1s, filter 0.1s, box-shadow 0.15s, border-color 0.15s;
   }
-  .square:hover { transform: scale(1.04); filter: brightness(1.12); }
+  /* brilho "de vidro" no canto superior esquerdo, esmaecendo pro canto
+     oposto — funciona em cima de QUALQUER cor de fundo porque não depende
+     de saber a cor (a cor real do quadrado fica embaixo, no elemento em si,
+     não nesse pseudo-elemento) */
+  .square::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(160deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 45%, rgba(0,0,0,0.15) 100%);
+    pointer-events: none;
+  }
+  /* quadrado do modo Formas: quem desenha a forma de verdade é o .shape-fill
+     (clip-path) por dentro — o box-shadow/glass acima ficariam sobrando como
+     uma caixa retangular fantasma ao redor da forma recortada, então saem
+     daqui; o .shape-fill tem seu próprio tratamento equivalente mais abaixo */
+  .square.shape-square { box-shadow: none; }
+  .square.shape-square::before { content: none; }
+  /* .sq-hover/.sq-pressed em vez de :hover/:active — a media query
+     (hover:hover)+(pointer:fine) sozinha não bastou pra sumir de vez com o
+     "sticky hover"/"pressionado fantasma" no celular (relatado mesmo depois
+     dela): quando a rodada troca, o quadrado novo nasce exatamente embaixo
+     do dedo que acabou de tocar o quadrado anterior, e alguns navegadores
+     transferem o estado :active/:hover pro elemento que agora está sob o
+     toque, mesmo sem ninguém ter tocado NELE ainda. Como pseudo-classe não
+     dá pra controlar isso com certeza, essas classes são adicionadas/
+     removidas via JS (ver script no fim do index.html) com pointerdown/up
+     em CADA quadrado novo — sempre um listener novo num elemento novo, é
+     fisicamente impossível herdar estado do quadrado anterior. */
+  .square.sq-hover {
+    border-color: var(--sq-color, var(--neon-blue));
+    box-shadow: 0 3px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 4px 8px rgba(0,0,0,0.4), 0 0 14px var(--sq-color, rgba(45,214,255,0.35));
+    transform: scale(1.04) translateY(-2px);
+    filter: brightness(1.08);
+  }
+  .square.shape-square.sq-hover { box-shadow: none; filter: brightness(1.12); }
+  .square.sq-pressed {
+    transform: scale(0.98) translateY(1px);
+    box-shadow: 0 1px 0 var(--sq-color, rgba(255,255,255,0.12)), 0 2px 4px rgba(0,0,0,0.35);
+  }
+  .square.shape-square.sq-pressed { box-shadow: none; }
   .word {
     background: rgba(6,10,22,0.88);
     color: #fff;
@@ -1304,11 +1354,48 @@
        clip-path já escala em % relativo ao próprio elemento. */
     container-type: inline-size;
   }
+  /* mesmo tratamento "3D + vidro" do .square retangular (ver comentário lá
+     em cima), só que seguindo o RECORTE da forma em vez da caixa retangular:
+     drop-shadow (diferente de box-shadow) acompanha o alpha do que foi
+     pintado depois do clip-path/recorte de texto, então o "degrau" sólido e
+     a sombra de leveza saem no contorno certo da forma, não num retângulo
+     fantasma ao redor dela. --sf-color (setado via JS só no modo Caos, que
+     tem cor própria por figura — ver script no fim do index.html) faz o
+     degrau/brilho acompanharem a cor de cada figura; sem ele (Formas/Formas
+     Reverso, que não variam de cor por figura), cai no azul/roxo neon de
+     sempre. */
   .shape-fill {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
-    filter: drop-shadow(0 0 14px rgba(45,214,255,0.55)) drop-shadow(0 0 26px rgba(177,77,255,0.35));
+    background: var(--sf-color, linear-gradient(135deg, var(--neon-blue), var(--neon-purple)));
+    filter:
+      drop-shadow(0 3px 0 var(--sf-color, var(--neon-purple)))
+      drop-shadow(0 4px 8px rgba(0,0,0,0.4))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--sf-color, var(--neon-blue)) 55%, transparent))
+      drop-shadow(0 0 26px color-mix(in srgb, var(--sf-color, var(--neon-purple)) 30%, transparent));
+  }
+  /* brilho "de vidro" igual o .square::before, só que clipado na MESMA forma
+     do .shape-fill (clip-path: inherit copia o clip-path computado do pai) —
+     nas formas com glyph de texto (naipes/coração, ver .shape-glyph abaixo)
+     não tem clip-path pra herdar, então sai (ficaria um retângulo fantasma
+     atrás do ícone). */
+  .shape-fill::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: inherit;
+    background: linear-gradient(160deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 45%, rgba(0,0,0,0.15) 100%);
+    pointer-events: none;
+  }
+  .shape-fill.shape-glyph::before { content: none; }
+  /* degrau (drop-shadow 3px→1px) encolhe junto no clique, mesma ideia do
+     .square.sq-pressed retangular acima */
+  .square.shape-square.sq-pressed .shape-fill {
+    filter:
+      drop-shadow(0 1px 0 var(--sf-color, var(--neon-purple)))
+      drop-shadow(0 2px 4px rgba(0,0,0,0.35))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--sf-color, var(--neon-blue)) 55%, transparent))
+      drop-shadow(0 0 26px color-mix(in srgb, var(--sf-color, var(--neon-purple)) 30%, transparent));
   }
   .shape-fill.shape-circle        { clip-path: circle(50% at 50% 50%); }
   .shape-fill.shape-square-shape  { clip-path: inset(6%); }
