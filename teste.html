@@ -206,6 +206,7 @@
       <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som">
         <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">🔊</span></span></span>
       </button>
+      <button class="inbox-icon-btn" onclick="openAudioSettings()" aria-label="Configurações de áudio" title="Configurações de áudio" style="font-size:1.1rem;">⚙️</button>
       <button class="pill-btn" id="menu-logout-btn" onclick="doLogout()">sair</button>
     </span>
   </div>
@@ -628,6 +629,32 @@
   </div>
 </div>
 
+<!-- configurações de áudio (só teste.html, ver js/ambient-music.js e o
+     script no fim deste arquivo) — liga/desliga e volume da música e dos
+     efeitos, cada um independente do outro -->
+<div class="modal-overlay" id="audio-settings-modal" style="display:none;" onclick="if(event.target===this) closeAudioSettings();">
+  <div class="modal-card" style="max-width:380px; text-align:center; position:relative;">
+    <button onclick="closeAudioSettings()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 style="font-size:1.2rem;" data-i18n="audio_settings_title">🔊 Áudio</h1>
+    <div class="modal-card-body">
+      <div class="audio-settings-row">
+        <span class="audio-settings-label" data-i18n="audio_settings_music">🎵 Música</span>
+        <button class="icon-toggle" id="audio-settings-music-toggle" onclick="toggleAudioMusicEnabled()" aria-label="Ligar/desligar música">
+          <span class="tgl-track"><span class="tgl-knob"></span></span>
+        </button>
+      </div>
+      <input type="range" class="volume-slider" id="audio-settings-music-volume" min="0" max="100" value="55" oninput="setAudioMusicVolume(this.value)">
+      <div class="audio-settings-row" style="margin-top:6px;">
+        <span class="audio-settings-label" data-i18n="audio_settings_sfx">🔔 Efeitos sonoros</span>
+        <button class="icon-toggle" id="audio-settings-sfx-toggle" onclick="toggleAudioSfxEnabled()" aria-label="Ligar/desligar efeitos sonoros">
+          <span class="tgl-track"><span class="tgl-knob"></span></span>
+        </button>
+      </div>
+      <input type="range" class="volume-slider" id="audio-settings-sfx-volume" min="0" max="100" value="100" oninput="setAudioSfxVolume(this.value)">
+    </div>
+  </div>
+</div>
+
 <!-- denunciar mensagem do chat do clã: popup temática (mesmo padrão de
      #disband-guild-modal) em vez do confirm() genérico do navegador (ver
      uiReportGuildMessage em js/guilds.js) -->
@@ -932,7 +959,12 @@
 
 <script type="module" src="js/main-teste.js"></script>
 <script type="module">
-  import { startAmbientMusic, pauseAmbientMusic, resumeAmbientMusic } from './js/ambient-music.js';
+  import {
+    startAmbientMusic, pauseAmbientMusic, resumeAmbientMusic, duckAmbientMusic, unduckAmbientMusic,
+    isMusicEnabled, setMusicEnabled, getMusicVolume, setMusicVolume,
+  } from './js/ambient-music.js';
+  import { isMuted, setMuted, getSfxVolume, setSfxVolume } from './js/utils.js';
+  import { $ } from './js/dom.js';
   // só teste.html — deliberadamente NÃO entra em js/main-teste.js (que
   // precisa continuar espelhando js/main.js linha por linha, ver comentário
   // lá) nem em nenhum módulo compartilhado (game-core.js/replay.js/pvp.js).
@@ -1013,21 +1045,58 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pauseAmbientMusic('hidden'); else resumeAmbientMusic('hidden');
   });
-  // pausa durante a partida (#game-screen ativa), retoma em qualquer outra
-  // tela — cobre "voltar pro menu" E "sair da tela de fim de jogo" (JOGAR
-  // DE NOVO volta pra #game-screen na hora, então some de novo em seguida,
-  // como deveria) de uma vez só, sem precisar de um caso especial pra cada
-  // botão. show() (js/nav.js) só troca a classe "active" entre as .screen,
-  // então observar isso em TODAS elas (não só #game-screen) e reavaliar
-  // "a partida tá ativa?" a cada troca cobre qualquer caminho de navegação,
-  // sem precisar interceptar startGame/showMenu/playAgain um por um.
+  // ABAIXA (não pausa) durante a partida (#game-screen ativa) — pedido
+  // explícito pra continuar ouvindo, só mais baixo — e volta ao volume
+  // normal em qualquer outra tela. Cobre "voltar pro menu" E "sair da tela
+  // de fim de jogo" (JOGAR DE NOVO volta pra #game-screen na hora, então
+  // abaixa de novo em seguida, como deveria) de uma vez só, sem precisar de um
+  // caso especial pra cada botão. show() (js/nav.js) só troca a classe
+  // "active" entre as .screen, então observar isso em TODAS elas (não só
+  // #game-screen) e reavaliar "a partida tá ativa?" a cada troca cobre
+  // qualquer caminho de navegação, sem precisar interceptar
+  // startGame/showMenu/playAgain um por um.
   const gameScreenEl = document.getElementById('game-screen');
   document.querySelectorAll('.screen').forEach((screen) => {
     new MutationObserver(() => {
-      if (gameScreenEl.classList.contains('active')) pauseAmbientMusic('match');
-      else resumeAmbientMusic('match');
+      if (gameScreenEl.classList.contains('active')) duckAmbientMusic('match');
+      else unduckAmbientMusic('match');
     }).observe(screen, { attributes: true, attributeFilter: ['class'] });
   });
+
+  /* ============ painel de configurações de áudio (só teste.html) ============
+     liga/desliga e volume da música e dos efeitos, cada um TOTALMENTE
+     independente do outro (era o pedido: só música, só efeitos, os dois ou
+     nenhum) — música usa isMusicEnabled/getMusicVolume (js/ambient-music.js,
+     estado próprio); efeitos reaproveitam o mute geral que já existe
+     (isMuted/setMuted em js/utils.js, o mesmo do botão 🔊 do cabeçalho —
+     ficam sincronizados, não são dois interruptores concorrentes) + o novo
+     getSfxVolume/setSfxVolume (multiplicador aplicado dentro de tone()). */
+  function refreshAudioSettingsUi() {
+    $('audio-settings-music-toggle').classList.toggle('on', isMusicEnabled());
+    $('audio-settings-music-volume').value = Math.round(getMusicVolume() * 100);
+    $('audio-settings-sfx-toggle').classList.toggle('on', !isMuted());
+    $('audio-settings-sfx-volume').value = Math.round(getSfxVolume() * 100);
+  }
+  window.openAudioSettings = () => {
+    refreshAudioSettingsUi();
+    $('audio-settings-modal').style.display = 'flex';
+  };
+  window.closeAudioSettings = () => { $('audio-settings-modal').style.display = 'none'; };
+  window.toggleAudioMusicEnabled = () => {
+    setMusicEnabled(!isMusicEnabled());
+    $('audio-settings-music-toggle').classList.toggle('on', isMusicEnabled());
+  };
+  window.toggleAudioSfxEnabled = () => {
+    setMuted(!isMuted());
+    $('audio-settings-sfx-toggle').classList.toggle('on', !isMuted());
+    // mesmo estado, duas telas — sem isso o botão 🔊 do cabeçalho ficaria
+    // desatualizado até a próxima ação que o redesenha (ver toggleMute em
+    // js/bootstrap.js, que faz o mesmo update nesses 2 elementos)
+    $('mute-btn').classList.toggle('on', !isMuted());
+    $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
+  };
+  window.setAudioMusicVolume = (val) => setMusicVolume(Number(val) / 100);
+  window.setAudioSfxVolume = (val) => setSfxVolume(Number(val) / 100);
 </script>
 </body>
 </html>

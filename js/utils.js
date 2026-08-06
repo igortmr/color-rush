@@ -106,13 +106,32 @@ export function setMuted(v) {
   try { localStorage.setItem('colorRushMuted', muted ? '1' : '0'); } catch {}
 }
 
+// multiplicador de volume dos efeitos (0..1) — separado do isMuted() acima
+// (isMuted é liga/desliga; isso aqui é "o quanto"), pro painel de
+// configurações de áudio (só teste.html, ver teste.html) poder ter um
+// slider além do toggle. Fica aqui (não em teste.html/ambient-music.js)
+// porque tone() — usado por index.html E teste.html — precisa ler isso
+// sempre, mesmo que só teste.html tenha UI pra mudar; sem UI pra mudar,
+// index.html nunca sai do padrão (1 = 100%, comportamento de sempre).
+let sfxVolume = 1;
+try {
+  const stored = parseFloat(localStorage.getItem('colorRushSfxVolume'));
+  if (Number.isFinite(stored) && stored >= 0 && stored <= 1) sfxVolume = stored;
+} catch {}
+
+export function getSfxVolume() { return sfxVolume; }
+export function setSfxVolume(v) {
+  sfxVolume = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem('colorRushSfxVolume', String(sfxVolume)); } catch {}
+}
+
 export function audioContext() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 export function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
-  if (muted) return;
+  if (muted || sfxVolume <= 0) return;
   try {
     const c = audioContext();
     const t = c.currentTime + delay;
@@ -120,7 +139,7 @@ export function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
     const g = c.createGain();
     o.type = type;
     o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t);
+    g.gain.setValueAtTime(vol * sfxVolume, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o.connect(g); g.connect(c.destination);
     o.start(t); o.stop(t + dur);
