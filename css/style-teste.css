@@ -1253,17 +1253,74 @@
      em js/shop.js -- ver comentário lá. Imagens já vêm cropadas (sem a
      margem branca de cima/baixo do banner original) e comprimidas em JPEG
      (~900px de largura), em img/row-themes/. */
-  tbody tr.row-theme-unicorn    { background-image: url('../img/row-themes/row-unicorn.jpg');    background-size: cover; background-position: center; }
-  tbody tr.row-theme-forest-art { background-image: url('../img/row-themes/row-forest-art.jpg'); background-size: cover; background-position: center; }
-  tbody tr.row-theme-yinyang    { background-image: url('../img/row-themes/row-yinyang.jpg');    background-size: cover; background-position: center; }
-  tbody tr.row-theme-duality    { background-image: url('../img/row-themes/row-duality.jpg');    background-size: cover; background-position: center; }
-  tbody tr.row-theme-diamond    { background-image: url('../img/row-themes/row-diamond.jpg');    background-size: cover; background-position: center; }
-  tbody tr.row-theme-meteor     { background-image: url('../img/row-themes/row-meteor.jpg');     background-size: cover; background-position: center; }
-  tbody tr.row-theme-dragon     { background-image: url('../img/row-themes/row-dragon.jpg');     background-size: cover; background-position: center; }
-  tbody tr.row-theme-cyberpunk  { background-image: url('../img/row-themes/row-cyberpunk.jpg');  background-size: cover; background-position: center; }
-  tbody tr.row-theme-glacial    { background-image: url('../img/row-themes/row-glacial.jpg');    background-size: cover; background-position: center; }
-  tbody tr.row-theme-cosmos     { background-image: url('../img/row-themes/row-cosmos.jpg');     background-size: cover; background-position: center; }
-  tbody tr.row-theme-lava       { background-image: url('../img/row-themes/row-lava.jpg');       background-size: cover; background-position: center; }
+  /* Yin Yang e Dualidade ficam paradas de propósito -- são sobre calma/
+     equilíbrio, um piscar ali brigaria com o clima em vez de ajudar. */
+  tbody tr.row-theme-yinyang { background-image: url('../img/row-themes/row-yinyang.jpg'); background-size: cover; background-position: center; }
+  tbody tr.row-theme-duality { background-image: url('../img/row-themes/row-duality.jpg'); background-size: cover; background-position: center; }
+
+  /* brilho suave tipo cintilar de estrela/fada -- reaproveita o mesmo
+     @keyframes rowStarTwinkle de row-theme-starfield ali em cima, só com
+     duração própria pra cada uma não ficar toda sincronizada igual. */
+  tbody tr.row-theme-unicorn    { background-image: url('../img/row-themes/row-unicorn.jpg');    background-size: cover; background-position: center; animation: rowStarTwinkle 3.5s ease-in-out infinite; }
+  tbody tr.row-theme-forest-art { background-image: url('../img/row-themes/row-forest-art.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 4s ease-in-out infinite; }
+  tbody tr.row-theme-cosmos     { background-image: url('../img/row-themes/row-cosmos.jpg');     background-size: cover; background-position: center; animation: rowStarTwinkle 3s ease-in-out infinite; }
+  tbody tr.row-theme-meteor     { background-image: url('../img/row-themes/row-meteor.jpg');     background-size: cover; background-position: center; animation: rowStarTwinkle 2.2s ease-in-out infinite; }
+
+  /* chama tremulando -- variação irregular de brilho (não suave feito o
+     twinkle acima), pra imitar fogo de verdade em vez de estrela piscando. */
+  tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 2.4s ease-in-out infinite; }
+  tbody tr.row-theme-lava   { background-image: url('../img/row-themes/row-lava.jpg');   background-size: cover; background-position: center; animation: rowFlameFlicker 2.8s ease-in-out infinite; }
+  @keyframes rowFlameFlicker {
+    0%, 100% { filter: brightness(1); }
+    10% { filter: brightness(1.15); }
+    22% { filter: brightness(0.93); }
+    35% { filter: brightness(1.25); }
+    50% { filter: brightness(1); }
+    63% { filter: brightness(1.12); }
+    78% { filter: brightness(0.9); }
+    90% { filter: brightness(1.18); }
+  }
+
+  /* letreiro de neon com falha ocasional -- maior parte do tempo aceso
+     normal, com uns "soquinhos" rápidos de apagão, igual neon de verdade
+     que não tá 100%. */
+  tbody tr.row-theme-cyberpunk {
+    background-image: url('../img/row-themes/row-cyberpunk.jpg');
+    background-size: cover;
+    background-position: center;
+    animation: rowNeonFlicker 5s linear infinite;
+  }
+  @keyframes rowNeonFlicker {
+    0%, 89%, 100% { filter: brightness(1); }
+    90% { filter: brightness(0.6); }
+    91% { filter: brightness(1); }
+    92% { filter: brightness(0.7); }
+    93%, 96% { filter: brightness(1); }
+    97% { filter: brightness(0.75); }
+    98% { filter: brightness(1); }
+  }
+
+  /* reflexo passando por cima da imagem -- uma faixa clara diagonal que
+     desliza da esquerda pra direita e volta, tipo luz batendo em
+     diamante/gelo. Duas camadas de fundo: o brilho (gradiente, na frente,
+     é o único que se move) e a foto por baixo (parada, sempre centralizada). */
+  tbody tr.row-theme-diamond {
+    background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.6) 48%, rgba(255,255,255,0.6) 52%, transparent 70%), url('../img/row-themes/row-diamond.jpg');
+    background-size: 220% 100%, cover;
+    background-repeat: no-repeat, no-repeat;
+    animation: rowShineSweep 3.5s ease-in-out infinite;
+  }
+  tbody tr.row-theme-glacial {
+    background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.5) 48%, rgba(255,255,255,0.5) 52%, transparent 70%), url('../img/row-themes/row-glacial.jpg');
+    background-size: 220% 100%, cover;
+    background-repeat: no-repeat, no-repeat;
+    animation: rowShineSweep 5s ease-in-out infinite;
+  }
+  @keyframes rowShineSweep {
+    0%   { background-position: -60% 0%, center; }
+    50%  { background-position: 160% 0%, center; }
+    100% { background-position: -60% 0%, center; }
+  }
 
   tbody tr.row-theme-confetti-dots {
     background:
