@@ -37,6 +37,27 @@ export const SHOP_ITEMS = [
   { id: 'row_stripes_gold', slot: 'rowTheme', price: 3000, icon: '🐝', name: 'Linha: Listras Douradas',        desc: 'Listras diagonais douradas e pretas, visual VIP.' },
   { id: 'row_storm',     slot: 'rowTheme',   price: 5000, icon: '⚡', name: 'Linha: Tempestade',               desc: 'Raios brancos riscando um fundo escuro de tempestade — pisca de vez em quando.' },
   { id: 'row_confetti_dots', slot: 'rowTheme', price: 3000, icon: '🎊', name: 'Linha: Confete',                desc: 'Bolinhas coloridas espalhadas, visual de festa.' },
+  // linhas novas com arte de fundo de verdade (não gradiente simples) --
+  // "testOnly" faz elas ficarem fora da loja em index.html (ver o filtro em
+  // renderShop, que só checa window.IS_TESTE em tempo de renderização, não
+  // aqui no topo do módulo -- window.IS_TESTE só é setado DEPOIS que este
+  // arquivo já terminou de avaliar, ver comentário grande em
+  // js/main-teste.js, então checar aqui sempre daria falso mesmo em
+  // teste.html). Ficam sempre no catálogo (igual avatar/frame/confetti/sfx,
+  // que já existem no catálogo sem estar em VISIBLE_SHOP_SLOTS) só invisíveis
+  // fora do teste. Servem pra decidir quais valem a pena promover pra
+  // produção antes de gastar CSS em style.css também.
+  { id: 'row_unicorn',    slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio',       desc: 'Cenário mágico com unicórnio, castelo e arco-íris.', testOnly: true },
+  { id: 'row_forest_art', slot: 'rowTheme', price: 5000, icon: '🌳', name: 'Linha: Floresta Mística', desc: 'Floresta densa e enevoada, com brilhos entre as árvores.', testOnly: true },
+  { id: 'row_yinyang',    slot: 'rowTheme', price: 5000, icon: '☯️', name: 'Linha: Yin Yang',        desc: 'Símbolo do yin yang com fumaça luminosa.', testOnly: true },
+  { id: 'row_duality',    slot: 'rowTheme', price: 5000, icon: '🌗', name: 'Linha: Dualidade',       desc: 'Degradê do preto ao branco, com um ponto de cada lado.', testOnly: true },
+  { id: 'row_diamond',    slot: 'rowTheme', price: 5000, icon: '💎', name: 'Linha: Diamante',        desc: 'Diamantes brilhando num fundo azul escuro.', testOnly: true },
+  { id: 'row_meteor',     slot: 'rowTheme', price: 5000, icon: '☄️', name: 'Linha: Chuva de Meteoros', desc: 'Meteoros em chamas cruzando o espaço.', testOnly: true },
+  { id: 'row_dragon',     slot: 'rowTheme', price: 5000, icon: '🐉', name: 'Linha: Dragão',          desc: 'Dragão verde flamejante enrolado na linha.', testOnly: true },
+  { id: 'row_cyberpunk',  slot: 'rowTheme', price: 5000, icon: '🌆', name: 'Linha: Cyberpunk',       desc: 'Cidade neon estilo cyberpunk, rosa e azul.', testOnly: true },
+  { id: 'row_glacial',    slot: 'rowTheme', price: 5000, icon: '🧊', name: 'Linha: Glacial',         desc: 'Cristais de gelo e flocos de neve num azul profundo.', testOnly: true },
+  { id: 'row_cosmos',     slot: 'rowTheme', price: 5000, icon: '🌌', name: 'Linha: Cosmos',          desc: 'Galáxia espiral com planetas e nebulosas.', testOnly: true },
+  { id: 'row_lava',       slot: 'rowTheme', price: 5000, icon: '🌋', name: 'Linha: Lava',            desc: 'Rachaduras de lava incandescente num fundo escuro.', testOnly: true },
   { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
   { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
   { id: 'avatar_ghost',   slot: 'avatar', price: 110, icon: '👻', name: 'Avatar: Fantasma', desc: 'Um fantasma pra representar você no perfil e no duelo.' },
@@ -147,7 +168,11 @@ function renderShop({ keepScroll = false } = {}) {
     section.appendChild(title);
 
     section.appendChild(shopDefaultRow(slot, equipped[slot]));
-    SHOP_ITEMS.filter(it => it.slot === slot).sort((a, b) => a.price - b.price).forEach(item => {
+    // window.IS_TESTE checado aqui (não no topo do módulo) de propósito --
+    // renderShop só roda quando a tela realmente abre, bem depois do
+    // carregamento inicial, quando window.IS_TESTE já está setado de
+    // verdade (ver comentário junto de "testOnly" nos itens acima).
+    SHOP_ITEMS.filter(it => it.slot === slot && (!it.testOnly || window.IS_TESTE)).sort((a, b) => a.price - b.price).forEach(item => {
       section.appendChild(shopItemRow(item, owned.has(item.id), equipped[slot] === item.id));
     });
 
