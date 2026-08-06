@@ -45,8 +45,11 @@ let nextBeatAt = 0;
 // música, só os efeitos, os dois ou nenhum. Local, com o mesmo padrão de
 // persistência do resto do áudio do jogo (ver colorRushMuted/
 // colorRushSfxVolume em utils.js).
-let musicEnabled = true;
-try { musicEnabled = localStorage.getItem('colorRushMusicEnabled') !== '0'; } catch {}
+// desligada por padrão (só liga quem entrar no painel de configurações e
+// ligar por conta própria — ver localStorage.getItem abaixo: só fica true
+// se alguém já salvou '1' explicitamente algum dia)
+let musicEnabled = false;
+try { musicEnabled = localStorage.getItem('colorRushMusicEnabled') === '1'; } catch {}
 let musicVolume = 0.55;
 try {
   const stored = parseFloat(localStorage.getItem('colorRushMusicVolume'));

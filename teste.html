@@ -203,7 +203,12 @@
         <img class="inbox-icon-img" src="img/menu-icons/inbox.png" alt="">
         <span class="menu-quick-badge" id="inbox-badge" style="display:none;"></span>
       </button>
-      <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som">
+      <!-- escondido (não removido: código compartilhado — toggleMute em
+           js/bootstrap.js, menu.js — ainda escreve nele por fora, então
+           precisa continuar existindo no DOM) — o painel de configurações
+           (⚙️ abaixo) já cobre o mesmo controle (liga/desliga + volume dos
+           efeitos), não faz sentido ter os dois no cabeçalho -->
+      <button class="icon-toggle on" id="mute-btn" onclick="toggleMute()" aria-label="Som" title="Som" style="display:none;">
         <span class="tgl-track"><span class="tgl-knob"><span class="tgl-icon">🔊</span></span></span>
       </button>
       <button class="inbox-icon-btn" onclick="openAudioSettings()" aria-label="Configurações de áudio" title="Configurações de áudio" style="font-size:1.1rem;">⚙️</button>

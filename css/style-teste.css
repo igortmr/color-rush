@@ -167,10 +167,15 @@
     color: #fff;
     cursor: pointer;
     position: relative;
-    overflow: hidden;
     box-shadow: 0 3px 0 rgba(255,255,255,0.12), 0 4px 8px rgba(0,0,0,0.4);
     transition: transform 0.12s ease, box-shadow 0.15s ease;
   }
+  /* SEM overflow:hidden de propósito — cortava as bolinhas de notificação
+     (.menu-quick-badge/.notif-dot) que ficam de propósito parcialmente PRA
+     FORA do botão (offset negativo, ex.: .inbox-icon-btn .menu-quick-badge,
+     #user-label .notif-dot). Não precisa dele mesmo: o ::before abaixo já
+     tem border-radius:inherit próprio, então os cantos dele já saem
+     arredondados certos sem precisar que o pai corte nada. */
   button::before {
     content: '';
     position: absolute;
