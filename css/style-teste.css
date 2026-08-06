@@ -87,6 +87,15 @@
     overflow-x: hidden;
   }
   .screen.active { display: flex; }
+  /* tela de login: as outras telas ficam ancoradas perto do topo de propósito
+     (ver comentário grande acima sobre o bug de scroll no Chrome), mas essa é
+     sempre curta — em celulares mais altos ficava enviesada lá em cima com
+     um vazio grande embaixo. margin auto (não align-items:center no
+     #scroll-area, que afetaria todas as telas) centraliza só essa tela
+     verticalmente quando ela cabe inteira na viewport; se o conteúdo for
+     maior que a tela (fonte grande/paisagem), os margins colapsam pra 0 e o
+     topo continua alcançável rolando normalmente. */
+  #auth-screen { margin-top: auto; margin-bottom: auto; }
 
   h1 {
     font-family: 'Orbitron', 'Rajdhani', sans-serif;
