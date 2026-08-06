@@ -148,7 +148,6 @@ const ROW_THEME_CLASS = {
   // de avatar/frame/confetti/sfx). A classe CSS correspondente só existe em
   // style-teste.css, então mesmo que uma delas fosse equipada via API
   // direta em produção (não pela UI), não teria efeito visual nenhum lá.
-  row_unicorn2: 'row-theme-unicorn2',
   row_unicorn3: 'row-theme-unicorn3',
   row_forest2: 'row-theme-forest2',
   row_yinyang: 'row-theme-yinyang',

@@ -1256,20 +1256,22 @@
   /* Yin Yang e Dualidade ficam paradas de propósito -- são sobre calma/
      equilíbrio, um piscar ali brigaria com o clima em vez de ajudar. */
   tbody tr.row-theme-yinyang { background-image: url('../img/row-themes/row-yinyang.jpg'); background-size: cover; background-position: center; }
-  tbody tr.row-theme-duality { background-image: url('../img/row-themes/row-duality.jpg'); background-size: cover; background-position: center; }
+
+  /* Unicórnio (floresta) e Floresta Mística ficam sem animação -- testado
+     com o brilho e decidiu que não precisava. */
+  tbody tr.row-theme-unicorn3 { background-image: url('../img/row-themes/row-unicorn3.jpg'); background-size: cover; background-position: center; }
+  tbody tr.row-theme-forest2  { background-image: url('../img/row-themes/row-forest2.jpg');  background-size: cover; background-position: center; }
 
   /* brilho suave tipo cintilar de estrela/fada -- reaproveita o mesmo
      @keyframes rowStarTwinkle de row-theme-starfield ali em cima, só com
      duração própria pra cada uma não ficar toda sincronizada igual. */
-  tbody tr.row-theme-unicorn2 { background-image: url('../img/row-themes/row-unicorn2.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 3.5s ease-in-out infinite; }
-  tbody tr.row-theme-unicorn3 { background-image: url('../img/row-themes/row-unicorn3.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 3.8s ease-in-out infinite; }
-  tbody tr.row-theme-forest2  { background-image: url('../img/row-themes/row-forest2.jpg');  background-size: cover; background-position: center; animation: rowStarTwinkle 4s ease-in-out infinite; }
-  tbody tr.row-theme-cosmos   { background-image: url('../img/row-themes/row-cosmos.jpg');   background-size: cover; background-position: center; animation: rowStarTwinkle 3s ease-in-out infinite; }
-  tbody tr.row-theme-meteor   { background-image: url('../img/row-themes/row-meteor.jpg');   background-size: cover; background-position: center; animation: rowStarTwinkle 2.2s ease-in-out infinite; }
+  tbody tr.row-theme-cosmos { background-image: url('../img/row-themes/row-cosmos.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 3s ease-in-out infinite; }
+  tbody tr.row-theme-meteor { background-image: url('../img/row-themes/row-meteor.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 2.2s ease-in-out infinite; }
 
   /* chama tremulando -- variação irregular de brilho (não suave feito o
-     twinkle acima), pra imitar fogo de verdade em vez de estrela piscando. */
-  tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 2.4s ease-in-out infinite; }
+     twinkle acima), pra imitar fogo de verdade em vez de estrela piscando.
+     Dragão mais devagar que a Lava de propósito (pedido depois de testar). */
+  tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 4.5s ease-in-out infinite; }
   tbody tr.row-theme-lava   { background-image: url('../img/row-themes/row-lava.jpg');   background-size: cover; background-position: center; animation: rowFlameFlicker 2.8s ease-in-out infinite; }
   @keyframes rowFlameFlicker {
     0%, 100% { filter: brightness(1); }

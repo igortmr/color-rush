@@ -47,7 +47,6 @@ export const SHOP_ITEMS = [
   // que já existem no catálogo sem estar em VISIBLE_SHOP_SLOTS) só invisíveis
   // fora do teste. Servem pra decidir quais valem a pena promover pra
   // produção antes de gastar CSS em style.css também.
-  { id: 'row_unicorn2',   slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio (rosa)', desc: 'Unicórnio num cenário rosa/roxo com lua crescente.', testOnly: true },
   { id: 'row_unicorn3',   slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio (floresta)', desc: 'Unicórnio de pé numa floresta rosa nas montanhas.', testOnly: true },
   { id: 'row_forest2',    slot: 'rowTheme', price: 5000, icon: '🌳', name: 'Linha: Floresta Mística', desc: 'Floresta encantada com lanterna, vagalumes e cachoeira.', testOnly: true },
   { id: 'row_yinyang',    slot: 'rowTheme', price: 5000, icon: '☯️', name: 'Linha: Yin Yang',        desc: 'Símbolo do yin yang com fumaça luminosa.', testOnly: true },
