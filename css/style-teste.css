@@ -1140,8 +1140,14 @@
   tbody tr:nth-child(odd) { background: #0a0e1e; }
   /* borda de "essa linha é sua" agora fica POR DENTRO da linha (inset),
      não outline por fora — outline não respeita o espaçamento entre linhas
-     (border-spacing) nem cantos, ficava cortado/deslocado */
-  tbody tr.me { box-shadow: inset 0 0 0 2px var(--neon-yellow), 0 0 12px rgba(255,233,60,0.4); }
+     (border-spacing) nem cantos, ficava cortado/deslocado.
+     Aplicado nos <td>, não na <tr>: WebKit (Safari mobile e o app nativo, que
+     usa WKWebView) tem um bug antigo e nunca corrigido onde box-shadow não é
+     pintado em elementos <tr> (table-row) — só funcionava no Chrome desktop.
+     Em <td> (table-cell) o box-shadow pinta normalmente em todos os motores. */
+  tbody tr.me td { box-shadow: inset 0 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow), 0 0 12px rgba(255,233,60,0.4); }
+  tbody tr.me td:first-child { box-shadow: inset 2px 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow), 0 0 12px rgba(255,233,60,0.4); }
+  tbody tr.me td:last-child { box-shadow: inset -2px 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow), 0 0 12px rgba(255,233,60,0.4); }
   /* linha temática da loja — sobrepõe o fundo padrão/listrado da tabela;
      combina normalmente com .me (que só usa outline, não background).
      Camada "padrão" (1000 pigmentos): só gradiente, sem padrão/animação.
