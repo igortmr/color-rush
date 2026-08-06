@@ -433,3 +433,81 @@ window.stopDmListeners = () => {
   const popup = $('dm-chat-popup');
   if (popup) popup.style.display = 'none';
 };
+
+// ================== DIAGNÓSTICO TEMPORÁRIO — balãozinho de DM não abre no
+// app nativo ainda na versão 1.1.3 (contentInset:"always", trocado pra
+// "never" só na 1.1.4 — ver comentário grande sobre isso em codemagic.yaml)
+// mas funciona na 1.1.4 e no navegador. 1.1.4 ainda está em revisão na
+// Apple, então não dá pra só pedir pra quem está na 1.1.3 atualizar — via
+// site (sem precisar de nova revisão) via mesma técnica já usada nessa
+// mesma investigação de safe-area (painel visível na tela, sem Mac/Xcode
+// pra Web Inspector no device, ver commit 1ba0941/3b46745/75d50a0). Sem
+// gate de "load" (não confiável, ver 3b46745), protegido por try/catch pra
+// nunca quebrar o resto do app. Remover assim que o real motivo for
+// confirmado (ver js/dms.js, procurar por "DIAGNÓSTICO TEMPORÁRIO").
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+  setTimeout(() => {
+    try {
+      const bubble = $('dm-chat-bubble');
+      const popup = $('dm-chat-popup');
+      const rect = bubble ? bubble.getBoundingClientRect() : null;
+      const cx = rect ? rect.left + rect.width / 2 : null;
+      const cy = rect ? rect.top + rect.height / 2 : null;
+      const hit = (cx !== null) ? document.elementFromPoint(cx, cy) : null;
+      const vv = window.visualViewport;
+      const CapApp = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+
+      const lines = [
+        'DIAGNÓSTICO balãozinho de DM',
+        'html classes: ' + document.documentElement.className,
+        'Capacitor.getPlatform: ' + (window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'n/a'),
+        'bubble display: ' + (bubble ? getComputedStyle(bubble).display : 'ELEMENTO NÃO ENCONTRADO'),
+        'bubble rect: ' + (rect ? `top=${rect.top.toFixed(1)} left=${rect.left.toFixed(1)} w=${rect.width.toFixed(1)} h=${rect.height.toFixed(1)}` : 'n/a'),
+        'elementFromPoint no centro do balão: ' + (hit ? (hit.id || hit.className || hit.tagName) : 'n/a') + (hit === bubble ? '  <-- BATE com o balão (ok)' : '  <-- NÃO é o balão (isso explicaria o clique não funcionar)'),
+        'popup display (antes de clicar): ' + (popup ? getComputedStyle(popup).display : 'ELEMENTO NÃO ENCONTRADO'),
+        'window.innerWidth/innerHeight: ' + window.innerWidth + ' / ' + window.innerHeight,
+        'visualViewport: ' + (vv ? `w=${vv.width} h=${vv.height} offsetTop=${vv.offsetTop} scale=${vv.scale}` : 'indisponível'),
+        '(toque no balão de chat agora — se o clique for detectado, uma linha nova aparece aqui embaixo)',
+      ];
+
+      const panel = document.createElement('div');
+      panel.id = 'debug-dm-panel';
+      panel.style.cssText = 'position:fixed; left:12px; right:12px; top:12px; z-index:99999; background:rgba(0,0,0,0.92); color:#0f0; font-family:monospace; font-size:11px; line-height:1.5; padding:14px; border-radius:10px; border:2px solid #0f0; white-space:pre-wrap; word-break:break-all; max-height:70vh; overflow:auto;';
+      panel.textContent = lines.join('\n');
+      document.body.appendChild(panel);
+
+      // clique de verdade no balão real (capture:true — roda ANTES do
+      // onclick="toggleDmChatPopup()" inline, então aparece mesmo se esse
+      // handler falhar silenciosamente por algum motivo)
+      if (bubble) {
+        bubble.addEventListener('click', () => {
+          const popupNow = $('dm-chat-popup');
+          panel.textContent += '\n\nCLIQUE DETECTADO no balão às ' + new Date().toLocaleTimeString() +
+            '\npopup display logo depois: ' + (popupNow ? getComputedStyle(popupNow).display : 'n/a') +
+            '\npopup rect: ' + (popupNow ? JSON.stringify(popupNow.getBoundingClientRect()) : 'n/a');
+        }, { capture: true });
+      }
+
+      // toque em qualquer lugar FORA do painel esconde ele, pra não
+      // atrapalhar o teste de verdade do balão (um toque dentro do painel
+      // não faz nada, só pra poder ler com calma sem fechar sem querer)
+      document.addEventListener('click', (ev) => {
+        if (!panel.isConnected || panel.contains(ev.target)) return;
+        panel.remove();
+      }, { capture: true, once: true });
+
+      if (CapApp && CapApp.getInfo) {
+        CapApp.getInfo().then(info => {
+          panel.textContent = 'App.getInfo: version=' + info.version + ' build=' + info.build + '\n\n' + panel.textContent;
+        }).catch(() => {});
+      }
+    } catch (e) {
+      try {
+        const panel = document.createElement('div');
+        panel.style.cssText = 'position:fixed; left:12px; right:12px; top:12px; z-index:99999; background:rgba(80,0,0,0.92); color:#fff; font-family:monospace; font-size:11px; padding:14px; border-radius:10px; white-space:pre-wrap; word-break:break-all;';
+        panel.textContent = 'erro no painel de diagnóstico do balão de DM: ' + (e && e.message);
+        document.body.appendChild(panel);
+      } catch (e2) { /* nada mais a fazer */ }
+    }
+  }, 1500); // dá tempo do balão aparecer (refreshDmChatBubble só roda depois do menu carregar)
+}
