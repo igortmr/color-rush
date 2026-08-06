@@ -13,12 +13,18 @@
   }
 
   /* iOS faz "rubber-band bounce" ao arrastar além do topo/fim da página,
-     revelando o fundo do <html> por baixo do <body> — sem isso, aparecia
-     uma barra preta (fundo padrão do WebView) além do limite do tema. */
+     revelando o que tem por trás do conteúdo — como o fundo do tema é um
+     padrão quadriculado (não uma cor lisa), qualquer área revelada aí
+     sempre ia parecer um "corte" feio, mesmo com a cor certa por trás.
+     overscroll-behavior:none trava o scroll bem na borda do conteúdo, sem
+     nunca esticar/revelar nada. html{background} fica só de rede de
+     segurança pra WKWebViews antigas onde overscroll-behavior não pega. */
   html {
     background: var(--bg-deep);
+    overscroll-behavior: none;
   }
   body {
+    overscroll-behavior: none;
     font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
     background:
       radial-gradient(ellipse 900px 500px at 15% -10%, rgba(177,77,255,0.25), transparent 60%),
