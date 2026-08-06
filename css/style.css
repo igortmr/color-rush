@@ -1144,13 +1144,15 @@
      usa WKWebView) tem um bug antigo e nunca corrigido onde box-shadow não é
      pintado em elementos <tr> (table-row) — só funcionava no Chrome desktop.
      Em <td> (table-cell) o box-shadow pinta normalmente em todos os motores.
-     O brilho externo (glow) é direcional (só topo/base em toda célula, e
-     esquerda/direita só na 1ª/última) — um glow "0 0 Npx" (todos os lados)
-     em cada <td> vazava nas bordas internas entre colunas, criando linhas
-     amarelas indesejadas nas separações. */
-  tbody tr.me td { box-shadow: inset 0 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow), 0 -2px 8px rgba(255,233,60,0.4), 0 2px 8px rgba(255,233,60,0.4); }
-  tbody tr.me td:first-child { box-shadow: inset 2px 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow), 0 -2px 8px rgba(255,233,60,0.4), 0 2px 8px rgba(255,233,60,0.4), -2px 0 8px rgba(255,233,60,0.4); }
-  tbody tr.me td:last-child { box-shadow: inset -2px 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow), 0 -2px 8px rgba(255,233,60,0.4), 0 2px 8px rgba(255,233,60,0.4), 2px 0 8px rgba(255,233,60,0.4); }
+     SEM glow externo com blur (só inset): blur "vaza" pros lados mesmo em
+     sombras só de topo/base (blur espalha em todas as direções a partir da
+     forma da sombra, não só na direção do offset) — mesmo a versão
+     "direcional" ainda criava linhas amarelas nas bordas internas entre
+     colunas, onde o blur de duas células vizinhas se somava. Inset nunca tem
+     esse problema (fica sempre contido dentro da própria célula). */
+  tbody tr.me td { box-shadow: inset 0 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow); }
+  tbody tr.me td:first-child { box-shadow: inset 2px 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow); }
+  tbody tr.me td:last-child { box-shadow: inset -2px 2px 0 var(--neon-yellow), inset 0 -2px 0 var(--neon-yellow); }
   /* linha temática da loja — sobrepõe o fundo padrão/listrado da tabela;
      combina normalmente com .me (que só usa outline, não background).
      Camada "padrão" (1000 pigmentos): só gradiente, sem padrão/animação.
