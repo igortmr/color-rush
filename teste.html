@@ -646,11 +646,11 @@
       <input type="range" class="volume-slider" id="audio-settings-music-volume" min="0" max="100" value="55" oninput="setAudioMusicVolume(this.value)">
       <div class="audio-settings-row" style="margin-top:6px;">
         <span class="audio-settings-label" data-i18n="audio_settings_sfx">🔔 Efeitos sonoros</span>
-        <button class="icon-toggle" id="audio-settings-sfx-toggle" onclick="toggleAudioSfxEnabled()" aria-label="Ligar/desligar efeitos sonoros">
+        <button class="icon-toggle" id="audio-settings-sfx-toggle" onclick="toggleAudioSfxEnabled()" aria-label="Ligar/desligar efeitos sonoros" data-no-click-tick>
           <span class="tgl-track"><span class="tgl-knob"></span></span>
         </button>
       </div>
-      <input type="range" class="volume-slider" id="audio-settings-sfx-volume" min="0" max="100" value="100" oninput="setAudioSfxVolume(this.value)">
+      <input type="range" class="volume-slider" id="audio-settings-sfx-volume" min="0" max="100" value="100" oninput="setAudioSfxVolume(this.value)" onchange="previewSfxVolume()">
     </div>
   </div>
 </div>
@@ -1094,9 +1094,25 @@
     // js/bootstrap.js, que faz o mesmo update nesses 2 elementos)
     $('mute-btn').classList.toggle('on', !isMuted());
     $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
+    // som só ao LIGAR (confirma que voltou a soar) — desligando fica mudo
+    // de propósito, não faria sentido tocar algo bem na hora de silenciar.
+    // Precisa ser explícito aqui (em vez de deixar o tique genérico de
+    // qualquer botão — ver bootstrap.js — cuidar disso sozinho) porque
+    // aquele listener roda na fase de CAPTURA, antes deste onclick: ele
+    // sempre veria o estado de ANTES do toggle, o oposto do que faz
+    // sentido. Por isso o botão leva data-no-click-tick no HTML — sem
+    // isso soaria também, com o estado errado.
+    if (!isMuted()) window.sfx.tick();
   };
   window.setAudioMusicVolume = (val) => setMusicVolume(Number(val) / 100);
   window.setAudioSfxVolume = (val) => setSfxVolume(Number(val) / 100);
+  // toca o som de acerto (o efeito sonoro "de verdade" do jogo, já no
+  // timbre que a pessoa tem equipado na loja — bem mais perceptível que o
+  // tique de clique pra dar noção real do volume) no volume que acabou de
+  // ficar, só ao SOLTAR o slider (evento "change", dispara uma vez ao final
+  // do arraste — não "input", que dispararia a cada pixel arrastado e
+  // viraria um zumbido)
+  window.previewSfxVolume = () => window.sfx.correct(1);
 </script>
 </body>
 </html>

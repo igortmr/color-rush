@@ -302,6 +302,14 @@ document.addEventListener('click', (e) => {
   if (playing) return;
   const el = e.target.closest('button, .mode-card');
   if (!el || el.disabled) return;
+  // opt-out pontual — hoje só o toggle de efeitos sonoros do painel de
+  // configurações (teste.html) usa isso: como esse listener é de CAPTURA
+  // (roda antes do próprio onclick do botão), um tique genérico aqui
+  // tocaria com o estado de mudo de ANTES do toggle rodar — exatamente
+  // invertido do que faz sentido (tocar ao desligar, ficar mudo ao ligar).
+  // O onclick de quem marcar esse atributo decide o som certo por conta
+  // própria, na hora certa (depois de já ter mudado o estado).
+  if (el.hasAttribute('data-no-click-tick')) return;
   sfx.tick();
 }, true);
 window.toggleMute = () => {
