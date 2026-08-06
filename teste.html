@@ -491,6 +491,19 @@
   </div>
 </div>
 
+<!-- versão do APP NATIVO em si desatualizada (diferente do modal acima, que
+     é sobre o JS do site) — ver isNativeVersionUpToDate/MIN_NATIVE_APP_VERSION
+     em js/bootstrap.js -->
+<div class="modal-overlay" id="outdated-native-app-modal" style="display:none;" onclick="if(event.target===this) closeOutdatedNativeAppModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-orange); text-shadow:0 0 10px rgba(255,159,28,0.5);" data-i18n="outdated_native_title">📱 Atualize o app</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" data-i18n="outdated_native_msg">Essa versão do app está desatualizada e tem problemas já corrigidos numa versão mais nova. Atualize pela App Store pra continuar jogando.</p>
+    </div>
+    <a href="https://apps.apple.com/app/id6794695684" style="display:block; text-decoration:none;"><button data-i18n="outdated_native_update_btn">📱 Atualizar na App Store</button></a>
+  </div>
+</div>
+
 <div class="modal-overlay" id="buy-shop-modal" style="display:none;" onclick="if(event.target===this) closeBuyShopModal();">
   <div class="modal-card" style="max-width:380px; text-align:center;">
     <h1 style="font-size:1.2rem; color:var(--neon-yellow); text-shadow:0 0 10px rgba(255,233,60,0.5);">🛍️ Confirmar compra</h1>

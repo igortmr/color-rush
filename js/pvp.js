@@ -167,6 +167,7 @@ window.uiAcceptChallenge = async () => {
   if (!matchId) return;
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
   if (!(await window.isClientUpToDate())) { window.showOutdatedVersionModal(); return; } // ver isClientUpToDate em bootstrap.js
+  if (!(await window.isNativeVersionUpToDate())) { window.showOutdatedNativeAppModal(); return; } // ver isNativeVersionUpToDate em bootstrap.js
   $('pvp-challenge-banner').style.display = 'none';
   try {
     await callRespondChallenge({ matchId, accept: true });
@@ -220,6 +221,7 @@ window.closeChallengeModeModal = () => {
 async function sendChallenge(toUid, mode) {
   closeChallengeModeModal();
   if (!(await window.isClientUpToDate())) { window.showOutdatedVersionModal(); return; } // ver isClientUpToDate em bootstrap.js
+  if (!(await window.isNativeVersionUpToDate())) { window.showOutdatedNativeAppModal(); return; } // ver isNativeVersionUpToDate em bootstrap.js
   try {
     const res = await callChallengeFriend({ toUid, mode });
     const data = res.data || {};

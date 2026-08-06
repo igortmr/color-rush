@@ -519,6 +519,17 @@ window.startDailyChallenge = async () => {
     show('daily-screen');
     return;
   }
+  // versão do APP NATIVO desatualizada (não do JS do site, checagem acima) —
+  // ver isNativeVersionUpToDate em js/bootstrap.js
+  if (!(await window.isNativeVersionUpToDate())) {
+    $('daily-blocked-msg').textContent = T[state.lang].daily_native_update_required;
+    $('daily-intro').style.display = 'none';
+    $('daily-play').style.display = 'none';
+    $('daily-result').style.display = 'none';
+    $('daily-blocked').style.display = 'flex';
+    show('daily-screen');
+    return;
+  }
   try {
     const res = await callStartDailyAttempt();
     const d = res.data || {};

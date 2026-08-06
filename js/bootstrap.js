@@ -249,6 +249,52 @@ window.closeOutdatedVersionModal = () => {
   document.getElementById('outdated-version-modal').style.display = 'none';
 };
 
+// checagem PARALELA à de cima, mas de outra coisa: isClientUpToDate confere
+// se o JS carregado bateu com o mais novo do GitHub (site sempre carrega
+// remoto — ver isClientUpToDate acima); esta aqui confere a VERSÃO DO
+// BINÁRIO NATIVO em si (algo que só uma nova build/resubmissão na App
+// Store resolve, nenhum push no site consegue mudar). Motivo de existir:
+// bugs de app nativo antigo (ex.: contentInset:"always" na 1.1.3, trocado
+// pra "never" só na 1.1.4 — ver codemagic.yaml) não têm conserto possível
+// via site pra quem ainda não atualizou o app; a partir da 1.1.4 já
+// liberada na loja, só resta mandar quem está numa build mais antiga
+// atualizar, em vez de tentar (e falhar) corrigir via CSS/JS pra sempre.
+// MIN_NATIVE_APP_VERSION: só sobe esse número quando uma versão nova reparar
+// algo que realmente exige atualização (não é pra toda build nova).
+const MIN_NATIVE_APP_VERSION = '1.1.4';
+function isVersionAtLeast(version, min) {
+  const a = String(version).split('.').map(n => parseInt(n, 10) || 0);
+  const b = String(min).split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return true;
+}
+async function isNativeVersionUpToDate() {
+  if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return true; // não é o app nativo, essa checagem não se aplica
+  const CapApp = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  // plugin "@capacitor/app" nem existir é sinal de uma build MUITO antiga
+  // (anterior a quando esse plugin foi adicionado, ver comentário sobre
+  // Universal Links logo acima nesse arquivo) — trata como desatualizada,
+  // sem precisar comparar número de versão nenhum
+  if (!CapApp || !CapApp.getInfo) return false;
+  try {
+    const info = await CapApp.getInfo();
+    if (!info || !info.version) return true; // não deu pra confirmar — fail-open, igual isClientUpToDate
+    return isVersionAtLeast(info.version, MIN_NATIVE_APP_VERSION);
+  } catch {
+    return true; // falha pontual da chamada nativa — fail-open, não bloqueia por uma falha transitória
+  }
+}
+window.isNativeVersionUpToDate = isNativeVersionUpToDate;
+window.showOutdatedNativeAppModal = () => {
+  document.getElementById('outdated-native-app-modal').style.display = 'flex';
+};
+window.closeOutdatedNativeAppModal = () => {
+  document.getElementById('outdated-native-app-modal').style.display = 'none';
+};
+
 // se sair versão nova no GitHub, recarrega sozinho — mas nunca no meio de uma partida
 async function checkForUpdate() {
   if (playing || document.hidden) return;

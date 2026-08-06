@@ -119,6 +119,9 @@ window.startGame = async (m) => {
   // e também Batalha de Clã, que chama window.startGame por baixo — ver
   // guild-battle.js) se saiu build nova no GitHub — ver isClientUpToDate
   if (!(await window.isClientUpToDate())) { window.showOutdatedVersionModal(); return; }
+  // versão do APP NATIVO (não do JS do site) desatualizada — ver
+  // isNativeVersionUpToDate em js/bootstrap.js
+  if (!(await window.isNativeVersionUpToDate())) { window.showOutdatedNativeAppModal(); return; }
   track('game_start', { mode: m });
   mode = m;
   score = 0;
