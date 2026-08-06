@@ -24,9 +24,7 @@
      elemento, não ao conteúdo — durante o bounce interno ele fica parado
      no lugar (só o conteúdo desliza por cima), nunca revelando nada atrás. */
   html, body {
-    height: 100vh;
-    height: calc(var(--vh, 1vh) * 100);
-    height: 100dvh;
+    height: 100%;
     overflow: hidden;
   }
   html {
@@ -37,9 +35,15 @@
     color: #eef1ff;
     user-select: none;
   }
+  /* position:fixed + inset:0 (a mesma técnica dos elementos fixos como
+     #version-tag, que sempre bateram certinho na borda) em vez de
+     height:100% encadeado por html→body→aqui: esse encadeamento de
+     porcentagens (cada nível com seu próprio vh/dvh) deixava sobrar uma
+     fresta embaixo em alguns iPhones — presa direto na viewport, não tem
+     esse arredondamento. */
   #scroll-area {
-    width: 100%;
-    height: 100%;
+    position: fixed;
+    inset: 0;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
