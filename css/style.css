@@ -621,6 +621,18 @@
     transition: bottom 0.15s ease;
   }
   .chat-bubble:hover { transform: scale(1.08); }
+  /* área de toque bem maior que o círculo visível (::after invisível, sem
+     background) — investigando o balão de DM não abrir no app nativo ainda
+     na 1.1.3, um painel de diagnóstico temporário (ver histórico de
+     js/dms.js) mostrou que vários toques dentro do círculo visto na tela
+     não geravam clique NENHUM, só um ponto bem perto do centro funcionava —
+     ou seja, a área realmente clicável tinha encolhido bem menor que o
+     círculo pintado (bug de hit-testing do WKWebView sob contentInset,
+     aparentemente). Isso aqui não depende de saber a causa exata: qualquer
+     toque na faixa de 24px ao redor do balão agora conta como clique nele,
+     o suficiente pra cobrir a área "morta" observada — e não atrapalha
+     ninguém (navegador, 1.1.4), só facilita acertar o botão. */
+  .chat-bubble::after { content: ''; position: absolute; inset: -24px; }
   .chat-bubble .menu-quick-badge { top: -4px; right: -4px; }
   #dm-chat-bubble { background: linear-gradient(135deg, var(--neon-green), var(--neon-blue)); }
   /* reticências bem pequenas no canto inferior esquerdo do balão — como o
