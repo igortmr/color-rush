@@ -1211,16 +1211,14 @@
   tbody tr.row-theme-pink   { background: linear-gradient(90deg, rgba(255,0,144,0.65), rgba(255,64,180,0.5)); }
 
   /* --- premium (1500): padrão e/ou animação --- */
+  /* foto real de céu estrelado (img/row-themes/row-starfield.jpg), trocou o
+     patchwork de radial-gradient de antes -- mesmo cintilar de brilho
+     (rowStarTwinkle) por cima, que já funcionava tanto pra gradiente quanto
+     pra foto (ver row-theme-cosmos abaixo, que reusa a mesma animação). */
   tbody tr.row-theme-starfield {
-    background:
-      radial-gradient(circle at 10% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 5%),
-      radial-gradient(circle at 25% 72%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 4%),
-      radial-gradient(circle at 40% 18%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 3.5%),
-      radial-gradient(circle at 55% 60%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 4.5%),
-      radial-gradient(circle at 70% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 3.5%),
-      radial-gradient(circle at 85% 75%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 4%),
-      radial-gradient(circle at 95% 22%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 3.5%),
-      linear-gradient(90deg, rgba(20,10,60,0.6), rgba(60,20,100,0.4));
+    background-image: url('../img/row-themes/row-starfield.jpg');
+    background-size: cover;
+    background-position: center;
     animation: rowStarTwinkle 3s ease-in-out infinite;
   }
   @keyframes rowStarTwinkle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
@@ -1305,16 +1303,12 @@
     98% { filter: brightness(1); }
   }
 
+  /* foto real de confete (img/row-themes/row-confetti-dots.jpg), trocou o
+     patchwork de radial-gradient de antes -- sem animação, igual já era. */
   tbody tr.row-theme-confetti-dots {
-    background:
-      radial-gradient(circle at 8% 40%, rgba(255,45,107,0.9) 0%, rgba(255,45,107,0) 6%),
-      radial-gradient(circle at 22% 75%, rgba(0,210,211,0.9) 0%, rgba(0,210,211,0) 6%),
-      radial-gradient(circle at 38% 25%, rgba(255,233,60,0.9) 0%, rgba(255,233,60,0) 6%),
-      radial-gradient(circle at 52% 65%, rgba(177,77,255,0.9) 0%, rgba(177,77,255,0) 6%),
-      radial-gradient(circle at 68% 30%, rgba(33,230,161,0.9) 0%, rgba(33,230,161,0) 6%),
-      radial-gradient(circle at 82% 70%, rgba(255,159,28,0.9) 0%, rgba(255,159,28,0) 6%),
-      radial-gradient(circle at 94% 40%, rgba(255,45,107,0.9) 0%, rgba(255,45,107,0) 6%),
-      #0e1224;
+    background-image: url('../img/row-themes/row-confetti-dots.jpg');
+    background-size: cover;
+    background-position: center;
   }
   /* volta a mostrar o tema/fundo da linha (sem background próprio) — em vez
      de isolar a posição num fundo sólido, agora ela usa a mesma sombra

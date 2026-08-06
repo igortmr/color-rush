@@ -200,8 +200,8 @@
       <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
       <span class="notif-dot" id="user-label-badge" style="display:none;"></span>
     </span>
-    <span class="user-pigmentos" id="user-pigmentos-bar" style="display:none; align-items:center; gap:3px; margin-left:auto; margin-right:10px; padding:3px 8px; background:rgba(255,233,60,0.08); border:1px solid rgba(255,233,60,0.25); border-radius:10px; font-size:0.72rem; font-weight:700; white-space:nowrap;">
-      <span style="color:#6b76a8; font-weight:600;">Saldo:</span><span id="user-pigmentos-num">0</span><span id="user-pigmentos-icon"></span>
+    <span class="user-pigmentos" id="user-pigmentos-bar" style="display:none; align-items:center; gap:3px; margin-left:auto; margin-right:10px; padding:3px 8px; background:rgba(255,233,60,0.08); border:1px solid rgba(255,233,60,0.25); border-radius:4px; font-size:0.72rem; font-weight:700; white-space:nowrap;">
+      <span style="color:#6b76a8; font-weight:600;">Pigmentos:</span><span id="user-pigmentos-num">0</span><span id="user-pigmentos-icon"></span>
     </span>
     <span>
       <button class="inbox-icon-btn" id="inbox-btn" onclick="showInbox()" aria-label="Caixa de entrada" title="Caixa de entrada" style="display:none;">
@@ -726,10 +726,10 @@
     <h1 style="font-size:1.7rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" src="img/menu-icons/shop.png" alt=""><span>LOJA</span></h1>
     <button class="pill-btn" onclick="showMenu()">VOLTAR</button>
   </div>
-  <div class="card" style="flex-direction:row; align-items:center; justify-content:center; gap:8px;">
+  <div id="shop-balance-bar" style="align-self:flex-end; display:flex; align-items:center; gap:3px; padding:3px 8px; background:rgba(255,233,60,0.08); border:1px solid rgba(255,233,60,0.25); border-radius:4px; font-size:0.72rem; font-weight:700; white-space:nowrap;">
+    <span style="color:#6b76a8; font-weight:600;">Pigmentos:</span>
+    <span id="shop-balance-num" style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-yellow);">0</span>
     <span id="shop-balance-icon"></span>
-    <span id="shop-balance-num" style="font-family:'Orbitron',sans-serif; font-weight:800; color:var(--neon-yellow); font-size:1.3rem;">0</span>
-    <span class="muted">Pigmentos</span>
   </div>
   <div class="muted" id="shop-status"></div>
   <div id="shop-body" style="width:100%; display:flex; flex-direction:column; gap:18px;"></div>
