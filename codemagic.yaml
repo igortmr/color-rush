@@ -67,19 +67,23 @@ workflows:
           # então não precisa da reserva nativa duplicada). backgroundColor
           # (raiz e ios) é rede de segurança pro instante entre o WebView
           # carregar e o CSS aplicar, caso ainda sobre algum pixel de borda.
+          # Formato é #RRGGBBAA (cor primeiro, alpha por último) -- uma
+          # versão anterior escreveu #AARRGGBB por engano (alpha na frente),
+          # o Capacitor leu como vermelho quase transparente e piscava uma
+          # tela avermelhada por ~0.5s antes do CSS de verdade carregar.
           cat > capacitor.config.json << 'EOF'
           {
             "appId": "br.com.colorrush.app",
             "appName": "Color Rush",
             "webDir": "www",
-            "backgroundColor": "#ff050810",
+            "backgroundColor": "#050810ff",
             "server": {
               "url": "https://colorrush.com.br",
               "cleartext": false
             },
             "ios": {
               "contentInset": "never",
-              "backgroundColor": "#ff050810"
+              "backgroundColor": "#050810ff"
             },
             "plugins": {
               "FirebaseAuthentication": {
