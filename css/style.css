@@ -1190,13 +1190,15 @@
      Camada "padrão" (1000 pigmentos): só gradiente, sem padrão/animação.
      Camada "premium" (1500): padrão (pontinhos/listras) e/ou animação, pra
      se destacar mais na lista — ver preço em functions/index.js/js/shop.js. */
-  tbody tr.row-theme-ocean  { background: linear-gradient(90deg, rgba(30,144,255,0.35), rgba(0,210,211,0.15)); }
   tbody tr.row-theme-galaxy { background: linear-gradient(90deg, rgba(177,77,255,0.35), rgba(255,107,157,0.15)); }
   tbody tr.row-theme-forest { background: linear-gradient(90deg, rgba(27,94,32,0.45), rgba(139,195,74,0.18)); }
-  tbody tr.row-theme-sunset { background: linear-gradient(90deg, rgba(255,94,58,0.4), rgba(255,64,129,0.22), rgba(123,31,162,0.18)); }
   tbody tr.row-theme-frost  { background: linear-gradient(90deg, rgba(179,229,252,0.4), rgba(41,121,255,0.18)); }
   tbody tr.row-theme-yellow { background: linear-gradient(90deg, rgba(255,224,60,0.45), rgba(255,193,7,0.2)); }
-  tbody tr.row-theme-pink   { background: linear-gradient(90deg, rgba(255,20,147,0.4), rgba(255,153,204,0.22)); }
+  /* rosa choque, bem mais forte/saturado que o rosa clarinho de antes --
+     opacidade bem mais alta também (0.4/0.22 -> 0.65/0.5), pedido pra dar
+     mais destaque mesmo continuando simples (item de 1000, sem
+     padrão/imagem/animação, só o gradiente). */
+  tbody tr.row-theme-pink   { background: linear-gradient(90deg, rgba(255,0,144,0.65), rgba(255,64,180,0.5)); }
 
   /* --- premium (1500): padrão e/ou animação --- */
   tbody tr.row-theme-starfield {

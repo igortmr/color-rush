@@ -25,13 +25,11 @@ export const SHOP_ITEMS = [
   { id: 'frame_gold',    slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Dourada',                desc: 'Uma moldura dourada ao redor do seu nick no ranking e perfil.' },
   { id: 'frame_rainbow', slot: 'frame',      price: 100, icon: '🖼️', name: 'Moldura Arco-íris',              desc: 'Uma moldura multicolorida ao redor do seu nick.' },
   { id: 'confetti_gold', slot: 'confetti',   price: 120, icon: '🎊', name: 'Confete Dourado',                desc: 'Um confete dourado quando você bate um novo recorde.' },
-  { id: 'row_ocean',     slot: 'rowTheme',   price: 1000, icon: '🌊', name: 'Linha: Oceano',                  desc: 'Fundo temático de oceano na sua linha do ranking.' },
   { id: 'row_galaxy',    slot: 'rowTheme',   price: 1000, icon: '🌌', name: 'Linha: Galáxia',                 desc: 'Fundo temático de galáxia na sua linha do ranking.' },
   { id: 'row_forest',    slot: 'rowTheme',   price: 1000, icon: '🌲', name: 'Linha: Floresta',                desc: 'Verdes de floresta na sua linha do ranking.' },
-  { id: 'row_sunset',    slot: 'rowTheme',   price: 1000, icon: '🌇', name: 'Linha: Pôr do Sol',               desc: 'Degradê de laranja, rosa e roxo, tipo um pôr do sol.' },
   { id: 'row_frost',     slot: 'rowTheme',   price: 1000, icon: '❄️', name: 'Linha: Gelo',                    desc: 'Azul e branco gelados na sua linha do ranking.' },
   { id: 'row_yellow',    slot: 'rowTheme',   price: 1000, icon: '🌻', name: 'Linha: Girassol',                desc: 'Amarelo e dourado na sua linha do ranking.' },
-  { id: 'row_pink',      slot: 'rowTheme',   price: 1000, icon: '🦩', name: 'Linha: Flamingo',                desc: 'Rosa na sua linha do ranking.' },
+  { id: 'row_pink',      slot: 'rowTheme',   price: 1000, icon: '🦩', name: 'Linha: Flamingo',                desc: 'Rosa choque na sua linha do ranking.' },
   { id: 'row_starfield', slot: 'rowTheme',   price: 3000, icon: '✨', name: 'Linha: Céu Estrelado',            desc: 'Fundo escuro cheio de estrelinhas cintilantes — anima sozinho.' },
   { id: 'row_holo',      slot: 'rowTheme',   price: 5000, icon: '🌈', name: 'Linha: RGB',                     desc: 'Degradê iridescente que muda de cor sozinho.' },
   { id: 'row_stripes_gold', slot: 'rowTheme', price: 3000, icon: '🐝', name: 'Linha: Listras Douradas',        desc: 'Listras diagonais douradas e pretas, visual VIP.' },
@@ -252,7 +250,14 @@ function shopItemPreview(item) {
     const tbody = document.createElement('tbody');
     const tr = document.createElement('tr');
     applyRowTheme(tr, { equipped: { rowTheme: item.id } });
-    tr.innerHTML = '<td class="pos" style="padding:6px 8px;">1</td><td style="padding:6px 8px; font-weight:700;">SeuNick</td><td class="pts" style="padding:6px 8px;">1234</td>';
+    // classes "pos"/"nick-cell"/"pts" sem padding inline por cima -- antes
+    // tinha padding inline (diferente do valor real) e a célula do nick nem
+    // usava a classe "nick-cell" (que no ranking de verdade tem só 2px de
+    // padding-left, bem mais colado que o padrão de 8px), então a prévia
+    // ficava com "1"/"SeuNick" mais deslocados pra direita do que ficam de
+    // verdade no ranking. Herdando o CSS de lá direto, sem inline, some essa
+    // diferença.
+    tr.innerHTML = '<td class="pos">1</td><td class="nick-cell" style="font-weight:700;">SeuNick</td><td class="pts">1234</td>';
     tbody.appendChild(tr);
     mini.appendChild(tbody);
     wrap.appendChild(mini);

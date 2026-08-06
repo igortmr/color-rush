@@ -131,10 +131,8 @@ export function applyGuildTagStyle(el, tagStyle) {
 // com padrão/animação, ver ROW_THEME_CLASS) marcados como tal só pra
 // referência de quem for revisar o catálogo, não afeta o código.
 const ROW_THEME_CLASS = {
-  row_ocean: 'row-theme-ocean',
   row_galaxy: 'row-theme-galaxy',
   row_forest: 'row-theme-forest',
-  row_sunset: 'row-theme-sunset',
   row_frost: 'row-theme-frost',
   row_yellow: 'row-theme-yellow',
   row_pink: 'row-theme-pink',
