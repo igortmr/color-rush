@@ -23,65 +23,6 @@ const isNativeApp = () => !!(window.Capacitor && window.Capacitor.isNativePlatfo
 // só no app, sem mexer no valor que já está certo no site.
 if (isNativeApp()) document.documentElement.classList.add('is-native-app');
 
-// ===== PAINEL DE DIAGNÓSTICO TEMPORÁRIO (remover depois de resolver o bug
-// do .lang-switch grudado no topo no app nativo) =====
-// Sem Mac/Xcode à mão pra abrir o Web Inspector no device, isso mostra os
-// números reais direto na tela -- toque em qualquer lugar do painel pra
-// esconder (não atrapalha o teste do resto do app depois de ler).
-// sem gate de isNativeApp() e sem depender do evento "load" (nenhum dos
-// dois é confiável o bastante aqui pra apostar tudo neles -- o painel
-// simplesmente não apareceu da primeira vez, e não dá pra saber qual dos
-// dois foi o culpado sem outro round de teste). Roda direto, protegido por
-// try/catch pra nunca quebrar o resto do app se algo aqui der errado.
-setTimeout(() => {
-  try {
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); visibility:hidden;';
-    document.body.appendChild(probe);
-    const probeStyle = getComputedStyle(probe);
-    const safeTop = probeStyle.paddingTop;
-    const safeBottom = probeStyle.paddingBottom;
-    probe.remove();
-
-    const langSwitch = document.querySelector('.lang-switch');
-    const lsRect = langSwitch ? langSwitch.getBoundingClientRect() : null;
-    const lsStyle = langSwitch ? getComputedStyle(langSwitch) : null;
-    const vv = window.visualViewport;
-
-    const lines = [
-      'DIAGNÓSTICO .lang-switch',
-      'isNativeApp: ' + isNativeApp(),
-      'html classes: ' + document.documentElement.className,
-      'env(safe-area-inset-top): ' + safeTop,
-      'env(safe-area-inset-bottom): ' + safeBottom,
-      'lang-switch computed top: ' + (lsStyle ? lsStyle.top : 'n/a'),
-      'lang-switch rect.top: ' + (lsRect ? lsRect.top.toFixed(1) : 'n/a'),
-      'lang-switch rect.left: ' + (lsRect ? lsRect.left.toFixed(1) : 'n/a'),
-      'lang-switch rect.height: ' + (lsRect ? lsRect.height.toFixed(1) : 'n/a'),
-      '--ios-banner-offset: ' + (getComputedStyle(document.documentElement).getPropertyValue('--ios-banner-offset') || '(vazio)'),
-      'window.innerWidth/innerHeight: ' + window.innerWidth + ' / ' + window.innerHeight,
-      'visualViewport: ' + (vv ? `w=${vv.width} h=${vv.height} offsetTop=${vv.offsetTop} scale=${vv.scale}` : 'indisponível'),
-      'Capacitor.getPlatform: ' + (window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'n/a'),
-      'userAgent: ' + navigator.userAgent,
-    ];
-
-    const panel = document.createElement('div');
-    panel.id = 'debug-diag-panel';
-    panel.style.cssText = 'position:fixed; left:12px; right:12px; top:50%; transform:translateY(-50%); z-index:99999; background:rgba(0,0,0,0.92); color:#0f0; font-family:monospace; font-size:11px; line-height:1.5; padding:14px; border-radius:10px; border:2px solid #0f0; white-space:pre-wrap; word-break:break-all; max-height:80vh; overflow:auto;';
-    panel.textContent = lines.join('\n');
-    panel.addEventListener('click', () => panel.remove());
-    document.body.appendChild(panel);
-  } catch (e) {
-    try {
-      const panel = document.createElement('div');
-      panel.style.cssText = 'position:fixed; left:12px; right:12px; top:50%; transform:translateY(-50%); z-index:99999; background:rgba(80,0,0,0.92); color:#fff; font-family:monospace; font-size:11px; padding:14px; border-radius:10px; white-space:pre-wrap; word-break:break-all;';
-      panel.textContent = 'erro no painel de diagnóstico: ' + (e && e.message);
-      panel.addEventListener('click', () => panel.remove());
-      document.body.appendChild(panel);
-    } catch (e2) { /* nada mais a fazer */ }
-  }
-}, 800); // dá tempo do layout/safe-area assentar
-
 function socialLinksHtml(i) {
   // selo "Baixar na App Store" ao lado das redes -- SÓ fora do app nativo
   // (quem já está no app não precisa ser convidado a baixar de novo).
