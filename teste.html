@@ -932,6 +932,7 @@
 
 <script type="module" src="js/main-teste.js"></script>
 <script type="module">
+  import { startAmbientMusic, pauseAmbientMusic, resumeAmbientMusic } from './js/ambient-music.js';
   // só teste.html — deliberadamente NÃO entra em js/main-teste.js (que
   // precisa continuar espelhando js/main.js linha por linha, ver comentário
   // lá) nem em nenhum módulo compartilhado (game-core.js/replay.js/pvp.js).
@@ -995,6 +996,20 @@
       }
     }
   }).observe(document.body, { childList: true, subtree: true });
+
+  // música ambiente de fundo (ver js/ambient-music.js — só teste.html) —
+  // começa no primeiro toque/clique em QUALQUER lugar da página (navegador
+  // não deixa tocar áudio sozinho antes de um gesto do usuário) e depois
+  // fica tocando em loop; { once: true } tira o listener sozinho depois do
+  // primeiro disparo, não precisa remover na mão.
+  document.addEventListener('pointerdown', startAmbientMusic, { once: true });
+  document.addEventListener('keydown', startAmbientMusic, { once: true });
+  // pausa quando a aba fica em segundo plano (economiza recursos e evita
+  // acordar tocando sozinha se a pessoa voltar bem no meio de um acorde) e
+  // retoma ao voltar
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pauseAmbientMusic(); else resumeAmbientMusic();
+  });
 </script>
 </body>
 </html>
