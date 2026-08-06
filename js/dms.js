@@ -456,31 +456,70 @@ window.stopDmListeners = () => {
 // confirmar se o toque real cai dentro do rect do balão ou não — isso
 // distingue de vez um bug de coordenada nativa (contentInset) de um bug só
 // no elementFromPoint em si.
+//
+// V3 (2026-08-06, depois do 2º teste real): achado importante e confuso ao
+// mesmo tempo — um toque registrou "alvo=dm-chat-bubble" e ABRIU o chat de
+// verdade, mas outros toques (relatados como "dentro" do balão visualmente)
+// não geraram nenhuma linha nova. Dois problemas identificados nessa rodada:
+// (1) o painel foi montado com setTimeout(1500) mas o balão ainda estava
+// display:none / rect zerado nesse momento (refreshDmChatBubble ainda não
+// tinha rodado) — o rect "de referência" usado pra comparar os toques era
+// lixo, invalidando a comparação "dentro/fora do rect". Agora espera até o
+// balão estar de fato visível (poll a cada 200ms, até 5s) antes de tirar o
+// snapshot. (2) só logava em cima do evento "click" — se um toque não gera
+// click nenhum (o que aconteceria se a coordenada nativa do toque cair fora
+// da área realmente interativa), não sobrava nem um log dele. Adicionado
+// "touchstart" (mais baixo nível, dispara sempre que o dedo encosta,
+// independente de virar click depois) pra capturar TODO toque, não só os
+// que "deram certo". Também testa elementFromPoint em 5 pontos do balão
+// (não só o centro) pra ver se só uma fatia dele está realmente clicável
+// (indício de algo cobrindo parte do botão) em vez de um deslocamento
+// uniforme de coordenada.
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-  setTimeout(() => {
+  const waitForBubbleThenDiagnose = (triesLeft) => {
+    const bubble = $('dm-chat-bubble');
+    const visible = bubble && getComputedStyle(bubble).display !== 'none';
+    if (!visible && triesLeft > 0) { setTimeout(() => waitForBubbleThenDiagnose(triesLeft - 1), 200); return; }
     try {
-      const bubble = $('dm-chat-bubble');
       const popup = $('dm-chat-popup');
       const rect = bubble ? bubble.getBoundingClientRect() : null;
-      const cx = rect ? rect.left + rect.width / 2 : null;
-      const cy = rect ? rect.top + rect.height / 2 : null;
-      const hit = (cx !== null) ? document.elementFromPoint(cx, cy) : null;
       const vv = window.visualViewport;
       const CapApp = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
 
+      // amostra 5 pontos do balão (centro + 4 cantos, 6px pra dentro de cada
+      // canto pra não cair já fora por 1px de arredondamento) em vez de só o
+      // centro — se só alguns pontos baterem com o balão, é sinal de algo
+      // cobrindo parte dele, não um deslocamento uniforme de coordenada
+      let sampleLines = ['(balão não encontrado/nunca ficou visível em 5s)'];
+      if (rect) {
+        const pts = {
+          centro: [rect.left + rect.width / 2, rect.top + rect.height / 2],
+          'canto sup-esq': [rect.left + 6, rect.top + 6],
+          'canto sup-dir': [rect.right - 6, rect.top + 6],
+          'canto inf-esq': [rect.left + 6, rect.bottom - 6],
+          'canto inf-dir': [rect.right - 6, rect.bottom - 6],
+        };
+        sampleLines = Object.entries(pts).map(([label, [x, y]]) => {
+          const hit = document.elementFromPoint(x, y);
+          const hitLabel = hit ? (hit.id || hit.className || hit.tagName) : 'n/a';
+          return `  ${label} (${x.toFixed(0)},${y.toFixed(0)}): ${hitLabel}` + (hit === bubble ? ' OK' : ' <-- não é o balão');
+        });
+      }
+
       const lines = [
-        'DIAGNÓSTICO balãozinho de DM v2',
+        'DIAGNÓSTICO balãozinho de DM v3',
         'html classes: ' + document.documentElement.className,
         'Capacitor.getPlatform: ' + (window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'n/a'),
         'bubble display: ' + (bubble ? getComputedStyle(bubble).display : 'ELEMENTO NÃO ENCONTRADO'),
         'bubble rect: ' + (rect ? `top=${rect.top.toFixed(1)} left=${rect.left.toFixed(1)} w=${rect.width.toFixed(1)} h=${rect.height.toFixed(1)}` : 'n/a'),
-        'elementFromPoint no centro do balão: ' + (hit ? (hit.id || hit.className || hit.tagName) : 'n/a') + (hit === bubble ? '  <-- BATE com o balão (ok)' : '  <-- NÃO é o balão'),
+        'elementFromPoint em 5 pontos do balão:',
+        ...sampleLines,
         'popup display (antes de tocar): ' + (popup ? getComputedStyle(popup).display : 'ELEMENTO NÃO ENCONTRADO'),
         'window.innerWidth/innerHeight: ' + window.innerWidth + ' / ' + window.innerHeight,
         'visualViewport: ' + (vv ? `w=${vv.width} h=${vv.height} offsetTop=${vv.offsetTop} scale=${vv.scale}` : 'indisponível'),
         '',
-        '>>> AGORA TOQUE ONDE O BALÃO APARECE NA TELA (embaixo à direita) <<<',
-        '(cada toque na tela vira uma linha aqui embaixo, mesmo que erre o balão)',
+        '>>> AGORA TOQUE VÁRIAS VEZES EM VOLTA DE ONDE O BALÃO APARECE <<<',
+        '(centro, um pouco acima, abaixo, esquerda, direita — cada toque vira uma linha aqui embaixo, mesmo que erre)',
       ];
 
       const panel = document.createElement('div');
@@ -494,21 +533,32 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
       panel.appendChild(closeBtn);
       document.body.appendChild(panel);
 
-      // loga QUALQUER toque na tela (não só no balão) com a coordenada bruta
-      // do evento — se o toque visualmente "no balão" gerar uma coordenada
-      // fora do bubble rect acima, é a prova direta de que o toque real não
-      // bate com onde o CSS acha que o balão está (bug de contentInset).
-      // capture:true roda ANTES de qualquer outro handler (inclusive o
-      // onclick inline do balão), então não interfere no comportamento real
-      // que está sendo testado.
+      // touchstart (mais baixo nível que click — dispara sempre que o dedo
+      // encosta na tela, mesmo que aquele toque nunca vire um evento
+      // "click") em cima de CADA toque, não só os que caem no balão.
+      // capture:true roda antes de qualquer outro handler, sem interferir
+      // no comportamento real sendo testado.
       let tapCount = 0;
-      document.addEventListener('click', (ev) => {
+      document.addEventListener('touchstart', (ev) => {
         tapCount++;
+        const t = ev.touches[0];
+        const x = t ? t.clientX : NaN;
+        const y = t ? t.clientY : NaN;
+        const hit = document.elementFromPoint(x, y);
+        const label = (hit && (hit.id || hit.className || hit.tagName)) || 'n/a';
+        const insideBubbleRect = rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        const entry = document.createElement('div');
+        entry.textContent = `toque #${tapCount}: x=${x.toFixed(0)} y=${y.toFixed(0)} elementFromPoint=${label} ` + (insideBubbleRect ? '(dentro do rect do balão)' : '(FORA do rect do balão)');
+        panel.insertBefore(entry, closeBtn);
+      }, { capture: true, passive: true });
+      // click também, só pra comparar se aquele toque específico chegou a
+      // virar um clique de verdade (e em cima de qual elemento)
+      document.addEventListener('click', (ev) => {
+        const entry = document.createElement('div');
         const t = ev.target;
         const label = (t && (t.id || t.className || t.tagName)) || 'n/a';
-        const insideBubbleRect = rect && ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
-        const entry = document.createElement('div');
-        entry.textContent = `toque #${tapCount}: x=${ev.clientX} y=${ev.clientY} alvo=${label} ` + (insideBubbleRect ? '(DENTRO do rect do balão)' : '(FORA do rect do balão)');
+        entry.textContent = `  -> virou CLICK em cima de: ${label}`;
+        entry.style.color = '#7fd';
         panel.insertBefore(entry, closeBtn);
       }, { capture: true });
 
@@ -527,5 +577,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
         document.body.appendChild(panel);
       } catch (e2) { /* nada mais a fazer */ }
     }
-  }, 1500); // dá tempo do balão aparecer (refreshDmChatBubble só roda depois do menu carregar)
+  };
+  setTimeout(() => waitForBubbleThenDiagnose(25), 1000); // 1s inicial + até 25x200ms (5s) esperando o balão ficar visível
 }
