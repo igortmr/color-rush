@@ -277,24 +277,33 @@ const sfx = {
 // reproduzir um replay, sem esperar os sons ganharem seu próprio módulo
 // (fase futura)
 window.sfx = sfx;
-// tick de confirmação em QUALQUER <button> clicado fora de uma partida —
-// menus, telas, modais etc. Delegado num listener só no document (em vez de
-// um em cada botão) porque cobre também os que nascem depois via JS
-// (ranking, chat etc.) sem precisar lembrar de religar em cada lugar novo.
+// tick de confirmação em QUALQUER <button> (ou .mode-card — os cards de
+// modo na tela inicial são <div onclick>, não <button>, mas também "iniciam
+// uma ação" igual um botão) clicado fora de uma partida — menus, telas,
+// modais etc. Delegado num listener só no document (em vez de um em cada
+// botão) porque cobre também os que nascem depois via JS (ranking, chat
+// etc.) sem precisar lembrar de religar em cada lugar novo. Fase de CAPTURA
+// (3º argumento "true"), não a de bolha default: vários cliques do app
+// chamam event.stopPropagation() pra não disparar o onclick de um ancestral
+// (ex.: o "❓ Como jogar" dentro de um .mode-card, pra não also iniciar a
+// partida do card) — isso corta a propagação ANTES de chegar num listener
+// de bolha no document, mas um listener de CAPTURA roda antes disso (a
+// captura desce da raiz até o alvo, de fora pra dentro, antes da fase de
+// bolha nem começar), então continua vendo o clique mesmo assim.
 // Não entra durante uma partida: os quadrados do tabuleiro são <div>, não
-// <button> (ver newRound em game-core.js), então closest('button') já não
-// bate neles sozinho — o "if (playing) return" é só reforço pro raro caso de
-// algum <button> real aparecer por cima do tabuleiro no meio da rodada; sem
-// isso ia soar duplicado/errado em cima do som de acerto/erro que o próprio
-// clique no quadrado já tem (ver handleClick). "playing" é um live binding
-// de módulo ES (import de cima), por isso reflete o valor atual sem precisar
-// reimportar a cada clique.
+// <button>/.mode-card (ver newRound em game-core.js), então o closest()
+// abaixo já não bate neles sozinho — o "if (playing) return" é só reforço
+// pro raro caso de algum <button> real aparecer por cima do tabuleiro no
+// meio da rodada; sem isso ia soar duplicado/errado em cima do som de
+// acerto/erro que o próprio clique no quadrado já tem (ver handleClick).
+// "playing" é um live binding de módulo ES (import de cima), por isso
+// reflete o valor atual sem precisar reimportar a cada clique.
 document.addEventListener('click', (e) => {
   if (playing) return;
-  const btn = e.target.closest('button');
-  if (!btn || btn.disabled) return;
+  const el = e.target.closest('button, .mode-card');
+  if (!el || el.disabled) return;
   sfx.tick();
-});
+}, true);
 window.toggleMute = () => {
   setMuted(!isMuted());
   $('mute-btn').classList.toggle('on', !isMuted());
