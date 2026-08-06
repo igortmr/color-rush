@@ -918,7 +918,14 @@
 
   /* pigmentos — moeda do desafio diário: uma gota com um gradiente das cores
      do jogo, lembrando "pigmento" se misturando */
-  .pigment-icon { display: inline-block; vertical-align: -4px; }
+  /* nudge pra cima (não pra baixo, como o vertical-align:-4px antigo fazia) --
+     dígitos não têm descendente, então o centro óptico do texto fica ACIMA
+     do centro geométrico da linha; o ícone (SVG com bounding box cheio) fica
+     centralizado no geométrico, sobrando mais baixo que o texto do lado.
+     transform (não vertical-align) porque isso precisa valer tanto em texto
+     normal quanto dentro de containers flex (ex.: badge de saldo no menu),
+     onde vertical-align simplesmente não tem efeito nenhum. */
+  .pigment-icon { display: inline-block; transform: translateY(-2px); }
   .pigment-word { color: var(--neon-yellow); font-weight: 700; }
 
   .daily-inbox-msg { background: #0a0e1e; border: 1px solid rgba(255,233,60,0.3); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; text-align: left; }

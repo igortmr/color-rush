@@ -147,7 +147,7 @@ window.showShop = () => {
 };
 
 function renderShop({ keepScroll = false } = {}) {
-  $('shop-balance-icon').innerHTML = pigmentIconSvg(12);
+  $('shop-balance-icon').innerHTML = pigmentIconSvg(26);
   $('shop-balance-num').textContent = state.myData.pigmentos || 0;
   const owned = new Set(state.myData.ownedItems || []);
   const equipped = state.myData.equipped || {};
