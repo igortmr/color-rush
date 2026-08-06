@@ -128,6 +128,7 @@ const sfx = {
   pvpLose() { [300, 240, 190, 140].forEach((f, i) => tone(f, 0.22, 'sawtooth', 0.12, i * 0.14)); }, // tom descendente de derrota
   pvpDraw() { tone(440, 0.18, 'triangle', 0.12); tone(440, 0.18, 'triangle', 0.12, 0.22); }, // dois bipes iguais = empate
   countdown(isGo) { isGo ? tone(880, 0.2, 'square', 0.16) : tone(660, 0.12, 'square', 0.14); }, // bipe da contagem 3-2-1 (mais agudo/comprido no "Vai!")
+  purchase() { [659, 880, 1108].forEach((f, i) => tone(f, 0.13, 'sine', 0.13, i * 0.07)); tone(1568, 0.22, 'sine', 0.14, 0.22); }, // "cha-ching" da compra na loja de cosméticos
 };
 // exposta em window pra js/replay.js poder tocar o som de acerto simulado ao
 // reproduzir um replay, sem esperar os sons ganharem seu próprio módulo

@@ -229,8 +229,8 @@
       <button class="link" id="user-label" onclick="showProfile()" style="text-decoration:none;"></button>
       <span class="notif-dot" id="user-label-badge" style="display:none;"></span>
     </span>
-    <span class="user-pigmentos" id="user-pigmentos-bar" style="display:none; align-items:center; gap:3px; font-weight:700;">
-      <span id="user-pigmentos-num">0</span><span id="user-pigmentos-icon"></span>
+    <span class="user-pigmentos" id="user-pigmentos-bar" style="display:none; align-items:center; gap:3px; margin-left:auto; margin-right:10px; padding:3px 8px; background:rgba(255,233,60,0.08); border:1px solid rgba(255,233,60,0.25); border-radius:10px; font-size:0.72rem; font-weight:700; white-space:nowrap;">
+      <span style="color:#6b76a8; font-weight:600;">Saldo:</span><span id="user-pigmentos-num">0</span><span id="user-pigmentos-icon"></span>
     </span>
     <span>
       <button class="inbox-icon-btn" id="inbox-btn" onclick="showInbox()" aria-label="Caixa de entrada" title="Caixa de entrada" style="display:none;">
@@ -546,6 +546,21 @@
     </div>
     <button class="secondary" onclick="closeBuyShopModal()">Cancelar</button>
     <button onclick="confirmBuyShopItem()">Confirmar compra</button>
+  </div>
+</div>
+
+<!-- confirmação visual de "comprei mesmo" depois que o servidor aceita a
+     compra (ver window.buyShopItemUi em js/shop.js) — junto com o som
+     sfx.purchase(), fecha o loop de feedback que antes só trocava o botão
+     silenciosamente pra "EQUIPADO" -->
+<div class="modal-overlay" id="buy-shop-success-modal" style="display:none;" onclick="if(event.target===this) closeBuyShopSuccessModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-green); text-shadow:0 0 10px rgba(33,230,161,0.5);">✅ Compra concluída!</h1>
+    <div class="modal-card-body">
+      <p style="font-weight:700; font-size:1.05rem;" id="buy-shop-success-modal-item"></p>
+      <p class="muted">Item adquirido com sucesso.</p>
+    </div>
+    <button onclick="closeBuyShopSuccessModal()">OK</button>
   </div>
 </div>
 

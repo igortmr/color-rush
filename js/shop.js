@@ -134,7 +134,7 @@ export function renderUserPigmentos() {
   }
   el.style.display = 'inline-flex';
   $('user-pigmentos-num').textContent = state.myData.pigmentos || 0;
-  $('user-pigmentos-icon').innerHTML = pigmentIconSvg(16);
+  $('user-pigmentos-icon').innerHTML = pigmentIconSvg(12);
 }
 
 window.showShop = () => {
@@ -339,6 +339,9 @@ window.closeBuyShopModal = () => {
 window.closeNotEnoughPigmentosModal = () => {
   $('not-enough-pigmentos-modal').style.display = 'none';
 };
+window.closeBuyShopSuccessModal = () => {
+  $('buy-shop-success-modal').style.display = 'none';
+};
 // fecha a popup e leva direto pro desafio diário — dailyCardClick já cuida
 // de decidir a tela certa (intro, bloqueado por já ter usado as tentativas
 // de hoje, etc.), mesma function usada pelo card do menu
@@ -360,9 +363,14 @@ window.buyShopItemUi = async (itemId) => {
     state.myData.ownedItems = [...(state.myData.ownedItems || []), itemId];
     renderMenuPigmentosBar();
     renderUserPigmentos();
+    // feedback de "comprei mesmo" — som + popup, só na compra em si (não a
+    // cada troca de equipado, ver equipShopItem logo abaixo)
+    const item = SHOP_ITEMS_BY_ID[itemId];
+    window.sfx?.purchase();
+    $('buy-shop-success-modal-item').textContent = item ? `${item.icon} ${item.name}` : '';
+    $('buy-shop-success-modal').style.display = 'flex';
     // já equipa na hora — comprou, é pra usar, não precisa clicar em "USAR"
     // logo depois (equipShopItem já cuida do próprio renderShop)
-    const item = SHOP_ITEMS_BY_ID[itemId];
     if (item) await equipShopItem(item.slot, itemId);
     else renderShop({ keepScroll: true });
   } catch (e) {
