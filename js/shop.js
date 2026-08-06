@@ -45,9 +45,11 @@ export const SHOP_ITEMS = [
   // que já existem no catálogo sem estar em VISIBLE_SHOP_SLOTS) só invisíveis
   // fora do teste. Servem pra decidir quais valem a pena promover pra
   // produção antes de gastar CSS em style.css também.
-  { id: 'row_unicorn3',   slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio (floresta)', desc: 'Unicórnio de pé numa floresta rosa nas montanhas.', testOnly: true },
-  { id: 'row_forest2',    slot: 'rowTheme', price: 5000, icon: '🌳', name: 'Linha: Floresta Mística', desc: 'Floresta encantada com lanterna, vagalumes e cachoeira.', testOnly: true },
-  { id: 'row_yinyang',    slot: 'rowTheme', price: 5000, icon: '☯️', name: 'Linha: Yin Yang',        desc: 'Símbolo do yin yang com fumaça luminosa.', testOnly: true },
+  // preço 3000 (não 5000) nessas três -- sem brilho/animação extra, mesma
+  // faixa de preço das outras "premium sem animação" tipo Listras Douradas.
+  { id: 'row_unicorn3',   slot: 'rowTheme', price: 3000, icon: '🦄', name: 'Linha: Unicórnio',        desc: 'Unicórnio de pé numa floresta rosa nas montanhas.', testOnly: true },
+  { id: 'row_forest2',    slot: 'rowTheme', price: 3000, icon: '🌳', name: 'Linha: Floresta Mística', desc: 'Floresta encantada com lanterna, vagalumes e cachoeira.', testOnly: true },
+  { id: 'row_yinyang',    slot: 'rowTheme', price: 3000, icon: '☯️', name: 'Linha: Yin Yang',        desc: 'Símbolo do yin yang com fumaça luminosa.', testOnly: true },
   { id: 'row_meteor',     slot: 'rowTheme', price: 5000, icon: '☄️', name: 'Linha: Chuva de Meteoros', desc: 'Meteoros em chamas cruzando o espaço.', testOnly: true },
   { id: 'row_dragon',     slot: 'rowTheme', price: 5000, icon: '🐉', name: 'Linha: Dragão',          desc: 'Dragão verde flamejante enrolado na linha.', testOnly: true },
   { id: 'row_cyberpunk',  slot: 'rowTheme', price: 5000, icon: '🌆', name: 'Linha: Cyberpunk',       desc: 'Cidade neon estilo cyberpunk, rosa e azul.', testOnly: true },
@@ -247,16 +249,16 @@ function shopItemPreview(item) {
     // seletor CSS "tbody tr.row-theme-x" usado na tabela de ranking de verdade
     const mini = document.createElement('table');
     mini.style.cssText = 'width:100%; border-collapse:collapse; margin-top:2px;';
+    // mesmo colgroup do #ranking-table-card de verdade (index.html/
+    // teste.html) -- a tabela é "table-layout:fixed" (regra global) e, sem
+    // isso, o navegador divide as 3 colunas em terços iguais (sem nenhum
+    // <thead>/<col> aqui dizendo o contrário), deixando a coluna do "1"
+    // bem mais larga que os 32px de verdade e empurrando o "SeuNick" muito
+    // mais pra direita do que ele fica no ranking de verdade.
+    mini.insertAdjacentHTML('beforeend', '<colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>');
     const tbody = document.createElement('tbody');
     const tr = document.createElement('tr');
     applyRowTheme(tr, { equipped: { rowTheme: item.id } });
-    // classes "pos"/"nick-cell"/"pts" sem padding inline por cima -- antes
-    // tinha padding inline (diferente do valor real) e a célula do nick nem
-    // usava a classe "nick-cell" (que no ranking de verdade tem só 2px de
-    // padding-left, bem mais colado que o padrão de 8px), então a prévia
-    // ficava com "1"/"SeuNick" mais deslocados pra direita do que ficam de
-    // verdade no ranking. Herdando o CSS de lá direto, sem inline, some essa
-    // diferença.
     tr.innerHTML = '<td class="pos">1</td><td class="nick-cell" style="font-weight:700;">SeuNick</td><td class="pts">1234</td>';
     tbody.appendChild(tr);
     mini.appendChild(tbody);
