@@ -445,6 +445,17 @@ window.stopDmListeners = () => {
 // gate de "load" (não confiável, ver 3b46745), protegido por try/catch pra
 // nunca quebrar o resto do app. Remover assim que o real motivo for
 // confirmado (ver js/dms.js, procurar por "DIAGNÓSTICO TEMPORÁRIO").
+//
+// V2 (2026-08-06, depois do 1º teste real no device): a 1ª versão já
+// confirmou o essencial — elementFromPoint no centro do próprio rect do
+// balão devolve <html>, não o balão — mas tinha um bug: o painel se fechava
+// sozinho em QUALQUER toque fora dele, inclusive no balão, apagando a prova
+// do clique antes de dar tempo de ler. Removido o fechar-automático (agora
+// só fecha com o botão "✕ fechar" dentro do painel) e adicionado um log de
+// coordenada bruta de QUALQUER toque na tela (não só no balão), pra
+// confirmar se o toque real cai dentro do rect do balão ou não — isso
+// distingue de vez um bug de coordenada nativa (contentInset) de um bug só
+// no elementFromPoint em si.
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
   setTimeout(() => {
     try {
@@ -458,47 +469,54 @@ if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.is
       const CapApp = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
 
       const lines = [
-        'DIAGNÓSTICO balãozinho de DM',
+        'DIAGNÓSTICO balãozinho de DM v2',
         'html classes: ' + document.documentElement.className,
         'Capacitor.getPlatform: ' + (window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'n/a'),
         'bubble display: ' + (bubble ? getComputedStyle(bubble).display : 'ELEMENTO NÃO ENCONTRADO'),
         'bubble rect: ' + (rect ? `top=${rect.top.toFixed(1)} left=${rect.left.toFixed(1)} w=${rect.width.toFixed(1)} h=${rect.height.toFixed(1)}` : 'n/a'),
-        'elementFromPoint no centro do balão: ' + (hit ? (hit.id || hit.className || hit.tagName) : 'n/a') + (hit === bubble ? '  <-- BATE com o balão (ok)' : '  <-- NÃO é o balão (isso explicaria o clique não funcionar)'),
-        'popup display (antes de clicar): ' + (popup ? getComputedStyle(popup).display : 'ELEMENTO NÃO ENCONTRADO'),
+        'elementFromPoint no centro do balão: ' + (hit ? (hit.id || hit.className || hit.tagName) : 'n/a') + (hit === bubble ? '  <-- BATE com o balão (ok)' : '  <-- NÃO é o balão'),
+        'popup display (antes de tocar): ' + (popup ? getComputedStyle(popup).display : 'ELEMENTO NÃO ENCONTRADO'),
         'window.innerWidth/innerHeight: ' + window.innerWidth + ' / ' + window.innerHeight,
         'visualViewport: ' + (vv ? `w=${vv.width} h=${vv.height} offsetTop=${vv.offsetTop} scale=${vv.scale}` : 'indisponível'),
-        '(toque no balão de chat agora — se o clique for detectado, uma linha nova aparece aqui embaixo)',
+        '',
+        '>>> AGORA TOQUE ONDE O BALÃO APARECE NA TELA (embaixo à direita) <<<',
+        '(cada toque na tela vira uma linha aqui embaixo, mesmo que erre o balão)',
       ];
 
       const panel = document.createElement('div');
       panel.id = 'debug-dm-panel';
-      panel.style.cssText = 'position:fixed; left:12px; right:12px; top:12px; z-index:99999; background:rgba(0,0,0,0.92); color:#0f0; font-family:monospace; font-size:11px; line-height:1.5; padding:14px; border-radius:10px; border:2px solid #0f0; white-space:pre-wrap; word-break:break-all; max-height:70vh; overflow:auto;';
+      panel.style.cssText = 'position:fixed; left:12px; right:12px; top:12px; z-index:99999; background:rgba(0,0,0,0.92); color:#0f0; font-family:monospace; font-size:11px; line-height:1.5; padding:14px; border-radius:10px; border:2px solid #0f0; white-space:pre-wrap; word-break:break-all; max-height:60vh; overflow:auto;';
       panel.textContent = lines.join('\n');
+      const closeBtn = document.createElement('div');
+      closeBtn.textContent = '[ ✕ fechar painel ]';
+      closeBtn.style.cssText = 'margin-top:10px; text-align:center; color:#fff; text-decoration:underline;';
+      closeBtn.addEventListener('click', (ev) => { ev.stopPropagation(); panel.remove(); }, { capture: true });
+      panel.appendChild(closeBtn);
       document.body.appendChild(panel);
 
-      // clique de verdade no balão real (capture:true — roda ANTES do
-      // onclick="toggleDmChatPopup()" inline, então aparece mesmo se esse
-      // handler falhar silenciosamente por algum motivo)
-      if (bubble) {
-        bubble.addEventListener('click', () => {
-          const popupNow = $('dm-chat-popup');
-          panel.textContent += '\n\nCLIQUE DETECTADO no balão às ' + new Date().toLocaleTimeString() +
-            '\npopup display logo depois: ' + (popupNow ? getComputedStyle(popupNow).display : 'n/a') +
-            '\npopup rect: ' + (popupNow ? JSON.stringify(popupNow.getBoundingClientRect()) : 'n/a');
-        }, { capture: true });
-      }
-
-      // toque em qualquer lugar FORA do painel esconde ele, pra não
-      // atrapalhar o teste de verdade do balão (um toque dentro do painel
-      // não faz nada, só pra poder ler com calma sem fechar sem querer)
+      // loga QUALQUER toque na tela (não só no balão) com a coordenada bruta
+      // do evento — se o toque visualmente "no balão" gerar uma coordenada
+      // fora do bubble rect acima, é a prova direta de que o toque real não
+      // bate com onde o CSS acha que o balão está (bug de contentInset).
+      // capture:true roda ANTES de qualquer outro handler (inclusive o
+      // onclick inline do balão), então não interfere no comportamento real
+      // que está sendo testado.
+      let tapCount = 0;
       document.addEventListener('click', (ev) => {
-        if (!panel.isConnected || panel.contains(ev.target)) return;
-        panel.remove();
-      }, { capture: true, once: true });
+        tapCount++;
+        const t = ev.target;
+        const label = (t && (t.id || t.className || t.tagName)) || 'n/a';
+        const insideBubbleRect = rect && ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
+        const entry = document.createElement('div');
+        entry.textContent = `toque #${tapCount}: x=${ev.clientX} y=${ev.clientY} alvo=${label} ` + (insideBubbleRect ? '(DENTRO do rect do balão)' : '(FORA do rect do balão)');
+        panel.insertBefore(entry, closeBtn);
+      }, { capture: true });
 
       if (CapApp && CapApp.getInfo) {
         CapApp.getInfo().then(info => {
-          panel.textContent = 'App.getInfo: version=' + info.version + ' build=' + info.build + '\n\n' + panel.textContent;
+          const infoLine = document.createElement('div');
+          infoLine.textContent = 'App.getInfo: version=' + info.version + ' build=' + info.build;
+          panel.insertBefore(infoLine, panel.firstChild);
         }).catch(() => {});
       }
     } catch (e) {
