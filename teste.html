@@ -439,7 +439,7 @@
     <div class="record-line" id="daily-result-xp" style="display:none; color:var(--neon-green);"></div>
     <div class="muted" id="daily-result-attempts"></div>
     <div class="btn-row">
-      <button id="daily-result-again-btn" onclick="startDailyChallenge()" data-i18n="btn_play_again">JOGAR DE NOVO</button>
+      <button id="daily-result-again-btn" onclick="withBtnLoading(this, () => startDailyChallenge())" data-i18n="btn_play_again">JOGAR DE NOVO</button>
       <button class="secondary" onclick="showRanking('daily')" data-i18n="btn_view_ranking_short">🏆 VER RANKING</button>
     </div>
   </div>
@@ -460,7 +460,7 @@
       <button class="pill-btn" onclick="closeInbox()" data-i18n="btn_close">FECHAR</button>
     </div>
     <div class="modal-card-body" id="inbox-list"></div>
-    <button class="secondary" id="inbox-claim-all-btn" style="display:none;" onclick="claimAllDailyRewards()" data-i18n="btn_claim_all">💰 RESGATAR TODAS</button>
+    <button class="secondary" id="inbox-claim-all-btn" style="display:none;" onclick="withBtnLoading(this, () => claimAllDailyRewards())" data-i18n="btn_claim_all">💰 RESGATAR TODAS</button>
     <div class="muted" id="inbox-status"></div>
   </div>
 </div>
@@ -798,7 +798,7 @@
     </button>
     <span class="muted" id="hide-online-label"></span>
   </div>
-  <button class="secondary" id="profile-invite-btn" onclick="inviteFriends('profile-invite-status')" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
+  <button class="secondary" id="profile-invite-btn" onclick="withBtnLoading(this, () => inviteFriends('profile-invite-status'))" style="display:none;" data-i18n="btn_invite_profile">➕ ADICIONAR AMIGOS</button>
   <div class="muted" id="profile-invite-status" style="display:none;"></div>
   <!-- código de indicação da própria pessoa, pra passar direto (de viva voz,
        WhatsApp, etc.) sem precisar mandar o link inteiro — ver ref-code-input
@@ -827,7 +827,7 @@
     <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div class="muted" id="friends-status"></div>
-  <button class="secondary" style="width:100%;" onclick="inviteFriends('friends-invite-status')" data-i18n="btn_invite">➕ ADICIONAR AMIGO</button>
+  <button class="secondary" style="width:100%;" onclick="withBtnLoading(this, () => inviteFriends('friends-invite-status'))" data-i18n="btn_invite">➕ ADICIONAR AMIGO</button>
   <div class="muted" id="friends-invite-status" style="display:none;"></div>
   <!-- mesma ideia do profile-refcode-row no perfil — código pra passar direto
        pra um amigo colar na tela de nick dele -->

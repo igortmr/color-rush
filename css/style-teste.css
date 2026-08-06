@@ -234,6 +234,26 @@
      trava clique e some com o efeito de hover pra ficar claro que tá parado */
   button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
   button:disabled:hover { transform: none; box-shadow: 0 3px 0 rgba(255,255,255,0.12), 0 4px 8px rgba(0,0,0,0.4); }
+  /* spinner de "carregando" que substitui o conteúdo do botão enquanto uma
+     ação assíncrona está em andamento (ver withBtnLoading em js/dom.js) —
+     sem isso, em conexão lenta o botão fica parado sem nenhum feedback.
+     currentColor pra herdar a cor do texto de cada tipo de botão (branco no
+     primário/secundário, #333 no Google, etc.) sem precisar de uma regra por
+     variante. Sobrescreve a opacidade/grayscale de button:disabled (classe
+     dedicada, não :has(), pra não depender de suporte mais recente do
+     WebKit) — senão o spinner ficaria apagado demais pra servir de feedback. */
+  button:disabled.btn-loading { opacity: 0.85; filter: none; }
+  .btn-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btnSpin 0.6s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes btnSpin { to { transform: rotate(360deg); } }
   button.secondary {
     background: #0a0e1e;
     border: 1.5px solid var(--neon-purple);

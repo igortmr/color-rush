@@ -1,6 +1,6 @@
 import { doc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { db, callable } from './firebase.js';
-import { $ } from './dom.js';
+import { $, withBtnLoading } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { show, resetScroll } from './nav.js';
@@ -160,7 +160,7 @@ function friendActionNode(rel, theirUid, theirNick) {
     btn.className = 'secondary';
     btn.textContent = T[state.lang].btn_remove_friend_profile;
     btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
-    btn.onclick = () => uiRemoveFriend(theirUid);
+    btn.onclick = () => withBtnLoading(btn, () => uiRemoveFriend(theirUid));
     wrap.appendChild(btn);
     return wrap;
   }
@@ -175,7 +175,7 @@ function friendActionNode(rel, theirUid, theirNick) {
     btn.className = 'secondary';
     btn.textContent = T[state.lang].btn_cancel_request;
     btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
-    btn.onclick = () => uiCancelFriendRequest(theirUid);
+    btn.onclick = () => withBtnLoading(btn, () => uiCancelFriendRequest(theirUid));
     wrap.appendChild(btn);
     return wrap;
   }
@@ -186,13 +186,13 @@ function friendActionNode(rel, theirUid, theirNick) {
     const acceptBtn = document.createElement('button');
     acceptBtn.textContent = T[state.lang].btn_accept;
     acceptBtn.style.cssText = 'flex:1;';
-    acceptBtn.onclick = () => uiRespondFriendRequest(theirUid, true);
+    acceptBtn.onclick = () => withBtnLoading(acceptBtn, () => uiRespondFriendRequest(theirUid, true));
     wrap.appendChild(acceptBtn);
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
     declineBtn.textContent = T[state.lang].btn_decline;
     declineBtn.style.cssText = 'flex:1;';
-    declineBtn.onclick = () => uiRespondFriendRequest(theirUid, false);
+    declineBtn.onclick = () => withBtnLoading(declineBtn, () => uiRespondFriendRequest(theirUid, false));
     wrap.appendChild(declineBtn);
     return wrap;
   }
@@ -201,7 +201,7 @@ function friendActionNode(rel, theirUid, theirNick) {
   const btn = document.createElement('button');
   btn.textContent = T[state.lang].btn_add_friend;
   btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
-  btn.onclick = () => uiSendFriendRequest(theirUid);
+  btn.onclick = () => withBtnLoading(btn, () => uiSendFriendRequest(theirUid));
   wrap.appendChild(btn);
   return wrap;
 }
@@ -250,7 +250,7 @@ function friendRow(uid, nick, xp, isAdmin, guildTag, guildId, guildTagStyle) {
   btn.className = 'secondary';
   btn.textContent = T[state.lang].btn_remove_friend;
   btn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
-  btn.onclick = () => uiRemoveFriend(uid);
+  btn.onclick = () => withBtnLoading(btn, () => uiRemoveFriend(uid));
   actions.appendChild(btn);
 
   row.appendChild(actions);
@@ -276,21 +276,21 @@ function friendRequestRow(uid, nick, incoming) {
     const acceptBtn = document.createElement('button');
     acceptBtn.textContent = T[state.lang].btn_accept;
     acceptBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
-    acceptBtn.onclick = () => uiRespondFriendRequest(uid, true);
+    acceptBtn.onclick = () => withBtnLoading(acceptBtn, () => uiRespondFriendRequest(uid, true));
     actions.appendChild(acceptBtn);
 
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
     declineBtn.textContent = T[state.lang].btn_decline;
     declineBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
-    declineBtn.onclick = () => uiRespondFriendRequest(uid, false);
+    declineBtn.onclick = () => withBtnLoading(declineBtn, () => uiRespondFriendRequest(uid, false));
     actions.appendChild(declineBtn);
   } else {
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'secondary';
     cancelBtn.textContent = T[state.lang].btn_cancel_request;
     cancelBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
-    cancelBtn.onclick = () => uiCancelFriendRequest(uid);
+    cancelBtn.onclick = () => withBtnLoading(cancelBtn, () => uiCancelFriendRequest(uid));
     actions.appendChild(cancelBtn);
   }
 

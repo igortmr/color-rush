@@ -3,7 +3,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
 import { db, functions, callable } from './firebase.js';
-import { $ } from './dom.js';
+import { $, withBtnLoading } from './dom.js';
 import { state } from './state.js';
 import { show, resetScroll } from './nav.js';
 import { T, cName } from './i18n.js';
@@ -267,7 +267,7 @@ window.showDailyIntro = () => {
   $('daily-intro-best').textContent = dailyBestScore;
   renderDailyCardCountdown(); // atualiza o cronômetro na hora, sem esperar o próximo tique do segundo
   $('daily-intro-tut-btn').onclick = () => window.startTutorial(dailyMode, { fromDaily: true });
-  $('daily-intro-start-btn').onclick = () => startDailyChallenge();
+  { const introStartBtn = $('daily-intro-start-btn'); introStartBtn.onclick = () => withBtnLoading(introStartBtn, () => startDailyChallenge()); }
   $('daily-countdown').style.display = 'none';
   $('daily-play').style.display = 'none';
   $('daily-result').style.display = 'none';
@@ -376,7 +376,7 @@ function renderInboxList(msgs) {
       // em resolveDailyChallenge), mas um admin_message pode ter um id fixo
       // que não é uma data (ex.: "admin_mosaic_bugfix"), então só o id serve
       // de referência confiável pro resgate
-      claimBtn.onclick = () => claimOneDailyReward(msg.id);
+      claimBtn.onclick = () => withBtnLoading(claimBtn, () => claimOneDailyReward(msg.id));
       claimRow.appendChild(claimBtn);
     }
 

@@ -2,7 +2,7 @@ import {
   doc, getDoc, collection, query, orderBy, limit, onSnapshot, getDocs
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { db, callable } from './firebase.js';
-import { $ } from './dom.js';
+import { $, withBtnLoading } from './dom.js';
 import { state } from './state.js';
 import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
@@ -358,8 +358,8 @@ async function renderGuildScreen() {
       <div class="card" style="text-align:center; border-color:var(--neon-yellow);">
         <p>${T[state.lang].guild_transfer_offer(g.name)}</p>
         <div class="btn-row" style="width:100%;">
-          <button style="flex:1;" onclick="respondGuildTransfer(true)">${T[state.lang].btn_accept}</button>
-          <button class="secondary" style="flex:1;" onclick="respondGuildTransfer(false)">${T[state.lang].btn_decline}</button>
+          <button style="flex:1;" onclick="withBtnLoading(this, () => respondGuildTransfer(true))">${T[state.lang].btn_accept}</button>
+          <button class="secondary" style="flex:1;" onclick="withBtnLoading(this, () => respondGuildTransfer(false))">${T[state.lang].btn_decline}</button>
         </div>
       </div>`);
   }
@@ -449,13 +449,13 @@ function nonMemberActionCard(g, myUid) {
     const acceptBtn = document.createElement('button');
     acceptBtn.style.flex = '1';
     acceptBtn.textContent = T[state.lang].btn_accept;
-    acceptBtn.onclick = () => respondGuildInvite(true);
+    acceptBtn.onclick = () => withBtnLoading(acceptBtn, () => respondGuildInvite(true));
     row.appendChild(acceptBtn);
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
     declineBtn.style.flex = '1';
     declineBtn.textContent = T[state.lang].btn_decline;
-    declineBtn.onclick = () => respondGuildInvite(false);
+    declineBtn.onclick = () => withBtnLoading(declineBtn, () => respondGuildInvite(false));
     row.appendChild(declineBtn);
     wrap.appendChild(row);
     return wrap;
@@ -466,7 +466,7 @@ function nonMemberActionCard(g, myUid) {
     const btn = document.createElement('button');
     btn.className = 'secondary';
     btn.textContent = T[state.lang].btn_cancel_request;
-    btn.onclick = uiCancelGuildRequest;
+    btn.onclick = () => withBtnLoading(btn, uiCancelGuildRequest);
     wrap.appendChild(btn);
     return wrap;
   }
@@ -495,7 +495,7 @@ function nonMemberActionCard(g, myUid) {
   const btn = document.createElement('button');
   btn.textContent = T[state.lang].guild_btn_request_join;
   btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
-  btn.onclick = () => uiRequestJoinGuild(g.id);
+  btn.onclick = () => withBtnLoading(btn, () => uiRequestJoinGuild(g.id));
   wrap.appendChild(btn);
   return wrap;
 }
@@ -553,7 +553,7 @@ function memberRow(g, uid, data, myUid, isLeader, xpByUid) {
     leaveBtn.className = 'secondary';
     leaveBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     leaveBtn.textContent = T[state.lang].guild_btn_leave;
-    leaveBtn.onclick = uiLeaveGuild;
+    leaveBtn.onclick = () => withBtnLoading(leaveBtn, uiLeaveGuild);
     row.appendChild(leaveBtn);
   }
   return row;
@@ -583,13 +583,13 @@ function joinRequestsSection(xpByUid) {
     const acceptBtn = document.createElement('button');
     acceptBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     acceptBtn.textContent = T[state.lang].btn_accept;
-    acceptBtn.onclick = () => uiRespondGuildRequest(uid, true);
+    acceptBtn.onclick = () => withBtnLoading(acceptBtn, () => uiRespondGuildRequest(uid, true));
     actions.appendChild(acceptBtn);
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
     declineBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     declineBtn.textContent = T[state.lang].btn_decline;
-    declineBtn.onclick = () => uiRespondGuildRequest(uid, false);
+    declineBtn.onclick = () => withBtnLoading(declineBtn, () => uiRespondGuildRequest(uid, false));
     actions.appendChild(declineBtn);
     row.appendChild(actions);
     wrap.appendChild(row);
@@ -623,7 +623,7 @@ function invitesSection(xpByUid) {
     cancelBtn.className = 'secondary';
     cancelBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
     cancelBtn.textContent = T[state.lang].btn_cancel_request;
-    cancelBtn.onclick = () => uiCancelGuildInvite(uid);
+    cancelBtn.onclick = () => withBtnLoading(cancelBtn, () => uiCancelGuildInvite(uid));
     row.appendChild(cancelBtn);
     wrap.appendChild(row);
   });
