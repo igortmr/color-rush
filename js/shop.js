@@ -32,9 +32,9 @@ export const SHOP_ITEMS = [
   { id: 'row_pink',      slot: 'rowTheme',   price: 1000, icon: '🦩', name: 'Linha: Flamingo',                desc: 'Rosa choque na sua linha do ranking.' },
   { id: 'row_starfield', slot: 'rowTheme',   price: 3000, icon: '✨', name: 'Linha: Céu Estrelado',            desc: 'Fundo escuro cheio de estrelinhas cintilantes — anima sozinho.' },
   { id: 'row_holo',      slot: 'rowTheme',   price: 5000, icon: '🌈', name: 'Linha: RGB',                     desc: 'Degradê iridescente que muda de cor sozinho.' },
-  { id: 'row_stripes_gold', slot: 'rowTheme', price: 3000, icon: '🐝', name: 'Linha: Listras Douradas',        desc: 'Listras diagonais douradas e pretas, visual VIP.' },
+  { id: 'row_stripes_gold', slot: 'rowTheme', price: 2000, icon: '🐝', name: 'Linha: Listras Douradas',        desc: 'Listras diagonais douradas e pretas, visual VIP.' },
   { id: 'row_storm',     slot: 'rowTheme',   price: 5000, icon: '⚡', name: 'Linha: Tempestade',               desc: 'Raios brancos riscando um fundo escuro de tempestade — pisca de vez em quando.' },
-  { id: 'row_confetti_dots', slot: 'rowTheme', price: 3000, icon: '🎊', name: 'Linha: Confete',                desc: 'Bolinhas coloridas espalhadas, visual de festa.' },
+  { id: 'row_confetti_dots', slot: 'rowTheme', price: 2000, icon: '🎊', name: 'Linha: Confete',                desc: 'Bolinhas coloridas espalhadas, visual de festa.' },
   // linhas com arte de fundo de verdade (não gradiente simples) -- ficaram
   // "testOnly" um tempo (só apareciam em teste.html, gated por
   // window.IS_TESTE no filtro de renderShop) até decidir quais valiam a
@@ -50,6 +50,7 @@ export const SHOP_ITEMS = [
   { id: 'row_cyberpunk',  slot: 'rowTheme', price: 5000, icon: '🌆', name: 'Linha: Cyberpunk',       desc: 'Cidade neon estilo cyberpunk, rosa e azul.' },
   { id: 'row_cosmos',     slot: 'rowTheme', price: 5000, icon: '🌌', name: 'Linha: Cosmos',          desc: 'Galáxia espiral com planetas e nebulosas.' },
   { id: 'row_lava',       slot: 'rowTheme', price: 5000, icon: '🌋', name: 'Linha: Lava',            desc: 'Rachaduras de lava incandescente num fundo escuro.' },
+  { id: 'row_aurora',     slot: 'rowTheme', price: 3000, icon: '🌠', name: 'Linha: Aurora',          desc: 'Aurora boreal verde e violeta sobre um céu estrelado.' },
   { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
   { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
   { id: 'avatar_ghost',   slot: 'avatar', price: 110, icon: '👻', name: 'Avatar: Fantasma', desc: 'Um fantasma pra representar você no perfil e no duelo.' },

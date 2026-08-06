@@ -154,6 +154,7 @@ const ROW_THEME_CLASS = {
   row_cyberpunk: 'row-theme-cyberpunk',
   row_cosmos: 'row-theme-cosmos',
   row_lava: 'row-theme-lava',
+  row_aurora: 'row-theme-aurora',
 };
 const ROW_THEME_CLASSES = Object.values(ROW_THEME_CLASS);
 export function applyRowTheme(el, stats) {
