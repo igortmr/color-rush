@@ -12,20 +12,38 @@
     --bg-panel-2: #131a33;
   }
 
-  /* iOS faz "rubber-band bounce" ao arrastar além do topo/fim da página,
-     revelando o que tem por trás do conteúdo — como o fundo do tema é um
-     padrão quadriculado (não uma cor lisa), qualquer área revelada aí
-     sempre ia parecer um "corte" feio, mesmo com a cor certa por trás.
-     overscroll-behavior:none trava o scroll bem na borda do conteúdo, sem
-     nunca esticar/revelar nada. html{background} fica só de rede de
-     segurança pra WKWebViews antigas onde overscroll-behavior não pega. */
+  /* iOS faz "rubber-band bounce" ao arrastar além do topo/fim — e como o
+     fundo do tema é um padrão quadriculado (não uma cor lisa), deixar o
+     scroll da PÁGINA (documento/body) estourar sempre revelava um corte
+     feio atrás, não importa a cor usada ali (overscroll-behavior sozinho
+     não segura esse bounce no nível do documento em Safari/WKWebView —
+     limitação conhecida do WebKit, só funciona bem em elementos internos).
+     Fix de verdade: html/body PARAM de rolar (overflow:hidden, altura
+     travada); quem rola de fato é a div #scroll-area por dentro, com o
+     fundo quadriculado nela. Fundo é desenhado relativo à CAIXA do
+     elemento, não ao conteúdo — durante o bounce interno ele fica parado
+     no lugar (só o conteúdo desliza por cima), nunca revelando nada atrás. */
+  html, body {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+    height: 100dvh;
+    overflow: hidden;
+  }
   html {
     background: var(--bg-deep);
-    overscroll-behavior: none;
   }
   body {
-    overscroll-behavior: none;
     font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+    color: #eef1ff;
+    user-select: none;
+  }
+  #scroll-area {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     background:
       radial-gradient(ellipse 900px 500px at 15% -10%, rgba(177,77,255,0.25), transparent 60%),
       radial-gradient(ellipse 900px 500px at 100% 10%, rgba(45,214,255,0.18), transparent 55%),
@@ -33,20 +51,14 @@
       repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
       repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 26px),
       var(--bg-deep);
-    color: #eef1ff;
-    min-height: 100vh;
-    min-height: calc(var(--vh, 1vh) * 100);
-    min-height: 100dvh;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    user-select: none;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    overflow-x: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
-  body::-webkit-scrollbar { display: none; }
+  #scroll-area::-webkit-scrollbar { display: none; }
   /* Cada tela tinha seu próprio "overflow-y: auto" aninhado dentro de um
      flexbox centralizado — em alguns Chrome desktop (relato de mais de um
      usuário), isso travava: o navegador "esquecia" de reconhecer que dava

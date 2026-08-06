@@ -118,6 +118,11 @@
 
 <div class="version-tag" id="version-tag">carregando versão...</div>
 
+<!-- envolve todas as .screen (única coisa que realmente rola) — ver
+     comentário grande no CSS sobre por que html/body pararam de rolar. As
+     faixas/modais/chat-bubble acima e abaixo continuam fora daqui, fixos
+     de verdade (position:fixed), sem serem afetados pelo scroll interno. -->
+<div id="scroll-area">
 <!-- LOADING -->
 <div class="screen active" id="loading-screen"><h1>COLOR RUSH</h1><div class="loading-wrap"><div class="loading-squares" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p class="muted" data-i18n="loading_text">Carregando...</p></div></div>
 
@@ -938,6 +943,8 @@
     <button onclick="pvpBackToMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
 </div>
+
+</div><!-- fim de #scroll-area -->
 
 <!-- balãozinho de chat do clã (flutuante, tipo o chat do Messenger) — fora
      de qualquer .screen de propósito, pra continuar visível trocando de

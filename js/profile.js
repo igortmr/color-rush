@@ -244,9 +244,10 @@ window.setEquippedBadgeTier = async (key, tierIdx) => {
   // joga a página pro topo — é o certo ao ENTRAR na tela, mas aqui a pessoa já
   // está nela só trocando a medalha, então guarda a posição e restaura logo
   // depois, pra não pular a tela pra cima.
-  const scrollY = window.scrollY;
+  const scrollArea = $('scroll-area');
+  const scrollY = scrollArea ? scrollArea.scrollTop : 0;
   renderProfile(); // atualiza o chip/legenda na hora, antes mesmo do Firestore confirmar
-  window.scrollTo(0, scrollY);
+  if (scrollArea) scrollArea.scrollTop = scrollY;
   try {
     await setDoc(doc(db, 'scores', state.currentUser.uid), { equippedBadge: nextKey, equippedBadgeTier: nextTier, updatedAt: serverTimestamp() }, { merge: true });
   } catch (e) {

@@ -70,7 +70,8 @@ function updateAppStoreBadges() {
 window.dismissIosAppBanner = () => {
   const el = $('ios-app-banner');
   if (el) el.style.display = 'none';
-  document.body.style.paddingTop = ''; // volta pro padding normal (env(safe-area-inset-top)) do CSS
+  const scrollArea = $('scroll-area');
+  if (scrollArea) scrollArea.style.paddingTop = ''; // volta pro padding normal (env(safe-area-inset-top)) do CSS
   document.documentElement.style.setProperty('--ios-banner-offset', '0px'); // combo de idioma sobe de volta (ver .lang-switch no CSS)
   try { localStorage.setItem(IOS_APP_BANNER_DISMISSED_KEY, '1'); } catch {}
 };
@@ -97,7 +98,8 @@ window.dismissIosAppBanner = () => {
   // topo que já existia (env(safe-area-inset-top), notch etc.). O combo de
   // idioma (.lang-switch) usa a mesma var pra descer e não ficar por baixo.
   requestAnimationFrame(() => {
-    document.body.style.paddingTop = `calc(env(safe-area-inset-top) + ${el.offsetHeight}px)`;
+    const scrollArea = $('scroll-area');
+    if (scrollArea) scrollArea.style.paddingTop = `calc(env(safe-area-inset-top) + ${el.offsetHeight}px)`;
     document.documentElement.style.setProperty('--ios-banner-offset', `${el.offsetHeight}px`);
   });
 })();

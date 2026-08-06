@@ -135,5 +135,6 @@ export function resetScroll(screenId) {
   const el = $(screenId);
   if (!el) return;
   void el.offsetHeight; // força o navegador recalcular o layout
-  window.scrollTo(0, 0); // quem rola agora é a página inteira, não mais cada .screen por dentro
+  const scrollArea = $('scroll-area');
+  if (scrollArea) scrollArea.scrollTop = 0; // quem rola agora é #scroll-area, não mais o documento (ver comentário no CSS)
 }
