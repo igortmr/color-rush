@@ -30,6 +30,19 @@ const callSyncProgress = httpsCallable(functions, 'syncRoundProgress');
 
 function todayStr() { return new Date().toLocaleDateString('sv-SE'); } // YYYY-MM-DD local
 
+// uids sob investigação manual (ex.: suspeita de cliques automatizados,
+// ver análise de ritmo/tempo em functions/index.js) — enquanto um uid
+// estiver aqui, TODA partida dele salva replay, mesmo sem bater recorde
+// nem entrar na Batalha de Clã (ver os outros 2 motivos em
+// persistGameResult abaixo). Sem UI própria de propósito — é uma lista
+// manual pra investigação pontual, não uma feature de moderação; editar
+// aqui mesmo pra adicionar/tirar um uid. Pra assistir depois: pegar o
+// sessionId no Firestore (coleção "sessions", filtro por uid) e chamar
+// window.openReplay(sessionId) direto no console do navegador — não
+// precisa aparecer no ranking pra isso funcionar (openReplay só lê
+// replays/{sessionId}, nick/stats são só pra exibição no cabeçalho).
+const REPLAY_WATCHLIST_UIDS = ['P5tQCP4fo5dxDlz2kolUrAYEXls1'];
+
 // exportadas como bindings ao vivo (mesmo padrão de tutMode/tutStep em
 // tutorial.js e equippedSfx/etc em shop.js) — lidas por domínios que ainda
 // não são módulos próprios: mode/score no compartilhamento (share.js
@@ -716,13 +729,16 @@ async function persistGameResult(xpEarned = 0) {
       state.myData[mode + 'ReplaySessionId'] = sessionId;
     }
     // sobe o "filme" da partida (ver replayRounds/replayMouse lá em cima) —
-    // por recorde pessoal (isNewRecord) OU porque essa pontuação entrou no
-    // top-2 da Batalha de Clã (d.guildBattleReplaySave, ver submitGameResult),
-    // que pode acontecer sem bater recorde geral do jogador. Sem o segundo
-    // caso, uma pontuação de Batalha nunca teria replay pra "provar" o placar
-    // na popup de detalhe (ver js/guild-battle.js). Em segundo plano, não
-    // atrasa a tela de resultado.
-    if (d.isNewRecord || d.guildBattleReplaySave) {
+    // por recorde pessoal (isNewRecord), porque essa pontuação entrou no
+    // top-2 da Batalha de Clã (d.guildBattleReplaySave, ver submitGameResult,
+    // que pode acontecer sem bater recorde geral do jogador — sem esse
+    // caso, uma pontuação de Batalha nunca teria replay pra "provar" o
+    // placar na popup de detalhe, ver js/guild-battle.js), OU porque o uid
+    // está no REPLAY_WATCHLIST_UIDS (investigação manual, ver comentário
+    // lá em cima — salva TODA partida, recorde ou não). Em segundo plano,
+    // não atrasa a tela de resultado.
+    const onReplayWatchlist = state.currentUser && REPLAY_WATCHLIST_UIDS.includes(state.currentUser.uid);
+    if (d.isNewRecord || d.guildBattleReplaySave || onReplayWatchlist) {
       saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
     return d.guildBattleReplaySave === true;
