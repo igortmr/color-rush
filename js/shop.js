@@ -47,15 +47,13 @@ export const SHOP_ITEMS = [
   // que já existem no catálogo sem estar em VISIBLE_SHOP_SLOTS) só invisíveis
   // fora do teste. Servem pra decidir quais valem a pena promover pra
   // produção antes de gastar CSS em style.css também.
-  { id: 'row_unicorn',    slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio',       desc: 'Cenário mágico com unicórnio, castelo e arco-íris.', testOnly: true },
-  { id: 'row_forest_art', slot: 'rowTheme', price: 5000, icon: '🌳', name: 'Linha: Floresta Mística', desc: 'Floresta densa e enevoada, com brilhos entre as árvores.', testOnly: true },
+  { id: 'row_unicorn2',   slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio (rosa)', desc: 'Unicórnio num cenário rosa/roxo com lua crescente.', testOnly: true },
+  { id: 'row_unicorn3',   slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio (floresta)', desc: 'Unicórnio de pé numa floresta rosa nas montanhas.', testOnly: true },
+  { id: 'row_forest2',    slot: 'rowTheme', price: 5000, icon: '🌳', name: 'Linha: Floresta Mística', desc: 'Floresta encantada com lanterna, vagalumes e cachoeira.', testOnly: true },
   { id: 'row_yinyang',    slot: 'rowTheme', price: 5000, icon: '☯️', name: 'Linha: Yin Yang',        desc: 'Símbolo do yin yang com fumaça luminosa.', testOnly: true },
-  { id: 'row_duality',    slot: 'rowTheme', price: 5000, icon: '🌗', name: 'Linha: Dualidade',       desc: 'Degradê do preto ao branco, com um ponto de cada lado.', testOnly: true },
-  { id: 'row_diamond',    slot: 'rowTheme', price: 5000, icon: '💎', name: 'Linha: Diamante',        desc: 'Diamantes brilhando num fundo azul escuro.', testOnly: true },
   { id: 'row_meteor',     slot: 'rowTheme', price: 5000, icon: '☄️', name: 'Linha: Chuva de Meteoros', desc: 'Meteoros em chamas cruzando o espaço.', testOnly: true },
   { id: 'row_dragon',     slot: 'rowTheme', price: 5000, icon: '🐉', name: 'Linha: Dragão',          desc: 'Dragão verde flamejante enrolado na linha.', testOnly: true },
   { id: 'row_cyberpunk',  slot: 'rowTheme', price: 5000, icon: '🌆', name: 'Linha: Cyberpunk',       desc: 'Cidade neon estilo cyberpunk, rosa e azul.', testOnly: true },
-  { id: 'row_glacial',    slot: 'rowTheme', price: 5000, icon: '🧊', name: 'Linha: Glacial',         desc: 'Cristais de gelo e flocos de neve num azul profundo.', testOnly: true },
   { id: 'row_cosmos',     slot: 'rowTheme', price: 5000, icon: '🌌', name: 'Linha: Cosmos',          desc: 'Galáxia espiral com planetas e nebulosas.', testOnly: true },
   { id: 'row_lava',       slot: 'rowTheme', price: 5000, icon: '🌋', name: 'Linha: Lava',            desc: 'Rachaduras de lava incandescente num fundo escuro.', testOnly: true },
   { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },

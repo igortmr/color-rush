@@ -1261,10 +1261,11 @@
   /* brilho suave tipo cintilar de estrela/fada -- reaproveita o mesmo
      @keyframes rowStarTwinkle de row-theme-starfield ali em cima, só com
      duração própria pra cada uma não ficar toda sincronizada igual. */
-  tbody tr.row-theme-unicorn    { background-image: url('../img/row-themes/row-unicorn.jpg');    background-size: cover; background-position: center; animation: rowStarTwinkle 3.5s ease-in-out infinite; }
-  tbody tr.row-theme-forest-art { background-image: url('../img/row-themes/row-forest-art.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 4s ease-in-out infinite; }
-  tbody tr.row-theme-cosmos     { background-image: url('../img/row-themes/row-cosmos.jpg');     background-size: cover; background-position: center; animation: rowStarTwinkle 3s ease-in-out infinite; }
-  tbody tr.row-theme-meteor     { background-image: url('../img/row-themes/row-meteor.jpg');     background-size: cover; background-position: center; animation: rowStarTwinkle 2.2s ease-in-out infinite; }
+  tbody tr.row-theme-unicorn2 { background-image: url('../img/row-themes/row-unicorn2.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 3.5s ease-in-out infinite; }
+  tbody tr.row-theme-unicorn3 { background-image: url('../img/row-themes/row-unicorn3.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 3.8s ease-in-out infinite; }
+  tbody tr.row-theme-forest2  { background-image: url('../img/row-themes/row-forest2.jpg');  background-size: cover; background-position: center; animation: rowStarTwinkle 4s ease-in-out infinite; }
+  tbody tr.row-theme-cosmos   { background-image: url('../img/row-themes/row-cosmos.jpg');   background-size: cover; background-position: center; animation: rowStarTwinkle 3s ease-in-out infinite; }
+  tbody tr.row-theme-meteor   { background-image: url('../img/row-themes/row-meteor.jpg');   background-size: cover; background-position: center; animation: rowStarTwinkle 2.2s ease-in-out infinite; }
 
   /* chama tremulando -- variação irregular de brilho (não suave feito o
      twinkle acima), pra imitar fogo de verdade em vez de estrela piscando. */
@@ -1298,28 +1299,6 @@
     93%, 96% { filter: brightness(1); }
     97% { filter: brightness(0.75); }
     98% { filter: brightness(1); }
-  }
-
-  /* reflexo passando por cima da imagem -- uma faixa clara diagonal que
-     desliza da esquerda pra direita e volta, tipo luz batendo em
-     diamante/gelo. Duas camadas de fundo: o brilho (gradiente, na frente,
-     é o único que se move) e a foto por baixo (parada, sempre centralizada). */
-  tbody tr.row-theme-diamond {
-    background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.6) 48%, rgba(255,255,255,0.6) 52%, transparent 70%), url('../img/row-themes/row-diamond.jpg');
-    background-size: 220% 100%, cover;
-    background-repeat: no-repeat, no-repeat;
-    animation: rowShineSweep 3.5s ease-in-out infinite;
-  }
-  tbody tr.row-theme-glacial {
-    background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.5) 48%, rgba(255,255,255,0.5) 52%, transparent 70%), url('../img/row-themes/row-glacial.jpg');
-    background-size: 220% 100%, cover;
-    background-repeat: no-repeat, no-repeat;
-    animation: rowShineSweep 5s ease-in-out infinite;
-  }
-  @keyframes rowShineSweep {
-    0%   { background-position: -60% 0%, center; }
-    50%  { background-position: 160% 0%, center; }
-    100% { background-position: -60% 0%, center; }
   }
 
   tbody tr.row-theme-confetti-dots {
