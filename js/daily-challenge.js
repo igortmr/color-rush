@@ -343,12 +343,21 @@ function renderInboxList(msgs) {
       bodyLine.textContent = msg.body || '';
       box.appendChild(bodyLine);
     } else {
+      // mesmo formato título (negrito) + corpo do admin_message acima, só que
+      // com texto fixo em vez de vir do documento -- título sempre
+      // "Recompensa do desafio diário", corpo com o parabéns/posição/data/
+      // pontuação de sempre
       const pos = msg.position;
       const posLabel = pos === 1 ? T[state.lang].daily_pos_1 : pos === 2 ? T[state.lang].daily_pos_2 : pos === 3 ? T[state.lang].daily_pos_3 : T[state.lang].daily_pos_n(pos);
-      const posLine = document.createElement('div');
-      posLine.className = 'pos-line';
-      posLine.textContent = T[state.lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
-      box.appendChild(posLine);
+      const titleLine = document.createElement('div');
+      titleLine.className = 'pos-line';
+      titleLine.textContent = T[state.lang].daily_reward_title;
+      box.appendChild(titleLine);
+      const bodyLine = document.createElement('div');
+      bodyLine.className = 'muted';
+      bodyLine.style.cssText = 'text-align:left; margin-top:4px;';
+      bodyLine.textContent = T[state.lang].daily_inbox_congrats(posLabel, formatDailyDateShort(msg.dateStr), msg.score);
+      box.appendChild(bodyLine);
     }
 
     const claimRow = document.createElement('div');
