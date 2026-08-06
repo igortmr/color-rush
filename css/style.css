@@ -12,6 +12,12 @@
     --bg-panel-2: #131a33;
   }
 
+  /* iOS faz "rubber-band bounce" ao arrastar além do topo/fim da página,
+     revelando o fundo do <html> por baixo do <body> — sem isso, aparecia
+     uma barra preta (fundo padrão do WebView) além do limite do tema. */
+  html {
+    background: var(--bg-deep);
+  }
   body {
     font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
     background:
