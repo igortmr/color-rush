@@ -59,12 +59,14 @@ workflows:
             "appId": "br.com.colorrush.app",
             "appName": "Color Rush",
             "webDir": "www",
+            "backgroundColor": "#ff050810",
             "server": {
               "url": "https://colorrush.com.br",
               "cleartext": false
             },
             "ios": {
-              "contentInset": "always"
+              "contentInset": "always",
+              "backgroundColor": "#ff050810"
             },
             "plugins": {
               "FirebaseAuthentication": {
