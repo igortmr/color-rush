@@ -287,6 +287,11 @@
     transform: translateY(1px) scale(0.98);
     box-shadow: 0 1px 0 rgba(255,45,107,0.35), 0 2px 4px rgba(0,0,0,0.3);
   }
+  /* só o "sair" do cabeçalho do menu (não os outros .pill-btn — VOLTAR/
+     FECHAR nas outras telas ficam do tamanho normal): fica ao lado do
+     toggle de som, então baixa o padding vertical pra bater a mesma altura
+     da trilha do switch (20px) */
+  #menu-logout-btn { padding-top: 1px; padding-bottom: 1px; }
 
   /* toggle de som (mute) */
   button.icon-toggle {
