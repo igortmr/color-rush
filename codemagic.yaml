@@ -38,7 +38,11 @@ workflows:
         # e o código JS certo (initNativePush em auth.js), então NENHUMA
         # conta jamais teve token registrado, mesmo depois da correção de JS
         # anterior (que só resolvia metade do problema).
-        XCODE_MARKETING_VERSION: "1.1.3"
+        # 1.1.4 (2026-08-06): 1.1.3 já está na loja -- essa versão muda
+        # ios.contentInset de "always" pra "never" (ver comentário junto do
+        # capacitor.config.json abaixo), pra sumir com a barra preta fixa no
+        # fim da tela.
+        XCODE_MARKETING_VERSION: "1.1.4"
       node: latest
       xcode: latest
     scripts:
