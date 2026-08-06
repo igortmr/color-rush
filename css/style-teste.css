@@ -1219,14 +1219,13 @@
 
   /* --- premium (1500): padrão e/ou animação --- */
   /* foto real de céu estrelado (img/row-themes/row-starfield.jpg), trocou o
-     patchwork de radial-gradient de antes -- mesmo cintilar de brilho
-     (rowStarTwinkle) por cima, que já funcionava tanto pra gradiente quanto
-     pra foto (ver row-theme-cosmos abaixo, que reusa a mesma animação). */
+     patchwork de radial-gradient de antes -- sem animação de cintilar
+     (tirada a pedido; rowStarTwinkle continua existindo pra row-theme-cosmos
+     logo abaixo). */
   tbody tr.row-theme-starfield {
     background-image: url('../img/row-themes/row-starfield.jpg');
     background-size: cover;
     background-position: center;
-    animation: rowStarTwinkle 3s ease-in-out infinite;
   }
   @keyframes rowStarTwinkle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
   tbody tr.row-theme-holo {
