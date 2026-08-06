@@ -135,7 +135,15 @@ export async function renderProfileFriendAction(theirUid, theirNick) {
   box.dataset.uid = theirUid;
   if (state.offline || !state.currentUser) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
-  box.innerHTML = `<span class="muted">${T[state.lang].loading_text}</span>`;
+  // se já tem um botão com o spinner do withBtnLoading (essa função também é
+  // chamada logo depois de qualquer ação de amizade, pra atualizar o botão
+  // pro novo estado — ver refreshFriendUiFor), mantém ele visível em vez de
+  // trocar por esse texto "Carregando..." só pra, alguns instantes depois,
+  // trocar de novo pelo resultado final — sem isso o spinner "piscava" e
+  // sumia quase na hora, dando a impressão de que ele nunca tinha aparecido
+  if (!box.querySelector('button.btn-loading')) {
+    box.innerHTML = `<span class="muted">${T[state.lang].loading_text}</span>`;
+  }
   const rel = await getFriendRelation(theirUid);
   if (box.dataset.uid !== theirUid) return; // perfil trocou enquanto isso carregava
   box.innerHTML = '';
