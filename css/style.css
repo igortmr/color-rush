@@ -1251,6 +1251,61 @@
     background-size: cover;
     background-position: center;
   }
+
+  /* linhas com arte de fundo de verdade (fotos/ilustrações, não gradiente) --
+     promovidas de style-teste.css (eram testOnly em js/shop.js) pra produção.
+     Imagens já vêm cropadas (sem a margem branca de cima/baixo do banner
+     original) e comprimidas em JPEG (~900px de largura), em img/row-themes/. */
+  /* Yin Yang fica parado de propósito -- é sobre calma/equilíbrio, um piscar
+     ali brigaria com o clima em vez de ajudar. */
+  tbody tr.row-theme-yinyang { background-image: url('../img/row-themes/row-yinyang.jpg'); background-size: cover; background-position: center; }
+
+  /* Unicórnio (floresta) e Floresta Mística ficam sem animação -- testado
+     com o brilho e decidiu que não precisava. */
+  tbody tr.row-theme-unicorn3 { background-image: url('../img/row-themes/row-unicorn3.jpg'); background-size: cover; background-position: center; }
+  tbody tr.row-theme-forest2  { background-image: url('../img/row-themes/row-forest2.jpg');  background-size: cover; background-position: center; }
+
+  /* brilho suave tipo cintilar de estrela/fada -- reaproveita o mesmo
+     @keyframes rowStarTwinkle de row-theme-starfield ali em cima, só com
+     duração própria pra cada uma não ficar toda sincronizada igual. */
+  tbody tr.row-theme-cosmos { background-image: url('../img/row-themes/row-cosmos.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 3s ease-in-out infinite; }
+  tbody tr.row-theme-meteor { background-image: url('../img/row-themes/row-meteor.jpg'); background-size: cover; background-position: center; animation: rowStarTwinkle 2.2s ease-in-out infinite; }
+
+  /* chama tremulando -- variação irregular de brilho (não suave feito o
+     twinkle acima), pra imitar fogo de verdade em vez de estrela piscando.
+     Dragão mais devagar que a Lava de propósito (pedido depois de testar). */
+  tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 4.5s ease-in-out infinite; }
+  tbody tr.row-theme-lava   { background-image: url('../img/row-themes/row-lava.jpg');   background-size: cover; background-position: center; animation: rowFlameFlicker 2.8s ease-in-out infinite; }
+  @keyframes rowFlameFlicker {
+    0%, 100% { filter: brightness(1); }
+    10% { filter: brightness(1.15); }
+    22% { filter: brightness(0.93); }
+    35% { filter: brightness(1.25); }
+    50% { filter: brightness(1); }
+    63% { filter: brightness(1.12); }
+    78% { filter: brightness(0.9); }
+    90% { filter: brightness(1.18); }
+  }
+
+  /* letreiro de neon com falha ocasional -- maior parte do tempo aceso
+     normal, com uns "soquinhos" rápidos de apagão, igual neon de verdade
+     que não tá 100%. */
+  tbody tr.row-theme-cyberpunk {
+    background-image: url('../img/row-themes/row-cyberpunk.jpg');
+    background-size: cover;
+    background-position: center;
+    animation: rowNeonFlicker 5s linear infinite;
+  }
+  @keyframes rowNeonFlicker {
+    0%, 89%, 100% { filter: brightness(1); }
+    90% { filter: brightness(0.6); }
+    91% { filter: brightness(1); }
+    92% { filter: brightness(0.7); }
+    93%, 96% { filter: brightness(1); }
+    97% { filter: brightness(0.75); }
+    98% { filter: brightness(1); }
+  }
+
   /* sombra escura de contato + brilho da própria cor — sem isso, um tema de
      linha (row-theme-*, cor de fundo escolhida pela pessoa) parecido com a
      cor de destaque da posição deixava o número quase ilegível */
