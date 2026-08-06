@@ -12,6 +12,16 @@ import { state } from './state.js';
 // mesma checagem duplicada em auth.js/game-core.js (não vale a pena um
 // módulo compartilhado só pra isso, ver padrão já usado nos outros).
 const isNativeApp = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+// WKWebView (app nativo) desloca a origem do "position:fixed" pelo
+// contentInset do scrollView -- enquanto o documento tinha scroll de
+// verdade, isso empurrava de graça os elementos fixos ancorados no topo
+// (ex.: .lang-switch) pra baixo do notch/Dynamic Island. Sem esse scroll
+// (ver #scroll-area no CSS), esse empurrão some, e "top:10px" passa a
+// cair embaixo do notch mesmo -- SÓ no app, o Safari nunca teve esse
+// deslocamento (viewport-fit:cover só afeta contexto standalone/WebView,
+// não uma aba normal do Safari). Por isso essa classe existe: compensa
+// só no app, sem mexer no valor que já está certo no site.
+if (isNativeApp()) document.documentElement.classList.add('is-native-app');
 function socialLinksHtml(i) {
   // selo "Baixar na App Store" ao lado das redes -- SÓ fora do app nativo
   // (quem já está no app não precisa ser convidado a baixar de novo).

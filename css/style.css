@@ -1482,6 +1482,13 @@
     z-index: 1000;
     transition: top 0.25s ease;
   }
+  /* SÓ no app nativo (ver .is-native-app em js/nav.js): soma a área segura
+     de cima, senão o combo fica embaixo do notch/Dynamic Island e não dá
+     pra clicar. No site (Safari) NÃO faz isso -- lá já está certo do jeito
+     que está, ver comentário grande em js/nav.js sobre o motivo. */
+  html.is-native-app .lang-switch {
+    top: calc(10px + var(--ios-banner-offset, 0px) + env(safe-area-inset-top));
+  }
   .lang-select {
     font-family: 'Rajdhani', sans-serif;
     font-size: 0.72rem;
