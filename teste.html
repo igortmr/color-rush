@@ -1006,9 +1006,27 @@
   document.addEventListener('keydown', startAmbientMusic, { once: true });
   // pausa quando a aba fica em segundo plano (economiza recursos e evita
   // acordar tocando sozinha se a pessoa voltar bem no meio de um acorde) e
-  // retoma ao voltar
+  // retoma ao voltar — motivo 'hidden' próprio (ver pauseReasons em
+  // js/ambient-music.js): independente do motivo 'match' abaixo, senão
+  // trocar de aba NO MEIO de uma partida religava a música na volta mesmo
+  // ainda jogando.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pauseAmbientMusic(); else resumeAmbientMusic();
+    if (document.hidden) pauseAmbientMusic('hidden'); else resumeAmbientMusic('hidden');
+  });
+  // pausa durante a partida (#game-screen ativa), retoma em qualquer outra
+  // tela — cobre "voltar pro menu" E "sair da tela de fim de jogo" (JOGAR
+  // DE NOVO volta pra #game-screen na hora, então some de novo em seguida,
+  // como deveria) de uma vez só, sem precisar de um caso especial pra cada
+  // botão. show() (js/nav.js) só troca a classe "active" entre as .screen,
+  // então observar isso em TODAS elas (não só #game-screen) e reavaliar
+  // "a partida tá ativa?" a cada troca cobre qualquer caminho de navegação,
+  // sem precisar interceptar startGame/showMenu/playAgain um por um.
+  const gameScreenEl = document.getElementById('game-screen');
+  document.querySelectorAll('.screen').forEach((screen) => {
+    new MutationObserver(() => {
+      if (gameScreenEl.classList.contains('active')) pauseAmbientMusic('match');
+      else resumeAmbientMusic('match');
+    }).observe(screen, { attributes: true, attributeFilter: ['class'] });
   });
 </script>
 </body>
