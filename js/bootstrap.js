@@ -277,6 +277,24 @@ const sfx = {
 // reproduzir um replay, sem esperar os sons ganharem seu próprio módulo
 // (fase futura)
 window.sfx = sfx;
+// tick de confirmação em QUALQUER <button> clicado fora de uma partida —
+// menus, telas, modais etc. Delegado num listener só no document (em vez de
+// um em cada botão) porque cobre também os que nascem depois via JS
+// (ranking, chat etc.) sem precisar lembrar de religar em cada lugar novo.
+// Não entra durante uma partida: os quadrados do tabuleiro são <div>, não
+// <button> (ver newRound em game-core.js), então closest('button') já não
+// bate neles sozinho — o "if (playing) return" é só reforço pro raro caso de
+// algum <button> real aparecer por cima do tabuleiro no meio da rodada; sem
+// isso ia soar duplicado/errado em cima do som de acerto/erro que o próprio
+// clique no quadrado já tem (ver handleClick). "playing" é um live binding
+// de módulo ES (import de cima), por isso reflete o valor atual sem precisar
+// reimportar a cada clique.
+document.addEventListener('click', (e) => {
+  if (playing) return;
+  const btn = e.target.closest('button');
+  if (!btn || btn.disabled) return;
+  sfx.tick();
+});
 window.toggleMute = () => {
   setMuted(!isMuted());
   $('mute-btn').classList.toggle('on', !isMuted());
