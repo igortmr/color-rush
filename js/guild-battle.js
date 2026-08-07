@@ -144,10 +144,21 @@ window.guildBattleGoToGuilds = () => {
   window.showGuildList();
 };
 
+// popup do "?" ao lado do título da tela cheia, explicando em detalhe as
+// regras de pontuação/desempate (ver #guild-battle-rules-modal em
+// index.html/teste.html) — texto 100% estático via data-i18n-html, não
+// precisa de nenhum dado do evento pra ser exibido
+window.openGuildBattleRulesModal = () => {
+  $('guild-battle-rules-modal').style.display = 'flex';
+};
+window.closeGuildBattleRulesModal = () => {
+  $('guild-battle-rules-modal').style.display = 'none';
+};
+
 // único ponto de entrada é o card do menu, então "voltar" sempre é pro
 // menu mesmo (mesmo padrão simples do botão VOLTAR de #shop-screen, sem
 // pilha de navegação — ver pushScreenAndShow/popScreenBack em js/nav.js)
-window.guildBattleBack = () => window.showMenu();
+window.guildBattleBack = () => { stopBattleScreenTicker(); window.showMenu(); };
 
 /* ================== tela cheia (#guild-battle-screen) ================== */
 // token evita que um fetch antigo (ex.: a pessoa saiu e voltou rápido pra
@@ -159,6 +170,7 @@ let battleScreenToken = 0;
 let currentBattleEvent = null;
 
 async function renderGuildBattleScreen() {
+  stopBattleScreenTicker();
   const myToken = ++battleScreenToken;
   const body = $('guild-battle-body');
   body.innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].loading_text}</div>`;
@@ -188,10 +200,36 @@ async function renderGuildBattleScreen() {
   }
 }
 
-function formatBattleDate(ts) {
-  if (!ts || !ts.toMillis) return '';
-  const loc = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
-  return new Date(ts.toMillis()).toLocaleString(loc, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+// cronômetro da tela cheia (diferente do guildBattleTicker do card do menu,
+// que só sabe contar pro início/fim REAL de calendário) — conta direto pro
+// endsAt do evento já buscado do Firestore, então funciona igual em
+// teste.html com um evento de teste criado fora da janela real. Só roda
+// enquanto #guild-battle-screen está aberta (ver start/stop abaixo).
+let battleScreenTicker = null;
+function stopBattleScreenTicker() {
+  if (battleScreenTicker) { clearInterval(battleScreenTicker); battleScreenTicker = null; }
+}
+function renderBattleScreenCountdown() {
+  const el = $('guild-battle-screen-countdown');
+  const event = currentBattleEvent;
+  if (!el || !event) { stopBattleScreenTicker(); return; }
+  const endsAtMs = event.endsAt && event.endsAt.toMillis ? event.endsAt.toMillis() : 0;
+  const msLeft = endsAtMs - Date.now();
+  if (msLeft <= 0) {
+    // a pessoa ficou olhando a tela até a batalha acabar de verdade —
+    // re-renderiza o corpo pra trocar pro estado "encerrada" (sem re-buscar
+    // do Firestore, o doc do evento em si não muda por isso)
+    stopBattleScreenTicker();
+    const body = $('guild-battle-body');
+    if (body) renderGuildBattleBody(body);
+    return;
+  }
+  el.textContent = formatGuildBattleCountdown(msLeft);
+}
+function startBattleScreenTicker() {
+  stopBattleScreenTicker();
+  renderBattleScreenCountdown();
+  battleScreenTicker = setInterval(renderBattleScreenCountdown, 1000);
 }
 
 function renderGuildBattleBody(body) {
@@ -203,13 +241,32 @@ function renderGuildBattleBody(body) {
   const statusCard = document.createElement('div');
   statusCard.className = 'card';
   statusCard.style.textAlign = 'center';
-  statusCard.innerHTML = isActive
-    ? `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_active_until}</div><div style="font-weight:700;">${formatBattleDate(event.endsAt)}</div>`
-    : `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ended}</div>`;
-  body.appendChild(statusCard);
+  if (isActive) {
+    statusCard.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ends_in_label}</div><div id="guild-battle-screen-countdown" style="font-weight:700; font-family:'Orbitron',sans-serif; font-size:1.2rem;"></div>`;
+    body.appendChild(statusCard);
+    startBattleScreenTicker();
+  } else {
+    statusCard.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ended}</div>`;
+    body.appendChild(statusCard);
+    stopBattleScreenTicker();
+  }
 
-  // botão de jogar só faz sentido enquanto ainda dá tempo de pontuar
-  if (isActive) (event.modes || []).forEach(mode => body.appendChild(battlePlayCard(mode)));
+  // botão de jogar só faz sentido enquanto ainda dá tempo de pontuar — os
+  // 2 modos sorteados lado a lado (flex-wrap pra empilhar se a tela for
+  // estreita demais pros 2 caberem), cada um com seu próprio card/botão
+  if (isActive) {
+    const modesTitle = document.createElement('div');
+    modesTitle.innerHTML = `<b>${T[state.lang].guild_battle_modes_title}</b>`;
+    body.appendChild(modesTitle);
+    const modesRow = document.createElement('div');
+    modesRow.style.cssText = 'display:flex; gap:10px; flex-wrap:wrap;';
+    (event.modes || []).forEach(mode => {
+      const card = battlePlayCard(mode);
+      card.style.flex = '1 1 140px';
+      modesRow.appendChild(card);
+    });
+    body.appendChild(modesRow);
+  }
 
   // ranking geral entre TODOS os clãs — vem denormalizado no próprio doc do
   // evento (guildScores), atualizado a cada pontuação válida (ver

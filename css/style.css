@@ -365,6 +365,38 @@
      da trilha do switch (20px) */
   #menu-logout-btn { padding-top: 1px; padding-bottom: 1px; }
 
+  /* botãozinho "?" redondo ao lado de um título — abre um popup explicando
+     algo em mais detalhe (ex.: regras de pontuação da Batalha de Clãs, ver
+     #guild-battle-rules-modal em index.html/teste.html) */
+  button.info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #0a0e1e;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #8fa0d6;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.3), 0 3px 6px rgba(0,0,0,0.3);
+    transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  button.info-btn::before { content: none; }
+  button.info-btn:hover {
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.3), 0 3px 6px rgba(0,0,0,0.3), 0 0 10px rgba(45,214,255,0.5);
+    transform: translateY(-1px);
+  }
+  button.info-btn:active { transform: translateY(1px) scale(0.95); }
+
   /* toggle de som (mute) */
   button.icon-toggle {
     display: inline-flex;

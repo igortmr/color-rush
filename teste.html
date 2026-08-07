@@ -600,6 +600,26 @@
   </div>
 </div>
 
+<!-- popup do "?" ao lado do título de #guild-battle-screen, explicando em
+     detalhe como a pontuação/desempate da Batalha de Clãs funciona (ver
+     openGuildBattleRulesModal em js/guild-battle.js) — texto 100% estático,
+     não depende de nenhum dado do evento -->
+<div class="modal-overlay" id="guild-battle-rules-modal" style="display:none;" onclick="if(event.target===this) closeGuildBattleRulesModal();">
+  <div class="modal-card" style="max-width:440px; position:relative;">
+    <button onclick="closeGuildBattleRulesModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 style="font-size:1.2rem; text-align:center;" data-i18n="guild_battle_rules_title">Como funciona a pontuação</h1>
+    <div class="modal-card-body" style="text-align:left;">
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p1">A cada semana, o jogo sorteia <b>2 modos de jogo</b> — os mesmos para todos os clãs. Enquanto a Batalha estiver ativa, toda partida que você jogar nesses modos entra automaticamente na pontuação do seu clã, sem precisar fazer nada especial: é só jogar normalmente.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p2">Cada modo tem seu próprio Top 5 por clã: as 5 melhores pontuações do clã naquele modo. No máximo <b>2 das 5 vagas</b> podem ser da mesma pessoa (suas 2 melhores pontuações no modo), pra premiar clãs com mais gente participando.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p3">Em caso de empate de pontuação — tanto pra entrar no Top 5 de um modo quanto no ranking geral entre clãs — quem tiver o <b>menor tempo de partida</b> fica na frente.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p4">A nota do clã em cada modo é a <b>média das 5 pontuações do Top 5</b> (vaga vazia conta como 0). A nota final do clã é a <b>média das notas dos 2 modos</b> sorteados.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p5">Se dois clãs empatarem na nota final, o desempate é pela <b>soma dos tempos</b> das partidas que entraram no Top 5 dos 2 modos — vence quem tiver a menor soma (vagas vazias não entram nessa soma).</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p6">Qualquer pessoa pode clicar num clã no ranking geral pra ver o Top 5 de cada modo, com nick, nível e um botão ▶️ de replay pra conferir a pontuação de perto.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p7">A Batalha começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).</p>
+    </div>
+  </div>
+</div>
+
 <!-- criar conta: popup própria (campos separados dos de login), aberta pelo
      botão CRIAR CONTA em #auth-screen — repete Google/Apple pra quem prefere
      entrar por eles em vez de e-mail+senha (ver openSignupModal em js/auth.js) -->
@@ -951,7 +971,10 @@
      — só acessada pelo card do menu quando o evento está rolando -->
 <div class="screen" id="guild-battle-screen">
   <div class="profile-top-row">
-    <h1 style="font-size:1.7rem;" data-i18n="guild_battle_page_title">⚔️ Batalha de Clãs</h1>
+    <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+      <h1 style="font-size:1.7rem; margin:0;" data-i18n="guild_battle_page_title">⚔️ Batalha de Clãs</h1>
+      <button class="info-btn" onclick="openGuildBattleRulesModal()" aria-label="Como funciona a pontuação">?</button>
+    </span>
     <button class="pill-btn" onclick="guildBattleBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
   <div id="guild-battle-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
