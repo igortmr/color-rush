@@ -79,13 +79,15 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   $('profile-nick-text').textContent = T[state.lang].profile_nick_label(isOther ? (viewNick || '') : (state.myData.nick || ''));
   $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
-  // sigla do clã (se tiver) — clicável, mesmo padrão de buildRankRowNick em
-  // js/ranking-cache.js (window.openGuildFromTag, ver js/guilds.js)
+  // sigla do clã (se tiver) — do lado ESQUERDO do nick ("[TAG] nick"), mesmo
+  // padrão de buildRankRowNick em js/ranking-cache.js (window.openGuildFromTag,
+  // ver js/guilds.js); span já vem antes de profile-nick-text no HTML (ver
+  // index.html), só falta o espaço ficar depois da sigla, não antes
   const tagEl = $('profile-nick-guild-tag');
   tagEl.innerHTML = '';
   if (stats.guildTag && stats.guildId) {
     const tagSpan = document.createElement('span');
-    tagSpan.textContent = ` [${stats.guildTag}]`;
+    tagSpan.textContent = `[${stats.guildTag}] `;
     tagSpan.className = 'guild-tag-link';
     applyGuildTagStyle(tagSpan, stats.guildTagStyle);
     tagSpan.onclick = () => window.openGuildFromTag(stats.guildId, 'profile-screen');
