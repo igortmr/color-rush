@@ -22,11 +22,9 @@ import { isWeeklyPassActive } from './levels.js';
 //
 // A "Public API Key" do RevenueCat NÃO é segredo (mesmo status da chave do
 // Firebase já hardcoded em js/firebase.js — identifica o projeto, não
-// autoriza nada sozinha) — fica direto aqui. Placeholder vazio até o
-// usuário criar a conta RevenueCat e passar a chave de verdade (ver plano
-// "Passe Semanal" — a compra simplesmente falha com string vazia, sem
-// quebrar o resto do app).
-const REVENUECAT_PUBLIC_API_KEY = '';
+// autoriza nada sozinha) — fica direto aqui. Chave do app "Color Rush Saga
+// (App Store)" no projeto RevenueCat (obtida em API keys > SDK API keys).
+const REVENUECAT_PUBLIC_API_KEY = 'appl_XWLAAoYZNgNPNhoBflUUUbJqmpD';
 const WEEKLY_PASS_PRODUCT_ID = 'br.com.colorrush.app.weeklypass';
 
 let weeklyPassOnSale = false;
