@@ -130,8 +130,8 @@
 <div class="screen" id="auth-screen">
   <h1>COLOR RUSH</h1>
   <div class="card">
-    <input type="text" id="auth-email" data-i18n-placeholder="auth_login_ph" placeholder="E-mail ou nome de usuário">
-    <input type="password" id="auth-pass" data-i18n-placeholder="auth_pass_ph" placeholder="Senha (mín. 6 caracteres)">
+    <input type="text" id="auth-email" data-i18n-placeholder="auth_login_ph" placeholder="E-mail ou nome de usuário" onkeydown="if(event.key==='Enter') doLogin();">
+    <input type="password" id="auth-pass" data-i18n-placeholder="auth_pass_ph" placeholder="Senha (mín. 6 caracteres)" onkeydown="if(event.key==='Enter') doLogin();">
     <div class="error" id="auth-error"></div>
     <button onclick="doLogin()" data-i18n="btn_login">ENTRAR</button>
     <button class="secondary" onclick="openSignupModal()" data-i18n="btn_signup">CRIAR CONTA</button>
