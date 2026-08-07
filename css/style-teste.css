@@ -1282,6 +1282,19 @@
 
   /* sem animação, a pedido -- só a foto estática mesmo. */
   tbody tr.row-theme-aurora { background-image: url('../img/row-themes/row-aurora.jpg'); background-size: cover; background-position: center; }
+
+  /* mesma foto da aurora, com o degradê iridescente do RGB (row-theme-holo)
+     por cima -- ver comentário completo em css/style.css */
+  tbody tr.row-theme-aurora-rgb {
+    background-image: linear-gradient(120deg, rgba(255,0,150,0.35), rgba(0,229,255,0.3), rgba(255,234,0,0.3), rgba(150,0,255,0.35), rgba(255,0,150,0.35)), url('../img/row-themes/row-aurora.jpg');
+    background-size: 300% 100%, cover;
+    background-position: 0% 50%, center;
+    animation: rowAuroraRgbShift 10s linear infinite;
+  }
+  @keyframes rowAuroraRgbShift {
+    0% { background-position: 0% 50%, center; }
+    100% { background-position: 300% 50%, center; }
+  }
   @keyframes rowFlameFlicker {
     0%, 100% { filter: brightness(1); }
     10% { filter: brightness(1.15); }

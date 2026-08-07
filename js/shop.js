@@ -51,6 +51,7 @@ export const SHOP_ITEMS = [
   { id: 'row_cosmos',     slot: 'rowTheme', price: 5000, icon: '🌌', name: 'Linha: Cosmos',          desc: 'Galáxia espiral com planetas e nebulosas.' },
   { id: 'row_lava',       slot: 'rowTheme', price: 5000, icon: '🌋', name: 'Linha: Lava',            desc: 'Rachaduras de lava incandescente num fundo escuro.' },
   { id: 'row_aurora',     slot: 'rowTheme', price: 3000, icon: '🌠', name: 'Linha: Aurora',          desc: 'Aurora boreal verde e violeta sobre um céu estrelado.' },
+  { id: 'row_aurora_rgb', slot: 'rowTheme', price: 7000, icon: '🎆', name: 'Linha: Aurora RGB',      desc: 'A foto da aurora boreal com um brilho RGB passando por cima — anima sozinho.' },
   { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
   { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
   { id: 'avatar_ghost',   slot: 'avatar', price: 110, icon: '👻', name: 'Avatar: Fantasma', desc: 'Um fantasma pra representar você no perfil e no duelo.' },
