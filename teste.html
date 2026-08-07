@@ -683,6 +683,21 @@
   </div>
 </div>
 
+<!-- tornar líder: popup temática de confirmação (mesmo padrão de
+     #disband-guild-modal) em vez do confirm() genérico do navegador — abre
+     depois de fechar a #guild-member-actions-modal acima (ver
+     uiInitiateGuildTransferFromModal em js/guilds.js) -->
+<div class="modal-overlay" id="guild-transfer-confirm-modal" style="display:none;" onclick="if(event.target===this) closeGuildTransferConfirmModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem;" data-i18n="guild_transfer_modal_title">👑 Tornar líder</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" id="guild-transfer-confirm-text"></p>
+    </div>
+    <button class="secondary" onclick="closeGuildTransferConfirmModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
+    <button onclick="confirmGuildTransferMember()" data-i18n="guild_btn_make_leader">Tornar líder</button>
+  </div>
+</div>
+
 <!-- expulsar membro: popup temática de confirmação (mesmo padrão de
      #disband-guild-modal) em vez do confirm() genérico do navegador — abre
      depois de fechar a #guild-member-actions-modal acima (ver
