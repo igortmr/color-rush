@@ -852,6 +852,10 @@ async function loadTreasuryHistory(guildId, historyList, xpByUid) {
 // functions/index.js). Preço é reconferido no servidor; isso aqui é só
 // exibição/preview. Chaves das 8 básicas batem com COLORS[].key de propósito.
 const GUILD_TAG_STYLES_CATALOG = [
+  // volta pra cor padrão (branco, sem estilo) -- de graça, fica marcada como
+  // "atual" sozinha pra quem nunca comprou nada (ver isCurrent em
+  // guildTagStyleCard), e serve pra reverter depois de já ter comprado outra
+  { id: 'default', price: 0, name: { pt: 'Padrão (branco)', en: 'Default (white)', es: 'Predeterminado (blanco)' } },
   ...COLORS.map(c => ({ id: c.key, price: 5000, name: c.name })),
   { id: 'espectro', price: 10000, name: { pt: 'Espectro', en: 'Spectrum', es: 'Espectro' } },
 ];
@@ -911,10 +915,14 @@ function guildTagStyleCard(item, g, isLeader) {
   const priceLine = document.createElement('div');
   priceLine.className = 'muted';
   priceLine.style.cssText = 'font-size:0.72rem; display:flex; align-items:center; justify-content:center; gap:3px; margin-top:2px;';
-  priceLine.innerHTML = `${item.price}${pigmentIconSvg(11)}`;
+  priceLine.innerHTML = item.price > 0 ? `${item.price}${pigmentIconSvg(11)}` : T[state.lang].guild_shop_free_label;
   card.appendChild(priceLine);
 
-  const isCurrent = g.tagStyle === item.id;
+  // "default" fica marcado como atual sozinho pra clã que nunca comprou
+  // nada (g.tagStyle vem null do servidor até a primeira compra, ver
+  // buyGuildTagStyle em functions/index.js) -- sem isso, nenhum card
+  // aparecia com o selo de "atual" antes da primeira compra
+  const isCurrent = item.id === 'default' ? !g.tagStyle || g.tagStyle === 'default' : g.tagStyle === item.id;
   if (isCurrent) {
     const badge = document.createElement('div');
     badge.style.cssText = 'font-size:0.7rem; font-weight:700; color:var(--neon-green); margin-top:6px;';
@@ -953,7 +961,9 @@ window.startBuyGuildTagStyle = (styleId, guildTag) => {
   preview.textContent = `[${guildTag}]`;
   applyGuildTagStyle(preview, styleId);
   $('buy-guild-tag-style-modal-item').textContent = item.name[state.lang];
-  $('buy-guild-tag-style-modal-price').innerHTML = `${T[state.lang].guild_shop_price_label}<span style="font-size:1.35rem; color:var(--neon-yellow); text-shadow:0 0 8px rgba(255,233,60,0.4);">${item.price}</span>${pigmentIconSvg(20)}`;
+  $('buy-guild-tag-style-modal-price').innerHTML = item.price > 0
+    ? `${T[state.lang].guild_shop_price_label}<span style="font-size:1.35rem; color:var(--neon-yellow); text-shadow:0 0 8px rgba(255,233,60,0.4);">${item.price}</span>${pigmentIconSvg(20)}`
+    : `<span style="font-size:1.1rem; color:var(--neon-green);">${T[state.lang].guild_shop_free_label}</span>`;
   $('buy-guild-tag-style-modal').style.display = 'flex';
 };
 window.closeBuyGuildTagStyleModal = () => {
@@ -1368,16 +1378,20 @@ async function amIGuildLeader() {
 // joinRequestsSection). Só aparece pra quem lidera um clã. Chamada por
 // js/profile.js via window (perfil ainda não conhece o domínio de clãs,
 // mesmo padrão de window.openGuildFromTag/window.fetchMyFriends)
-window.renderGuildInviteAction = async (theirUid, theirNick) => {
+window.renderGuildInviteAction = async (theirUid, theirNick, theirGuildId) => {
   const el = $('profile-guild-invite-action');
   if (!el) return;
   el.innerHTML = '';
   if (!theirNick || (state.currentUser && theirUid === state.currentUser.uid)) return;
+  if (theirGuildId) return; // já está em um clã (o meu ou outro) -- não dá pra convidar
   const isLeader = await amIGuildLeader();
   if (!isLeader) return;
-  // sem .card ao redor (aquela borda roxa) — é só o botão sozinho, sem caixa
+  // sem .card ao redor (aquela borda roxa) — é só o botão sozinho, sem caixa.
+  // margin-top negativo pra compensar o gap:12px do flex (.card) + o
+  // #profile-friend-status vazio entre esse botão e os de cima (chat/amigo),
+  // que juntos deixavam uma folga grande demais só pra esse botão secundário
   const wrap = document.createElement('div');
-  wrap.style.textAlign = 'center';
+  wrap.style.cssText = 'text-align:center; margin-top:-14px;';
   const btn = document.createElement('button');
   btn.textContent = T[state.lang].guild_btn_invite;
   // botão bem menor que o padrão (que ocupa o card inteiro) — é uma ação

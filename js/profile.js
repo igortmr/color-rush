@@ -98,7 +98,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
     // botão "convidar pro clã" — window.renderGuildInviteAction vem de
     // js/guilds.js (perfil ainda não conhece o domínio de clãs, mesmo padrão
     // de window.openGuildFromTag logo acima)
-    if (window.renderGuildInviteAction) window.renderGuildInviteAction(viewUid, viewNick || '');
+    if (window.renderGuildInviteAction) window.renderGuildInviteAction(viewUid, viewNick || '', stats.guildId);
     const ranks = await computeModeRanks(viewUid);
     const ranksHtml = renderPublicProfileRanks(stats, ranks);
     let html = '';
