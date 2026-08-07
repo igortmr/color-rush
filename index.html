@@ -1127,10 +1127,11 @@
     <button onclick="toggleWeeklyPassPopup()" aria-label="Fechar">×</button>
   </div>
   <div class="weekly-pass-popup-body">
-    <div data-i18n-html="weekly_pass_desc"><p>Por 7 dias a partir da compra:</p><ul class="weekly-pass-benefits"><li>✓ nick com <b class="nick-pass-gold">cor exclusiva</b></li><li>✓ +100 <span id="weekly-pass-pigment-icon"></span> Pigmentos por dia <span class="muted">(700 no total)</span></li><li>✓ <b>+1 tentativa</b> no Desafio Diário</li></ul><p style="font-size:0.8em;">Compra única — não renova sozinha.</p></div>
+    <div data-i18n-html="weekly_pass_desc"><p>Por 7 dias a partir da compra:</p><ul class="weekly-pass-benefits"><li><span class="wp-benefit-arrow">▸</span> nick com <b class="nick-pass-gold">cor exclusiva</b></li><li><span class="wp-benefit-arrow">▸</span> +100 <span id="weekly-pass-pigment-icon"></span> Pigmentos por dia <span class="muted">(700 no total)</span></li><li><span class="wp-benefit-arrow">▸</span> <b>+1 tentativa</b> no Desafio Diário</li></ul></div>
     <button id="weekly-pass-buy-btn" onclick="weeklyPassCardClick()">
       <span id="weekly-pass-status">R$9,90</span>
     </button>
+    <span class="weekly-pass-disclaimer" data-i18n="weekly_pass_disclaimer">Compra única — não renova sozinha.</span>
   </div>
 </div>
 

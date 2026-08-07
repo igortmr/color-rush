@@ -653,17 +653,12 @@
   .weekly-pass-benefits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem; }
   .weekly-pass-benefits li { display: flex; align-items: center; gap: 5px; }
   #weekly-pass-pigment-icon { display: inline-flex; align-items: center; }
-  /* botão de preço/comprar -- align-self:flex-end pra não esticar (o
-     container é flex-column, sem isso ele vira largura total sozinho) +
-     padding/fonte menores que o botão padrão, já que aqui é só um valor
-     curto ("R$9,90"), não um texto de ação longo */
-  #weekly-pass-buy-btn {
-    align-self: flex-end;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 800;
-    font-size: 0.8rem;
-    padding: 8px 16px;
-  }
+  /* setinha no lugar do ✓ simples -- cor neon + negrito pra puxar o olho
+     pra cada linha de benefício, mesmo espírito visual do resto do jogo */
+  .wp-benefit-arrow { color: var(--neon-green); font-weight: 800; }
+  #weekly-pass-buy-btn { font-family: 'Orbitron', sans-serif; font-weight: 800; }
+  /* "não renova sozinha" -- embaixo do botão, alinhado à direita igual ele */
+  .weekly-pass-disclaimer { align-self: flex-end; font-size: 0.8em; }
   /* reticências bem pequenas no canto inferior esquerdo do balão — como o
      ícone principal virou escudo/pessoinhas (não é mais um balão de fala em
      si), isso aqui é o que ainda entrega visualmente "é um chat" */
