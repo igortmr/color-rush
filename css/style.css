@@ -1276,39 +1276,7 @@
      Dragão mais devagar que a Lava de propósito (pedido depois de testar). */
   tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 4.5s ease-in-out infinite; }
   tbody tr.row-theme-lava   { background-image: url('../img/row-themes/row-lava.jpg');   background-size: cover; background-position: center; animation: rowFlameFlicker 2.8s ease-in-out infinite; }
-
-  /* brilho branco deslizante passando pela foto -- mesma técnica de 2
-     camadas da aurora-rgb abaixo, só que a faixa é branca (não colorida) e
-     some/pausa fora da área visível nas pontas (0-15%/55-100%) em vez de
-     deslizar sem parar, pra imitar o "shine" que passa e some de vez em
-     quando em vez de ficar num loop contínuo */
-  tbody tr.row-theme-aurora {
-    background-image: linear-gradient(100deg, transparent 40%, rgba(255,255,255,0.55) 50%, transparent 60%), url('../img/row-themes/row-aurora.jpg');
-    background-size: 250% 100%, cover;
-    background-position: -40% 0, center;
-    animation: rowAuroraShine 4s ease-in-out infinite;
-  }
-  @keyframes rowAuroraShine {
-    0%, 15% { background-position: -40% 0, center; }
-    55%, 100% { background-position: 140% 0, center; }
-  }
-
-  /* mesma foto da aurora, com o degradê iridescente do RGB (row-theme-holo)
-     por cima -- duas camadas de background-image na mesma regra (gradiente
-     primeiro, semi-transparente, deixa a foto passar por baixo). Só a
-     posição do gradiente anima (2º valor de cada propriedade abaixo fica
-     fixo em "center"/cover, é a foto) -- reaproveita as mesmas cores do RGB
-     original, só a keyframe é própria por causa da camada extra */
-  tbody tr.row-theme-aurora-rgb {
-    background-image: linear-gradient(120deg, rgba(255,0,150,0.35), rgba(0,229,255,0.3), rgba(255,234,0,0.3), rgba(150,0,255,0.35), rgba(255,0,150,0.35)), url('../img/row-themes/row-aurora.jpg');
-    background-size: 300% 100%, cover;
-    background-position: 0% 50%, center;
-    animation: rowAuroraRgbShift 10s linear infinite;
-  }
-  @keyframes rowAuroraRgbShift {
-    0% { background-position: 0% 50%, center; }
-    100% { background-position: 300% 50%, center; }
-  }
+  tbody tr.row-theme-aurora { background-image: url('../img/row-themes/row-aurora.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 3.5s ease-in-out infinite; }
   @keyframes rowFlameFlicker {
     0%, 100% { filter: brightness(1); }
     10% { filter: brightness(1.15); }
