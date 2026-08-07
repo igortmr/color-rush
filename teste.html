@@ -607,7 +607,7 @@
 <div class="modal-overlay" id="guild-battle-rules-modal" style="display:none;" onclick="if(event.target===this) closeGuildBattleRulesModal();">
   <div class="modal-card" style="max-width:440px; position:relative;">
     <button onclick="closeGuildBattleRulesModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
-    <h1 style="font-size:1.2rem; text-align:center;" data-i18n="guild_battle_rules_title">Como funciona a Batalha de Clãs</h1>
+    <h1 style="font-size:1.2rem; text-align:center;" data-i18n="guild_battle_rules_title">Como funciona</h1>
     <div class="modal-card-body" style="text-align:left;">
       <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p1">No início da Batalha de Clãs, 2 modos de jogo são sorteados — os mesmos para todos os clãs.</p>
       <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p2">Cada modo registra as 5 melhores pontuações de cada clã.</p>
@@ -969,11 +969,13 @@
 <!-- Batalha de Clã: tela própria, fora da tela do clã (ver js/guild-battle.js)
      — só acessada pelo card do menu quando o evento está rolando -->
 <div class="screen" id="guild-battle-screen">
-  <div class="profile-top-row">
-    <h1 style="font-size:1.7rem;" data-i18n="guild_battle_page_title">⚔️ Batalha de Clãs</h1>
+  <div class="profile-top-row" style="align-items:flex-start;">
+    <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
+      <h1 style="font-size:1.7rem; margin:0;" data-i18n="guild_battle_page_title">⚔️ Batalha de Clãs</h1>
+      <div id="guild-battle-status"></div>
+    </div>
     <button class="pill-btn" onclick="guildBattleBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
-  <div id="guild-battle-status" style="width:100%; text-align:center;"></div>
   <button class="tut-link-btn" style="font-size:0.85rem; padding:7px 16px;" onclick="openGuildBattleRulesModal()" data-i18n="guild_battle_rules_btn">❓ Como funciona a Batalha de Clãs</button>
   <div id="guild-battle-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
 </div>
