@@ -12,7 +12,7 @@ import {
   SQUARES, poolItemId, DAILY_ROTATION_MODES, DAILY_MAX_ATTEMPTS, DAILY_COLORS,
   DAILY_PALETTE_OVERRIDE, DAILY_SHAPES_OVERRIDE, poolFor
 } from './constants.js';
-import { levelFromXp, myXp, pigmentIconSvg, blockIfBanned } from './levels.js';
+import { levelFromXp, myXp, pigmentIconSvg, blockIfBanned, isWeeklyPassActive } from './levels.js';
 import { renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
 import { spawnConfetti } from './game-core.js';
 import { saveMatchReplayWithRetry } from './replay.js';
@@ -79,6 +79,17 @@ let dailyAttemptsUsed = 0;
 window.getDailyAttemptsUsed = () => dailyAttemptsUsed;
 window.setDailyAttemptsUsed = (n) => { dailyAttemptsUsed = n; };
 let dailyBestScore = 0;
+
+// Passe Semanal ativo dá +1 tentativa (ver dailyMaxAttempts em
+// startDailyAttempt, functions/index.js — o servidor é quem garante isso de
+// verdade, aqui é só pra exibição/checagem de UI baterem com o que o server
+// vai aceitar). isWeeklyPassActive vem de js/levels.js (mesmo helper usado
+// pelo nick amarelo), reexportada aqui porque js/daily-ranking.js também
+// precisa do mesmo cálculo (ver lá) e importar de volta daily-challenge.js
+// criaria um import circular (este arquivo já importa de daily-ranking.js).
+export function dailyMaxAttempts() {
+  return DAILY_MAX_ATTEMPTS + (isWeeklyPassActive(state.myData) ? 1 : 0);
+}
 
 // modo sorteado do desafio diário — determinístico por dia (mesmo modo pra
 // TODO MUNDO, e igual nas 3 tentativas), sorteado entre os modos de
@@ -238,7 +249,7 @@ window.dailyCardClick = () => {
   if (!isDailyChallengeLive() || isDailyStartDelay() || !dailyLevelUnlocked()) return;
   if (state.offline || !state.currentUser || !state.myData.nick) { window.goSignup(); return; }
   if (blockIfBanned()) return; // conta suspensa não joga nenhum modo
-  if (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS) {
+  if (dailyAttemptsUsed >= dailyMaxAttempts()) {
     $('daily-blocked-msg').textContent = T[state.lang].daily_blocked_msg;
     $('daily-intro').style.display = 'none';
     $('daily-play').style.display = 'none';
@@ -265,7 +276,7 @@ window.showDailyIntro = () => {
   const modeKey = dailyMode.replace(/-/g, '_');
   $('daily-intro-mode-title').innerHTML = T[state.lang][`mode_${modeKey}_title`];
   $('daily-intro-mode-desc').innerHTML = T[state.lang][`mode_${modeKey}_desc`];
-  $('daily-intro-attempts').textContent = T[state.lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+  $('daily-intro-attempts').textContent = T[state.lang].daily_card_attempts(dailyMaxAttempts() - dailyAttemptsUsed, dailyMaxAttempts());
   $('daily-intro-best').textContent = dailyBestScore;
   renderDailyCardCountdown(); // atualiza o cronômetro na hora, sem esperar o próximo tique do segundo
   $('daily-intro-tut-btn').onclick = () => window.startTutorial(dailyMode, { fromDaily: true });
@@ -513,9 +524,9 @@ export async function updateDailyMenuCard() {
   // mostrada no ranking "Hoje" do desafio diário (ver computeMyDailyTodayRank)
   const myDailyRank = await computeMyDailyTodayRank();
   $('daily-card-best').innerHTML = `${myDailyRank ? myDailyRank + 'º ' : ''}📊 ${T[state.lang].daily_card_best(dailyBestScore)}`;
-  $('daily-card-attempts').textContent = (dailyAttemptsUsed >= DAILY_MAX_ATTEMPTS)
+  $('daily-card-attempts').textContent = (dailyAttemptsUsed >= dailyMaxAttempts())
     ? T[state.lang].daily_card_already_played
-    : T[state.lang].daily_card_attempts(DAILY_MAX_ATTEMPTS - dailyAttemptsUsed, DAILY_MAX_ATTEMPTS);
+    : T[state.lang].daily_card_attempts(dailyMaxAttempts() - dailyAttemptsUsed, dailyMaxAttempts());
 }
 
 /* -------- jogo do desafio (mesmo modo Clássico, RNG determinística) -------- */
@@ -775,7 +786,7 @@ async function dailyGameOver(reason) {
   dailyBestScore = bestScore;
   $('daily-result-best').textContent = dailyBestScore;
 
-  const left = Math.max(0, DAILY_MAX_ATTEMPTS - dailyAttemptsUsed);
+  const left = Math.max(0, dailyMaxAttempts() - dailyAttemptsUsed);
   $('daily-result-attempts').textContent = left > 0
     ? T[state.lang].daily_attempts_left_msg(left)
     : T[state.lang].daily_attempts_used_msg;

@@ -101,6 +101,21 @@ export function applyNickFrame(el, stats) {
   if (frame === 'frame_gold') el.classList.add('nick-frame-gold');
   else if (frame === 'frame_rainbow') el.classList.add('nick-frame-rainbow');
 }
+// nick amarelo exclusivo de quem tem o Passe Semanal ativo (ainda não à
+// venda, ver config/features.weeklyPassOnSale em js/weekly-pass.js) --
+// "ativo" é sempre COMPUTADO comparando scores/{uid}.weeklyPassExpiresAt
+// com agora, nunca um booleano guardado (mesmo raciocínio de
+// isWeeklyPassActive em functions/index.js, pra nunca ficar dessincronizado
+// de nenhum webhook). Campo público (igual equipped/guildTag), então
+// funciona pra QUALQUER nick renderizado com stats de outra pessoa, não só
+// o seu.
+export function isWeeklyPassActive(stats) {
+  const exp = stats && stats.weeklyPassExpiresAt;
+  return !!(exp && typeof exp.toMillis === 'function' && exp.toMillis() > Date.now());
+}
+export function applyWeeklyPassNickColor(el, stats) {
+  el.classList.toggle('nick-pass-gold', isWeeklyPassActive(stats));
+}
 // cor/animação da [TAG] do clã, comprada no Cofre do Clã (ver
 // buyGuildTagStyle em functions/index.js) — campo público (scores/{uid}.
 // guildTagStyle, espelhado em todo membro igual guildTag), então funciona

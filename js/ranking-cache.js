@@ -5,7 +5,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { db } from './firebase.js';
-import { lvChip, applyNickFrame, applyRowTheme, applyGuildTagStyle, modeLabel } from './levels.js';
+import { lvChip, applyNickFrame, applyWeeklyPassNickColor, applyRowTheme, applyGuildTagStyle, modeLabel } from './levels.js';
 import { equippedBadgeLabel } from './badges.js';
 
 export const RANKING_PAGE_SIZE = 20;
@@ -88,6 +88,7 @@ export function buildRankRowNick(nickCell, r, badgeHtml, backTarget) {
   }
   nickSpan.className = 'nick-click';
   applyNickFrame(nickSpan, r.stats);
+  applyWeeklyPassNickColor(nickSpan, r.stats);
   nickSpan.onclick = () => window.openProfileFromRanking(r, backTarget);
   return nickSpan;
 }

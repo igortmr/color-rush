@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { T } from './i18n.js';
 import { db } from './firebase.js';
 import { resetScroll } from './nav.js';
-import { applyRowTheme } from './levels.js';
+import { applyRowTheme, isWeeklyPassActive } from './levels.js';
 import { equippedBadgeLabel } from './badges.js';
 import { DAILY_MAX_ATTEMPTS } from './constants.js';
 import {
@@ -113,7 +113,11 @@ function renderDailyTodayPage() {
     // próprias tentativas seria colar (você veria o tabuleiro inteiro de
     // antemão). Não depende de quantas tentativas o DONO da linha usou, só
     // das suas.
-    if (r.replaySessionId && window.getDailyAttemptsUsed() >= DAILY_MAX_ATTEMPTS) {
+    // DAILY_MAX_ATTEMPTS + 1 se o Passe Semanal estiver ativo (ver
+    // dailyMaxAttempts em js/daily-challenge.js — mesmo cálculo, duplicado
+    // aqui pra não criar import circular entre os dois arquivos)
+    const myDailyMaxAttempts = DAILY_MAX_ATTEMPTS + (isWeeklyPassActive(state.myData) ? 1 : 0);
+    if (r.replaySessionId && window.getDailyAttemptsUsed() >= myDailyMaxAttempts) {
       const ptsCell = tr.children[2];
       const replayBtn = document.createElement('button');
       replayBtn.className = 'replay-btn';

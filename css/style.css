@@ -864,6 +864,14 @@
     background: linear-gradient(180deg, rgba(255,233,60,0.06), var(--bg-panel));
   }
   .mode-card.daily-card:hover { border-color: var(--neon-yellow); box-shadow: 0 0 22px rgba(255,233,60,0.35); }
+
+  /* Passe Semanal (IAP, ainda não à venda -- ver js/weekly-pass.js) — mesmo
+     acento dourado do desafio diário (tema "amarelo exclusivo" do passe) */
+  .mode-card.weekly-pass-card {
+    border-color: rgba(255,233,60,0.5);
+    background: linear-gradient(180deg, rgba(255,233,60,0.06), var(--bg-panel));
+  }
+  .mode-card.weekly-pass-card:hover { border-color: var(--neon-yellow); box-shadow: 0 0 22px rgba(255,233,60,0.35); }
   /* antes da estreia — só título + cronômetro, sem clique nem descrição */
   .mode-card.daily-card.coming-soon { cursor: default; }
   .mode-card.daily-card.coming-soon:hover { transform: none; border-color: rgba(255,233,60,0.5); box-shadow: none; }
@@ -1523,6 +1531,11 @@
     80%  { border-color: #2dd6ff; box-shadow: 0 0 8px rgba(45,214,255,0.6); }
     100% { border-color: #b14dff; box-shadow: 0 0 8px rgba(177,77,255,0.6); }
   }
+  /* nick amarelo exclusivo do Passe Semanal (ver applyWeeklyPassNickColor em
+     js/levels.js) -- especificidade maior que .nick-click:hover de propósito,
+     pra continuar amarelo mesmo passando o mouse em cima (não vira azul) */
+  .nick-pass-gold { color: var(--neon-yellow); text-shadow: 0 0 6px rgba(255,233,60,0.5); }
+  .nick-click.nick-pass-gold:hover { color: var(--neon-yellow); }
   .badge-card { text-align: left; gap: 10px; }
   .badge-card-head { display: flex; align-items: center; gap: 12px; }
   .badge-card-head .name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.95rem; }

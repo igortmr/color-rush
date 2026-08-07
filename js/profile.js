@@ -6,7 +6,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { pushScreenAndShow, popScreenBack, resetScroll, show } from './nav.js';
-import { avatarOrDefaultIcon, applyNickFrame, applyGuildTagStyle, lvChip, myXp } from './levels.js';
+import { avatarOrDefaultIcon, applyNickFrame, applyWeeklyPassNickColor, applyGuildTagStyle, lvChip, myXp } from './levels.js';
 import {
   BADGE_ORDER, BADGE_DEFS, TIER_COLORS, unlockedTier, badgePillHtml,
   newBadgeCountFor, markAllBadgesSeen
@@ -79,6 +79,7 @@ async function renderProfile(viewStats, viewNick, viewUid) {
   $('profile-nick-text').textContent = T[state.lang].profile_nick_label(isOther ? (viewNick || '') : (state.myData.nick || ''));
   $('profile-nick-lv').innerHTML = ' ' + lvChip(isOther ? (stats.xp || 0) : myXp());
   applyNickFrame($('profile-nick'), stats);
+  applyWeeklyPassNickColor($('profile-nick-text'), stats);
   // sigla do clã (se tiver) — do lado ESQUERDO do nick ("[TAG] nick"), mesmo
   // padrão de buildRankRowNick em js/ranking-cache.js (window.openGuildFromTag,
   // ver js/guilds.js); span já vem antes de profile-nick-text no HTML (ver

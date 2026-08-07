@@ -7,7 +7,7 @@ import { state } from './state.js';
 import { T } from './i18n.js';
 import { formatMsgTime, formatMsgFullDateTime } from './utils.js';
 import { fetchMyFriends, openProfileByUid } from './friends.js';
-import { lvChip } from './levels.js';
+import { lvChip, applyWeeklyPassNickColor } from './levels.js';
 
 // mensagens diretas entre amigos — balãozinho flutuante igual ao do clã (ver
 // js/guilds.js), só que 1-pra-1: abre na lista de amigos (bolinha verde =
@@ -96,18 +96,18 @@ async function renderDmFriendsList() {
       // bolinha verde aqui, mesmo se estiver de fato ativo agora
       const lastActiveAt = data.lastActiveAt && typeof data.lastActiveAt.toMillis === 'function' ? data.lastActiveAt.toMillis() : 0;
       const online = data.hideOnlineStatus !== true && (Date.now() - lastActiveAt) < DM_ONLINE_THRESHOLD_MS;
-      return { online, xp: data.xp || 0, admin: data.admin === true };
-    } catch { return { online: false, xp: 0, admin: false }; }
+      return { online, xp: data.xp || 0, admin: data.admin === true, weeklyPassExpiresAt: data.weeklyPassExpiresAt || null };
+    } catch { return { online: false, xp: 0, admin: false, weeklyPassExpiresAt: null }; }
   }));
   if (dmView !== 'list') return;
   // online primeiro, depois ordem alfabética dentro de cada grupo
   const rows = entries.map(([uid, data], i) => ({ uid, nick: data.nick || '', ...results[i] }));
   rows.sort((a, b) => (b.online - a.online) || a.nick.localeCompare(b.nick));
   el.innerHTML = '';
-  rows.forEach(r => el.appendChild(dmFriendRow(r.uid, r.nick, r.online, r.xp, r.admin)));
+  rows.forEach(r => el.appendChild(dmFriendRow(r.uid, r.nick, r.online, r.xp, r.admin, r.weeklyPassExpiresAt)));
 }
 
-function dmFriendRow(uid, nick, online, xp, isAdmin) {
+function dmFriendRow(uid, nick, online, xp, isAdmin, weeklyPassExpiresAt) {
   const row = document.createElement('div');
   row.className = 'dm-friend-row';
   const dot = document.createElement('span');
@@ -117,6 +117,7 @@ function dmFriendRow(uid, nick, online, xp, isAdmin) {
   const nickSpan = document.createElement('span');
   nickSpan.className = 'nick';
   nickSpan.textContent = nick;
+  applyWeeklyPassNickColor(nickSpan, { weeklyPassExpiresAt });
   row.appendChild(nickSpan);
   const chatId = dmChatIdFor(state.currentUser.uid, uid);
   const summary = dmSummaries[chatId];
@@ -291,9 +292,12 @@ async function setDmChatTitle(uid, nick) {
   const el = $('dm-chat-popup-title');
   el.textContent = nick;
   let xp = 0;
+  let weeklyPassExpiresAt = null;
   try {
     const snap = await getDoc(doc(db, 'scores', uid));
-    xp = (snap.exists() && snap.data().xp) || 0;
+    const data = snap.exists() ? snap.data() : {};
+    xp = data.xp || 0;
+    weeklyPassExpiresAt = data.weeklyPassExpiresAt || null;
   } catch {}
   if (activeFriendUid !== uid || dmView !== 'chat') return; // trocou de conversa enquanto isso carregava
   el.innerHTML = '';
@@ -303,6 +307,7 @@ async function setDmChatTitle(uid, nick) {
   nickSpan.style.marginLeft = '6px';
   nickSpan.textContent = nick;
   nickSpan.onclick = () => openProfileByUid(uid, nick, 'friends-screen');
+  applyWeeklyPassNickColor(nickSpan, { weeklyPassExpiresAt });
   el.appendChild(nickSpan);
 }
 

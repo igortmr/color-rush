@@ -252,6 +252,17 @@
     </div>
     <span class="record-badge lock-badge" id="lock-daily" style="display:none;"></span>
   </div>
+  <!-- Passe Semanal (IAP via RevenueCat, ver js/weekly-pass.js) -- ainda NÃO
+       à venda: só aparece se config/features.weeklyPassOnSale (Firestore,
+       ligado à mão no Firebase Console quando for a hora de lançar) for
+       true E dentro do app nativo (compra real só existe lá) -->
+  <div class="mode-card weekly-pass-card" id="card-weekly-pass" onclick="weeklyPassCardClick()" style="display:none;">
+    <h2 data-i18n="weekly_pass_title">🌟 Passe Semanal</h2>
+    <p data-i18n-html="weekly_pass_desc">Por 7 dias a partir da compra: nick <b>amarelo exclusivo</b>, +500 <span class="pigment-word">💧 Pigmentos</span> e <b>+1 tentativa</b> no Desafio Diário. Compra única — não renova sozinha.</p>
+    <div class="mode-card-footer">
+      <span class="record-badge" id="weekly-pass-status">R$9,90</span>
+    </div>
+  </div>
   <div class="mode-card" onclick="startGame('classic')">
     <h2 data-i18n="mode_classic_title">🎨 Clássico</h2>
     <p data-i18n-html="mode_classic_desc">Clique no quadrado da <b>cor pedida</b> e memorize a <b>palavra</b> dentro dele. Na próxima rodada, clique no quadrado da cor da palavra memorizada.</p>

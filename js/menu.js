@@ -4,7 +4,7 @@ import { show, resetScreenBackStack } from './nav.js';
 import { T } from './i18n.js';
 import { isMuted } from './utils.js';
 import { ALL_MODES } from './constants.js';
-import { MODE_UNLOCK, avatarOrDefaultIcon, xpInfo, myXp, modeUnlocked, applyGuildTagStyle } from './levels.js';
+import { MODE_UNLOCK, avatarOrDefaultIcon, xpInfo, myXp, modeUnlocked, applyGuildTagStyle, applyWeeklyPassNickColor } from './levels.js';
 import { refreshBadgeNotifDot } from './badges.js';
 import { fetchMyFriendRequests } from './friends.js';
 import { myRecord } from './game-core.js';
@@ -12,6 +12,7 @@ import { refreshInboxBadge, updateDailyMenuCard } from './daily-challenge.js';
 import { equippedAvatar, renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
 import { refreshGuildMenuBadge } from './guilds.js';
 import { updateGuildBattleCard } from './guild-battle.js';
+import { updateWeeklyPassCard } from './weekly-pass.js';
 import { computeModeRanks } from './profile-public.js';
 
 // posição no ranking de cada modo, do lado do 📊 nos cards da tela principal
@@ -68,6 +69,7 @@ window.showMenu = () => {
   refreshInboxBadge();
   updateDailyMenuCard();
   updateGuildBattleCard();
+  updateWeeklyPassCard();
   renderMenuPigmentosBar();
   renderUserPigmentos();
   refreshBadgeNotifDot();
@@ -109,7 +111,14 @@ window.showMenu = () => {
       tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(state.myData.guildId, 'menu-screen'); };
       labelEl.appendChild(tagSpan);
     }
-    labelEl.appendChild(document.createTextNode(T[state.lang].user_greeting(state.myData.nick || '')));
+    // span dedicado (não textNode direto) só pra poder levar a classe do
+    // nick amarelo do Passe Semanal (ver applyWeeklyPassNickColor) sem
+    // colorir o resto do cumprimento (avatar/sigla do clã já têm suas
+    // próprias cores)
+    const nickSpan = document.createElement('span');
+    nickSpan.textContent = T[state.lang].user_greeting(state.myData.nick || '');
+    applyWeeklyPassNickColor(nickSpan, state.myData);
+    labelEl.appendChild(nickSpan);
     $('menu-logout-btn').textContent = T[state.lang].sair_label;
   }
   // menu é a "raiz" da navegação — zera a pilha de "voltar" (ver

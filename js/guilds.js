@@ -6,7 +6,7 @@ import { $, withBtnLoading } from './dom.js';
 import { state } from './state.js';
 import { show, pushScreenAndShow, popScreenBack, resetScroll } from './nav.js';
 import { T } from './i18n.js';
-import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip, applyGuildTagStyle } from './levels.js';
+import { myXp, levelFromXp, GUILD_CREATE_MIN_LEVEL, GUILD_JOIN_MIN_LEVEL, GUILD_MAX_MEMBERS, guildLevelFromXp, pigmentIconSvg, lvChip, applyGuildTagStyle, applyWeeklyPassNickColor } from './levels.js';
 import { isMuted, tone, formatMsgTime, formatMsgFullDateTime } from './utils.js';
 import { fetchAllScores, rowData, buildLevelNickBlock } from './ranking-cache.js';
 import { openProfileByUid } from './friends.js';
@@ -1133,10 +1133,24 @@ function renderMessageText(container, text) {
 // valor (ver amtSpan em renderChatMessages), sem ícone antes do nick como os
 // outros tipos
 const GUILD_SYSTEM_EVENT_ICON = { create: '🎉', join: '👋', leave: '🚶', kick: '🚫', leader_transfer: '👑' };
-function renderChatMessages(elId) {
+// async por causa do fetchAllScores() abaixo (nick amarelo do Passe Semanal
+// — mensagem de chat só guarda uid/nick, não weeklyPassExpiresAt, então
+// precisa cruzar com o cache de scores; mesmo padrão já usado por
+// treasurySection acima, cache de 5min então não pesa chamar em toda
+// renderização). Chamadores não esperam essa promise (fire-and-forget) —
+// como cada renderização sempre lê chatMessages/fetchAllScores no
+// instante em que roda, uma renderização mais velha terminando depois de
+// uma mais nova ainda pinta o estado certo, só desperdiça um pouco de
+// trabalho — mesma tolerância já aceita no resto do arquivo.
+async function renderChatMessages(elId) {
   const el = $(elId);
   if (!el) return;
   const myUid = state.currentUser && state.currentUser.uid;
+  const passExpByUid = {};
+  try {
+    const all = await fetchAllScores();
+    all.forEach(r => { passExpByUid[r.uid] = rowData(r).weeklyPassExpiresAt || null; });
+  } catch { /* melhor esforço — sem isso só o nick amarelo no chat não aparece, resto do chat funciona normal */ }
   el.innerHTML = '';
   if (!chatMessages.length) {
     el.innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].guild_chat_empty}</div>`;
@@ -1152,6 +1166,7 @@ function renderChatMessages(elId) {
         nickSpan.className = 'nick-click';
         nickSpan.style.fontWeight = '700';
         nickSpan.onclick = (ev) => { ev.stopPropagation(); openProfileByUid(m.uid, m.nick || '', 'guild-screen'); };
+        applyWeeklyPassNickColor(nickSpan, { weeklyPassExpiresAt: passExpByUid[m.uid] });
         row.appendChild(nickSpan);
         const suffixSpan = document.createElement('span');
         suffixSpan.textContent = T[state.lang][`guild_sys_${m.eventType}_suffix`] || '';
@@ -1182,8 +1197,13 @@ function renderChatMessages(elId) {
       const mine = m.uid === myUid;
       bubble.style.cssText = `align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:80%; background:${mine ? 'rgba(45,214,255,0.12)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${mine ? 'rgba(45,214,255,0.35)' : 'rgba(255,255,255,0.12)'}; border-radius:10px; padding:6px 10px; cursor:pointer;`;
       const nickEl = document.createElement('div');
-      nickEl.style.cssText = 'font-size:0.7rem; font-weight:700; color:#8fa0d6;';
+      nickEl.style.cssText = 'font-size:0.7rem; font-weight:700;';
       nickEl.textContent = m.nick || '';
+      applyWeeklyPassNickColor(nickEl, { weeklyPassExpiresAt: passExpByUid[m.uid] });
+      // cor padrão só quando NÃO tem passe -- .nick-pass-gold (classe CSS)
+      // não venceria uma cor inline, então a cor de sempre vira condicional
+      // em vez de fixa no cssText acima
+      if (!nickEl.classList.contains('nick-pass-gold')) nickEl.style.color = '#8fa0d6';
       bubble.appendChild(nickEl);
       const textEl = document.createElement('div');
       textEl.style.cssText = 'font-size:0.9rem; word-break:break-word;';
