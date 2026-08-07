@@ -3,7 +3,7 @@ import { db } from './firebase.js';
 import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
-import { isWeeklyPassActive } from './levels.js';
+import { isWeeklyPassActive, pigmentIconSvg } from './levels.js';
 
 // Passe Semanal (IAP via RevenueCat) — R$9,90/US$1,99, dá por 7 dias a
 // partir da compra: nick amarelo (ver applyWeeklyPassNickColor em
@@ -155,6 +155,30 @@ function setupWeeklyPassBubbleWatcher() {
   document.querySelectorAll('.screen').forEach(s => observer.observe(s, { attributes: true, attributeFilter: ['class'] }));
 }
 setupWeeklyPassBubbleWatcher();
+
+// ícone de verdade dos Pigmentos (gota com gradiente colorido, mesmo usado
+// em todo o resto do jogo -- ver pigmentIconSvg em js/levels.js), em vez do
+// emoji 💧 (cor fixa, não bate com o resto do app). O texto do popup vem de
+// data-i18n-html (troca o innerHTML inteiro a cada idioma/render, ver
+// applyLanguage em js/bootstrap.js), então um <span id="weekly-pass-pigment-icon">
+// vazio serve de marcador -- observa a mesma div e reinjeta toda vez que o
+// conteúdo é trocado (idioma mudando, popup reabrindo etc.), sem precisar
+// que bootstrap.js saiba desse detalhe. Checa se já tem <svg> dentro antes
+// de reinjetar pra não entrar em loop (a própria injeção também é uma
+// mutação dentro da árvore observada).
+function injectWeeklyPassPigmentIcon() {
+  const el = $('weekly-pass-pigment-icon');
+  if (!el || el.querySelector('svg')) return;
+  el.innerHTML = pigmentIconSvg(16);
+}
+function setupWeeklyPassPigmentIconWatcher() {
+  const body = document.querySelector('.weekly-pass-popup-body');
+  if (!body) return;
+  const observer = new MutationObserver(() => injectWeeklyPassPigmentIcon());
+  observer.observe(body, { childList: true, subtree: true });
+  injectWeeklyPassPigmentIcon();
+}
+setupWeeklyPassPigmentIconWatcher();
 
 window.toggleWeeklyPassPopup = () => {
   weeklyPassPopupOpen = !weeklyPassPopupOpen;
