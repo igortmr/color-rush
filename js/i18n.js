@@ -174,10 +174,11 @@ export const T = {
     guild_battle_rules_p1: 'No início da Batalha de Clãs, 2 modos de jogo são sorteados — os mesmos para todos os clãs.',
     guild_battle_rules_p2: 'Cada modo registra as 5 melhores pontuações de cada clã.',
     guild_battle_rules_p3: 'No máximo 2 das 5 melhores pontuações podem ser da mesma pessoa.',
-    guild_battle_rules_p4: 'A pontuação do clã em cada modo é a média das 5 melhores pontuações de seus membros.',
-    guild_battle_rules_p5: 'A <b>pontuação final</b> do clã é a média das pontuações dos 2 modos.',
-    guild_battle_rules_p6: 'A Batalha de Clãs começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).',
-    guild_battle_rules_p7: 'Todos os membros que participarem da Batalha de Clãs ganham também +1.000 XP.',
+    guild_battle_rules_p4: 'Você pode jogar quantas vezes quiser pra tentar melhorar sua pontuação, mas só suas 2 melhores pontuações em cada modo entram no top-5 do clã.',
+    guild_battle_rules_p5: 'A pontuação do clã em cada modo é a média das 5 melhores pontuações de seus membros.',
+    guild_battle_rules_p6: 'A <b>pontuação final</b> do clã é a média das pontuações dos 2 modos.',
+    guild_battle_rules_p7: 'A Batalha de Clãs começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).',
+    guild_battle_rules_p8: 'Todos os membros que participarem da Batalha de Clãs ganham também +1.000 XP.',
     guild_battle_prizes_legend: {
       title: '🏆 Prêmios (creditados no Cofre do Clã)',
       rows: [
@@ -596,10 +597,11 @@ export const T = {
     guild_battle_rules_p1: 'At the start of the Guild Battle, 2 game modes are drawn — the same ones for every guild.',
     guild_battle_rules_p2: 'Each mode records every guild\'s 5 best scores.',
     guild_battle_rules_p3: 'At most 2 of those 5 best scores can belong to the same person.',
-    guild_battle_rules_p4: 'A guild\'s score in each mode is the average of its members\' 5 best scores.',
-    guild_battle_rules_p5: 'The guild\'s <b>final score</b> is the average of the scores from the 2 modes.',
-    guild_battle_rules_p6: 'The Guild Battle starts every Friday at 6 PM and ends Sunday at 11:59 PM (Brasília time).',
-    guild_battle_rules_p7: 'All members who take part in the Guild Battle also get +1,000 XP.',
+    guild_battle_rules_p4: 'You can play as many times as you want to try to improve your score, but only your 2 best scores in each mode count toward the guild\'s top 5.',
+    guild_battle_rules_p5: 'A guild\'s score in each mode is the average of its members\' 5 best scores.',
+    guild_battle_rules_p6: 'The guild\'s <b>final score</b> is the average of the scores from the 2 modes.',
+    guild_battle_rules_p7: 'The Guild Battle starts every Friday at 6 PM and ends Sunday at 11:59 PM (Brasília time).',
+    guild_battle_rules_p8: 'All members who take part in the Guild Battle also get +1,000 XP.',
     guild_battle_prizes_legend: {
       title: '🏆 Prizes (credited to the Guild Vault)',
       rows: [
@@ -1012,10 +1014,11 @@ export const T = {
     guild_battle_rules_p1: 'Al inicio de la Batalla de Clanes, se sortean 2 modos de juego — los mismos para todos los clanes.',
     guild_battle_rules_p2: 'Cada modo registra las 5 mejores puntuaciones de cada clan.',
     guild_battle_rules_p3: 'Como máximo 2 de esas 5 mejores puntuaciones pueden ser de la misma persona.',
-    guild_battle_rules_p4: 'La puntuación del clan en cada modo es el promedio de las 5 mejores puntuaciones de sus miembros.',
-    guild_battle_rules_p5: 'La <b>puntuación final</b> del clan es el promedio de las puntuaciones de los 2 modos.',
-    guild_battle_rules_p6: 'La Batalla de Clanes empieza todos los viernes a las 18h y termina el domingo a las 23h59 (hora de Brasilia).',
-    guild_battle_rules_p7: 'Todos los miembros que participen en la Batalla de Clanes también ganan +1.000 XP.',
+    guild_battle_rules_p4: 'Puedes jugar cuantas veces quieras para intentar mejorar tu puntuación, pero solo tus 2 mejores puntuaciones en cada modo entran en el top 5 del clan.',
+    guild_battle_rules_p5: 'La puntuación del clan en cada modo es el promedio de las 5 mejores puntuaciones de sus miembros.',
+    guild_battle_rules_p6: 'La <b>puntuación final</b> del clan es el promedio de las puntuaciones de los 2 modos.',
+    guild_battle_rules_p7: 'La Batalla de Clanes empieza todos los viernes a las 18h y termina el domingo a las 23h59 (hora de Brasilia).',
+    guild_battle_rules_p8: 'Todos los miembros que participen en la Batalla de Clanes también ganan +1.000 XP.',
     guild_battle_prizes_legend: {
       title: '🏆 Premios (acreditados en el Cofre del Clan)',
       rows: [
