@@ -615,11 +615,11 @@ async function gameOver(reason) {
     $('over-xp-wrap').style.display = 'none';
   }
 
-  let guildBattleCredited = false;
+  let guildBattleResult = { credited: false, reason: null };
   if (state.offline) {
     if (isNewRecord) setLocalRecord(mode, score);
   } else if (state.currentUser && state.myData.nick) {
-    guildBattleCredited = await persistGameResult(xpEarned);
+    guildBattleResult = await persistGameResult(xpEarned);
   }
   setOverButtonsEnabled(true);
 
@@ -637,9 +637,11 @@ async function gameOver(reason) {
   $('over-mini-ranking-card').style.display = state.playingForGuildBattle ? 'none' : '';
   $('over-guild-battle-card').style.display = state.playingForGuildBattle ? '' : 'none';
   if (state.playingForGuildBattle) {
-    $('over-guild-battle-text').textContent = guildBattleCredited
+    $('over-guild-battle-text').textContent = guildBattleResult.credited
       ? T[state.lang].guild_battle_over_credited
-      : T[state.lang].guild_battle_over_not_credited;
+      : guildBattleResult.reason === 'other_guild'
+        ? T[state.lang].guild_battle_over_other_guild
+        : T[state.lang].guild_battle_over_not_credited;
   } else {
     renderMiniRankings(mode, score);
   }
@@ -687,9 +689,14 @@ window.dismissLevelUp = () => $('levelup-banner').classList.remove('show');
 // inverso não pode ser um import de módulo normal
 window.showLevelUp = showLevelUp;
 
-// retorna se essa pontuação foi creditada na Batalha de Clã (d.guildBattleReplaySave)
-// — gameOver() usa isso pra decidir o texto do aviso quando
-// state.playingForGuildBattle (ver js/state.js)
+// retorna { credited, reason } sobre a Batalha de Clã (d.guildBattleReplaySave/
+// d.guildBattleReason) — gameOver() usa isso pra decidir o texto do aviso
+// quando state.playingForGuildBattle (ver js/state.js). "reason" só vem
+// preenchido quando credited é false POR UM MOTIVO ESPECÍFICO que merece
+// mensagem própria (hoje só 'other_guild' -- já pontuou por outro clã essa
+// semana, ver creditGuildBattleScore em functions/index.js); nos outros
+// casos de "não creditado" (não fez top-2 etc.) reason vem null e cai na
+// mensagem genérica.
 async function persistGameResult(xpEarned = 0) {
   // a pontuação final agora é validada no servidor (Cloud Function), que checa
   // se o tempo real de jogo é compatível com a pontuação alegada antes de gravar.
@@ -697,7 +704,7 @@ async function persistGameResult(xpEarned = 0) {
     // sem sessão validada (ex.: caiu a internet bem no início da partida) —
     // não há como confirmar no servidor, então não grava essa partida.
     $('sync-status').textContent = T[state.lang].sync_fail;
-    return false;
+    return { credited: false, reason: null };
   }
   const sessionId = state.currentSessionId;
   state.currentSessionId = null; // cada sessão só pode ser usada uma vez
@@ -751,9 +758,9 @@ async function persistGameResult(xpEarned = 0) {
     if (d.isNewRecord || d.guildBattleReplaySave || onReplayWatchlist) {
       saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
-    return d.guildBattleReplaySave === true;
+    return { credited: d.guildBattleReplaySave === true, reason: d.guildBattleReason || null };
   } catch (e) {
     $('sync-status').textContent = T[state.lang].sync_fail;
-    return false;
+    return { credited: false, reason: null };
   }
 }
