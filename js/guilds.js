@@ -343,6 +343,13 @@ async function renderGuildScreen() {
   const myUid = state.currentUser && state.currentUser.uid;
   const isMember = !!(myUid && g.members && g.members[myUid]);
   const isLeader = myUid && g.leaderUid === myUid;
+  // admin pode ver as 4 abas (Membros/Chat/Cofre/Loja) de QUALQUER clã, sem
+  // precisar ser membro -- só visualização (não vira líder, não some com o
+  // "só a líder pode comprar" na Loja etc.); chat/cofre também precisam do
+  // bypass nas firestore.rules (guilds/{id}/chat e /treasuryLog), senão a
+  // leitura falha mesmo com a aba aparecendo
+  const isAdmin = state.myData.admin === true;
+  const canSeeTabs = isMember || isAdmin;
   const level = guildLevelFromXp(g.xp || 0);
 
   header.innerHTML = `
@@ -364,13 +371,13 @@ async function renderGuildScreen() {
       </div>`);
   }
 
-  // não sou membro: pedir entrada / cancelar pedido / avisos de bloqueio
-  if (!isMember) {
+  // não sou membro nem admin: pedir entrada / cancelar pedido / avisos de
+  // bloqueio (admin não pede entrada, só observa)
+  if (!isMember && !isAdmin) {
     body.appendChild(nonMemberActionCard(g, myUid));
   }
 
-  // abas (só faz sentido pra quem é membro ver chat/cofre/loja)
-  if (isMember) {
+  if (canSeeTabs) {
     const tabs = document.createElement('div');
     tabs.className = 'scope-tabs';
     tabs.innerHTML = `
@@ -381,7 +388,7 @@ async function renderGuildScreen() {
     body.appendChild(tabs);
   }
 
-  if (!isMember || guildTab === 'members') {
+  if (!canSeeTabs || guildTab === 'members') {
     // nível de cada pessoa (membro ou solicitando entrada) do lado do nick,
     // igual já é no resto do jogo — vem do mesmo cache de pontuações usado
     // pelo ranking/amigos, sem leitura extra por pessoa
@@ -398,14 +405,14 @@ async function renderGuildScreen() {
     // já é cacheado, mas ainda é assíncrono) — sem essa checagem, a lista de
     // membros podia desenhar por cima de outra aba depois que a pessoa já
     // tinha saído dela
-    if (guildTab !== 'members' && isMember) return;
+    if (guildTab !== 'members' && canSeeTabs) return;
 
     body.appendChild(membersSection(g, myUid, isLeader, xpByUid));
     if (isLeader) body.appendChild(joinRequestsSection(xpByUid));
     if (isLeader) body.appendChild(invitesSection(xpByUid));
     if (isLeader) body.appendChild(leaderToolsSection(g));
   } else if (guildTab === 'chat') {
-    body.appendChild(chatSection(g, myUid));
+    body.appendChild(chatSection(g, myUid, !isMember));
     ensureChatListener(g.id);
   } else if (guildTab === 'treasury') {
     // nível de cada doador do lado do nick, mesmo padrão/cache de
@@ -417,7 +424,7 @@ async function renderGuildScreen() {
       all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
     } catch { /* sem nível não quebra a lista, só mostra sem o chip */ }
     if (myRenderToken !== guildRenderToken) return;
-    body.appendChild(treasurySection(g, xpByUid));
+    body.appendChild(treasurySection(g, xpByUid, !isMember));
   } else if (guildTab === 'shop') {
     body.appendChild(guildShopSection(g, myUid, isLeader));
   }
@@ -682,7 +689,11 @@ function playDonateSound() {
   tone(1568, 0.16, 'sine', 0.16, 0.16);
 }
 
-function treasurySection(g, xpByUid) {
+// readOnly: admin vendo o cofre de um clã que não é o próprio (ver
+// renderGuildScreen) -- donateToGuildTreasury no servidor doa pro guildId da
+// PRÓPRIA conta (não pro clã aberto na tela), então deixar o formulário de
+// doação aqui doaria pro clã errado sem avisar; melhor nem mostrar
+function treasurySection(g, xpByUid, readOnly) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:10px;';
 
@@ -696,63 +707,71 @@ function treasurySection(g, xpByUid) {
     </div>`;
   wrap.appendChild(balanceCard);
 
-  const donateCard = document.createElement('div');
-  donateCard.className = 'card';
-  donateCard.style.textAlign = 'center';
-  const myPigmentos = state.myData.pigmentos || 0;
-  const hint = document.createElement('div');
-  hint.className = 'muted';
-  hint.style.cssText = 'font-size:0.8rem; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:4px;';
-  hint.innerHTML = `${T[state.lang].guild_treasury_donate_hint}<b>${myPigmentos}</b>${pigmentIconSvg(12)}`;
-  donateCard.appendChild(hint);
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex; gap:8px; align-items:center; justify-content:center;';
-  const input = document.createElement('input');
-  input.type = 'number';
-  input.min = '1';
-  input.max = String(myPigmentos);
-  input.placeholder = '0';
-  input.style.cssText = 'width:100px; text-align:center; padding:8px;';
-  row.appendChild(input);
-  const donateBtn = document.createElement('button');
-  donateBtn.textContent = T[state.lang].guild_btn_donate;
-  donateBtn.style.cssText = 'padding:8px 18px; font-size:0.8rem;';
-  row.appendChild(donateBtn);
-  donateCard.appendChild(row);
-  const status = document.createElement('div');
-  status.className = 'muted';
-  status.style.cssText = 'margin-top:8px; min-height:1.2em; font-size:0.8rem;';
-  donateCard.appendChild(status);
+  if (readOnly) {
+    const hint = document.createElement('div');
+    hint.className = 'muted';
+    hint.style.cssText = 'text-align:center; font-size:0.78rem;';
+    hint.textContent = T[state.lang].guild_admin_readonly_hint;
+    wrap.appendChild(hint);
+  } else {
+    const donateCard = document.createElement('div');
+    donateCard.className = 'card';
+    donateCard.style.textAlign = 'center';
+    const myPigmentos = state.myData.pigmentos || 0;
+    const hint = document.createElement('div');
+    hint.className = 'muted';
+    hint.style.cssText = 'font-size:0.8rem; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:4px;';
+    hint.innerHTML = `${T[state.lang].guild_treasury_donate_hint}<b>${myPigmentos}</b>${pigmentIconSvg(12)}`;
+    donateCard.appendChild(hint);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; gap:8px; align-items:center; justify-content:center;';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '1';
+    input.max = String(myPigmentos);
+    input.placeholder = '0';
+    input.style.cssText = 'width:100px; text-align:center; padding:8px;';
+    row.appendChild(input);
+    const donateBtn = document.createElement('button');
+    donateBtn.textContent = T[state.lang].guild_btn_donate;
+    donateBtn.style.cssText = 'padding:8px 18px; font-size:0.8rem;';
+    row.appendChild(donateBtn);
+    donateCard.appendChild(row);
+    const status = document.createElement('div');
+    status.className = 'muted';
+    status.style.cssText = 'margin-top:8px; min-height:1.2em; font-size:0.8rem;';
+    donateCard.appendChild(status);
 
-  donateBtn.onclick = () => {
-    const amount = parseInt(input.value, 10);
-    status.textContent = '';
-    if (!Number.isInteger(amount) || amount <= 0) {
-      status.textContent = T[state.lang].guild_treasury_invalid_amount;
-      return;
-    }
-    if (amount > myPigmentos) {
-      status.textContent = T[state.lang].guild_treasury_not_enough_own;
-      return;
-    }
-    // popup temática de confirmação antes de doar de verdade (mesmo padrão
-    // do #buy-shop-modal/#buy-guild-tag-style-modal) — o callback só roda se
-    // a pessoa confirmar (ver window.confirmDonateToGuildTreasury abaixo)
-    window.startDonateToGuildTreasury(amount, async () => {
-      donateBtn.disabled = true;
-      try {
-        await callDonateToGuildTreasury({ amount });
-        state.myData.pigmentos = myPigmentos - amount; // otimista — atualiza local na hora, sem esperar o próximo fetch
-        spawnPigmentSplash();
-        playDonateSound();
-        renderGuildScreen(); // recarrega saldo do cofre + lista/histórico de doações
-      } catch (e) {
-        status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
-        donateBtn.disabled = false;
+    donateBtn.onclick = () => {
+      const amount = parseInt(input.value, 10);
+      status.textContent = '';
+      if (!Number.isInteger(amount) || amount <= 0) {
+        status.textContent = T[state.lang].guild_treasury_invalid_amount;
+        return;
       }
-    });
-  };
-  wrap.appendChild(donateCard);
+      if (amount > myPigmentos) {
+        status.textContent = T[state.lang].guild_treasury_not_enough_own;
+        return;
+      }
+      // popup temática de confirmação antes de doar de verdade (mesmo padrão
+      // do #buy-shop-modal/#buy-guild-tag-style-modal) — o callback só roda se
+      // a pessoa confirmar (ver window.confirmDonateToGuildTreasury abaixo)
+      window.startDonateToGuildTreasury(amount, async () => {
+        donateBtn.disabled = true;
+        try {
+          await callDonateToGuildTreasury({ amount });
+          state.myData.pigmentos = myPigmentos - amount; // otimista — atualiza local na hora, sem esperar o próximo fetch
+          spawnPigmentSplash();
+          playDonateSound();
+          renderGuildScreen(); // recarrega saldo do cofre + lista/histórico de doações
+        } catch (e) {
+          status.textContent = (e && e.message) || T[state.lang].guild_err_generic;
+          donateBtn.disabled = false;
+        }
+      });
+    };
+    wrap.appendChild(donateCard);
+  }
 
   // ranking de maiores doações somadas (total por pessoa, treasuryContributions
   // — só informativo, não dá nenhum privilégio)
@@ -1041,17 +1060,25 @@ function ensureChatListener(guildId) {
   }, () => {});
 }
 
-function chatSection() {
+// readOnly: admin vendo o chat de um clã que não é o próprio (ver
+// renderGuildScreen) -- sendGuildMessage no servidor manda pro guildId da
+// PRÓPRIA conta (não pro clã aberto na tela), então deixar a caixa de
+// digitar visível aqui mandaria a mensagem pro clã errado sem avisar;
+// melhor nem mostrar a caixa, só o histórico (a leitura em si já depende de
+// um bypass admin nas firestore.rules, ver comentário lá)
+function chatSection(g, myUid, readOnly) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:8px; position:relative;';
   wrap.innerHTML = `
     <div id="guild-chat-messages" style="display:flex; flex-direction:column; gap:6px; max-height:340px; overflow-y:auto; padding:4px;"></div>
     <div class="muted chat-typing-indicator" id="guild-chat-typing" style="display:none; font-size:0.75rem; padding:0 4px;"></div>
     <div class="chat-mention-list" id="guild-chat-mentions" style="display:none;"></div>
-    <div style="display:flex; gap:6px;">
+    ${readOnly
+      ? `<div class="muted" style="text-align:center; font-size:0.78rem;">${T[state.lang].guild_admin_readonly_hint}</div>`
+      : `<div style="display:flex; gap:6px;">
       <input type="text" id="guild-chat-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="${T[state.lang].guild_chat_ph}" style="flex:1;" oninput="handleGuildChatInput(this,'guild-chat-mentions')" onkeydown="if(event.key==='Enter') sendGuildChatMessage();">
       <button style="padding:12px 16px;" onclick="sendGuildChatMessage()">${T[state.lang].guild_chat_send}</button>
-    </div>`;
+    </div>`}`;
   setTimeout(() => renderChatMessages('guild-chat-messages'), 0);
   return wrap;
 }
