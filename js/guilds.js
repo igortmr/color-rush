@@ -1109,18 +1109,10 @@ function renderMessageText(container, text) {
 // guild_sys_<tipo>_suffix em js/i18n.js, montado depois do nick clicável
 // (ver renderChatMessages abaixo)
 const GUILD_SYSTEM_EVENT_ICON = { create: '🎉', join: '👋', leave: '🚶', kick: '🚫', leader_transfer: '👑' };
-async function renderChatMessages(elId) {
+function renderChatMessages(elId) {
   const el = $(elId);
   if (!el) return;
   const myUid = state.currentUser && state.currentUser.uid;
-  // nível de cada pessoa citada numa mensagem de sistema (ver bloco "system"
-  // abaixo) — mesmo cache de pontuações usado no resto da tela do clã
-  // (membersSection/treasurySection), sem leitura extra por mensagem
-  let xpByUid = {};
-  try {
-    const all = await fetchAllScores();
-    all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
-  } catch { /* sem nível não quebra a mensagem, só mostra sem o chip */ }
   el.innerHTML = '';
   if (!chatMessages.length) {
     el.innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].guild_chat_empty}</div>`;
@@ -1129,7 +1121,6 @@ async function renderChatMessages(elId) {
       if (m.system) {
         const row = document.createElement('div');
         row.style.cssText = 'align-self:center; display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; font-size:0.72rem; color:#8fa0d6; padding:2px 8px; cursor:pointer;';
-        row.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[m.uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
         const icon = GUILD_SYSTEM_EVENT_ICON[m.eventType] || '';
         if (icon) row.appendChild(document.createTextNode(icon + ' '));
         const nickSpan = document.createElement('span');
