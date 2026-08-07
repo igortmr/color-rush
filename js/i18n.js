@@ -177,7 +177,7 @@ export const T = {
     guild_battle_rules_p4: 'A pontuação do clã em cada modo é a média das 5 melhores pontuações de seus membros.',
     guild_battle_rules_p5: 'A <b>pontuação final</b> do clã é a média das pontuações dos 2 modos.',
     guild_battle_rules_p6: 'A Batalha de Clãs começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).',
-    guild_battle_rules_p7: 'Todos os membros que participarem da Batalha de Clãs ganham +1.000 XP.',
+    guild_battle_rules_p7: 'Todos os membros que participarem da Batalha de Clãs ganham também +1.000 XP.',
     guild_battle_prizes_legend: {
       title: '🏆 Prêmios (creditados no Cofre do Clã)',
       rows: [
@@ -599,7 +599,7 @@ export const T = {
     guild_battle_rules_p4: 'A guild\'s score in each mode is the average of its members\' 5 best scores.',
     guild_battle_rules_p5: 'The guild\'s <b>final score</b> is the average of the scores from the 2 modes.',
     guild_battle_rules_p6: 'The Guild Battle starts every Friday at 6 PM and ends Sunday at 11:59 PM (Brasília time).',
-    guild_battle_rules_p7: 'All members who take part in the Guild Battle get +1,000 XP.',
+    guild_battle_rules_p7: 'All members who take part in the Guild Battle also get +1,000 XP.',
     guild_battle_prizes_legend: {
       title: '🏆 Prizes (credited to the Guild Vault)',
       rows: [
@@ -1015,7 +1015,7 @@ export const T = {
     guild_battle_rules_p4: 'La puntuación del clan en cada modo es el promedio de las 5 mejores puntuaciones de sus miembros.',
     guild_battle_rules_p5: 'La <b>puntuación final</b> del clan es el promedio de las puntuaciones de los 2 modos.',
     guild_battle_rules_p6: 'La Batalla de Clanes empieza todos los viernes a las 18h y termina el domingo a las 23h59 (hora de Brasilia).',
-    guild_battle_rules_p7: 'Todos los miembros que participen en la Batalla de Clanes ganan +1.000 XP.',
+    guild_battle_rules_p7: 'Todos los miembros que participen en la Batalla de Clanes también ganan +1.000 XP.',
     guild_battle_prizes_legend: {
       title: '🏆 Premios (acreditados en el Cofre del Clan)',
       rows: [
