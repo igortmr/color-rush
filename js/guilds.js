@@ -1129,7 +1129,10 @@ function renderMessageText(container, text) {
 // em functions/index.js) — texto de verdade (traduzido) vem de
 // guild_sys_<tipo>_suffix em js/i18n.js, montado depois do nick clicável
 // (ver renderChatMessages abaixo)
-const GUILD_SYSTEM_EVENT_ICON = { create: '🎉', join: '👋', leave: '🚶', kick: '🚫', leader_transfer: '👑', donate: '💧' };
+// "donate" de propósito fora daqui -- só o ícone do pigmento à direita do
+// valor (ver amtSpan em renderChatMessages), sem ícone antes do nick como os
+// outros tipos
+const GUILD_SYSTEM_EVENT_ICON = { create: '🎉', join: '👋', leave: '🚶', kick: '🚫', leader_transfer: '👑' };
 function renderChatMessages(elId) {
   const el = $(elId);
   if (!el) return;
