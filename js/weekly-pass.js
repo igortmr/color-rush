@@ -15,10 +15,11 @@ import { isWeeklyPassActive } from './levels.js';
 //
 // AINDA NÃO À VENDA: card só aparece se config/features.weeklyPassOnSale
 // (Firestore, documento público, ligado à mão no Firebase Console quando
-// for a hora de lançar — mesmo padrão manual do campo "admin" em
-// scores/{uid}) for true. Lido uma vez só ao abrir o menu, não é um
-// listener — não precisa reagir em tempo real a essa flag mudando enquanto
-// alguém já está com o app aberto.
+// for a hora de lançar) for true -- OU se a conta for admin (ver
+// canSeeWeeklyPass abaixo), pra dar pra conferir/testar sem expor pra
+// ninguém mais. Lido uma vez só ao abrir o menu, não é um listener — não
+// precisa reagir em tempo real a essa flag mudando enquanto alguém já está
+// com o app aberto.
 //
 // A "Public API Key" do RevenueCat NÃO é segredo (mesmo status da chave do
 // Firebase já hardcoded em js/firebase.js — identifica o projeto, não
@@ -38,6 +39,17 @@ async function ensureWeeklyPassFlagLoaded() {
     const snap = await getDoc(doc(db, 'config', 'features'));
     weeklyPassOnSale = !!(snap.exists() && snap.data().weeklyPassOnSale === true);
   } catch { weeklyPassOnSale = false; }
+}
+
+// libera o card/compra pra conta admin mesmo com weeklyPassOnSale desligado
+// (mesmo campo "admin" de scores/{uid}, "setado à mão no Firebase Console",
+// já usado em todo o resto do jogo) -- serve tanto pro usuário conferir como
+// o card está ficando antes do lançamento, quanto pro revisor da Apple
+// testar a compra de verdade durante a revisão, dando pra conta de revisão
+// (App Store Connect > App Review Information > Sign-In Required) um
+// scores/{uid}.admin = true SEM precisar ligar a flag pra todo mundo.
+function canSeeWeeklyPass() {
+  return weeklyPassOnSale || (state.myData && state.myData.admin === true);
 }
 
 // plugin nativo (@revenuecat/purchases-capacitor) — acessado via
@@ -102,7 +114,7 @@ export async function updateWeeklyPassCard() {
   // checagem duplicada aqui de propósito, não compensa um módulo
   // compartilhado só pra isso, mesmo padrão já usado nos outros arquivos)
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  if (!weeklyPassOnSale || !isNative || state.offline || !state.currentUser || !state.myData.nick) {
+  if (!canSeeWeeklyPass() || !isNative || state.offline || !state.currentUser || !state.myData.nick) {
     card.style.display = 'none';
     return;
   }
@@ -117,7 +129,7 @@ window.weeklyPassCardClick = async () => {
   // passe já ativo -- card é só informativo enquanto durar, comprar de novo
   // ainda funcionaria (empilha mais 7 dias, ver revenueCatWebhook em
   // functions/index.js) mas não é o que o toque no card faz aqui
-  if (!weeklyPassOnSale || isWeeklyPassActive(state.myData)) return;
+  if (!canSeeWeeklyPass() || isWeeklyPassActive(state.myData)) return;
   const Purchases = purchasesPlugin();
   if (!Purchases) { alert(T[state.lang].guild_err_generic); return; }
   const statusEl = $('weekly-pass-status');
