@@ -417,14 +417,18 @@ async function renderGuildScreen() {
   } else if (guildTab === 'treasury') {
     // nível de cada doador do lado do nick, mesmo padrão/cache de
     // membersSection acima (aqui é buscado de novo pq essa aba é um else-if
-    // separado, fora daquele bloco)
+    // separado, fora daquele bloco). nickByUid junto pq o ranking de doações
+    // usa g.treasuryContributions (chaveado por uid) — quem já saiu do clã
+    // não tem mais entrada em g.members, então o nick precisa vir de algum
+    // lugar que não dependa de continuar sendo membro (ver treasurySection)
     let xpByUid = {};
+    let nickByUid = {};
     try {
       const all = await fetchAllScores();
-      all.forEach(r => { xpByUid[r.uid] = rowData(r).xp || 0; });
+      all.forEach(r => { const d = rowData(r); xpByUid[r.uid] = d.xp || 0; nickByUid[r.uid] = d.nick || ''; });
     } catch { /* sem nível não quebra a lista, só mostra sem o chip */ }
     if (myRenderToken !== guildRenderToken) return;
-    body.appendChild(treasurySection(g, xpByUid, !isMember));
+    body.appendChild(treasurySection(g, xpByUid, nickByUid, !isMember));
   } else if (guildTab === 'shop') {
     body.appendChild(guildShopSection(g, myUid, isLeader));
   }
@@ -693,7 +697,7 @@ function playDonateSound() {
 // renderGuildScreen) -- donateToGuildTreasury no servidor doa pro guildId da
 // PRÓPRIA conta (não pro clã aberto na tela), então deixar o formulário de
 // doação aqui doaria pro clã errado sem avisar; melhor nem mostrar
-function treasurySection(g, xpByUid, readOnly) {
+function treasurySection(g, xpByUid, nickByUid, readOnly) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; display:flex; flex-direction:column; gap:10px;';
 
@@ -795,7 +799,18 @@ function treasurySection(g, xpByUid, readOnly) {
       posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
       posSpan.textContent = medal;
       left.appendChild(posSpan);
-      left.appendChild(buildLevelNickBlock((xpByUid && xpByUid[uid]) || 0, (g.members && g.members[uid] && g.members[uid].nick) || '?', ''));
+      // g.members só tem quem ainda está no clã — quem já saiu não aparece
+      // mais lá (por isso o "?" no lugar do nick, bug reportado), então o
+      // fallback vem do cache de pontuações (nickByUid), que tem todo mundo
+      // que já pontuou uma vez, membro atual ou não
+      const nick = (g.members && g.members[uid] && g.members[uid].nick) || (nickByUid && nickByUid[uid]) || '?';
+      const nickBlock = buildLevelNickBlock((xpByUid && xpByUid[uid]) || 0, nick, '');
+      const nickSpan = nickBlock.querySelector('.nick-top-row span');
+      if (nickSpan) {
+        nickSpan.className = 'nick-click';
+        nickSpan.onclick = () => openProfileByUid(uid, nick, 'guild-screen');
+      }
+      left.appendChild(nickBlock);
       memberRow2.appendChild(left);
       const amtSpan = document.createElement('span');
       amtSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700; flex-shrink:0;';
@@ -845,6 +860,12 @@ async function loadTreasuryHistory(guildId, historyList, xpByUid) {
       const nickSpan = document.createElement('span');
       nickSpan.style.fontWeight = '700';
       nickSpan.textContent = data.nick || '?';
+      // data.nick já vem denormalizado no próprio log de doação (gravado no
+      // momento da doação, ver donateToGuildTreasury em functions/index.js),
+      // então continua certo mesmo pra quem já saiu do clã — só faltava
+      // o clique pro perfil
+      nickSpan.className = 'nick-click';
+      nickSpan.onclick = () => openProfileByUid(data.uid, data.nick || '', 'guild-screen');
       nickRow.appendChild(nickSpan);
       left.appendChild(nickRow);
       const dateSpan = document.createElement('span');

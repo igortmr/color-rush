@@ -254,7 +254,7 @@ function renderBattleStatus() {
     // flutuando por cima da borda de um .mode-card; aqui não tem nenhum card
     // por baixo pra flutuar sobre, então troca pra position:static (só o
     // resto do visual — fundo amarelo, fonte Orbitron, etc. — é reaproveitado)
-    statusEl.innerHTML = `<span class="daily-badge-today" style="position:static; display:inline-block;">${T[state.lang].guild_battle_ends_in_label} <span class="daily-badge-time" id="guild-battle-screen-countdown"></span></span>`;
+    statusEl.innerHTML = `<span class="daily-badge-today" style="position:static; display:inline-block;">${T[state.lang].guild_battle_ends_in_label}<span class="daily-badge-time" id="guild-battle-screen-countdown"></span></span>`;
     startBattleScreenTicker();
   } else {
     statusEl.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ended}</div>`;
