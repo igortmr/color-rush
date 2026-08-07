@@ -607,13 +607,14 @@
 <div class="modal-overlay" id="guild-battle-rules-modal" style="display:none;" onclick="if(event.target===this) closeGuildBattleRulesModal();">
   <div class="modal-card" style="max-width:440px; position:relative;">
     <button onclick="closeGuildBattleRulesModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
-    <h1 style="font-size:1.2rem; text-align:center;" data-i18n="guild_battle_rules_title">Como funciona a pontuação</h1>
+    <h1 style="font-size:1.2rem; text-align:center;" data-i18n="guild_battle_rules_title">Como funciona a Batalha de Clãs</h1>
     <div class="modal-card-body" style="text-align:left;">
       <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p1">No início da Batalha de Clãs, 2 modos de jogo são sorteados — os mesmos para todos os clãs.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p2">Cada modo registra as 5 melhores pontuações de cada clã. No máximo 2 dessas 5 melhores pontuações podem ser da mesma pessoa.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p3">A pontuação do clã em cada modo é a média das 5 melhores pontuações de seus membros. A pontuação final do clã é a média das pontuações dos 2 modos.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p4">Se dois clãs empatarem na pontuação final, o desempate é pela soma dos tempos de todas as partidas que entraram no Top 5 dos 2 modos — vence quem tiver a menor soma.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p5">A Batalha de Clãs começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p2">Cada modo registra as 5 melhores pontuações de cada clã.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p3">No máximo 2 das 5 melhores pontuações podem ser da mesma pessoa.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p4">A pontuação do clã em cada modo é a média das 5 melhores pontuações de seus membros.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p5">A pontuação final do clã é a média das pontuações dos 2 modos.</p>
+      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p6">A Batalha de Clãs começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).</p>
     </div>
   </div>
 </div>
@@ -969,12 +970,10 @@
      — só acessada pelo card do menu quando o evento está rolando -->
 <div class="screen" id="guild-battle-screen">
   <div class="profile-top-row">
-    <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-      <h1 style="font-size:1.7rem; margin:0;" data-i18n="guild_battle_page_title">⚔️ Batalha de Clãs</h1>
-      <button class="info-btn" onclick="openGuildBattleRulesModal()" aria-label="Como funciona a pontuação">?</button>
-    </span>
+    <h1 style="font-size:1.7rem;" data-i18n="guild_battle_page_title">⚔️ Batalha de Clãs</h1>
     <button class="pill-btn" onclick="guildBattleBack()" data-i18n="btn_back">VOLTAR</button>
   </div>
+  <button class="tut-link-btn" onclick="openGuildBattleRulesModal()" data-i18n="guild_battle_rules_btn">❓ Como funciona a Batalha de Clãs</button>
   <div id="guild-battle-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
 </div>
 

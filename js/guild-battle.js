@@ -242,7 +242,7 @@ function renderGuildBattleBody(body) {
   statusCard.className = 'card';
   statusCard.style.textAlign = 'center';
   if (isActive) {
-    statusCard.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ends_in_label}</div><div id="guild-battle-screen-countdown" style="font-weight:700; font-family:'Orbitron',sans-serif; font-size:1.2rem;"></div>`;
+    statusCard.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ends_in_label}</div><div id="guild-battle-screen-countdown" style="font-weight:700; font-family:'Orbitron',sans-serif; font-size:0.85rem; color:var(--neon-yellow);"></div>`;
     body.appendChild(statusCard);
     startBattleScreenTicker();
   } else {
