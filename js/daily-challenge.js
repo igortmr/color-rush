@@ -12,7 +12,7 @@ import {
   SQUARES, poolItemId, DAILY_ROTATION_MODES, DAILY_MAX_ATTEMPTS, DAILY_COLORS,
   DAILY_PALETTE_OVERRIDE, DAILY_SHAPES_OVERRIDE, poolFor
 } from './constants.js';
-import { levelFromXp, myXp, pigmentIconSvg, blockIfBanned, isWeeklyPassActive } from './levels.js';
+import { levelFromXp, myXp, pigmentIconSvg, blockIfBanned, isWeeklyPassActive, renderMenuXpBar } from './levels.js';
 import { renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
 import { spawnConfetti } from './game-core.js';
 import { saveMatchReplayWithRetry } from './replay.js';
@@ -486,9 +486,18 @@ window.claimOneDailyReward = async (dateStr) => {
     const coins = (res.data && res.data.coins) || 0;
     if (coins > 0) state.myData.pigmentos = (state.myData.pigmentos || 0) + coins;
     // prêmio de XP da Batalha de Clã (ver type:'guild_battle_prize') -- só
-    // essa function credita algo diferente de Pigmentos, daí o campo extra
+    // essa function credita algo diferente de Pigmentos, daí o campo extra.
+    // Atualiza a barra do menu na hora (renderMenuXpBar, ver js/levels.js) e
+    // dispara o mesmo banner de "subiu de nível" de uma partida normal
+    // (window.showLevelUp, exposto por js/game-core.js) se o nível mudou.
     const xp = (res.data && res.data.xp) || 0;
-    if (xp > 0) state.myData.xp = (state.myData.xp || 0) + xp;
+    if (xp > 0) {
+      const beforeXp = state.myData.xp || 0;
+      const afterXp = beforeXp + xp;
+      state.myData.xp = afterXp;
+      renderMenuXpBar();
+      if (levelFromXp(beforeXp) !== levelFromXp(afterXp)) window.showLevelUp(levelFromXp(afterXp));
+    }
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();
@@ -504,7 +513,13 @@ window.claimAllDailyRewards = async () => {
     const coins = (res.data && res.data.coins) || 0;
     if (coins > 0) state.myData.pigmentos = (state.myData.pigmentos || 0) + coins;
     const xp = (res.data && res.data.xp) || 0;
-    if (xp > 0) state.myData.xp = (state.myData.xp || 0) + xp;
+    if (xp > 0) {
+      const beforeXp = state.myData.xp || 0;
+      const afterXp = beforeXp + xp;
+      state.myData.xp = afterXp;
+      renderMenuXpBar();
+      if (levelFromXp(beforeXp) !== levelFromXp(afterXp)) window.showLevelUp(levelFromXp(afterXp));
+    }
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();

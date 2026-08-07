@@ -679,6 +679,13 @@ function showLevelUp(newLv) {
   setTimeout(() => $('levelup-banner').classList.remove('show'), 3200);
 }
 window.dismissLevelUp = () => $('levelup-banner').classList.remove('show');
+// exposta em window (não export/import direto) pra outros módulos poderem
+// disparar o banner de "subiu de nível" fora de uma partida (ex.: resgate
+// de XP na caixa de entrada, ver claimOneDailyReward em js/daily-challenge.js)
+// sem criar import circular — game-core.js já importa de daily-challenge.js
+// (dailyPlaying/dailyReplayMouse/dailyReplayStartMs acima), então o caminho
+// inverso não pode ser um import de módulo normal
+window.showLevelUp = showLevelUp;
 
 // retorna se essa pontuação foi creditada na Batalha de Clã (d.guildBattleReplaySave)
 // — gameOver() usa isso pra decidir o texto do aviso quando

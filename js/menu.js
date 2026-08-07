@@ -4,7 +4,7 @@ import { show, resetScreenBackStack } from './nav.js';
 import { T } from './i18n.js';
 import { isMuted } from './utils.js';
 import { ALL_MODES } from './constants.js';
-import { MODE_UNLOCK, avatarOrDefaultIcon, xpInfo, myXp, modeUnlocked, applyGuildTagStyle, applyWeeklyPassNickColor } from './levels.js';
+import { MODE_UNLOCK, avatarOrDefaultIcon, modeUnlocked, applyGuildTagStyle, applyWeeklyPassNickColor, renderMenuXpBar } from './levels.js';
 import { refreshBadgeNotifDot } from './badges.js';
 import { fetchMyFriendRequests } from './friends.js';
 import { myRecord } from './game-core.js';
@@ -47,12 +47,10 @@ window.showMenu = () => {
   $('mute-btn').classList.toggle('on', !isMuted());
   $('mute-btn').querySelector('.tgl-icon').textContent = isMuted() ? '🔇' : '🔊';
 
-  // nível e barra de XP (só aparece pra quem tem conta)
-  $('menu-xp-wrap').style.display = state.offline ? 'none' : '';
-  const xi = xpInfo(myXp());
-  $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
-  $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
-  $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
+  // nível e barra de XP (só aparece pra quem tem conta) -- ver renderMenuXpBar
+  // em js/levels.js (extraída de propósito, pra dar pra chamar sozinha fora
+  // de um showMenu() inteiro, ver claimOneDailyReward em js/daily-challenge.js)
+  renderMenuXpBar();
 
   // amigos precisam de conta — botão some jogando sem login; a bolinha
   // vermelha avisa quando tem pedido de amizade esperando resposta

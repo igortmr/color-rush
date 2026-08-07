@@ -22,6 +22,22 @@ export function xpInfo(xp) {
   return { lv, into: xp - totalXpForLevel(lv), need: xpForNext(lv) };
 }
 export function myXp() { return state.offline ? 0 : (state.myData.xp || 0); } // sem conta não acumula XP nem sobe de nível
+// nível + barra de XP da tela principal (#menu-xp-*) -- extraído de dentro
+// de showMenu() (js/menu.js) pra dar pra atualizar sozinho fora de um
+// re-render da tela inteira (ex.: depois de resgatar XP na caixa de
+// entrada, ver claimOneDailyReward em js/daily-challenge.js — menu.js
+// importa de daily-challenge.js, então o caminho inverso não pode ser um
+// import direto de menu.js; levels.js é neutro o bastante pra isso morar
+// aqui e os dois lados importarem sem criar ciclo)
+export function renderMenuXpBar() {
+  const wrap = $('menu-xp-wrap');
+  if (!wrap) return;
+  wrap.style.display = state.offline ? 'none' : '';
+  const xi = xpInfo(myXp());
+  $('menu-xp-lv').textContent = `Lv ${xi.lv}`;
+  $('menu-xp-nums').textContent = `${xi.into}/${xi.need}`;
+  $('menu-xp-fill').style.width = Math.min(100, (xi.into / xi.need) * 100) + '%';
+}
 // versão genérica de modeUnlocked, pra checar o desbloqueio de QUALQUER
 // pessoa (ex.: o amigo sendo desafiado pra um duelo, ver openChallengeModeModal
 // em js/pvp.js), não só da própria conta logada
