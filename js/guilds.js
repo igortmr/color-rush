@@ -1129,7 +1129,7 @@ function renderMessageText(container, text) {
 // em functions/index.js) — texto de verdade (traduzido) vem de
 // guild_sys_<tipo>_suffix em js/i18n.js, montado depois do nick clicável
 // (ver renderChatMessages abaixo)
-const GUILD_SYSTEM_EVENT_ICON = { create: '🎉', join: '👋', leave: '🚶', kick: '🚫', leader_transfer: '👑' };
+const GUILD_SYSTEM_EVENT_ICON = { create: '🎉', join: '👋', leave: '🚶', kick: '🚫', leader_transfer: '👑', donate: '💧' };
 function renderChatMessages(elId) {
   const el = $(elId);
   if (!el) return;
@@ -1153,6 +1153,14 @@ function renderChatMessages(elId) {
         const suffixSpan = document.createElement('span');
         suffixSpan.textContent = T[state.lang][`guild_sys_${m.eventType}_suffix`] || '';
         row.appendChild(suffixSpan);
+        // doação: valor + ícone do pigmento em vez da palavra "pigmentos"
+        // (mesmo pigmentIconSvg usado no resto do clã, ver import no topo)
+        if (m.eventType === 'donate') {
+          const amtSpan = document.createElement('span');
+          amtSpan.style.cssText = 'display:flex; align-items:center; gap:3px; font-weight:700;';
+          amtSpan.innerHTML = `${m.amount || 0}${pigmentIconSvg(12)}`;
+          row.appendChild(amtSpan);
+        }
         // hora curtinha, sempre visível; data completa aparece ao clicar,
         // mesmo padrão das mensagens normais abaixo
         const timeSpan = document.createElement('span');
