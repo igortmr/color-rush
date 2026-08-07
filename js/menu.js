@@ -12,7 +12,6 @@ import { refreshInboxBadge, updateDailyMenuCard } from './daily-challenge.js';
 import { equippedAvatar, renderMenuPigmentosBar, renderUserPigmentos } from './shop.js';
 import { refreshGuildMenuBadge } from './guilds.js';
 import { updateGuildBattleCard } from './guild-battle.js';
-import { updateWeeklyPassCard } from './weekly-pass.js';
 import { computeModeRanks } from './profile-public.js';
 
 // posição no ranking de cada modo, do lado do 📊 nos cards da tela principal
@@ -69,7 +68,6 @@ window.showMenu = () => {
   refreshInboxBadge();
   updateDailyMenuCard();
   updateGuildBattleCard();
-  updateWeeklyPassCard();
   renderMenuPigmentosBar();
   renderUserPigmentos();
   refreshBadgeNotifDot();

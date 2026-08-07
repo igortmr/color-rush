@@ -11,6 +11,14 @@ import './share.js';
 import './nick.js';
 import './menu.js';
 import './auth.js';
+// por último de propósito -- refreshWeeklyPassBubble (dentro de
+// weekly-pass.js) empilha por cima do balão de clã (ver mesmo raciocínio de
+// ordem de import junto de weekly-pass.js em js/bootstrap.js). NOTA:
+// teste.html não importa js/dms.js em lugar nenhum (nem aqui nem
+// transitivamente) -- o balão de amigos (#dm-chat-bubble) já existia no
+// HTML mas está sem JS por trás aqui, bug pré-existente não relacionado ao
+// Passe Semanal, não mexido nesta sessão.
+import './weekly-pass.js';
 
 /* ================== idioma ================== */
 // detecção inicial (URL/localStorage) agora mora em js/state.js, já que o

@@ -13,13 +13,17 @@ import { isWeeklyPassActive } from './levels.js';
 // functions/index.js) — este arquivo só dispara a compra e reflete o
 // estado na tela.
 //
-// AINDA NÃO À VENDA: card só aparece se config/features.weeklyPassOnSale
+// UI: balãozinho flutuante amarelo (mesmo padrão dos de clã/amigos, ver
+// refreshGuildChatBubble em js/guilds.js / refreshDmChatBubble em
+// js/dms.js), empilhado por cima dos dois — abre um popup com a oferta ao
+// clicar, em vez de um card fixo na tela principal.
+//
+// AINDA NÃO À VENDA: balão só aparece se config/features.weeklyPassOnSale
 // (Firestore, documento público, ligado à mão no Firebase Console quando
 // for a hora de lançar) for true -- OU se a conta for admin (ver
 // canSeeWeeklyPass abaixo), pra dar pra conferir/testar sem expor pra
-// ninguém mais. Lido uma vez só ao abrir o menu, não é um listener — não
-// precisa reagir em tempo real a essa flag mudando enquanto alguém já está
-// com o app aberto.
+// ninguém mais. Lido uma vez só, não é um listener — não precisa reagir em
+// tempo real a essa flag mudando enquanto alguém já está com o app aberto.
 //
 // A "Public API Key" do RevenueCat NÃO é segredo (mesmo status da chave do
 // Firebase já hardcoded em js/firebase.js — identifica o projeto, não
@@ -31,6 +35,7 @@ const WEEKLY_PASS_PRODUCT_ID = 'br.com.colorrush.app.weeklypass';
 let weeklyPassOnSale = false;
 let weeklyPassFlagChecked = false;
 let weeklyPassPriceString = ''; // preço de verdade (localizado) vindo do RevenueCat, quando disponível
+let weeklyPassPopupOpen = false;
 
 async function ensureWeeklyPassFlagLoaded() {
   if (weeklyPassFlagChecked) return;
@@ -41,16 +46,25 @@ async function ensureWeeklyPassFlagLoaded() {
   } catch { weeklyPassOnSale = false; }
 }
 
-// libera o card/compra pra conta admin mesmo com weeklyPassOnSale desligado
-// (mesmo campo "admin" de scores/{uid}, "setado à mão no Firebase Console",
-// já usado em todo o resto do jogo) -- serve tanto pro usuário conferir como
-// o card está ficando antes do lançamento, quanto pro revisor da Apple
-// testar a compra de verdade durante a revisão, dando pra conta de revisão
-// (App Store Connect > App Review Information > Sign-In Required) um
-// scores/{uid}.admin = true SEM precisar ligar a flag pra todo mundo.
+// libera o balão/compra pra conta admin mesmo com weeklyPassOnSale
+// desligado (mesmo campo "admin" de scores/{uid}, "setado à mão no Firebase
+// Console", já usado em todo o resto do jogo) -- serve tanto pro usuário
+// conferir como o balão está ficando antes do lançamento, quanto pro
+// revisor da Apple testar a compra de verdade durante a revisão, dando pra
+// conta de revisão (App Store Connect > App Review Information >
+// Sign-In Required) um scores/{uid}.admin = true SEM precisar ligar a flag
+// pra todo mundo.
 function canSeeWeeklyPass() {
   return weeklyPassOnSale || (state.myData && state.myData.admin === true);
 }
+
+// mesmas telas "principais" dos balões de clã/amigos (ver
+// GUILD_CHAT_BUBBLE_SCREENS/DM_CHAT_BUBBLE_SCREENS) — fora dessas, some
+// sozinho (não atrapalha uma partida/duelo em andamento)
+const WEEKLY_PASS_BUBBLE_SCREENS = new Set([
+  'menu-screen', 'shop-screen', 'ranking-screen', 'replay-screen',
+  'profile-screen', 'friends-screen', 'guild-list-screen', 'guild-screen',
+]);
 
 // plugin nativo (@revenuecat/purchases-capacitor) — acessado via
 // window.Capacitor.Plugins (SEM import de pacote: esta página roda remota,
@@ -74,9 +88,10 @@ async function ensurePurchasesConfigured() {
 }
 
 // busca o preço de verdade (localizado, ex. "R$ 9,90") na oferta configurada
-// no RevenueCat — só cosmético (o texto do card antes de comprar); se falhar
-// por qualquer motivo (produto ainda não configurado lá, sem internet etc.)
-// cai no texto estático T[lang].weekly_pass_price, sem travar o card
+// no RevenueCat — só cosmético (o texto do popup antes de comprar); se
+// falhar por qualquer motivo (produto ainda não configurado lá, sem
+// internet etc.) cai no texto estático T[lang].weekly_pass_price, sem
+// travar o popup
 async function refreshWeeklyPassPricing() {
   if (weeklyPassPriceString) return;
   try {
@@ -89,7 +104,7 @@ async function refreshWeeklyPassPricing() {
   } catch { /* melhor esforço -- cai no preço estático */ }
 }
 
-function renderWeeklyPassCardContent() {
+function renderWeeklyPassPopupContent() {
   const statusEl = $('weekly-pass-status');
   if (!statusEl) return;
   if (isWeeklyPassActive(state.myData)) {
@@ -102,33 +117,59 @@ function renderWeeklyPassCardContent() {
   }
 }
 
-// chamado pelo showMenu() (mesmo padrão de updateGuildBattleCard em
-// js/guild-battle.js / updateDailyMenuCard em js/daily-challenge.js) —
-// mostra/esconde o card e atualiza o texto
-export async function updateWeeklyPassCard() {
-  const card = $('card-weekly-pass');
-  if (!card) return;
+// chamada sempre que a tela ativa muda (ver MutationObserver no fim do
+// arquivo, mesmo padrão de refreshGuildChatBubble/refreshDmChatBubble) —
+// decide se o balão aparece e em cima de qual altura (empilhado acima dos
+// balões de clã/amigos que estiverem visíveis)
+async function refreshWeeklyPassBubble() {
+  const bubble = $('weekly-pass-bubble');
+  if (!bubble) return;
   await ensureWeeklyPassFlagLoaded();
   // compra real só existe dentro do app nativo (mesmo raciocínio já
   // aplicado ao botão de Sign in with Apple, ver isNativeApp em js/nav.js —
   // checagem duplicada aqui de propósito, não compensa um módulo
   // compartilhado só pra isso, mesmo padrão já usado nos outros arquivos)
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  if (!canSeeWeeklyPass() || !isNative || state.offline || !state.currentUser || !state.myData.nick) {
-    card.style.display = 'none';
-    return;
-  }
-  card.style.display = '';
-  renderWeeklyPassCardContent();
-  if (!isWeeklyPassActive(state.myData)) {
-    refreshWeeklyPassPricing().then(renderWeeklyPassCardContent);
-  }
+  const active = document.querySelector('.screen.active');
+  const eligible = !!(active && WEEKLY_PASS_BUBBLE_SCREENS.has(active.id) && canSeeWeeklyPass()
+    && isNative && !state.offline && state.currentUser && state.myData.nick);
+  bubble.style.display = eligible ? 'flex' : 'none';
+  // empilha por cima dos balões de clã/amigos que estiverem visíveis nesse
+  // instante (mesma ideia de refreshDmChatBubble em js/dms.js, só que
+  // somando os DOIS possíveis abaixo dele em vez de só um) -- depende dos
+  // dois já terem sido atualizados neste mesmo ciclo, por isso este módulo
+  // é importado por último em js/bootstrap.js/js/game-teste.js
+  const guildBubble = $('guild-chat-bubble');
+  const dmBubble = $('dm-chat-bubble');
+  const stackedBelow = (guildBubble && guildBubble.style.display !== 'none' ? 1 : 0)
+    + (dmBubble && dmBubble.style.display !== 'none' ? 1 : 0);
+  const baseBottom = 20 + stackedBelow * 68;
+  bubble.style.bottom = baseBottom + 'px';
+  const popup = $('weekly-pass-popup');
+  if (popup) popup.style.bottom = (baseBottom + 68) + 'px';
+  if (!eligible && weeklyPassPopupOpen) window.toggleWeeklyPassPopup();
 }
 
+function setupWeeklyPassBubbleWatcher() {
+  const observer = new MutationObserver(() => refreshWeeklyPassBubble());
+  document.querySelectorAll('.screen').forEach(s => observer.observe(s, { attributes: true, attributeFilter: ['class'] }));
+}
+setupWeeklyPassBubbleWatcher();
+
+window.toggleWeeklyPassPopup = () => {
+  weeklyPassPopupOpen = !weeklyPassPopupOpen;
+  const popup = $('weekly-pass-popup');
+  popup.style.display = weeklyPassPopupOpen ? 'flex' : 'none';
+  if (weeklyPassPopupOpen) {
+    renderWeeklyPassPopupContent();
+    if (!isWeeklyPassActive(state.myData)) refreshWeeklyPassPricing().then(renderWeeklyPassPopupContent);
+  }
+};
+
 window.weeklyPassCardClick = async () => {
-  // passe já ativo -- card é só informativo enquanto durar, comprar de novo
+  // passe já ativo -- popup é só informativo enquanto durar, comprar de novo
   // ainda funcionaria (empilha mais 7 dias, ver revenueCatWebhook em
-  // functions/index.js) mas não é o que o toque no card faz aqui
+  // functions/index.js) mas não é o que o toque no botão faz aqui
   if (!canSeeWeeklyPass() || isWeeklyPassActive(state.myData)) return;
   const Purchases = purchasesPlugin();
   if (!Purchases) { alert(T[state.lang].guild_err_generic); return; }
@@ -151,11 +192,11 @@ window.weeklyPassCardClick = async () => {
         const snap = await getDoc(doc(db, 'scores', state.currentUser.uid));
         if (snap.exists()) Object.assign(state.myData, snap.data());
       } catch {}
-      renderWeeklyPassCardContent();
+      renderWeeklyPassPopupContent();
       if (window.renderUserPigmentos) window.renderUserPigmentos();
     }, 2500);
   } catch (e) {
-    if (e && (e.userCancelled || e.code === 'PURCHASE_CANCELLED')) { renderWeeklyPassCardContent(); return; } // cancelou -- sem alerta
+    if (e && (e.userCancelled || e.code === 'PURCHASE_CANCELLED')) { renderWeeklyPassPopupContent(); return; } // cancelou -- sem alerta
     if (statusEl) statusEl.textContent = prevText;
     alert((e && e.message) || T[state.lang].guild_err_generic);
   }

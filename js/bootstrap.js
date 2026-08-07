@@ -16,6 +16,10 @@ import './guilds.js';
 // confere a posição do balão de clã pra não sobrepor o de amigos, ver
 // comentário junto de refreshDmChatBubble
 import './dms.js';
+// por último de propósito — refreshWeeklyPassBubble (dentro de weekly-pass.js)
+// empilha por cima dos balões de clã E amigos acima, mesmo raciocínio de
+// ordem de import de dms.js logo acima
+import './weekly-pass.js';
 
 // Universal Links (iOS): quando alguém toca um link de colorrush.com.br por
 // fora do app (WhatsApp, Mensagens etc.) com o app já instalado, o iOS abre

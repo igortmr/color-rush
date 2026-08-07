@@ -217,7 +217,7 @@ export const T = {
     // em js/weekly-pass.js). "não renova sozinha" no texto de propósito --
     // exigência da Apple (guideline 3.1.2) pra Non-Renewing Subscription.
     weekly_pass_title: '🌟 Passe Semanal',
-    weekly_pass_desc: 'Por 7 dias a partir da compra: nick <b>amarelo exclusivo</b>, +500 <span class="pigment-word">💧 Pigmentos</span> e <b>+1 tentativa</b> no Desafio Diário. Compra única — não renova sozinha.',
+    weekly_pass_desc: 'Por 7 dias a partir da compra: nick com <b class="nick-pass-gold">cor exclusiva</b>, +500 💧 Pigmentos e <b>+1 tentativa</b> no Desafio Diário.<br><span style="font-size:0.8em;">Compra única — não renova sozinha.</span>',
     weekly_pass_price: 'R$9,90',
     weekly_pass_active_until: date => `⭐ Ativo até ${date}`,
     guild_ranking_explain: 'Clãs ordenados por nível.',
@@ -622,7 +622,7 @@ export const T = {
     guild_sys_leader_transfer_suffix: ' is the new leader',
     guild_sys_donate_suffix: ' donated',
     weekly_pass_title: '🌟 Weekly Pass',
-    weekly_pass_desc: 'For 7 days from purchase: <b>exclusive yellow</b> nickname, +500 <span class="pigment-word">💧 Pigments</span> and <b>+1 attempt</b> on the Daily Challenge. One-time purchase — does not auto-renew.',
+    weekly_pass_desc: 'For 7 days from purchase: nickname with <b class="nick-pass-gold">exclusive color</b>, +500 💧 Pigments and <b>+1 attempt</b> on the Daily Challenge.<br><span style="font-size:0.8em;">One-time purchase — does not auto-renew.</span>',
     weekly_pass_price: 'US$1.99',
     weekly_pass_active_until: date => `⭐ Active until ${date}`,
     guild_ranking_explain: 'Guilds sorted by level.',
@@ -1024,7 +1024,7 @@ export const T = {
     guild_sys_leader_transfer_suffix: ' es la nueva líder',
     guild_sys_donate_suffix: ' donó',
     weekly_pass_title: '🌟 Pase Semanal',
-    weekly_pass_desc: 'Durante 7 días desde la compra: apodo <b>amarillo exclusivo</b>, +500 <span class="pigment-word">💧 Pigmentos</span> y <b>+1 intento</b> en el Desafío Diario. Compra única — no se renueva sola.',
+    weekly_pass_desc: 'Durante 7 días desde la compra: apodo con <b class="nick-pass-gold">color exclusivo</b>, +500 💧 Pigmentos y <b>+1 intento</b> en el Desafío Diario.<br><span style="font-size:0.8em;">Compra única — no se renueva sola.</span>',
     weekly_pass_price: 'US$1,99',
     weekly_pass_active_until: date => `⭐ Activo hasta ${date}`,
     guild_ranking_explain: 'Clanes ordenados por nivel.',

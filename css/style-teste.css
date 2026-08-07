@@ -632,6 +632,22 @@
   .chat-bubble::after { content: ''; position: absolute; inset: -24px; }
   .chat-bubble .menu-quick-badge { top: -4px; right: -4px; }
   #dm-chat-bubble { background: linear-gradient(135deg, var(--neon-green), var(--neon-blue)); }
+  /* balãozinho do Passe Semanal (ver js/weekly-pass.js) -- mesmo padrão dos
+     de clã/amigos acima, mas amarelo brilhante com um pulso contínuo no
+     glow (não só no hover) de propósito, pra chamar atenção sozinho sem
+     precisar de nenhum texto do tipo "novidade!" */
+  .weekly-pass-bubble {
+    background: linear-gradient(135deg, #ffe93c, #ff9f1c);
+    font-size: 1.8rem;
+    animation: weeklyPassBubblePulse 2.2s ease-in-out infinite;
+  }
+  @keyframes weeklyPassBubblePulse {
+    0%, 100% { box-shadow: 0 4px 18px rgba(255,233,60,0.45), 0 0 0 3px rgba(255,255,255,0.08); }
+    50% { box-shadow: 0 4px 28px rgba(255,233,60,0.85), 0 0 0 6px rgba(255,233,60,0.25); }
+  }
+  .weekly-pass-popup-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .weekly-pass-popup-body p { margin: 0; font-size: 0.88rem; line-height: 1.4; }
+  #weekly-pass-buy-btn { font-family: 'Orbitron', sans-serif; font-weight: 800; }
   /* reticências bem pequenas no canto inferior esquerdo do balão — como o
      ícone principal virou escudo/pessoinhas (não é mais um balão de fala em
      si), isso aqui é o que ainda entrega visualmente "é um chat" */
@@ -861,14 +877,6 @@
     background: linear-gradient(180deg, rgba(255,233,60,0.06), var(--bg-panel));
   }
   .mode-card.daily-card:hover { border-color: var(--neon-yellow); box-shadow: 0 0 22px rgba(255,233,60,0.35); }
-
-  /* Passe Semanal (IAP, ainda não à venda -- ver js/weekly-pass.js) — mesmo
-     acento dourado do desafio diário (tema "amarelo exclusivo" do passe) */
-  .mode-card.weekly-pass-card {
-    border-color: rgba(255,233,60,0.5);
-    background: linear-gradient(180deg, rgba(255,233,60,0.06), var(--bg-panel));
-  }
-  .mode-card.weekly-pass-card:hover { border-color: var(--neon-yellow); box-shadow: 0 0 22px rgba(255,233,60,0.35); }
   /* antes da estreia — só título + cronômetro, sem clique nem descrição */
   .mode-card.daily-card.coming-soon { cursor: default; }
   .mode-card.daily-card.coming-soon:hover { transform: none; border-color: rgba(255,233,60,0.5); box-shadow: none; }
