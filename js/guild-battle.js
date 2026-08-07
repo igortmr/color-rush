@@ -6,7 +6,7 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { pushScreenAndShow } from './nav.js';
-import { modeLabel, MODE_ICON, MODE_UNLOCK, modeUnlocked } from './levels.js';
+import { modeLabel, MODE_ICON, MODE_UNLOCK, modeUnlocked, pigmentIconSvg } from './levels.js';
 import { fetchAllScores, rowData, buildLevelNickBlock } from './ranking-cache.js';
 
 /* ================== evento semanal "Batalha de Clãs" ==================
@@ -144,11 +144,28 @@ window.guildBattleGoToGuilds = () => {
   window.showGuildList();
 };
 
+// legenda de premiação dentro da popup de regras -- uma linha por posição,
+// com o ícone SVG colorido de verdade dos Pigmentos (mesmo padrão de
+// renderDailyPrizesLegend em js/levels.js) em vez do emoji 💧 estático
+function renderGuildBattlePrizesLegend() {
+  const el = $('guild-battle-prizes-legend');
+  if (!el) return;
+  const cfg = T[state.lang].guild_battle_prizes_legend;
+  const rows = cfg.rows.map(r => `
+    <div style="display:flex; justify-content:space-between; align-items:center; max-width:260px; margin:2px auto;">
+      <span>${r.label}</span>
+      <span style="display:inline-flex; align-items:center; gap:3px; font-weight:700;">${r.amount} ${pigmentIconSvg(14)}</span>
+    </div>`).join('');
+  el.innerHTML = `<div style="margin-bottom:4px; text-align:center;">${cfg.title}</div>${rows}`;
+}
+
 // popup do "?" ao lado do título da tela cheia, explicando em detalhe as
 // regras de pontuação/desempate (ver #guild-battle-rules-modal em
-// index.html/teste.html) — texto 100% estático via data-i18n-html, não
-// precisa de nenhum dado do evento pra ser exibido
+// index.html/teste.html) — texto 100% estático via data-i18n-html, só a
+// legenda de premiação é montada em JS (ver renderGuildBattlePrizesLegend
+// acima), não precisa de nenhum dado do evento pra ser exibida
 window.openGuildBattleRulesModal = () => {
+  renderGuildBattlePrizesLegend();
   $('guild-battle-rules-modal').style.display = 'flex';
 };
 window.closeGuildBattleRulesModal = () => {

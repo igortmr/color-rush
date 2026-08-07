@@ -609,13 +609,18 @@
     <button onclick="closeGuildBattleRulesModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
     <h1 style="font-size:1.2rem; text-align:center;" data-i18n="guild_battle_rules_title">Como funciona</h1>
     <div class="modal-card-body" style="text-align:left;">
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p1">No início da Batalha de Clãs, 2 modos de jogo são sorteados — os mesmos para todos os clãs.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p2">Cada modo registra as 5 melhores pontuações de cada clã.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p3">No máximo 2 das 5 melhores pontuações podem ser da mesma pessoa.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p4">A pontuação do clã em cada modo é a média das 5 melhores pontuações de seus membros.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p5">A pontuação final do clã é a média das pontuações dos 2 modos.</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p6">A Batalha de Clãs começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).</p>
-      <p style="font-size:0.85rem;" data-i18n-html="guild_battle_rules_p7">Prêmios (creditados no Cofre do Clã): 1º lugar +1.000 💧, 2º +500 💧, 3º +250 💧, participação +100 💧 pra quem pontuou. Todo mundo que jogar pelo menos 1 partida também ganha +1.000 XP.</p>
+      <p style="font-size:0.85rem; display:flex; gap:6px;"><span class="wp-benefit-arrow">▸</span><span data-i18n-html="guild_battle_rules_p1">No início da Batalha de Clãs, 2 modos de jogo são sorteados — os mesmos para todos os clãs.</span></p>
+      <p style="font-size:0.85rem; display:flex; gap:6px;"><span class="wp-benefit-arrow">▸</span><span data-i18n-html="guild_battle_rules_p2">Cada modo registra as 5 melhores pontuações de cada clã.</span></p>
+      <p style="font-size:0.85rem; display:flex; gap:6px;"><span class="wp-benefit-arrow">▸</span><span data-i18n-html="guild_battle_rules_p3">No máximo 2 das 5 melhores pontuações podem ser da mesma pessoa.</span></p>
+      <p style="font-size:0.85rem; display:flex; gap:6px;"><span class="wp-benefit-arrow">▸</span><span data-i18n-html="guild_battle_rules_p4">A pontuação do clã em cada modo é a média das 5 melhores pontuações de seus membros.</span></p>
+      <p style="font-size:0.85rem; display:flex; gap:6px;"><span class="wp-benefit-arrow">▸</span><span data-i18n-html="guild_battle_rules_p5">A <b>pontuação final</b> do clã é a média das pontuações dos 2 modos.</span></p>
+      <p style="font-size:0.85rem; display:flex; gap:6px;"><span class="wp-benefit-arrow">▸</span><span data-i18n-html="guild_battle_rules_p6">A Batalha de Clãs começa toda sexta-feira às 18h e termina domingo às 23h59 (horário de Brasília).</span></p>
+      <!-- legenda de premiação -- montada em JS (mesmo padrão de
+           renderDailyPrizesLegend em js/levels.js), pra usar o ícone SVG
+           colorido de verdade dos Pigmentos em vez do emoji 💧 -- ver
+           renderGuildBattlePrizesLegend em js/guild-battle.js -->
+      <div id="guild-battle-prizes-legend" style="font-size:0.85rem;"></div>
+      <p style="font-size:0.85rem; display:flex; gap:6px;"><span class="wp-benefit-arrow">▸</span><span data-i18n-html="guild_battle_rules_p7">Todos os membros que participarem da Batalha de Clãs ganham +1.000 XP.</span></p>
     </div>
   </div>
 </div>
