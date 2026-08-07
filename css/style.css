@@ -1277,8 +1277,21 @@
   tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 4.5s ease-in-out infinite; }
   tbody tr.row-theme-lava   { background-image: url('../img/row-themes/row-lava.jpg');   background-size: cover; background-position: center; animation: rowFlameFlicker 2.8s ease-in-out infinite; }
 
-  /* sem animação, a pedido -- só a foto estática mesmo. */
-  tbody tr.row-theme-aurora { background-image: url('../img/row-themes/row-aurora.jpg'); background-size: cover; background-position: center; }
+  /* brilho branco deslizante passando pela foto -- mesma técnica de 2
+     camadas da aurora-rgb abaixo, só que a faixa é branca (não colorida) e
+     some/pausa fora da área visível nas pontas (0-15%/55-100%) em vez de
+     deslizar sem parar, pra imitar o "shine" que passa e some de vez em
+     quando em vez de ficar num loop contínuo */
+  tbody tr.row-theme-aurora {
+    background-image: linear-gradient(100deg, transparent 40%, rgba(255,255,255,0.55) 50%, transparent 60%), url('../img/row-themes/row-aurora.jpg');
+    background-size: 250% 100%, cover;
+    background-position: -40% 0, center;
+    animation: rowAuroraShine 4s ease-in-out infinite;
+  }
+  @keyframes rowAuroraShine {
+    0%, 15% { background-position: -40% 0, center; }
+    55%, 100% { background-position: 140% 0, center; }
+  }
 
   /* mesma foto da aurora, com o degradê iridescente do RGB (row-theme-holo)
      por cima -- duas camadas de background-image na mesma regra (gradiente

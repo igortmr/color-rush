@@ -1280,8 +1280,17 @@
   tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 4.5s ease-in-out infinite; }
   tbody tr.row-theme-lava   { background-image: url('../img/row-themes/row-lava.jpg');   background-size: cover; background-position: center; animation: rowFlameFlicker 2.8s ease-in-out infinite; }
 
-  /* sem animação, a pedido -- só a foto estática mesmo. */
-  tbody tr.row-theme-aurora { background-image: url('../img/row-themes/row-aurora.jpg'); background-size: cover; background-position: center; }
+  /* brilho branco deslizante -- ver comentário completo em css/style.css */
+  tbody tr.row-theme-aurora {
+    background-image: linear-gradient(100deg, transparent 40%, rgba(255,255,255,0.55) 50%, transparent 60%), url('../img/row-themes/row-aurora.jpg');
+    background-size: 250% 100%, cover;
+    background-position: -40% 0, center;
+    animation: rowAuroraShine 4s ease-in-out infinite;
+  }
+  @keyframes rowAuroraShine {
+    0%, 15% { background-position: -40% 0, center; }
+    55%, 100% { background-position: 140% 0, center; }
+  }
 
   /* mesma foto da aurora, com o degradê iridescente do RGB (row-theme-holo)
      por cima -- ver comentário completo em css/style.css */

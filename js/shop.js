@@ -42,7 +42,7 @@ export const SHOP_ITEMS = [
   // style.css também (ver img/row-themes/ e comentário lá).
   // preço 3000 (não 5000) nessas três -- sem brilho/animação extra, mesma
   // faixa de preço das outras "premium sem animação" tipo Listras Douradas.
-  { id: 'row_unicorn3',   slot: 'rowTheme', price: 3000, icon: '🦄', name: 'Linha: Unicórnio',        desc: 'Unicórnio de pé numa floresta rosa nas montanhas.' },
+  { id: 'row_unicorn3',   slot: 'rowTheme', price: 5000, icon: '🦄', name: 'Linha: Unicórnio',        desc: 'Unicórnio de pé numa floresta rosa nas montanhas.' },
   { id: 'row_forest2',    slot: 'rowTheme', price: 3000, icon: '🌳', name: 'Linha: Floresta Mística', desc: 'Floresta encantada com lanterna, vagalumes e cachoeira.' },
   { id: 'row_yinyang',    slot: 'rowTheme', price: 3000, icon: '☯️', name: 'Linha: Yin Yang',        desc: 'Símbolo do yin yang com fumaça luminosa.' },
   { id: 'row_meteor',     slot: 'rowTheme', price: 5000, icon: '☄️', name: 'Linha: Chuva de Meteoros', desc: 'Meteoros em chamas cruzando o espaço.' },
@@ -50,7 +50,7 @@ export const SHOP_ITEMS = [
   { id: 'row_cyberpunk',  slot: 'rowTheme', price: 5000, icon: '🌆', name: 'Linha: Cyberpunk',       desc: 'Cidade neon estilo cyberpunk, rosa e azul.' },
   { id: 'row_cosmos',     slot: 'rowTheme', price: 5000, icon: '🌌', name: 'Linha: Cosmos',          desc: 'Galáxia espiral com planetas e nebulosas.' },
   { id: 'row_lava',       slot: 'rowTheme', price: 5000, icon: '🌋', name: 'Linha: Lava',            desc: 'Rachaduras de lava incandescente num fundo escuro.' },
-  { id: 'row_aurora',     slot: 'rowTheme', price: 3000, icon: '🌠', name: 'Linha: Aurora',          desc: 'Aurora boreal verde e violeta sobre um céu estrelado.' },
+  { id: 'row_aurora',     slot: 'rowTheme', price: 5000, icon: '🌠', name: 'Linha: Aurora',          desc: 'Aurora boreal verde e violeta sobre um céu estrelado, com um brilho branco deslizando por cima de vez em quando.' },
   { id: 'row_aurora_rgb', slot: 'rowTheme', price: 7000, icon: '🎆', name: 'Linha: Aurora RGB',      desc: 'A foto da aurora boreal com um brilho RGB passando por cima — anima sozinho.' },
   { id: 'avatar_robot',   slot: 'avatar', price: 110, icon: '🤖', name: 'Avatar: Robô',     desc: 'Um robô neon pra representar você no perfil e no duelo.' },
   { id: 'avatar_ninja',   slot: 'avatar', price: 110, icon: '🥷', name: 'Avatar: Ninja',    desc: 'Um ninja encapuzado pra representar você no perfil e no duelo.' },
