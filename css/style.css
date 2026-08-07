@@ -932,7 +932,12 @@
   .mode-card.guild-battle-card.coming-soon { cursor: default; }
   .mode-card.guild-battle-card.coming-soon:hover { transform: none; border-color: rgba(255,45,107,0.5); box-shadow: none; }
   .mode-card.guild-battle-card h2 { margin-bottom: 0; }
-  .guild-battle-badge { background: var(--neon-red); color: #fff; box-shadow: 0 0 10px rgba(255,45,107,0.6); }
+  .guild-battle-badge { background: var(--neon-green); color: #0a0e1e; box-shadow: 0 0 10px rgba(33,230,161,0.6); }
+  /* botão pequeno/centralizado dentro do card do menu, só pra incentivar o
+     clique -- o card inteiro já é clicável (onclick em index.html/teste.html),
+     esse botão não tem onclick próprio de propósito, o clique nele já sobe
+     (bubbling) pro onclick do card */
+  .guild-battle-start-btn { padding:6px 14px; font-size:0.72rem; margin-top:8px; }
 
   /* linhas de item da loja */
   .shop-item-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }

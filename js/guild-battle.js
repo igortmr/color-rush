@@ -269,9 +269,10 @@ function renderBattleStatus() {
     // mesmo "balão" do cronômetro do desafio diário (.daily-badge-today/
     // .daily-badge-time em css/style.css) — lá ele fica position:absolute
     // flutuando por cima da borda de um .mode-card; aqui não tem nenhum card
-    // por baixo pra flutuar sobre, então troca pra position:static (só o
-    // resto do visual — fundo amarelo, fonte Orbitron, etc. — é reaproveitado)
-    statusEl.innerHTML = `<span class="daily-badge-today" style="position:static; display:inline-block;">${T[state.lang].guild_battle_ends_in_label}<span class="daily-badge-time" id="guild-battle-screen-countdown"></span></span>`;
+    // por baixo pra flutuar sobre, então troca pra position:static (o resto
+    // do visual é reaproveitado). .guild-battle-badge (verde) por cima do
+    // amarelo padrão, mesma cor do cronômetro do card na tela principal.
+    statusEl.innerHTML = `<span class="daily-badge-today guild-battle-badge" style="position:static; display:inline-block;">${T[state.lang].guild_battle_ends_in_label}<span class="daily-badge-time" id="guild-battle-screen-countdown"></span></span>`;
     startBattleScreenTicker();
   } else {
     statusEl.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ended}</div>`;

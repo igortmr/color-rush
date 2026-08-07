@@ -241,6 +241,11 @@
   <div class="mode-card guild-battle-card coming-soon" id="card-guild-battle" onclick="guildBattleCardClick()" style="display:none;">
     <span class="daily-badge-today guild-battle-badge" id="guild-battle-countdown"><span id="guild-battle-countdown-label">Inicia em: </span><span class="daily-badge-time">--:--:--</span></span>
     <h2 data-i18n="guild_battle_title">⚔️ Batalha de Clãs</h2>
+    <!-- só um empurrãozinho visual pro card -- sem onclick próprio, o clique
+         já sobe (bubbling) pro onclick do card acima -->
+    <div style="text-align:center;">
+      <button class="guild-battle-start-btn" data-i18n="guild_battle_start_btn">▶️ Iniciar</button>
+    </div>
   </div>
   <div class="mode-card daily-card" id="card-daily" onclick="dailyCardClick()" style="display:none;">
     <span class="daily-badge-today" id="daily-card-countdown"><span id="daily-card-countdown-label">Termina em: </span><span class="daily-badge-time">--:--:--</span></span>
