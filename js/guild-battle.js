@@ -445,7 +445,7 @@ async function openGuildBattleDetail(guildId) {
     const finalScoreLine = document.createElement('div');
     finalScoreLine.className = 'muted';
     finalScoreLine.style.cssText = 'text-align:center; font-size:0.85rem; margin-bottom:4px;';
-    finalScoreLine.textContent = `${T[state.lang].guild_battle_final_score}: ${(gs.score || 0).toFixed(1)}`;
+    finalScoreLine.innerHTML = `${T[state.lang].guild_battle_final_score}: <b>${(gs.score || 0).toFixed(1)}</b>`;
     modalBody.appendChild(finalScoreLine);
 
     const battleData = battleSnap.exists() ? battleSnap.data() : {};
