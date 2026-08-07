@@ -26,6 +26,7 @@ const callKickGuildMember = callable('kickGuildMember');
 const callInitiateGuildLeaderTransfer = callable('initiateGuildLeaderTransfer');
 const callRespondGuildLeaderTransfer = callable('respondGuildLeaderTransfer');
 const callDisbandGuild = callable('disbandGuild');
+const callRenameGuild = callable('renameGuild');
 const callSendGuildMessage = callable('sendGuildMessage');
 const callInviteGuildMember = callable('inviteGuildMember');
 const callCancelGuildInvite = callable('cancelGuildInvite');
@@ -637,9 +638,14 @@ function invitesSection(xpByUid) {
   return wrap;
 }
 
-function leaderToolsSection() {
+function leaderToolsSection(g) {
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:100%; text-align:center; margin-top:10px;';
+  wrap.style.cssText = 'width:100%; text-align:center; margin-top:10px; display:flex; flex-direction:column; gap:8px; align-items:center;';
+  const renameBtn = document.createElement('button');
+  renameBtn.className = 'secondary';
+  renameBtn.textContent = T[state.lang].guild_btn_rename;
+  renameBtn.onclick = () => uiRenameGuild(g.name);
+  wrap.appendChild(renameBtn);
   const btn = document.createElement('button');
   btn.className = 'secondary';
   btn.style.color = 'var(--neon-red)';
@@ -1641,6 +1647,35 @@ window.confirmDisbandGuild = async () => {
     stopGuildListeners();
     window.showGuildList();
   } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
+};
+
+// renomear clã: só a líder vê o botão (ver leaderToolsSection); mesmo padrão
+// do formulário de #create-guild-modal (submitCreateGuild acima), só que com
+// um input em vez de dois e sem custo de pigmentos
+window.uiRenameGuild = (currentName) => {
+  $('rename-guild-error').textContent = '';
+  $('rename-guild-name').value = currentName || '';
+  $('rename-guild-modal').style.display = 'flex';
+};
+window.closeRenameGuildModal = () => {
+  $('rename-guild-modal').style.display = 'none';
+};
+window.submitRenameGuild = async () => {
+  const errEl = $('rename-guild-error');
+  errEl.textContent = '';
+  const name = $('rename-guild-name').value.trim();
+  if (name.length < 3 || name.length > 24) { errEl.textContent = T[state.lang].guild_err_name_length; return; }
+
+  try {
+    await callRenameGuild({ name });
+    closeRenameGuildModal();
+    guildListCache = null; // nome mudou -- lista de clãs não pode mostrar o nome antigo
+    // sem atualizar currentGuildData/renderGuildScreen aqui: o listener de
+    // openGuildScreen (onSnapshot em guilds/{id}) já vai pegar o novo nome e
+    // re-renderizar sozinho assim que o servidor confirmar a escrita
+  } catch (e) {
+    errEl.textContent = (e && e.message) || T[state.lang].guild_err_generic;
+  }
 };
 
 /* ================== ranking de clãs (aba "Clãs" do ranking) ================== */

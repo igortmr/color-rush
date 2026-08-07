@@ -730,6 +730,20 @@
   </div>
 </div>
 
+<!-- renomear clã: só a líder vê o botão (ver leaderToolsSection em
+     js/guilds.js) -->
+<div class="modal-overlay" id="rename-guild-modal" style="display:none;" onclick="if(event.target===this) closeRenameGuildModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center; position:relative;">
+    <button onclick="closeRenameGuildModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 style="font-size:1.2rem;" data-i18n="guild_rename_modal_title">✏️ Renomear clã</h1>
+    <div class="modal-card-body">
+      <input type="text" id="rename-guild-name" maxlength="24" data-i18n-placeholder="guild_name_ph" placeholder="Nome do clã (3 a 24 caracteres)">
+      <div class="error" id="rename-guild-error"></div>
+      <button onclick="submitRenameGuild()" data-i18n="guild_confirm_rename_btn">Renomear</button>
+    </div>
+  </div>
+</div>
+
 <!-- ações do líder sobre um membro (tornar líder / expulsar) — abre ao
      clicar na linha do membro na lista de clã, em vez de dois botões soltos
      dentro da própria linha (ver memberRow/openGuildMemberActionsModal em
