@@ -46,25 +46,28 @@ window.loadRanking = async (m) => {
     resetDailyRankSubtabToToday();
     $('ranking-table-card').style.display = '';
     $('daily-alltime-card').style.display = 'none';
+    $('guild-ranking-card').style.display = 'none';
     loadDailyTodayRanking();
     return;
   }
   if (m === 'guilds') {
     $('ranking-pagination').innerHTML = '';
     $('ranking-explain').textContent = T[state.lang].guild_ranking_explain;
-    $('ranking-points-header').textContent = T[state.lang].points_header_guild_level;
-    $('ranking-table-card').style.display = '';
+    $('ranking-table-card').style.display = 'none';
     $('daily-alltime-card').style.display = 'none';
+    $('guild-ranking-card').style.display = '';
     loadGuildRanking();
     return;
   }
 
-  // saindo do desafio diário — "ranking-table-card" é compartilhado com o
-  // daily-today, e "daily-alltime-card" (Salão da Fama) só é escondido no
-  // ramo acima; sem isso, sair do Salão da Fama pra outro ranking deixa a
-  // lista escondida mesmo com os dados carregados certinho
+  // saindo do desafio diário/clãs — "ranking-table-card" é compartilhado com
+  // o daily-today, e "daily-alltime-card"/"guild-ranking-card" só são
+  // escondidos nos ramos acima; sem isso, sair do Salão da Fama ou da aba
+  // Clãs pra outro ranking deixa a lista escondida mesmo com os dados
+  // carregados certinho
   $('ranking-table-card').style.display = '';
   $('daily-alltime-card').style.display = 'none';
+  $('guild-ranking-card').style.display = 'none';
 
   $('scope-geral-btn').classList.toggle('active', rankingScope === 'geral');
   $('scope-amigos-btn').classList.toggle('active', rankingScope === 'amigos');

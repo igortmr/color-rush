@@ -854,20 +854,31 @@ async function loadTreasuryHistory(guildId, historyList, xpByUid) {
       row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px;';
       const left = document.createElement('span');
       left.style.cssText = 'display:flex; flex-direction:column;';
-      const nickRow = document.createElement('span');
-      nickRow.style.cssText = 'display:flex; align-items:center; gap:6px;';
-      nickRow.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[data.uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
-      const nickSpan = document.createElement('span');
-      nickSpan.style.fontWeight = '700';
-      nickSpan.textContent = data.nick || '?';
-      // data.nick já vem denormalizado no próprio log de doação (gravado no
-      // momento da doação, ver donateToGuildTreasury em functions/index.js),
-      // então continua certo mesmo pra quem já saiu do clã — só faltava
-      // o clique pro perfil
-      nickSpan.className = 'nick-click';
-      nickSpan.onclick = () => openProfileByUid(data.uid, data.nick || '', 'guild-screen');
-      nickRow.appendChild(nickSpan);
-      left.appendChild(nickRow);
+      // prêmio da Batalha de Clã (ver resolveGuildBattleEvent em
+      // functions/index.js) não tem uid/nick de doador -- kind:'guild_battle'
+      // é quem diferencia essa linha de uma doação normal (ramo abaixo)
+      if (data.kind === 'guild_battle') {
+        const posLabel = data.position === 1 ? T[state.lang].daily_pos_1 : data.position === 2 ? T[state.lang].daily_pos_2 : data.position === 3 ? T[state.lang].daily_pos_3 : T[state.lang].daily_pos_n(data.position);
+        const titleRow = document.createElement('span');
+        titleRow.style.cssText = 'font-weight:700;';
+        titleRow.textContent = `🏆 ${T[state.lang].guild_battle_title} — ${posLabel}`;
+        left.appendChild(titleRow);
+      } else {
+        const nickRow = document.createElement('span');
+        nickRow.style.cssText = 'display:flex; align-items:center; gap:6px;';
+        nickRow.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[data.uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
+        const nickSpan = document.createElement('span');
+        nickSpan.style.fontWeight = '700';
+        nickSpan.textContent = data.nick || '?';
+        // data.nick já vem denormalizado no próprio log de doação (gravado no
+        // momento da doação, ver donateToGuildTreasury em functions/index.js),
+        // então continua certo mesmo pra quem já saiu do clã — só faltava
+        // o clique pro perfil
+        nickSpan.className = 'nick-click';
+        nickSpan.onclick = () => openProfileByUid(data.uid, data.nick || '', 'guild-screen');
+        nickRow.appendChild(nickSpan);
+        left.appendChild(nickRow);
+      }
       const dateSpan = document.createElement('span');
       dateSpan.className = 'muted';
       dateSpan.style.fontSize = '0.7rem';
@@ -1634,24 +1645,28 @@ window.confirmDisbandGuild = async () => {
 
 /* ================== ranking de clãs (aba "Clãs" do ranking) ================== */
 // chamada por js/ranking.js quando a aba "guilds" é selecionada — tabela
-// própria (nome/sigla + nível), não reaproveita buildRankRowNick porque uma
-// linha de clã não tem xp/equipped/avatar de JOGADOR, é outro tipo de linha
+// própria (#guild-ranking-body, não reaproveita #ranking-body/buildRankRowNick
+// porque uma linha de clã não tem xp/equipped/avatar de JOGADOR, é outro tipo
+// de linha). Ordenado por vitórias na Batalha de Clã (battleWins, ver
+// resolveGuildBattleEvent em functions/index.js) -- nível do clã saiu do
+// ranking (não é mais critério nenhum aqui), desempate por Pigmentos
+// ganhados na Batalha (battlePigmentosTotal) e por fim nome.
 export async function loadGuildRanking() {
-  const body = $('ranking-body');
-  body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].loading_text}</td></tr>`;
+  const body = $('guild-ranking-body');
+  body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].loading_text}</td></tr>`;
   try {
     const guilds = await fetchAllGuilds(true);
-    guilds.sort((a, b) => (b.level || 1) - (a.level || 1) || (b.xp || 0) - (a.xp || 0) || a.name.localeCompare(b.name));
+    guilds.sort((a, b) => (b.battleWins || 0) - (a.battleWins || 0) || (b.battlePigmentosTotal || 0) - (a.battlePigmentosTotal || 0) || a.name.localeCompare(b.name));
     body.innerHTML = '';
     if (!guilds.length) {
-      body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].guild_list_empty}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].guild_list_empty}</td></tr>`;
       return;
     }
     guilds.forEach((g, i) => {
       const pos = i + 1;
       const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts">${guildLevelFromXp(g.xp || 0)}</td>`;
+      tr.innerHTML = `<td class="pos">${medal}</td><td class="nick-cell"></td><td class="pts" style="text-align:center;">${g.battleWins || 0}</td><td class="pts"></td>`;
       const cell = tr.children[1];
       cell.style.cursor = 'pointer';
       const tagSpan = document.createElement('span');
@@ -1666,10 +1681,13 @@ export async function loadGuildRanking() {
         pushScreenAndShow('guild-screen', 'ranking-screen');
         openGuildScreen(g.id);
       };
+      const pigCell = tr.children[3];
+      pigCell.style.cssText = 'display:flex; align-items:center; justify-content:flex-end; gap:3px;';
+      pigCell.innerHTML = `${g.battlePigmentosTotal || 0}${pigmentIconSvg(13)}`;
       body.appendChild(tr);
     });
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="3" class="muted">${T[state.lang].ranking_error}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="muted">${T[state.lang].ranking_error}</td></tr>`;
   }
   resetScroll('ranking-screen');
 }

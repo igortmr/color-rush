@@ -355,6 +355,30 @@ function renderInboxList(msgs) {
       bodyLine.style.cssText = 'text-align:left; margin-top:4px; white-space:pre-line;';
       bodyLine.textContent = msg.body || '';
       box.appendChild(bodyLine);
+    } else if (msg.type === 'guild_battle_prize') {
+      // prêmio da Batalha de Clã (ver resolveGuildBattleEvent em
+      // functions/index.js) -- Pigmentos já foram direto pro Cofre do clã
+      // (não passam por aqui), essa mensagem só EXPLICA isso (pra parecer
+      // que também está sendo resgatado) e credita o XP individual de
+      // verdade, único valor que o botão de resgatar concede aqui
+      const pos = msg.position;
+      const posLabel = pos === 1 ? T[state.lang].daily_pos_1 : pos === 2 ? T[state.lang].daily_pos_2 : pos === 3 ? T[state.lang].daily_pos_3 : T[state.lang].daily_pos_n(pos);
+      const titleLine = document.createElement('div');
+      titleLine.className = 'pos-line';
+      titleLine.textContent = T[state.lang].guild_battle_reward_title;
+      box.appendChild(titleLine);
+      const bodyLine = document.createElement('div');
+      bodyLine.className = 'muted';
+      bodyLine.style.cssText = 'text-align:left; margin-top:4px;';
+      bodyLine.textContent = T[state.lang].guild_battle_inbox_body(msg.guildTag || '', posLabel, msg.guildPigmentos || 0);
+      box.appendChild(bodyLine);
+      // lista do que ganhou (só 1 item aqui -- o XP; o Pigmentos do clã já
+      // foi mencionado acima) -- mesma setinha/estilo do popup do Passe
+      // Semanal (.wp-benefit-arrow em css/style.css), reaproveitado
+      const benefitLine = document.createElement('div');
+      benefitLine.style.cssText = 'text-align:left; margin-top:6px; font-size:0.85rem; display:flex; align-items:center; gap:5px;';
+      benefitLine.innerHTML = `<span class="wp-benefit-arrow">▸</span> ${T[state.lang].guild_battle_inbox_xp_line}: <b>+${msg.xp || 0} XP</b>`;
+      box.appendChild(benefitLine);
     } else {
       // mesmo formato título (negrito) + corpo do admin_message acima, só que
       // com texto fixo em vez de vir do documento -- título sempre
@@ -377,10 +401,16 @@ function renderInboxList(msgs) {
     claimRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px;';
     const coinsSpan = document.createElement('span');
     coinsSpan.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:700;';
-    coinsSpan.insertAdjacentHTML('beforeend', pigmentIconSvg(16));
-    const coinsNum = document.createElement('span');
-    coinsNum.textContent = `+${msg.coins}`;
-    coinsSpan.appendChild(coinsNum);
+    if (msg.type === 'guild_battle_prize') {
+      // resgate aqui é XP, não Pigmentos -- sem o ícone de pigmento, que
+      // seria enganoso (o Pigmentos do clã já foi creditado sozinho)
+      coinsSpan.textContent = `⭐ +${msg.xp || 0} XP`;
+    } else {
+      coinsSpan.insertAdjacentHTML('beforeend', pigmentIconSvg(16));
+      const coinsNum = document.createElement('span');
+      coinsNum.textContent = `+${msg.coins}`;
+      coinsSpan.appendChild(coinsNum);
+    }
     claimRow.appendChild(coinsSpan);
 
     if (msg.claimed) {
@@ -455,6 +485,10 @@ window.claimOneDailyReward = async (dateStr) => {
     const res = await callClaimDailyReward({ dateStr });
     const coins = (res.data && res.data.coins) || 0;
     if (coins > 0) state.myData.pigmentos = (state.myData.pigmentos || 0) + coins;
+    // prêmio de XP da Batalha de Clã (ver type:'guild_battle_prize') -- só
+    // essa function credita algo diferente de Pigmentos, daí o campo extra
+    const xp = (res.data && res.data.xp) || 0;
+    if (xp > 0) state.myData.xp = (state.myData.xp || 0) + xp;
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();
@@ -469,6 +503,8 @@ window.claimAllDailyRewards = async () => {
     const res = await callClaimDailyReward({});
     const coins = (res.data && res.data.coins) || 0;
     if (coins > 0) state.myData.pigmentos = (state.myData.pigmentos || 0) + coins;
+    const xp = (res.data && res.data.xp) || 0;
+    if (xp > 0) state.myData.xp = (state.myData.xp || 0) + xp;
     await loadInbox();
     refreshInboxBadge();
     updateDailyMenuCard();
