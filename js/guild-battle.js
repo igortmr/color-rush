@@ -288,6 +288,16 @@ function renderGuildBattleBody(body) {
     body.appendChild(empty);
     return;
   }
+  // cabeçalho "tabela" (Clã / Média Final) alinhado com as mesmas duas
+  // pontas de cada linha abaixo (nome à esquerda, nota à direita) — a lista
+  // em si continua sendo cards, não um <table> de verdade, então isso é só
+  // um rótulo visual por cima, não precisa bater pixel a pixel com a coluna
+  const header = document.createElement('div');
+  header.className = 'muted';
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:0 14px; font-size:0.75rem; font-weight:700; letter-spacing:0.3px;';
+  header.innerHTML = `<span>${T[state.lang].guild_battle_col_guild}</span><span>${T[state.lang].guild_battle_col_final_score}</span>`;
+  body.appendChild(header);
+
   const list = document.createElement('div');
   list.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
   ranked.forEach(([guildId, gs], i) => {
@@ -295,29 +305,39 @@ function renderGuildBattleBody(body) {
     const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
     const row = document.createElement('div');
     row.className = 'card';
-    row.style.cssText = 'flex-direction:row; align-items:center; justify-content:space-between; padding:8px 14px; gap:8px; cursor:pointer;'
+    row.style.cssText = 'padding:8px 14px; gap:2px; cursor:pointer;'
       + (guildId === state.myData.guildId ? ' border-color:var(--neon-purple);' : '');
     // qualquer clã da lista é clicável, não só o próprio — pedido explícito:
     // dá pra conferir a pontuação/quem jogou de qualquer um
     row.onclick = () => openGuildBattleDetail(guildId);
+    const topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px;';
     const left = document.createElement('span');
-    left.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    left.style.cssText = 'display:flex; align-items:center; gap:8px; min-width:0;';
     const posSpan = document.createElement('span');
     posSpan.style.cssText = 'font-weight:800; min-width:1.4em; text-align:center; flex-shrink:0;';
     posSpan.textContent = medal;
     left.appendChild(posSpan);
     const tagSpan = document.createElement('span');
-    tagSpan.style.fontWeight = '700';
+    tagSpan.style.cssText = 'font-weight:700; flex-shrink:0;';
     tagSpan.textContent = `[${gs.tag || '?'}]`;
     left.appendChild(tagSpan);
     const nameSpan = document.createElement('span');
     nameSpan.textContent = gs.name || '';
+    nameSpan.style.cssText = 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
     left.appendChild(nameSpan);
-    row.appendChild(left);
+    topRow.appendChild(left);
     const scoreSpan = document.createElement('span');
-    scoreSpan.style.fontWeight = '700';
+    scoreSpan.style.cssText = 'font-weight:700; flex-shrink:0;';
     scoreSpan.textContent = (gs.score || 0).toFixed(1);
-    row.appendChild(scoreSpan);
+    topRow.appendChild(scoreSpan);
+    row.appendChild(topRow);
+    // dica visual de que a linha inteira é clicável (o clique já funciona
+    // na linha toda, isso aqui só deixa explícito o que vai acontecer)
+    const viewHint = document.createElement('div');
+    viewHint.style.cssText = 'font-size:0.72rem; text-align:right; color:var(--neon-blue);';
+    viewHint.textContent = T[state.lang].guild_battle_view_scores_btn;
+    row.appendChild(viewHint);
     list.appendChild(row);
   });
   body.appendChild(list);
