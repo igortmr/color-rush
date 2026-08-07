@@ -528,17 +528,17 @@ function memberRow(g, uid, data, myUid, isLeader, xpByUid) {
   const left = document.createElement('span');
   left.style.cssText = 'display:flex; align-items:center; gap:6px;';
   left.insertAdjacentHTML('beforeend', lvChip((xpByUid && xpByUid[uid]) || 0)); // conteúdo fixo (número/cor), seguro via innerHTML
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = data.nick || '';
+  nickSpan.className = 'nick-click';
+  nickSpan.onclick = () => openProfileByUid(uid, data.nick || '', 'guild-screen');
+  left.appendChild(nickSpan);
   if (uid === g.leaderUid) {
     const crown = document.createElement('span');
     crown.textContent = '👑';
     crown.title = T[state.lang].guild_leader_label;
     left.appendChild(crown);
   }
-  const nickSpan = document.createElement('span');
-  nickSpan.textContent = data.nick || '';
-  nickSpan.className = 'nick-click';
-  nickSpan.onclick = () => openProfileByUid(uid, data.nick || '', 'guild-screen');
-  left.appendChild(nickSpan);
   row.appendChild(left);
 
   if (isLeader && uid !== myUid) {
