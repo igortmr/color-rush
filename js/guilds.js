@@ -641,11 +641,17 @@ function invitesSection(xpByUid) {
 function leaderToolsSection(g) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'width:100%; text-align:center; margin-top:10px; display:flex; flex-direction:column; gap:8px; align-items:center;';
-  const renameBtn = document.createElement('button');
-  renameBtn.className = 'secondary';
-  renameBtn.textContent = T[state.lang].guild_btn_rename;
-  renameBtn.onclick = () => uiRenameGuild(g.name);
-  wrap.appendChild(renameBtn);
+  // renomear só é permitido em clã ADMINISTRATIVO (g.adminGuild, ver
+  // createGuild em functions/index.js) — não aparece pra clã de jogador
+  // normal, mesmo pra líder (pedido explícito: não é pra qualquer clã nem
+  // qualquer líder, só os clãs de teste)
+  if (g.adminGuild === true) {
+    const renameBtn = document.createElement('button');
+    renameBtn.className = 'secondary';
+    renameBtn.textContent = T[state.lang].guild_btn_rename;
+    renameBtn.onclick = () => uiRenameGuild(g.name);
+    wrap.appendChild(renameBtn);
+  }
   const btn = document.createElement('button');
   btn.className = 'secondary';
   btn.style.color = 'var(--neon-red)';
