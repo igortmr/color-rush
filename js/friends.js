@@ -168,7 +168,7 @@ function friendActionNode(rel, theirUid, theirNick) {
     btn.className = 'secondary';
     btn.textContent = T[state.lang].btn_remove_friend_profile;
     btn.style.cssText = 'padding:6px 16px; font-size:0.75rem;';
-    btn.onclick = () => withBtnLoading(btn, () => uiRemoveFriend(theirUid));
+    btn.onclick = () => openRemoveFriendConfirmModal(theirUid, theirNick || '');
     wrap.appendChild(btn);
     return wrap;
   }
@@ -258,7 +258,7 @@ function friendRow(uid, nick, xp, isAdmin, guildTag, guildId, guildTagStyle) {
   btn.className = 'secondary';
   btn.textContent = T[state.lang].btn_remove_friend;
   btn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
-  btn.onclick = () => withBtnLoading(btn, () => uiRemoveFriend(uid));
+  btn.onclick = () => openRemoveFriendConfirmModal(uid, nick);
   actions.appendChild(btn);
 
   row.appendChild(actions);
@@ -418,4 +418,25 @@ window.uiRemoveFriend = async (friendUid) => {
   }
   invalidateFriendsCache();
   await refreshFriendUiFor(friendUid);
+};
+// remover amigo usa popup temática #remove-friend-confirm-modal em vez de
+// remover direto no clique — mesmo padrão de #disband-guild-modal em
+// js/guilds.js. Chamada tanto da lista de amigos (friendRow) quanto do botão
+// no perfil de outra pessoa (friendActionNode), guarda o uid aqui (não dá
+// pra passar direto no onclick do botão "Confirmar", que é HTML estático)
+let removeFriendState = null;
+function openRemoveFriendConfirmModal(uid, nick) {
+  removeFriendState = { uid };
+  $('remove-friend-confirm-text').textContent = T[state.lang].friend_confirm_remove(nick);
+  $('remove-friend-confirm-modal').style.display = 'flex';
+}
+window.closeRemoveFriendConfirmModal = () => {
+  $('remove-friend-confirm-modal').style.display = 'none';
+  removeFriendState = null;
+};
+window.confirmRemoveFriend = async () => {
+  if (!removeFriendState) return;
+  const { uid } = removeFriendState;
+  closeRemoveFriendConfirmModal();
+  await uiRemoveFriend(uid);
 };

@@ -525,26 +525,19 @@ function memberRow(g, uid, data, myUid, isLeader, xpByUid) {
   const nickSpan = document.createElement('span');
   nickSpan.textContent = data.nick || '';
   nickSpan.className = 'nick-click';
-  nickSpan.onclick = () => openProfileByUid(uid, data.nick || '', 'guild-screen');
+  // stopPropagation pra funcionar mesmo dentro da linha inteira clicável
+  // (ver row.onclick logo abaixo) -- sem isso, clicar no nick também abriria
+  // a popup de ações do membro por baixo, junto com o perfil
+  nickSpan.onclick = (ev) => { ev.stopPropagation(); openProfileByUid(uid, data.nick || '', 'guild-screen'); };
   left.appendChild(nickSpan);
   row.appendChild(left);
 
   if (isLeader && uid !== myUid) {
-    const actions = document.createElement('span');
-    actions.style.cssText = 'display:flex; gap:5px;';
-    const transferBtn = document.createElement('button');
-    transferBtn.className = 'secondary';
-    transferBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem;';
-    transferBtn.textContent = T[state.lang].guild_btn_make_leader;
-    transferBtn.onclick = () => uiInitiateGuildTransfer(uid, data.nick || '');
-    actions.appendChild(transferBtn);
-    const kickBtn = document.createElement('button');
-    kickBtn.className = 'secondary';
-    kickBtn.style.cssText = 'padding:4px 8px; font-size:0.7rem; color:var(--neon-red);';
-    kickBtn.textContent = T[state.lang].guild_btn_kick;
-    kickBtn.onclick = () => uiKickGuildMember(uid, data.nick || '');
-    actions.appendChild(kickBtn);
-    row.appendChild(actions);
+    // ações (tornar líder / expulsar) saíram da própria linha e foram pra
+    // popup #guild-member-actions-modal, aberta ao clicar na linha inteira
+    // (ver openGuildMemberActionsModal abaixo) -- lista ficava lotada com os
+    // dois botões por membro
+    row.onclick = () => openGuildMemberActionsModal(uid, data.nick || '');
   } else if (!isLeader && uid === myUid) {
     // "sair do clã" fica na própria linha do membro (em vez de um botão à
     // parte embaixo da lista toda) — só a líder não vê isso aqui, ela usa
@@ -1430,14 +1423,54 @@ window.uiLeaveGuild = async () => {
     window.showGuildList();
   } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 };
-async function uiKickGuildMember(uid, nick) {
-  if (!confirm(T[state.lang].guild_confirm_kick(nick))) return;
-  try { await callKickGuildMember({ uid }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
-}
 async function uiInitiateGuildTransfer(toUid, nick) {
   if (!confirm(T[state.lang].guild_confirm_transfer(nick))) return;
   try { await callInitiateGuildLeaderTransfer({ toUid }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 }
+// popup de ações do líder sobre um membro (tornar líder / expulsar), aberta
+// ao clicar na linha do membro (ver memberRow acima). guarda uid/nick aqui
+// (não dá pra passar direto no onclick dos botões, que são HTML estático) —
+// mesmo padrão de reportMsgState mais abaixo, só existe entre abrir e fechar
+let guildMemberActionsState = null;
+function openGuildMemberActionsModal(uid, nick) {
+  guildMemberActionsState = { uid, nick };
+  $('guild-member-actions-nick').textContent = nick;
+  $('guild-member-actions-modal').style.display = 'flex';
+}
+window.closeGuildMemberActionsModal = () => {
+  $('guild-member-actions-modal').style.display = 'none';
+  guildMemberActionsState = null;
+};
+window.uiInitiateGuildTransferFromModal = () => {
+  if (!guildMemberActionsState) return;
+  const { uid, nick } = guildMemberActionsState;
+  closeGuildMemberActionsModal();
+  uiInitiateGuildTransfer(uid, nick);
+};
+// expulsar é destrutivo (a pessoa expulsa não pode voltar sozinha, precisa
+// ser convidada ou solicitar entrada de novo), então usa popup temática
+// #guild-kick-confirm-modal em vez do confirm() genérico do navegador —
+// mesmo padrão de #disband-guild-modal. Abre depois de fechar a popup de
+// ações acima (não dá pra ter as duas popups abertas ao mesmo tempo)
+let guildKickState = null;
+window.uiKickGuildMemberFromModal = () => {
+  if (!guildMemberActionsState) return;
+  const { uid, nick } = guildMemberActionsState;
+  closeGuildMemberActionsModal();
+  guildKickState = { uid };
+  $('guild-kick-confirm-text').textContent = T[state.lang].guild_confirm_kick(nick);
+  $('guild-kick-confirm-modal').style.display = 'flex';
+};
+window.closeGuildKickConfirmModal = () => {
+  $('guild-kick-confirm-modal').style.display = 'none';
+  guildKickState = null;
+};
+window.confirmGuildKickMember = async () => {
+  if (!guildKickState) return;
+  const { uid } = guildKickState;
+  closeGuildKickConfirmModal();
+  try { await callKickGuildMember({ uid }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
+};
 window.respondGuildTransfer = async (accept) => {
   try { await callRespondGuildLeaderTransfer({ accept }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 };

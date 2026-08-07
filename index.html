@@ -699,6 +699,51 @@
   </div>
 </div>
 
+<!-- ações do líder sobre um membro (tornar líder / expulsar) — abre ao
+     clicar na linha do membro na lista de clã, em vez de dois botões soltos
+     dentro da própria linha (ver memberRow/openGuildMemberActionsModal em
+     js/guilds.js) -->
+<div class="modal-overlay" id="guild-member-actions-modal" style="display:none;" onclick="if(event.target===this) closeGuildMemberActionsModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center; position:relative;">
+    <button onclick="closeGuildMemberActionsModal()" aria-label="Fechar" style="position:absolute; top:10px; right:10px; z-index:2; width:28px; height:28px; padding:0; background:transparent; border:none; box-shadow:none; color:var(--neon-red); font-size:1.4rem; font-weight:800; line-height:1; cursor:pointer;">×</button>
+    <h1 style="font-size:1.2rem;" data-i18n="guild_member_actions_title">👤 Ações do membro</h1>
+    <p class="muted" id="guild-member-actions-nick" style="font-weight:700;"></p>
+    <div class="modal-card-body">
+      <button onclick="uiInitiateGuildTransferFromModal()" data-i18n="guild_btn_make_leader">Tornar líder</button>
+      <button class="secondary" style="color:var(--neon-red);" onclick="uiKickGuildMemberFromModal()" data-i18n="guild_btn_kick">Expulsar</button>
+    </div>
+  </div>
+</div>
+
+<!-- expulsar membro: popup temática de confirmação (mesmo padrão de
+     #disband-guild-modal) em vez do confirm() genérico do navegador — abre
+     depois de fechar a #guild-member-actions-modal acima (ver
+     uiKickGuildMemberFromModal em js/guilds.js) -->
+<div class="modal-overlay" id="guild-kick-confirm-modal" style="display:none;" onclick="if(event.target===this) closeGuildKickConfirmModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-red); text-shadow:0 0 10px rgba(255,45,107,0.5);" data-i18n="guild_kick_modal_title">🚪 Expulsar membro</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" id="guild-kick-confirm-text"></p>
+    </div>
+    <button class="secondary" onclick="closeGuildKickConfirmModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
+    <button onclick="confirmGuildKickMember()" data-i18n="guild_btn_kick">Expulsar</button>
+  </div>
+</div>
+
+<!-- remover amigo: popup temática de confirmação (mesmo padrão de
+     #disband-guild-modal) em vez de remover direto no clique (ver
+     openRemoveFriendConfirmModal em js/friends.js) -->
+<div class="modal-overlay" id="remove-friend-confirm-modal" style="display:none;" onclick="if(event.target===this) closeRemoveFriendConfirmModal();">
+  <div class="modal-card" style="max-width:380px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-red); text-shadow:0 0 10px rgba(255,45,107,0.5);" data-i18n="remove_friend_modal_title">👋 Remover amigo</h1>
+    <div class="modal-card-body">
+      <p class="muted" style="text-align:left;" id="remove-friend-confirm-text"></p>
+    </div>
+    <button class="secondary" onclick="closeRemoveFriendConfirmModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
+    <button onclick="confirmRemoveFriend()" data-i18n="btn_remove_friend_profile">Remover amigo</button>
+  </div>
+</div>
+
 <!-- configurações de áudio (ver js/ambient-music.js e o script no fim
      deste arquivo) — liga/desliga e volume da música e dos efeitos, cada
      um independente do outro -->
