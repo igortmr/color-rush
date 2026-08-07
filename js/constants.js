@@ -180,4 +180,16 @@ export const DAILY_SHAPES_OVERRIDE = {
     { name: { pt: 'TRAPÉZIO',   en: 'TRAPEZOID', es: 'TRAPECIO'  }, shapeClass: 'shape-trapezoid' },
     { name: { pt: 'PENTÁGONO',  en: 'PENTAGON',  es: 'PENTÁGONO' }, shapeClass: 'shape-pentagon' },
   ],
+  // 07/08/2026: as 6 formas padrão + trapézio/pentágono (sem o coração desta
+  // vez) -- ambas já usadas em clip-path normal no dia 03/08, sem glyph.
+  '2026-08-07': [
+    { name: { pt: 'CÍRCULO',    en: 'CIRCLE',    es: 'CÍRCULO'   }, shapeClass: 'shape-circle' },
+    { name: { pt: 'QUADRADO',   en: 'SQUARE',    es: 'CUADRADO'  }, shapeClass: 'shape-square-shape' },
+    { name: { pt: 'TRIÂNGULO',  en: 'TRIANGLE',  es: 'TRIÁNGULO' }, shapeClass: 'shape-triangle' },
+    { name: { pt: 'LOSANGO',    en: 'DIAMOND',   es: 'ROMBO'     }, shapeClass: 'shape-diamond' },
+    { name: { pt: 'ESTRELA',    en: 'STAR',      es: 'ESTRELLA'  }, shapeClass: 'shape-star' },
+    { name: { pt: 'CRUZ',       en: 'CROSS',     es: 'CRUZ'      }, shapeClass: 'shape-cross' },
+    { name: { pt: 'TRAPÉZIO',   en: 'TRAPEZOID', es: 'TRAPECIO'  }, shapeClass: 'shape-trapezoid' },
+    { name: { pt: 'PENTÁGONO',  en: 'PENTAGON',  es: 'PENTÁGONO' }, shapeClass: 'shape-pentagon' },
+  ],
 };

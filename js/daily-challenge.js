@@ -88,11 +88,13 @@ let dailyBestScore = 0;
 // DAILY_MODE_OVERRIDE: força um dia específico pra um modo em particular,
 // sem mexer no sorteio de verdade dos outros dias (fica igual pra quem olhar
 // de fora — "🎲 modo sorteado de hoje" continua fazendo sentido). 02/08/2026
-// foi Formas, com o pool de naipes de baralho; 03/08/2026 é Formas Reverso,
-// com um pool próprio de 9 formas (6 padrão + coração/trapézio/pentágono,
-// ver DAILY_SHAPES_OVERRIDE em constants.js) — sem esse override, o sorteio
-// normal (DAILY_ROTATION_MODES) teria caído em Reverso hoje.
-const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse', '2026-08-01': 'classic', '2026-08-02': 'shapes', '2026-08-03': 'shapes-reverse' };
+// foi Formas, com o pool de naipes de baralho; 03/08/2026 foi Formas Reverso,
+// com um pool próprio de 9 formas (6 padrão + coração/trapézio/pentágono);
+// 07/08/2026 é Formas de novo, agora com 8 formas (6 padrão + trapézio/
+// pentágono, sem o coração dessa vez — ver DAILY_SHAPES_OVERRIDE em
+// constants.js) — sem esse override, o sorteio normal (DAILY_ROTATION_MODES)
+// teria caído em Reverso.
+const DAILY_MODE_OVERRIDE = { '2026-07-28': 'reverse', '2026-07-29': 'classic', '2026-07-30': 'classic', '2026-07-31': 'reverse', '2026-08-01': 'classic', '2026-08-02': 'shapes', '2026-08-03': 'shapes-reverse', '2026-08-07': 'shapes' };
 function dailyModeForToday(dateStr) {
   if (DAILY_MODE_OVERRIDE[dateStr]) return DAILY_MODE_OVERRIDE[dateStr];
   return seededPick(mulberry32(hashSeed(dateStr + '|daily-mode-v1')), DAILY_ROTATION_MODES);
