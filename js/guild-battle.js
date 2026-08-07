@@ -173,7 +173,9 @@ async function renderGuildBattleScreen() {
   stopBattleScreenTicker();
   const myToken = ++battleScreenToken;
   const body = $('guild-battle-body');
+  const statusEl = $('guild-battle-status');
   body.innerHTML = `<div class="muted" style="text-align:center;">${T[state.lang].loading_text}</div>`;
+  if (statusEl) statusEl.innerHTML = '';
   currentBattleEvent = null;
 
   // window.IS_TESTE (só true em teste.html) escolhe a coleção de teste —
@@ -193,6 +195,7 @@ async function renderGuildBattleScreen() {
     }
     const eventDoc = snap.docs[0];
     currentBattleEvent = { id: eventDoc.id, ...eventDoc.data() };
+    renderBattleStatus();
     renderGuildBattleBody(body);
   } catch (e) {
     if (myToken !== battleScreenToken) return;
@@ -217,9 +220,11 @@ function renderBattleScreenCountdown() {
   const msLeft = endsAtMs - Date.now();
   if (msLeft <= 0) {
     // a pessoa ficou olhando a tela até a batalha acabar de verdade —
-    // re-renderiza o corpo pra trocar pro estado "encerrada" (sem re-buscar
-    // do Firestore, o doc do evento em si não muda por isso)
+    // re-renderiza o status (pro balão sumir) e o corpo (pra esconder os
+    // cards de "jogar") pro estado "encerrada", sem re-buscar do Firestore
+    // (o doc do evento em si não muda só por isso)
     stopBattleScreenTicker();
+    renderBattleStatus();
     const body = $('guild-battle-body');
     if (body) renderGuildBattleBody(body);
     return;
@@ -232,24 +237,37 @@ function startBattleScreenTicker() {
   battleScreenTicker = setInterval(renderBattleScreenCountdown, 1000);
 }
 
+// status/cronômetro mora num elemento estático próprio (#guild-battle-status,
+// ver index.html/teste.html), ACIMA do botão "❓ Como funciona" — separado
+// de #guild-battle-body (que só tem os cards de modo + a classificação) pra
+// dar pra reordenar os dois na tela sem depender de where cada bloco nasce
+// no innerHTML gerado dinamicamente
+function renderBattleStatus() {
+  const statusEl = $('guild-battle-status');
+  const event = currentBattleEvent;
+  if (!statusEl || !event) return;
+  const endsAtMs = event.endsAt && event.endsAt.toMillis ? event.endsAt.toMillis() : 0;
+  const isActive = event.status === 'active' && Date.now() <= endsAtMs;
+  if (isActive) {
+    // mesmo "balão" do cronômetro do desafio diário (.daily-badge-today/
+    // .daily-badge-time em css/style.css) — lá ele fica position:absolute
+    // flutuando por cima da borda de um .mode-card; aqui não tem nenhum card
+    // por baixo pra flutuar sobre, então troca pra position:static (só o
+    // resto do visual — fundo amarelo, fonte Orbitron, etc. — é reaproveitado)
+    statusEl.innerHTML = `<span class="daily-badge-today" style="position:static; display:inline-block;">${T[state.lang].guild_battle_ends_in_label} <span class="daily-badge-time" id="guild-battle-screen-countdown"></span></span>`;
+    startBattleScreenTicker();
+  } else {
+    statusEl.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ended}</div>`;
+    stopBattleScreenTicker();
+  }
+}
+
 function renderGuildBattleBody(body) {
   const event = currentBattleEvent;
   body.innerHTML = '';
 
   const endsAtMs = event.endsAt && event.endsAt.toMillis ? event.endsAt.toMillis() : 0;
   const isActive = event.status === 'active' && Date.now() <= endsAtMs;
-  const statusCard = document.createElement('div');
-  statusCard.className = 'card';
-  statusCard.style.textAlign = 'center';
-  if (isActive) {
-    statusCard.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ends_in_label}</div><div id="guild-battle-screen-countdown" style="font-weight:700; font-family:'Orbitron',sans-serif; font-size:0.85rem; color:var(--neon-yellow);"></div>`;
-    body.appendChild(statusCard);
-    startBattleScreenTicker();
-  } else {
-    statusCard.innerHTML = `<div class="muted" style="font-size:0.85rem;">${T[state.lang].guild_battle_ended}</div>`;
-    body.appendChild(statusCard);
-    stopBattleScreenTicker();
-  }
 
   // botão de jogar só faz sentido enquanto ainda dá tempo de pontuar — os
   // 2 modos sorteados lado a lado (flex-wrap pra empilhar se a tela for
@@ -363,8 +381,11 @@ function battlePlayCard(mode) {
   } else {
     const btn = document.createElement('button');
     // botão pequeno/centralizado — não o CTA grande padrão, reservado pra
-    // ações primárias reais (ver preferência já registrada no projeto)
-    btn.style.cssText = 'padding:8px 18px; font-size:0.8rem; margin-top:4px;';
+    // ações primárias reais (ver preferência já registrada no projeto).
+    // align-self:center anula o align-items:stretch de .card (flex-direction
+    // column, cross-axis = largura), que senão esticaria o botão pra ocupar
+    // a largura toda do card — sem isso "pequeno" no cssText não bastava.
+    btn.style.cssText = 'padding:6px 14px; font-size:0.72rem; margin-top:4px; align-self:center;';
     btn.textContent = T[state.lang].guild_battle_play_btn;
     btn.onclick = () => {
       // avisa a tela de fim de partida (ver gameOver em js/game-core.js) pra
