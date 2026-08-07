@@ -1279,7 +1279,7 @@
      Dragão mais devagar que a Lava de propósito (pedido depois de testar). */
   tbody tr.row-theme-dragon { background-image: url('../img/row-themes/row-dragon.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 4.5s ease-in-out infinite; }
   tbody tr.row-theme-lava   { background-image: url('../img/row-themes/row-lava.jpg');   background-size: cover; background-position: center; animation: rowFlameFlicker 2.8s ease-in-out infinite; }
-  tbody tr.row-theme-aurora { background-image: url('../img/row-themes/row-aurora.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 3.5s ease-in-out infinite; }
+  tbody tr.row-theme-aurora { background-image: url('../img/row-themes/row-aurora.jpg'); background-size: cover; background-position: center; animation: rowFlameFlicker 5s ease-in-out infinite; }
   @keyframes rowFlameFlicker {
     0%, 100% { filter: brightness(1); }
     10% { filter: brightness(1.15); }
