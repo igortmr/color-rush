@@ -652,6 +652,18 @@
     font-size: 1.8rem;
     animation: weeklyPassBubblePulse 2.2s ease-in-out infinite;
   }
+  /* emoji dentro de <button> costuma renderizar um pouco abaixo do centro
+     visual mesmo com o botão já centralizado (flex/align-items:center só
+     centraliza a LINHA de texto, não o desenho do glifo dentro dela --
+     fontes de emoji reservam mais espaço abaixo da linha de base do que
+     acima). Um flex ANINHADO só pro span do emoji centraliza pela caixa de
+     conteúdo de verdade, sem depender de metric de baseline/line-height. */
+  .weekly-pass-bubble-star {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
   /* drop-shadow de fora (0 4px 18px, neutro/escuro -- só profundidade) fica
      FIXO nos dois momentos do pulso de propósito -- quem realmente "pisca"
      é o glow dourado inset (pra DENTRO do círculo, atrás/ao redor da ⭐,
