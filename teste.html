@@ -1114,7 +1114,6 @@
      em js/weekly-pass.js), mas ainda não decidido abrir pra todo mundo. -->
 <button id="weekly-pass-bubble" class="chat-bubble weekly-pass-bubble" style="display:none;" onclick="toggleWeeklyPassPopup()" aria-label="Passe Semanal">
   <img class="weekly-pass-bubble-star" src="img/menu-icons/estrela_passe.png" alt="">
-  <span class="weekly-pass-bubble-check" id="weekly-pass-bubble-check" style="display:none;">✓</span>
 </button>
 <div id="weekly-pass-popup" class="chat-popup" style="display:none;">
   <div class="chat-popup-head">
@@ -1127,6 +1126,17 @@
       <span id="weekly-pass-status">R$9,90</span>
     </button>
     <span class="weekly-pass-disclaimer" data-i18n="weekly_pass_disclaimer">Compra única — não renova sozinha.</span>
+  </div>
+</div>
+<!-- comemoração ao concluir a compra (ver showWeeklyPassSuccess em
+     js/weekly-pass.js) -- mesmo padrão de #levelup-banner/#tut-intro-banner
+     (borda dourada já é a cor padrão de .levelup-inner, sem CSS extra) --
+     some sozinho depois de alguns segundos ou ao clicar fora -->
+<div class="levelup-banner" id="weekly-pass-success-banner" onclick="dismissWeeklyPassSuccess()">
+  <div class="levelup-inner">
+    <img class="weekly-pass-success-icon" src="img/menu-icons/estrela_passe.png" alt="">
+    <div class="levelup-title" data-i18n="weekly_pass_success_title">🎉 Passe Semanal ativado!</div>
+    <div class="weekly-pass-success-body" data-i18n="weekly_pass_success_body">Aproveite os benefícios pelos próximos 7 dias!</div>
   </div>
 </div>
 

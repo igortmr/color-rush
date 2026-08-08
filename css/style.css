@@ -700,29 +700,6 @@
     object-fit: contain;
     pointer-events: none;
   }
-  /* selo de "check" no canto inferior direito do balão quando a conta já
-     tem o passe ativo (ver refreshWeeklyPassBubble em js/weekly-pass.js) --
-     mesmo espírito do .menu-quick-badge (bolinha pequena no canto), mas
-     canto de BAIXO de propósito pra não colidir visualmente com esse
-     padrão de notificação (que sempre fica em cima); anel na cor do fundo
-     (var(--bg-deep)) separa o selo da borda dourada do balão, como um
-     "recorte" por cima dela */
-  .weekly-pass-bubble-check {
-    position: absolute;
-    bottom: -3px;
-    right: -3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--neon-green);
-    color: #08130c;
-    font-size: 0.7rem;
-    font-weight: 900;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 6px rgba(33,230,161,0.7), 0 0 0 2px var(--bg-deep);
-  }
   /* drop-shadow de fora (0 4px 18px, neutro/escuro -- só profundidade) fica
      FIXO nos dois momentos do pulso de propósito -- quem realmente "pisca"
      é o glow dourado inset (pra DENTRO do círculo, atrás/ao redor da ⭐,
@@ -753,6 +730,19 @@
   #weekly-pass-buy-btn { font-family: 'Orbitron', sans-serif; font-weight: 800; }
   /* "não renova sozinha" -- embaixo do botão, alinhado à direita igual ele */
   .weekly-pass-disclaimer { align-self: flex-end; font-size: 0.8em; }
+  /* banner de comemoração da compra (#weekly-pass-success-banner, ver
+     showWeeklyPassSuccess em js/weekly-pass.js) -- reaproveita a estrutura
+     .levelup-banner/.levelup-inner (borda/glow dourados já são o padrão
+     dela, ver --neon-yellow), só acrescenta o ícone e o corpo de texto que
+     esse banner específico tem a mais */
+  .weekly-pass-success-icon {
+    width: 56px;
+    height: 56px;
+    display: block;
+    margin: 0 auto 10px;
+    filter: drop-shadow(0 0 10px rgba(255,206,60,0.6));
+  }
+  .weekly-pass-success-body { margin-top: 8px; font-size: 0.95rem; color: #d5d9f0; }
   .chat-popup {
     position: fixed;
     bottom: 88px;

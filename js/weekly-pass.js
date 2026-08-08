@@ -230,13 +230,11 @@ async function refreshWeeklyPassBubble() {
   // valendo a regra normal (canSeeWeeklyPass, que inclui weeklyPassOnSale)
   const visibleHere = isNative ? canSeeWeeklyPass() : isAdminAccount();
   const active = document.querySelector('.screen.active');
+  // passe já ativo -- balão some de vez até expirar (nada mais pra vender
+  // pra essa conta agora), não faz mais sentido continuar chamando atenção
   const eligible = !!(active && WEEKLY_PASS_BUBBLE_SCREENS.has(active.id) && visibleHere
-    && !state.offline && state.currentUser && state.myData.nick);
+    && !state.offline && state.currentUser && state.myData.nick && !isWeeklyPassActive(state.myData));
   bubble.style.display = eligible ? 'flex' : 'none';
-  // selo verde de "✓" no canto -- só pra dar a entender de longe que essa
-  // conta já tem o passe comprado/ativo, sem precisar abrir o popup
-  const checkBadge = $('weekly-pass-bubble-check');
-  if (checkBadge) checkBadge.style.display = isWeeklyPassActive(state.myData) ? 'flex' : 'none';
   // empilha por cima do balão de chat (agora ÚNICO, amigos+clã em abas — ver
   // js/dms.js) se ele estiver visível nesse instante (mesma ideia de
   // refreshDmChatBubble) -- depende dele já ter sido atualizado neste mesmo
@@ -306,8 +304,33 @@ function reloadMyScoreAfterPurchase() {
     } catch {}
     renderWeeklyPassPopupContent();
     if (window.renderUserPigmentos) window.renderUserPigmentos();
+    // com weeklyPassExpiresAt já recarregado, refaz a checagem de
+    // visibilidade -- é o que faz o balão sumir de vez agora que o passe
+    // está ativo (ver eligible em refreshWeeklyPassBubble)
+    refreshWeeklyPassBubble();
   }, 2500);
 }
+
+// comemoração ao SDK confirmar a compra (antes mesmo do webhook creditar o
+// prazo -- não precisa esperar isso pra celebrar, só pra sumir com o balão/
+// atualizar o botão, que é o que reloadMyScoreAfterPurchase faz separado)
+// -- fecha a oferta e mostra o banner dourado com som, mesmo padrão de
+// #levelup-banner (ver showLevelUp em js/game-core.js), só que dono deste
+// arquivo por ser específico do Passe Semanal
+function showWeeklyPassSuccess() {
+  weeklyPassPopupOpen = false;
+  const popup = $('weekly-pass-popup');
+  if (popup) popup.style.display = 'none';
+  const banner = $('weekly-pass-success-banner');
+  if (!banner) return;
+  banner.classList.add('show');
+  if (window.sfx && window.sfx.weeklyPassPurchase) window.sfx.weeklyPassPurchase();
+  setTimeout(() => banner.classList.remove('show'), 4000);
+}
+window.dismissWeeklyPassSuccess = () => {
+  const banner = $('weekly-pass-success-banner');
+  if (banner) banner.classList.remove('show');
+};
 
 window.weeklyPassCardClick = async () => {
   // passe já ativo -- popup é só informativo enquanto durar, comprar de novo
@@ -330,6 +353,7 @@ window.weeklyPassCardClick = async () => {
       const pkg = pkgs.find(p => p.product && p.product.identifier === WEEKLY_PASS_PRODUCT_ID);
       if (!pkg) throw new Error('Produto do Passe Semanal ainda não configurado no RevenueCat.');
       await Purchases.purchasePackage({ aPackage: pkg });
+      showWeeklyPassSuccess();
       reloadMyScoreAfterPurchase();
     } catch (e) {
       if (e && (e.userCancelled || e.code === 'PURCHASE_CANCELLED')) { renderWeeklyPassPopupContent(); return; } // cancelou -- sem alerta
@@ -355,6 +379,7 @@ window.weeklyPassCardClick = async () => {
     // página; customerEmail evita que ele peça o e-mail de novo, já que a
     // conta já está logada
     await purchases.purchase({ rcPackage: pkg, customerEmail: state.currentUser.email || undefined });
+    showWeeklyPassSuccess();
     reloadMyScoreAfterPurchase();
   } catch (e) {
     if (e && e.errorCode === 1 /* ErrorCode.UserCancelledError */) { renderWeeklyPassPopupContent(); return; } // cancelou -- sem alerta
