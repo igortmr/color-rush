@@ -239,7 +239,7 @@ export const T = {
     // em js/weekly-pass.js). "não renova sozinha" no texto de propósito --
     // exigência da Apple (guideline 3.1.2) pra Non-Renewing Subscription.
     weekly_pass_title: '🌟 Passe Semanal',
-    weekly_pass_desc: '<p>Por 7 dias a partir da compra:</p><ul class="weekly-pass-benefits"><li><span class="wp-benefit-arrow">▸</span> nick com <b class="nick-pass-gold">cor exclusiva</b></li><li><span class="wp-benefit-arrow">▸</span> +100 <span id="weekly-pass-pigment-icon"></span> Pigmentos por dia <span class="muted">(700 no total)</span></li><li><span class="wp-benefit-arrow">▸</span> <b>+1 tentativa</b> no Desafio Diário</li></ul>',
+    weekly_pass_desc: '<p>Obtenha por 7 dias a partir da compra:</p><ul class="weekly-pass-benefits"><li><span class="wp-benefit-arrow">▸</span> nick com <b class="nick-pass-gold">cor exclusiva</b></li><li><span class="wp-benefit-arrow">▸</span> +100 <span id="weekly-pass-pigment-icon"></span> Pigmentos por dia <span class="muted">(700 no total)</span></li><li><span class="wp-benefit-arrow">▸</span> <b>+1 tentativa</b> no Desafio Diário</li></ul>',
     weekly_pass_disclaimer: 'Compra única — não renova sozinha.',
     weekly_pass_price: 'R$9,90',
     weekly_pass_active_until: (date, time) => `⭐ Ativo até ${date} às ${time}`,
@@ -672,7 +672,7 @@ export const T = {
     guild_sys_leader_transfer_suffix: ' is the new leader',
     guild_sys_donate_suffix: ' donated',
     weekly_pass_title: '🌟 Weekly Pass',
-    weekly_pass_desc: '<p>For 7 days from purchase:</p><ul class="weekly-pass-benefits"><li><span class="wp-benefit-arrow">▸</span> nickname with <b class="nick-pass-gold">exclusive color</b></li><li><span class="wp-benefit-arrow">▸</span> +100 <span id="weekly-pass-pigment-icon"></span> Pigments per day <span class="muted">(700 total)</span></li><li><span class="wp-benefit-arrow">▸</span> <b>+1 attempt</b> on the Daily Challenge</li></ul>',
+    weekly_pass_desc: '<p>Get for 7 days from purchase:</p><ul class="weekly-pass-benefits"><li><span class="wp-benefit-arrow">▸</span> nickname with <b class="nick-pass-gold">exclusive color</b></li><li><span class="wp-benefit-arrow">▸</span> +100 <span id="weekly-pass-pigment-icon"></span> Pigments per day <span class="muted">(700 total)</span></li><li><span class="wp-benefit-arrow">▸</span> <b>+1 attempt</b> on the Daily Challenge</li></ul>',
     weekly_pass_disclaimer: 'One-time purchase — does not auto-renew.',
     weekly_pass_price: 'US$1.99',
     weekly_pass_active_until: (date, time) => `⭐ Active until ${date} at ${time}`,
@@ -1102,7 +1102,7 @@ export const T = {
     guild_sys_leader_transfer_suffix: ' es la nueva líder',
     guild_sys_donate_suffix: ' donó',
     weekly_pass_title: '🌟 Pase Semanal',
-    weekly_pass_desc: '<p>Durante 7 días desde la compra:</p><ul class="weekly-pass-benefits"><li><span class="wp-benefit-arrow">▸</span> apodo con <b class="nick-pass-gold">color exclusivo</b></li><li><span class="wp-benefit-arrow">▸</span> +100 <span id="weekly-pass-pigment-icon"></span> Pigmentos por día <span class="muted">(700 en total)</span></li><li><span class="wp-benefit-arrow">▸</span> <b>+1 intento</b> en el Desafío Diario</li></ul>',
+    weekly_pass_desc: '<p>Obtén durante 7 días desde la compra:</p><ul class="weekly-pass-benefits"><li><span class="wp-benefit-arrow">▸</span> apodo con <b class="nick-pass-gold">color exclusivo</b></li><li><span class="wp-benefit-arrow">▸</span> +100 <span id="weekly-pass-pigment-icon"></span> Pigmentos por día <span class="muted">(700 en total)</span></li><li><span class="wp-benefit-arrow">▸</span> <b>+1 intento</b> en el Desafío Diario</li></ul>',
     weekly_pass_disclaimer: 'Compra única — no se renueva sola.',
     weekly_pass_price: 'US$1,99',
     weekly_pass_active_until: (date, time) => `⭐ Activo hasta ${date} a las ${time}`,
