@@ -1171,18 +1171,16 @@
       </div>
     </div>
   </div>
-  <!-- aba Clã -- some pro aviso de "sem clã" quando a pessoa não tem
-       (ver setChatPopupPane em js/dms.js) -->
+  <!-- aba Clã -- a aba em si nem aparece pra quem não tem clã (ver
+       setChatPopupPane em js/dms.js e refreshGuildChatBubble em
+       js/guilds.js), então esse pane só é alcançável já COM clã -->
   <div id="chat-popup-pane-guild" style="display:none; flex-direction:column; flex:1; min-height:0;">
-    <div class="muted" id="chat-popup-guild-empty" style="display:none; text-align:center; padding:20px 14px; font-size:0.85rem;" data-i18n="dm_chat_no_guild">Você ainda não tem clã. Entre em um (ou crie o seu) pra conversar aqui.</div>
-    <div id="guild-chat-pane-content" style="display:none; flex-direction:column; flex:1; min-height:0;">
-      <div id="guild-chat-popup-messages" class="chat-popup-messages"></div>
-      <div class="muted chat-typing-indicator" id="guild-chat-popup-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
-      <div class="chat-mention-list" id="guild-chat-popup-mentions" style="display:none;"></div>
-      <div class="chat-popup-input-row">
-        <input type="text" id="guild-chat-popup-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="Digite uma mensagem..." oninput="handleGuildChatInput(this,'guild-chat-popup-mentions')" onkeydown="if(event.key==='Enter') sendGuildChatPopupMessage();">
-        <button onclick="sendGuildChatPopupMessage()" data-i18n="guild_chat_send">Enviar</button>
-      </div>
+    <div id="guild-chat-popup-messages" class="chat-popup-messages"></div>
+    <div class="muted chat-typing-indicator" id="guild-chat-popup-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
+    <div class="chat-mention-list" id="guild-chat-popup-mentions" style="display:none;"></div>
+    <div class="chat-popup-input-row">
+      <input type="text" id="guild-chat-popup-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="Digite uma mensagem..." oninput="handleGuildChatInput(this,'guild-chat-popup-mentions')" onkeydown="if(event.key==='Enter') sendGuildChatPopupMessage();">
+      <button onclick="sendGuildChatPopupMessage()" data-i18n="guild_chat_send">Enviar</button>
     </div>
   </div>
 </div>

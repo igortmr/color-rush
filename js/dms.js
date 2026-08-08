@@ -353,10 +353,9 @@ async function markDmChatRead() {
 // visível
 window.setChatPopupTab = (tab) => {
   if (tab === chatPopupTab) return;
-  chatPopupTab = tab;
-  setChatPopupPane(tab);
+  setChatPopupPane(tab); // pode corrigir pra 'friends' aqui dentro se a pessoa não tiver clã
   updateChatPopupHead();
-  if (tab === 'guild') {
+  if (chatPopupTab === 'guild') {
     if (window.openGuildChatPane) window.openGuildChatPane();
   } else if (dmView === 'chat') {
     markDmChatRead();
@@ -367,15 +366,19 @@ window.setChatPopupTab = (tab) => {
 
 // desenha o pane certo (amigos ou clã) -- separado de setChatPopupTab pra
 // também ser chamado na abertura do balão (sempre volta pra aba amigos, ver
-// toggleDmChatPopup) sem disparar a lógica de "marcar como lida" de novo
+// toggleDmChatPopup) sem disparar a lógica de "marcar como lida" de novo.
+// Aba "Clã" nem aparece pra quem não tem clã (em vez de aparecer com um
+// aviso de "sem clã" dentro) -- se de alguma forma essa aba tivesse ficado
+// selecionada antes da pessoa sair do clã, cai de volta pra "Amigos" aqui.
 function setChatPopupPane(tab) {
+  const hasGuild = !!state.myData.guildId;
+  $('chat-popup-tab-guild').style.display = hasGuild ? '' : 'none';
+  if (tab === 'guild' && !hasGuild) tab = 'friends';
+  chatPopupTab = tab;
   $('chat-popup-tab-friends').classList.toggle('active', tab === 'friends');
   $('chat-popup-tab-guild').classList.toggle('active', tab === 'guild');
   $('chat-popup-pane-friends').style.display = tab === 'friends' ? 'flex' : 'none';
   $('chat-popup-pane-guild').style.display = tab === 'guild' ? 'flex' : 'none';
-  const hasGuild = !!state.myData.guildId;
-  $('chat-popup-guild-empty').style.display = (tab === 'guild' && !hasGuild) ? '' : 'none';
-  $('guild-chat-pane-content').style.display = (tab === 'guild' && hasGuild) ? 'flex' : 'none';
 }
 
 // abas (Amigos/Clã) OU título de conversa (voltar + nick) no cabeçalho —

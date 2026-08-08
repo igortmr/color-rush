@@ -1434,7 +1434,13 @@ function updateChatBubbleBadge(guildId) {
 // depois dele atualizado; uma chamada explícita elimina essa corrida
 function refreshGuildChatBubble() {
   const bubble = $('dm-chat-bubble'); // balão único, ver index.html
-  const eligible = !!(bubble && bubble.style.display !== 'none' && !state.offline && state.currentUser && state.myData.guildId);
+  const hasGuild = !!state.myData.guildId;
+  // aba "Clã" nem aparece pra quem não tem clã (ver também setChatPopupPane
+  // em js/dms.js, que faz a mesma checagem na abertura/troca de aba -- esse
+  // aqui cobre o caso de sair/entrar num clã com o balãozinho já aberto)
+  const tabBtn = $('chat-popup-tab-guild');
+  if (tabBtn) tabBtn.style.display = hasGuild ? '' : 'none';
+  const eligible = !!(bubble && bubble.style.display !== 'none' && !state.offline && state.currentUser && hasGuild);
   if (eligible) {
     ensureChatListener(state.myData.guildId);
     updateChatBubbleBadge(state.myData.guildId);
