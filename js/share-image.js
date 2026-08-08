@@ -329,5 +329,10 @@ export async function buildShareImageBlob(score) {
   spacedText(ctx, 'colorrush.com.br', "700 40px Rajdhani, sans-serif", 2, true, W / 2, 1840, 'center');
   ctx.restore();
 
-  return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/png'));
+  // JPEG, não PNG: o share sheet nativo do iOS (Web Share API) não gera
+  // miniatura de preview pra arquivos PNG — só mostra o ícone genérico de
+  // "documento". Com JPEG a preview da imagem aparece certinho, e como o
+  // cartão não tem transparência (fundo sempre opaco) não perde nada trocar
+  // — só fica mais leve.
+  return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.92));
 }

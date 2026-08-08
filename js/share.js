@@ -81,7 +81,7 @@ window.shareScore = async () => {
   let file = null;
   try {
     const blob = await buildShareImageBlob(score);
-    if (blob) file = new File([blob], 'color-rush.png', { type: 'image/png' });
+    if (blob) file = new File([blob], 'color-rush.jpg', { type: 'image/jpeg' });
   } catch {}
 
   try {
@@ -104,7 +104,7 @@ window.shareScore = async () => {
         const url = URL.createObjectURL(file);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'color-rush.png';
+        a.download = 'color-rush.jpg';
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 3000);
       }
