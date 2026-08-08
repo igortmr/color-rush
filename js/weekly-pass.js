@@ -26,19 +26,41 @@ import { isWeeklyPassActive, pigmentIconSvg } from './levels.js';
 // precisa reagir em tempo real a essa flag mudando enquanto alguém já está
 // com o app aberto.
 //
-// NO NAVEGADOR (PC ou celular, sem o WebView do Capacitor): ainda não tem
-// como comprar de verdade (falta o produto "Web Billing" do RevenueCat com
-// Stripe conectado -- não configurado ainda), então lá o balão só aparece
-// pra conta admin, mesmo que weeklyPassOnSale já esteja true (ver
-// refreshWeeklyPassBubble abaixo). Clicar em comprar mostra um aviso de
-// "em breve" em vez de tentar chamar o plugin nativo que não existe ali.
+// NO NAVEGADOR (PC ou celular, sem o WebView do Capacitor): compra de
+// verdade via RevenueCat Web Billing (Stripe por trás) já está configurada
+// (produto `weekly_pass_web`, mesma offering `default`/package `$rc_weekly`
+// do app nativo, ver isAdminAccount abaixo) -- mas SÓ pra conta admin,
+// independente de weeklyPassOnSale, porque ainda não passou por teste real
+// de compra nem foi decidido abrir pra todo mundo no navegador. Trocar isso
+// exigiria decisão separada (não é só ligar weeklyPassOnSale).
 //
 // A "Public API Key" do RevenueCat NÃO é segredo (mesmo status da chave do
 // Firebase já hardcoded em js/firebase.js — identifica o projeto, não
-// autoriza nada sozinha) — fica direto aqui. Chave do app "Color Rush Saga
-// (App Store)" no projeto RevenueCat (obtida em API keys > SDK API keys).
+// autoriza nada sozinha) — fica direto aqui. Chave do app nativo é do app
+// "Color Rush Saga (App Store)"; as chaves web são do app "Color Rush Saga
+// (RevenueCat Billing)" -- Web Billing tem uma Public API Key (cobra de
+// verdade) e uma Sandbox API Key (testes, sem cobrar) separadas, ambas
+// obtidas em Apps → Web → API keys no painel do RevenueCat.
 const REVENUECAT_PUBLIC_API_KEY = 'appl_XWLAAoYZNgNPNhoBflUUUbJqmpD';
 const WEEKLY_PASS_PRODUCT_ID = 'br.com.colorrush.app.weeklypass';
+const REVENUECAT_WEB_PUBLIC_API_KEY = 'rcb_ZOpahmiKUlfXCfPtCofeHdfgOrHG';
+const REVENUECAT_WEB_SANDBOX_API_KEY = 'rcb_sb_YYDbtJirtbEKdukwXxxvzHaCh';
+const WEEKLY_PASS_WEB_PRODUCT_ID = 'weekly_pass_web';
+// TROCAR PRA false SÓ QUANDO estiver pronto pra cobrar de verdade no
+// navegador (mesmo cartão de teste do Stripe funciona em modo sandbox, sem
+// mover dinheiro real) -- enquanto for true, toda compra web (mesmo da
+// conta admin) usa REVENUECAT_WEB_SANDBOX_API_KEY em vez da pública.
+const WEB_PURCHASES_SANDBOX_MODE = true;
+// SDK Web do RevenueCat, via CDN (mesmo padrão do Firebase acima -- este
+// arquivo roda direto do site, sem bundler). Versão travada de propósito
+// (mesmo motivo do Firebase pinado em js/firebase.js): atualizar não pode
+// quebrar o fluxo de compra sem a gente notar. dist/style.css é o CSS que o
+// modal de checkout injetado pelo SDK espera -- só é carregado quando o
+// fluxo web de verdade é usado (ver loadPurchasesJs abaixo), não pra todo
+// mundo.
+const PURCHASES_JS_VERSION = '1.51.2';
+const PURCHASES_JS_URL = `https://cdn.jsdelivr.net/npm/@revenuecat/purchases-js@${PURCHASES_JS_VERSION}/dist/Purchases.es.js`;
+const PURCHASES_JS_CSS_URL = `https://cdn.jsdelivr.net/npm/@revenuecat/purchases-js@${PURCHASES_JS_VERSION}/dist/style.css`;
 
 let weeklyPassOnSale = false;
 let weeklyPassFlagChecked = false;
@@ -64,6 +86,14 @@ async function ensureWeeklyPassFlagLoaded() {
 // pra todo mundo.
 function canSeeWeeklyPass() {
   return weeklyPassOnSale || (state.myData && state.myData.admin === true);
+}
+
+// mesmo campo scores/{uid}.admin usado acima, isolado numa função porque o
+// navegador (ver comentário grande no topo do arquivo) usa SÓ isso, sem o
+// "OU weeklyPassOnSale" de canSeeWeeklyPass -- a compra web ainda não foi
+// aberta pro público mesmo quando o app nativo já estiver à venda
+function isAdminAccount() {
+  return !!(state.myData && state.myData.admin === true);
 }
 
 // mesmas telas "principais" do balão de chat único (ver
@@ -95,6 +125,37 @@ async function ensurePurchasesConfigured() {
   return Purchases;
 }
 
+// carrega o SDK Web do RevenueCat (módulo ES + CSS do checkout, ver
+// PURCHASES_JS_URL/PURCHASES_JS_CSS_URL acima) só na primeira vez que
+// alguém realmente tenta comprar pelo navegador -- promise memoizada pra
+// não disparar o import()/<link> duas vezes se o clique acontecer de novo
+// antes do primeiro carregar
+let purchasesJsLoadPromise = null;
+function loadPurchasesJs() {
+  if (!purchasesJsLoadPromise) {
+    purchasesJsLoadPromise = (async () => {
+      if (!document.querySelector('link[data-purchases-js-css]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = PURCHASES_JS_CSS_URL;
+        link.dataset.purchasesJsCss = 'true';
+        document.head.appendChild(link);
+      }
+      return import(PURCHASES_JS_URL);
+    })();
+  }
+  return purchasesJsLoadPromise;
+}
+
+let webPurchasesInstance = null;
+async function ensureWebPurchasesConfigured() {
+  if (webPurchasesInstance) return webPurchasesInstance;
+  const { Purchases } = await loadPurchasesJs();
+  const apiKey = WEB_PURCHASES_SANDBOX_MODE ? REVENUECAT_WEB_SANDBOX_API_KEY : REVENUECAT_WEB_PUBLIC_API_KEY;
+  webPurchasesInstance = Purchases.configure({ apiKey, appUserId: state.currentUser.uid });
+  return webPurchasesInstance;
+}
+
 // busca o preço de verdade (localizado, ex. "R$ 9,90") na oferta configurada
 // no RevenueCat — só cosmético (o texto do popup antes de comprar); se
 // falhar por qualquer motivo (produto ainda não configurado lá, sem
@@ -102,13 +163,26 @@ async function ensurePurchasesConfigured() {
 // travar o popup
 async function refreshWeeklyPassPricing() {
   if (weeklyPassPriceString) return;
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   try {
-    const Purchases = await ensurePurchasesConfigured();
-    if (!Purchases) return;
-    const offerings = await Purchases.getOfferings();
-    const pkgs = (offerings.current && offerings.current.availablePackages) || [];
-    const pkg = pkgs.find(p => p.product && p.product.identifier === WEEKLY_PASS_PRODUCT_ID);
-    if (pkg && pkg.product && pkg.product.priceString) weeklyPassPriceString = pkg.product.priceString;
+    if (isNative) {
+      const Purchases = await ensurePurchasesConfigured();
+      if (!Purchases) return;
+      const offerings = await Purchases.getOfferings();
+      const pkgs = (offerings.current && offerings.current.availablePackages) || [];
+      const pkg = pkgs.find(p => p.product && p.product.identifier === WEEKLY_PASS_PRODUCT_ID);
+      if (pkg && pkg.product && pkg.product.priceString) weeklyPassPriceString = pkg.product.priceString;
+    } else {
+      // navegador -- só admin chega aqui (ver isAdminAccount), sem risco de
+      // carregar o SDK web/pedir preço do Stripe pra usuário nenhum
+      if (!isAdminAccount()) return;
+      const purchases = await ensureWebPurchasesConfigured();
+      const offerings = await purchases.getOfferings();
+      const pkgs = (offerings.current && offerings.current.availablePackages) || [];
+      const pkg = pkgs.find(p => p.webBillingProduct && p.webBillingProduct.identifier === WEEKLY_PASS_WEB_PRODUCT_ID);
+      const price = pkg && pkg.webBillingProduct && pkg.webBillingProduct.price;
+      if (price && price.formattedPrice) weeklyPassPriceString = price.formattedPrice;
+    }
   } catch { /* melhor esforço -- cai no preço estático */ }
 }
 
@@ -138,15 +212,10 @@ async function refreshWeeklyPassBubble() {
   // módulo compartilhado só pra isso, mesmo padrão já usado nos outros
   // arquivos
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  // no navegador (PC ou celular) ainda não existe forma de comprar de
-  // verdade — falta o produto "Web Billing" do RevenueCat com Stripe
-  // conectado, que ainda não foi configurado. Até isso existir, o balão só
-  // aparece no navegador pra conta admin (mesmo campo scores/{uid}.admin de
-  // canSeeWeeklyPass acima), pra dar pra conferir/testar a tela sem expor
-  // pra ninguém mais — mesmo com weeklyPassOnSale já ligado pro app nativo.
-  // Dentro do app nativo continua valendo a regra normal (canSeeWeeklyPass).
-  const isAdmin = !!(state.myData && state.myData.admin === true);
-  const visibleHere = isNative ? canSeeWeeklyPass() : isAdmin;
+  // no navegador o balão só aparece pra conta admin (ver isAdminAccount e o
+  // comentário grande no topo do arquivo) -- dentro do app nativo continua
+  // valendo a regra normal (canSeeWeeklyPass, que inclui weeklyPassOnSale)
+  const visibleHere = isNative ? canSeeWeeklyPass() : isAdminAccount();
   const active = document.querySelector('.screen.active');
   const eligible = !!(active && WEEKLY_PASS_BUBBLE_SCREENS.has(active.id) && visibleHere
     && !state.offline && state.currentUser && state.myData.nick);
@@ -205,41 +274,71 @@ window.toggleWeeklyPassPopup = () => {
   }
 };
 
+// comum aos dois fluxos (nativo/web) -- webhook do RevenueCat
+// (revenueCatWebhook em functions/index.js) é quem credita de verdade
+// (Pigmentos + weeklyPassExpiresAt); aqui só espera um instante (tempo do
+// evento chegar e a Cloud Function processar) e recarrega scores/{uid} pra
+// tela já refletir sem precisar recarregar a página/reabrir o app
+function reloadMyScoreAfterPurchase() {
+  setTimeout(async () => {
+    try {
+      const snap = await getDoc(doc(db, 'scores', state.currentUser.uid));
+      if (snap.exists()) Object.assign(state.myData, snap.data());
+    } catch {}
+    renderWeeklyPassPopupContent();
+    if (window.renderUserPigmentos) window.renderUserPigmentos();
+  }, 2500);
+}
+
 window.weeklyPassCardClick = async () => {
   // passe já ativo -- popup é só informativo enquanto durar, comprar de novo
   // ainda funcionaria (empilha mais 7 dias, ver revenueCatWebhook em
   // functions/index.js) mas não é o que o toque no botão faz aqui
-  if (!canSeeWeeklyPass() || isWeeklyPassActive(state.myData)) return;
-  const Purchases = purchasesPlugin();
-  // sem o plugin nativo (navegador, ver isNative em refreshWeeklyPassBubble
-  // acima) ainda não tem como comprar de verdade -- mensagem específica em
-  // vez do erro genérico, já que quem chega aqui é só a conta admin
-  // conferindo a tela (ver visibleHere em refreshWeeklyPassBubble)
-  if (!Purchases) { alert(T[state.lang].weekly_pass_web_soon); return; }
+  if (isWeeklyPassActive(state.myData)) return;
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   const statusEl = $('weekly-pass-status');
   const prevText = statusEl ? statusEl.textContent : '';
+
+  if (isNative) {
+    if (!canSeeWeeklyPass()) return;
+    const Purchases = purchasesPlugin();
+    if (!Purchases) { alert(T[state.lang].guild_err_generic); return; }
+    try {
+      if (statusEl) statusEl.textContent = T[state.lang].loading_text;
+      await ensurePurchasesConfigured();
+      const offerings = await Purchases.getOfferings();
+      const pkgs = (offerings.current && offerings.current.availablePackages) || [];
+      const pkg = pkgs.find(p => p.product && p.product.identifier === WEEKLY_PASS_PRODUCT_ID);
+      if (!pkg) throw new Error('Produto do Passe Semanal ainda não configurado no RevenueCat.');
+      await Purchases.purchasePackage({ aPackage: pkg });
+      reloadMyScoreAfterPurchase();
+    } catch (e) {
+      if (e && (e.userCancelled || e.code === 'PURCHASE_CANCELLED')) { renderWeeklyPassPopupContent(); return; } // cancelou -- sem alerta
+      if (statusEl) statusEl.textContent = prevText;
+      alert((e && e.message) || T[state.lang].guild_err_generic);
+    }
+    return;
+  }
+
+  // navegador -- só admin (ver comentário grande no topo do arquivo);
+  // checagem redundante de propósito (mesma cautela do resto do arquivo),
+  // já que quem não é admin nem consegue ver o botão pra clicar nele
+  if (!isAdminAccount()) return;
   try {
     if (statusEl) statusEl.textContent = T[state.lang].loading_text;
-    await ensurePurchasesConfigured();
-    const offerings = await Purchases.getOfferings();
+    const purchases = await ensureWebPurchasesConfigured();
+    const offerings = await purchases.getOfferings();
     const pkgs = (offerings.current && offerings.current.availablePackages) || [];
-    const pkg = pkgs.find(p => p.product && p.product.identifier === WEEKLY_PASS_PRODUCT_ID);
-    if (!pkg) throw new Error('Produto do Passe Semanal ainda não configurado no RevenueCat.');
-    await Purchases.purchasePackage({ aPackage: pkg });
-    // quem credita de verdade (Pigmentos + weeklyPassExpiresAt) é o webhook,
-    // do lado do servidor — aqui só espera um instante (tempo do RevenueCat
-    // mandar o evento e a Cloud Function processar) e recarrega scores/{uid}
-    // pra tela já refletir sem precisar reabrir o app
-    setTimeout(async () => {
-      try {
-        const snap = await getDoc(doc(db, 'scores', state.currentUser.uid));
-        if (snap.exists()) Object.assign(state.myData, snap.data());
-      } catch {}
-      renderWeeklyPassPopupContent();
-      if (window.renderUserPigmentos) window.renderUserPigmentos();
-    }, 2500);
+    const pkg = pkgs.find(p => p.webBillingProduct && p.webBillingProduct.identifier === WEEKLY_PASS_WEB_PRODUCT_ID);
+    if (!pkg) throw new Error('Produto do Passe Semanal (web) ainda não configurado no RevenueCat.');
+    // sem htmlTarget -- o próprio SDK cria e mostra um modal de checkout
+    // (com o dist/style.css carregado em loadPurchasesJs) por cima da
+    // página; customerEmail evita que ele peça o e-mail de novo, já que a
+    // conta já está logada
+    await purchases.purchase({ rcPackage: pkg, customerEmail: state.currentUser.email || undefined });
+    reloadMyScoreAfterPurchase();
   } catch (e) {
-    if (e && (e.userCancelled || e.code === 'PURCHASE_CANCELLED')) { renderWeeklyPassPopupContent(); return; } // cancelou -- sem alerta
+    if (e && e.errorCode === 1 /* ErrorCode.UserCancelledError */) { renderWeeklyPassPopupContent(); return; } // cancelou -- sem alerta
     if (statusEl) statusEl.textContent = prevText;
     alert((e && e.message) || T[state.lang].guild_err_generic);
   }
