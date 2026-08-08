@@ -94,7 +94,7 @@ function drawBackground(ctx, C) {
 // mesmo padrão visual dos .square do tabuleiro: "degrau" sólido da própria
 // cor embaixo (0 3px 0 var(--sq-color)) + sombra difusa preta, tile flat por
 // cima, e um brilho "de vidro" diagonal (o ::before) por cima de tudo.
-function drawTile(ctx, x, y, size, color, highlighted, badgeText) {
+function drawTile(ctx, x, y, size, color) {
   const r = size * 0.115;
 
   ctx.save();
@@ -125,27 +125,6 @@ function drawTile(ctx, x, y, size, color, highlighted, badgeText) {
   ctx.strokeStyle = 'rgba(255,255,255,0.18)';
   roundRectPath(ctx, x, y, size, size, r);
   ctx.stroke();
-
-  if (highlighted) {
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = size * 0.09;
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = color;
-    roundRectPath(ctx, x - 6, y - 6, size + 12, size + 12, r + 6);
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
-    ctx.font = `800 ${Math.round(size * 0.11)}px Orbitron, sans-serif`;
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = size * 0.05;
-    ctx.fillText(badgeText, x + size + 4, y - size * 0.015);
-    ctx.restore();
-  }
 }
 
 // título "COLOR RUSH": mesmo gradiente 90deg (vermelho→laranja→verde→
@@ -304,9 +283,9 @@ export async function buildShareImageBlob(score) {
     { color: C.purple, x: gridX, y: gridY },
     { color: C.blue, x: gridX + size + gap, y: gridY },
     { color: C.red, x: gridX, y: gridY + size + gap },
-    { color: C.green, x: gridX + size + gap, y: gridY + size + gap, highlighted: true },
+    { color: C.green, x: gridX + size + gap, y: gridY + size + gap },
   ];
-  for (const tl of tiles) drawTile(ctx, tl.x, tl.y, size, tl.color, tl.highlighted, '+10');
+  for (const tl of tiles) drawTile(ctx, tl.x, tl.y, size, tl.color);
 
   // logo
   drawLogo(ctx, W / 2, 1020, C, 950);
@@ -339,7 +318,7 @@ export async function buildShareImageBlob(score) {
 
   // "Consegue me vencer?"
   ctx.fillStyle = '#eef1ff';
-  spacedText(ctx, t.share_img_question, "700 42px Rajdhani, sans-serif", 0, true, W / 2, 1385, 'center');
+  spacedText(ctx, t.share_img_question, "700 42px Rajdhani, sans-serif", 0, true, W / 2, 1330, 'center');
 
   // CTA
   drawCta(ctx, (W - 820) / 2, 1480, 820, 150, C, icon, t.share_img_cta);

@@ -76,7 +76,7 @@ export const T = {
     ios_launch_modal_text: 'Baixe o app pra jogar mais rápido e sem precisar do navegador.',
     ios_launch_modal_continue_btn: 'Continuar pelo navegador',
     your_refcode_label: 'Seu código de indicação:',
-    share_text: (score, modeName, rec, link) => `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me bater? 👉 ${link}`,
+    share_text: (score, modeName, rec, link) => `🎨 Color Rush — fiz ${score} ponto${score === 1 ? '' : 's'} no modo ${modeName}!${rec}\nConsegue me vencer? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 Novo recorde pessoal!',
     // textos desenhados na imagem de compartilhamento gerada em canvas (ver js/share-image.js)
     share_img_tagline1: 'CLIQUE NA COR CERTA', share_img_tagline2: 'ANTES QUE O TEMPO ACABE.',
@@ -955,7 +955,7 @@ export const T = {
     ios_launch_modal_text: 'Descarga la app para jugar más rápido y sin necesidad del navegador.',
     ios_launch_modal_continue_btn: 'Continuar en el navegador',
     your_refcode_label: 'Tu código de invitación:',
-    share_text: (score, modeName, rec, link) => `🎨 Color Rush — ¡hice ${score} punto${score === 1 ? '' : 's'} en el modo ${modeName}!${rec}\n¿Puedes superarme? 👉 ${link}`,
+    share_text: (score, modeName, rec, link) => `🎨 Color Rush — ¡hice ${score} punto${score === 1 ? '' : 's'} en el modo ${modeName}!${rec}\n¿Puedes vencerme? 👉 ${link}`,
     share_new_record_suffix: ' 🎉 ¡Nuevo récord personal!',
     share_img_tagline1: 'TOCA EL COLOR CORRECTO', share_img_tagline2: 'ANTES QUE SE ACABE EL TIEMPO.',
     share_img_prefix: 'Hice ', share_img_suffix: score => score === 1 ? ' punto.' : ' puntos.',
