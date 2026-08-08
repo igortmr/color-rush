@@ -132,14 +132,14 @@
   <div class="card">
     <input type="text" id="auth-email" data-i18n-placeholder="auth_login_ph" placeholder="E-mail ou nome de usuário" onkeydown="if(event.key==='Enter') doLogin();">
     <div class="pass-field-wrap">
-      <input type="password" id="auth-pass" data-i18n-placeholder="auth_pass_ph" placeholder="Senha (mín. 6 caracteres)" onkeydown="if(event.key==='Enter') doLogin();">
+      <input type="password" id="auth-pass" data-i18n-placeholder="auth_login_pass_ph" placeholder="Senha" onkeydown="if(event.key==='Enter') doLogin();">
       <button type="button" class="pass-toggle-btn" aria-label="Mostrar senha" onclick="togglePasswordVisibility(this)">
         <svg class="eye-icon eye-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
         <svg class="eye-icon eye-hide" style="display:none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-6.06M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
       </button>
     </div>
     <div class="error" id="auth-error"></div>
-    <button class="link" onclick="openForgotPasswordModal()" data-i18n="btn_forgot_password" style="margin-bottom:-8px;">Esqueci minha senha</button>
+    <button class="link" onclick="openForgotPasswordModal()" data-i18n="btn_forgot_password" style="margin-top:-8px; margin-bottom:-8px;">Esqueci minha senha</button>
     <button onclick="doLogin()" data-i18n="btn_login">ENTRAR</button>
     <button class="secondary" onclick="openSignupModal()" data-i18n="btn_signup">CRIAR CONTA</button>
     <button class="google" onclick="doGoogle()">
