@@ -99,7 +99,6 @@ window.shareScore = async () => {
       }
       await navigator.share({ text });
     } else {
-      await navigator.clipboard.writeText(text);
       if (file) {
         const url = URL.createObjectURL(file);
         const a = document.createElement('a');
@@ -108,9 +107,27 @@ window.shareScore = async () => {
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 3000);
       }
-      $('share-status').textContent = T[state.lang].share_copied;
-      setTimeout(() => { $('share-status').textContent = ''; }, 3000);
+      openShareTextModal(text);
     }
+  } catch {}
+};
+
+// popup temática do computador (sem Web Share API) — mostra o texto pronto
+// pra conferir/selecionar manualmente ou copiar com um clique (ver
+// #share-text-modal em index.html)
+window.openShareTextModal = (text) => {
+  $('share-text-modal-box').value = text;
+  $('share-text-modal-status').textContent = '';
+  $('share-text-modal').style.display = 'flex';
+};
+window.closeShareTextModal = () => {
+  $('share-text-modal').style.display = 'none';
+};
+window.copyShareTextModal = async () => {
+  try {
+    await navigator.clipboard.writeText($('share-text-modal-box').value);
+    $('share-text-modal-status').textContent = T[state.lang].share_copied;
+    setTimeout(() => { $('share-text-modal-status').textContent = ''; }, 3000);
   } catch {}
 };
 

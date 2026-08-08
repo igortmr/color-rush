@@ -428,7 +428,6 @@
     <button class="secondary" onclick="shareScore()" data-i18n="btn_share">📤 COMPARTILHAR</button>
     <button class="secondary" onclick="showMenu()" data-i18n="btn_menu">MENU</button>
   </div>
-  <div class="muted" id="share-status"></div>
 </div>
 
 <!-- DESAFIO DIÁRIO -->
@@ -833,6 +832,22 @@
     </div>
     <button class="secondary" onclick="closeRemoveFriendConfirmModal()" data-i18n="delete_account_modal_cancel_btn">Cancelar</button>
     <button onclick="confirmRemoveFriend()" data-i18n="btn_remove_friend_profile">Remover amigo</button>
+  </div>
+</div>
+
+<!-- compartilhar pontuação no computador: sem Web Share API nativa (isso é
+     só coisa de celular), então em vez de copiar pra área de transferência
+     em silêncio mostra essa popup temática com o texto pronto — dá pra
+     conferir/selecionar manualmente ou clicar no botão de copiar (ver
+     openShareTextModal em js/share.js) -->
+<div class="modal-overlay" id="share-text-modal" style="display:none;" onclick="if(event.target===this) closeShareTextModal();">
+  <div class="modal-card" style="max-width:420px; text-align:center;">
+    <h1 style="font-size:1.2rem; color:var(--neon-purple); text-shadow:0 0 10px rgba(177,77,255,0.5);" data-i18n="share_text_modal_title">📤 Compartilhar</h1>
+    <div class="modal-card-body">
+      <textarea id="share-text-modal-box" class="share-text-box" rows="4" readonly></textarea>
+      <button class="secondary" style="align-self:center; padding:8px 18px; font-size:0.8rem;" onclick="copyShareTextModal()" data-i18n="share_text_modal_copy_btn">📋 Copiar para a área de transferência</button>
+      <span class="muted" id="share-text-modal-status" style="min-height:1.2em; font-size:0.8rem;"></span>
+    </div>
   </div>
 </div>
 

@@ -186,6 +186,23 @@
   }
   input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
   input::placeholder { color: #6b76a8; }
+  /* caixa de texto só-leitura do #share-text-modal — mesmo visual do
+     input acima, mas com quebra de linha normal (o texto de compartilhar
+     tem link + quebra de linha própria) em vez de campo de uma linha só */
+  .share-text-box {
+    width: 100%;
+    resize: none;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(45,214,255,0.35);
+    background: #060a16;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    outline: none;
+  }
+  .share-text-box:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
   /* ícone de olho (mostrar/ocultar senha) — ver togglePasswordVisibility em
      js/auth.js. Espaço reservado no padding-right do input pro botão não
      ficar por cima do texto digitado. */

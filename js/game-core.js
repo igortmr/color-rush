@@ -597,7 +597,6 @@ async function gameOver(reason) {
   $('record-over').textContent = Math.max(score, record);
   $('new-record').classList.toggle('show', isNewRecord);
   $('sync-status').textContent = '';
-  $('share-status').textContent = '';
   if (isNewRecord) { window.sfx.record(); spawnConfetti(); maybeRequestAppReview(); }
   show('over-screen');
   if (!state.playingForGuildBattle) clearRankPreview(mode);
