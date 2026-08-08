@@ -37,12 +37,12 @@ import { updateDailyMenuCard } from './daily-challenge.js';
 // do app nativo). Visibilidade/permissão segue config/features.
 // weeklyPassWebOnSale -- flag PRÓPRIA do navegador, independente da
 // weeklyPassOnSale do app nativo de propósito (ver canBuyWeeklyPassWeb
-// abaixo), já testada com sucesso em modo sandbox. Antes de ligar de vez
-// pra todo mundo (mudar weeklyPassWebOnSale pra true no Firebase Console):
-// (1) WEB_PURCHASES_SANDBOX_MODE abaixo precisa virar false, senão
-// continua sendo teste, ninguém é cobrado de verdade; (2) a conta Stripe
-// precisa terminar a verificação de identidade/empresa (área restrita ->
-// conta de produção).
+// abaixo). Testada com sucesso em modo sandbox, E a conta Stripe já
+// verificada (2026-08-08, "Status da conta" > Tarefas, nenhuma pendente)
+// -- WEB_PURCHASES_SANDBOX_MODE abaixo já está false (cobra de verdade).
+// Só falta mudar weeklyPassWebOnSale pra true no Firebase Console quando
+// quiser abrir a compra pra todo mundo (até lá, só a conta admin compra,
+// e agora sim seria cobrada de verdade).
 //
 // A "Public API Key" do RevenueCat NÃO é segredo (mesmo status da chave do
 // Firebase já hardcoded em js/firebase.js — identifica o projeto, não
@@ -56,11 +56,13 @@ const WEEKLY_PASS_PRODUCT_ID = 'br.com.colorrush.app.weeklypass';
 const REVENUECAT_WEB_PUBLIC_API_KEY = 'rcb_ZOpahmiKUlfXCfPtCofeHdfgOrHG';
 const REVENUECAT_WEB_SANDBOX_API_KEY = 'rcb_sb_YYDbtJirtbEKdukwXxxvzHaCh';
 const WEEKLY_PASS_WEB_PRODUCT_ID = 'weekly_pass_web';
-// TROCAR PRA false SÓ QUANDO estiver pronto pra cobrar de verdade no
-// navegador (mesmo cartão de teste do Stripe funciona em modo sandbox, sem
-// mover dinheiro real) -- enquanto for true, toda compra web (mesmo da
-// conta admin) usa REVENUECAT_WEB_SANDBOX_API_KEY em vez da pública.
-const WEB_PURCHASES_SANDBOX_MODE = true;
+// false = cobra DE VERDADE (conta Stripe já verificada, 2026-08-08 --
+// ver "Status da conta" > Tarefas, "Nenhuma tarefa ativa"). Continua
+// admin-only por enquanto (ver canBuyWeeklyPassWeb) até
+// config/features.weeklyPassWebOnSale ser ligada no Firebase Console --
+// então até lá, mesmo com sandbox desligado, só a conta admin consegue
+// comprar (e agora sim seria cobrada de verdade, cuidado ao testar).
+const WEB_PURCHASES_SANDBOX_MODE = false;
 // SDK Web do RevenueCat, via CDN (mesmo padrão do Firebase acima -- este
 // arquivo roda direto do site, sem bundler). Versão travada de propósito
 // (mesmo motivo do Firebase pinado em js/firebase.js): atualizar não pode
