@@ -325,7 +325,9 @@ export async function buildShareImageBlob(score) {
 
   // domínio
   ctx.save();
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = C.yellow;
+  ctx.shadowColor = rgba(C.yellow, 0.5);
+  ctx.shadowBlur = 12;
   spacedText(ctx, 'colorrush.com.br', "700 40px Rajdhani, sans-serif", 2, true, W / 2, 1840, 'center');
   ctx.restore();
 
