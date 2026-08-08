@@ -348,6 +348,14 @@
   button[aria-label="Fechar"]:hover { box-shadow: none; transform: none; }
   button[aria-label="Fechar"]:active { box-shadow: none; transform: none; }
   .error { color: var(--neon-red); font-size: 0.9rem; text-align: center; min-height: 1.2em; text-shadow: 0 0 8px rgba(255,45,107,0.5); }
+  /* sem mensagem, a div some do layout por completo (min-height:0 sozinho
+     não bastava -- um .card é flex column com gap, e o GAP em volta da div
+     continua contando mesmo com altura própria zerada, é isso que fazia o
+     espaço estranho entre a senha e "esqueci minha senha" na tela de login).
+     display:none tira a div do fluxo, cancelando os dois gaps ao redor dela
+     também. Some/aparece sozinha quando o JS seta/zera o textContent (ex.:
+     errEl.textContent = ''), sem precisar tocar em cada chamador. */
+  .error:empty { display: none; }
 
 
   /* botão de sair/voltar/fechar (texto) — mesmo degrau+vidro dos outros
