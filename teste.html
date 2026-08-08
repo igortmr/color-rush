@@ -1109,9 +1109,10 @@
      se config/features.weeklyPassOnSale (Firestore, ligado à mão no
      Firebase Console quando for a hora de lançar) for true, OU pra conta
      admin (scores/{uid}.admin === true) conferir/testar antes do
-     lançamento. No navegador (PC/celular), só aparece pra conta admin --
-     RevenueCat Web Billing + Stripe já configurados (WEB_PURCHASES_SANDBOX_MODE
-     em js/weekly-pass.js), mas ainda não decidido abrir pra todo mundo. -->
+     lançamento. No navegador (PC/celular), segue
+     config/features.weeklyPassWebOnSale (flag PRÓPRIA, separada da de
+     cima), OU conta admin -- RevenueCat Web Billing + Stripe já
+     configurados (WEB_PURCHASES_SANDBOX_MODE em js/weekly-pass.js). -->
 <button id="weekly-pass-bubble" class="chat-bubble weekly-pass-bubble" style="display:none;" onclick="toggleWeeklyPassPopup()" aria-label="Passe Semanal">
   <img class="weekly-pass-bubble-star" src="img/menu-icons/estrela_passe.png" alt="">
 </button>

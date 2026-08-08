@@ -34,10 +34,15 @@ import { updateDailyMenuCard } from './daily-challenge.js';
 // NO NAVEGADOR (PC ou celular, sem o WebView do Capacitor): compra de
 // verdade via RevenueCat Web Billing (Stripe por trás) já está configurada
 // (produto `weekly_pass_web`, mesma offering `default`/package `$rc_weekly`
-// do app nativo, ver isAdminAccount abaixo) -- mas SÓ pra conta admin,
-// independente de weeklyPassOnSale, porque ainda não passou por teste real
-// de compra nem foi decidido abrir pra todo mundo no navegador. Trocar isso
-// exigiria decisão separada (não é só ligar weeklyPassOnSale).
+// do app nativo). Visibilidade/permissão segue config/features.
+// weeklyPassWebOnSale -- flag PRÓPRIA do navegador, independente da
+// weeklyPassOnSale do app nativo de propósito (ver canBuyWeeklyPassWeb
+// abaixo), já testada com sucesso em modo sandbox. Antes de ligar de vez
+// pra todo mundo (mudar weeklyPassWebOnSale pra true no Firebase Console):
+// (1) WEB_PURCHASES_SANDBOX_MODE abaixo precisa virar false, senão
+// continua sendo teste, ninguém é cobrado de verdade; (2) a conta Stripe
+// precisa terminar a verificação de identidade/empresa (área restrita ->
+// conta de produção).
 //
 // A "Public API Key" do RevenueCat NÃO é segredo (mesmo status da chave do
 // Firebase já hardcoded em js/firebase.js — identifica o projeto, não
@@ -68,6 +73,7 @@ const PURCHASES_JS_URL = `https://cdn.jsdelivr.net/npm/@revenuecat/purchases-js@
 const PURCHASES_JS_CSS_URL = `https://cdn.jsdelivr.net/npm/@revenuecat/purchases-js@${PURCHASES_JS_VERSION}/dist/style.css`;
 
 let weeklyPassOnSale = false;
+let weeklyPassWebOnSale = false;
 let weeklyPassFlagChecked = false;
 let weeklyPassPriceString = ''; // preço de verdade (localizado) vindo do RevenueCat, quando disponível
 let weeklyPassPopupOpen = false;
@@ -77,8 +83,14 @@ async function ensureWeeklyPassFlagLoaded() {
   weeklyPassFlagChecked = true;
   try {
     const snap = await getDoc(doc(db, 'config', 'features'));
-    weeklyPassOnSale = !!(snap.exists() && snap.data().weeklyPassOnSale === true);
-  } catch { weeklyPassOnSale = false; }
+    const data = snap.exists() ? snap.data() : {};
+    weeklyPassOnSale = data.weeklyPassOnSale === true;
+    // flag PRÓPRIA do navegador, independente de weeklyPassOnSale (app
+    // nativo) -- de propósito, ver canBuyWeeklyPassWeb abaixo: abrir a
+    // venda web é uma decisão separada de lançar no app (que nem tem a
+    // build com o passe enviada pra Apple ainda)
+    weeklyPassWebOnSale = data.weeklyPassWebOnSale === true;
+  } catch { weeklyPassOnSale = false; weeklyPassWebOnSale = false; }
 }
 
 // libera o balão/compra pra conta admin mesmo com weeklyPassOnSale
@@ -93,10 +105,18 @@ function canSeeWeeklyPass() {
   return weeklyPassOnSale || (state.myData && state.myData.admin === true);
 }
 
-// mesmo campo scores/{uid}.admin usado acima, isolado numa função porque o
-// navegador (ver comentário grande no topo do arquivo) usa SÓ isso, sem o
-// "OU weeklyPassOnSale" de canSeeWeeklyPass -- a compra web ainda não foi
-// aberta pro público mesmo quando o app nativo já estiver à venda
+// equivalente à canSeeWeeklyPass acima, mas pro NAVEGADOR -- usa
+// config/features.weeklyPassWebOnSale (Firestore, mesmo padrão manual do
+// Firebase Console, começa false) em vez de weeklyPassOnSale, justamente
+// pra dar pra abrir a venda web sem depender/mexer no lançamento do app
+// nativo. Antes de ligar de vez pra todo mundo: (1) WEB_PURCHASES_SANDBOX_MODE
+// acima precisa estar false (senão continua sendo teste, ninguém é cobrado
+// de verdade) e (2) a conta Stripe precisa ter terminado a verificação de
+// identidade/empresa (ver "área restrita" -> conta de produção).
+function canBuyWeeklyPassWeb() {
+  return weeklyPassWebOnSale || isAdminAccount();
+}
+
 function isAdminAccount() {
   return !!(state.myData && state.myData.admin === true);
 }
@@ -178,9 +198,9 @@ async function refreshWeeklyPassPricing() {
       const pkg = pkgs.find(p => p.product && p.product.identifier === WEEKLY_PASS_PRODUCT_ID);
       if (pkg && pkg.product && pkg.product.priceString) weeklyPassPriceString = pkg.product.priceString;
     } else {
-      // navegador -- só admin chega aqui (ver isAdminAccount), sem risco de
-      // carregar o SDK web/pedir preço do Stripe pra usuário nenhum
-      if (!isAdminAccount()) return;
+      // navegador -- só quem pode comprar chega aqui (ver canBuyWeeklyPassWeb),
+      // sem risco de carregar o SDK web/pedir preço do Stripe à toa
+      if (!canBuyWeeklyPassWeb()) return;
       const purchases = await ensureWebPurchasesConfigured();
       const offerings = await purchases.getOfferings();
       const pkgs = (offerings.current && offerings.current.availablePackages) || [];
@@ -227,10 +247,10 @@ async function refreshWeeklyPassBubble() {
   // módulo compartilhado só pra isso, mesmo padrão já usado nos outros
   // arquivos
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  // no navegador o balão só aparece pra conta admin (ver isAdminAccount e o
-  // comentário grande no topo do arquivo) -- dentro do app nativo continua
-  // valendo a regra normal (canSeeWeeklyPass, que inclui weeklyPassOnSale)
-  const visibleHere = isNative ? canSeeWeeklyPass() : isAdminAccount();
+  // no navegador o balão segue canBuyWeeklyPassWeb (weeklyPassWebOnSale OU
+  // admin) -- dentro do app nativo continua valendo a regra normal
+  // (canSeeWeeklyPass, que inclui weeklyPassOnSale)
+  const visibleHere = isNative ? canSeeWeeklyPass() : canBuyWeeklyPassWeb();
   const active = document.querySelector('.screen.active');
   // passe já ativo -- balão some de vez até expirar (nada mais pra vender
   // pra essa conta agora), não faz mais sentido continuar chamando atenção
@@ -371,10 +391,10 @@ window.weeklyPassCardClick = async () => {
     return;
   }
 
-  // navegador -- só admin (ver comentário grande no topo do arquivo);
-  // checagem redundante de propósito (mesma cautela do resto do arquivo),
-  // já que quem não é admin nem consegue ver o botão pra clicar nele
-  if (!isAdminAccount()) return;
+  // navegador -- checagem redundante de propósito (mesma cautela do resto
+  // do arquivo), já que quem não pode comprar nem consegue ver o botão pra
+  // clicar nele (ver canBuyWeeklyPassWeb)
+  if (!canBuyWeeklyPassWeb()) return;
   try {
     if (statusEl) statusEl.textContent = T[state.lang].loading_text;
     const purchases = await ensureWebPurchasesConfigured();
