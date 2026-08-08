@@ -437,9 +437,12 @@ async function renderGuildScreen() {
   }
 
   // não sou membro nem admin: pedir entrada / cancelar pedido / avisos de
-  // bloqueio (admin não pede entrada, só observa)
+  // bloqueio (admin não pede entrada, só observa). Pode ser null (ex.: já
+  // sou membro de outro clã — ver nonMemberActionCard), aí não tem card
+  // nenhum pra mostrar
   if (!isMember && !isAdmin) {
-    body.appendChild(nonMemberActionCard(g, myUid));
+    const actionCard = nonMemberActionCard(g, myUid);
+    if (actionCard) body.appendChild(actionCard);
   }
 
   if (canSeeTabs) {
@@ -549,9 +552,12 @@ function nonMemberActionCard(g, myUid) {
     wrap.appendChild(btn);
     return wrap;
   }
+  // já sou membro de OUTRO clã (não este) — sem card de aviso nenhum, a
+  // pessoa só está dando uma olhada; a própria tela do clã já limita o que
+  // ela vê (sem abas, só a lista de membros, ver canSeeTabs em
+  // renderGuildScreen), então não tem "pedir pra entrar" pra bloquear aqui
   if (state.myData.guildId) {
-    wrap.innerHTML = `<p class="muted">${T[state.lang].guild_already_in_another}</p>`;
-    return wrap;
+    return null;
   }
   if (pending) {
     wrap.innerHTML = `<p class="muted">${T[state.lang].guild_request_pending_other}</p>`;
