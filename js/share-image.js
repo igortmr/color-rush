@@ -230,8 +230,18 @@ function drawCta(ctx, x, y, w, h, C, icon, label) {
   ctx.fillRect(x, y, w, h);
   ctx.restore();
 
+  // ícone + texto centralizados como um único bloco no meio do botão (em vez
+  // de ícone fixo na borda esquerda + texto solto) — mede a largura do texto
+  // primeiro pra poder centralizar o conjunto [ícone][gap][texto] inteiro
   const iconSize = h * 0.66;
-  const iconX = x + h * 0.22;
+  const iconTextGap = h * 0.18;
+  const labelFont = `900 ${Math.round(h * 0.32)}px Orbitron, sans-serif`;
+  ctx.font = labelFont;
+  const labelWidth = ctx.measureText(label).width;
+  const groupWidth = iconSize + iconTextGap + labelWidth;
+  const groupX = x + (w - groupWidth) / 2;
+
+  const iconX = groupX;
   const iconY = y + (h - iconSize) / 2;
   if (icon) {
     ctx.save();
@@ -241,11 +251,11 @@ function drawCta(ctx, x, y, w, h, C, icon, label) {
     ctx.restore();
   }
 
-  ctx.font = `900 ${Math.round(h * 0.32)}px Orbitron, sans-serif`;
+  ctx.font = labelFont;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#0a0e1e';
-  ctx.fillText(label, iconX + iconSize + h * 0.22, y + h / 2 + h * 0.02);
+  ctx.fillText(label, iconX + iconSize + iconTextGap, y + h / 2 + h * 0.02);
 }
 
 function loadImage(src) {
@@ -287,8 +297,9 @@ export async function buildShareImageBlob(score) {
   spacedText(ctx, t.share_img_tagline2, "800 48px Orbitron, sans-serif", 2, true, W / 2, 270, 'center');
   ctx.restore();
 
-  // tabuleiro 2x2
-  const gap = 36, size = 412, gridX = (W - (size * 2 + gap)) / 2, gridY = 340;
+  // tabuleiro 2x2 — só simbólico/decorativo (bem menor que o card inteiro),
+  // não é o foco da imagem
+  const gap = 22, size = 170, gridX = (W - (size * 2 + gap)) / 2, gridY = 400;
   const tiles = [
     { color: C.purple, x: gridX, y: gridY },
     { color: C.blue, x: gridX + size + gap, y: gridY },
@@ -298,7 +309,7 @@ export async function buildShareImageBlob(score) {
   for (const tl of tiles) drawTile(ctx, tl.x, tl.y, size, tl.color, tl.highlighted, '+10');
 
   // logo
-  drawLogo(ctx, W / 2, 1350, C, 950);
+  drawLogo(ctx, W / 2, 1020, C, 950);
 
   // "Fiz {score} pontos."
   const prefixFont = "600 44px Rajdhani, sans-serif";
@@ -312,7 +323,7 @@ export async function buildShareImageBlob(score) {
   const wSuffix = spacedText(ctx, suffix, suffixFont, 0, false);
   const totalW = wPrefix + wScore + wSuffix;
   let cursorX = W / 2 - totalW / 2;
-  const scoreBaseline = 1460;
+  const scoreBaseline = 1260;
   ctx.fillStyle = '#eef1ff';
   spacedText(ctx, prefix, prefixFont, 0, true, cursorX, scoreBaseline, 'left');
   cursorX += wPrefix;
@@ -328,15 +339,15 @@ export async function buildShareImageBlob(score) {
 
   // "Consegue me vencer?"
   ctx.fillStyle = '#eef1ff';
-  spacedText(ctx, t.share_img_question, "700 42px Rajdhani, sans-serif", 0, true, W / 2, 1525, 'center');
+  spacedText(ctx, t.share_img_question, "700 42px Rajdhani, sans-serif", 0, true, W / 2, 1385, 'center');
 
   // CTA
-  drawCta(ctx, (W - 820) / 2, 1575, 820, 150, C, icon, t.share_img_cta);
+  drawCta(ctx, (W - 820) / 2, 1480, 820, 150, C, icon, t.share_img_cta);
 
   // domínio
   ctx.save();
   ctx.fillStyle = '#ffffff';
-  spacedText(ctx, 'colorrush.com.br', "700 40px Rajdhani, sans-serif", 2, true, W / 2, 1830, 'center');
+  spacedText(ctx, 'colorrush.com.br', "700 40px Rajdhani, sans-serif", 2, true, W / 2, 1840, 'center');
   ctx.restore();
 
   return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/png'));
