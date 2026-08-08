@@ -385,8 +385,21 @@ window.weeklyPassCardClick = async () => {
     // sem htmlTarget -- o próprio SDK cria e mostra um modal de checkout
     // (com o dist/style.css carregado em loadPurchasesJs) por cima da
     // página; customerEmail evita que ele peça o e-mail de novo, já que a
-    // conta já está logada
-    await purchases.purchase({ rcPackage: pkg, customerEmail: state.currentUser.email || undefined });
+    // conta já está logada. selectedLocale/defaultLocale (RevenueCat
+    // suporta 33 idiomas, incluindo exatamente 'pt'/'en'/'es' -- os mesmos
+    // três códigos que state.lang já usa, sem precisar de mapeamento)
+    // leva o checkout E o corpo do e-mail de recibo (não o PDF em si, que
+    // fica em inglês sempre) pro idioma que a pessoa está usando no site.
+    // NÃO existe como trocar o domínio do remetente (sempre @revenuecat.com,
+    // limitação da plataforma) -- só dá pra configurar o nome de exibição
+    // ("Color Rush", já configurado) e o reply-to (contato@colorrush.com.br,
+    // já configurado também, ver Apps > Web > App info no painel deles).
+    await purchases.purchase({
+      rcPackage: pkg,
+      customerEmail: state.currentUser.email || undefined,
+      selectedLocale: state.lang,
+      defaultLocale: state.lang,
+    });
     showWeeklyPassSuccess();
     reloadMyScoreAfterPurchase();
   } catch (e) {
