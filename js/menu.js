@@ -14,6 +14,45 @@ import { refreshGuildMenuBadge } from './guilds.js';
 import { updateGuildBattleCard } from './guild-battle.js';
 import { computeModeRanks } from './profile-public.js';
 
+// avatar + sigla do clã + nick (cor do Passe Semanal incluída) do
+// cumprimento no topo do menu -- extraída do meio de showMenu() pra dar pra
+// chamar sozinha sem reexecutar a tela inteira (refetch de badges/ranking
+// etc.), usada pelo próprio showMenu() abaixo E por
+// reloadMyScoreAfterPurchase (js/weekly-pass.js) pra o nick já ficar
+// amarelo na hora que o passe é confirmado, sem esperar voltar pro menu/dar
+// refresh na página. Só funciona logado (mesma condição de showMenu()
+// acima, quem chama de fora garante isso).
+export function renderMenuUserLabel() {
+  const labelEl = $('user-label');
+  if (!labelEl) return;
+  // avatar (markup fixo/confiável) vai por innerHTML; o nick sempre por
+  // textContent/createTextNode (pode ter qualquer caractere não-espaço)
+  labelEl.innerHTML = '';
+  labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 32) + ' ');
+  // sigla do clã (se tiver) do lado ESQUERDO do nick ("[TAG] nick"), na tela
+  // principal — clicável, mesmo padrão de buildRankRowNick em
+  // js/ranking-cache.js (window.openGuildFromTag, ver js/guilds.js);
+  // stopPropagation pra não também disparar o showProfile() do botão em
+  // volta. Precisa vir ANTES do textNode do nick (não dá pra inserir só a
+  // sigla "dentro" dele, T[lang].user_greeting já devolve "nick ›" pronto).
+  if (state.myData.guildTag && state.myData.guildId) {
+    const tagSpan = document.createElement('span');
+    tagSpan.textContent = `[${state.myData.guildTag}] `;
+    tagSpan.className = 'guild-tag-link';
+    applyGuildTagStyle(tagSpan, state.myData.guildTagStyle);
+    tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(state.myData.guildId, 'menu-screen'); };
+    labelEl.appendChild(tagSpan);
+  }
+  // span dedicado (não textNode direto) só pra poder levar a classe do
+  // nick amarelo do Passe Semanal (ver applyWeeklyPassNickColor) sem
+  // colorir o resto do cumprimento (avatar/sigla do clã já têm suas
+  // próprias cores)
+  const nickSpan = document.createElement('span');
+  nickSpan.textContent = T[state.lang].user_greeting(state.myData.nick || '');
+  applyWeeklyPassNickColor(nickSpan, state.myData);
+  labelEl.appendChild(nickSpan);
+}
+
 // posição no ranking de cada modo, do lado do 📊 nos cards da tela principal
 // (só #número, sem escrever "posição") — reaproveita computeModeRanks, que já
 // usa o cache de fetchAllScores() dos rankings normais, sem consulta extra
@@ -88,33 +127,7 @@ window.showMenu = () => {
     $('user-label').textContent = T[state.lang].offline_label;
     $('menu-logout-btn').textContent = T[state.lang].entrar_label;
   } else {
-    // avatar (markup fixo/confiável) vai por innerHTML; o nick sempre por
-    // textContent/createTextNode (pode ter qualquer caractere não-espaço)
-    const labelEl = $('user-label');
-    labelEl.innerHTML = '';
-    labelEl.insertAdjacentHTML('beforeend', avatarOrDefaultIcon(equippedAvatar, 32) + ' ');
-    // sigla do clã (se tiver) do lado ESQUERDO do nick ("[TAG] nick"), na tela
-    // principal — clicável, mesmo padrão de buildRankRowNick em
-    // js/ranking-cache.js (window.openGuildFromTag, ver js/guilds.js);
-    // stopPropagation pra não também disparar o showProfile() do botão em
-    // volta. Precisa vir ANTES do textNode do nick (não dá pra inserir só a
-    // sigla "dentro" dele, T[lang].user_greeting já devolve "nick ›" pronto).
-    if (state.myData.guildTag && state.myData.guildId) {
-      const tagSpan = document.createElement('span');
-      tagSpan.textContent = `[${state.myData.guildTag}] `;
-      tagSpan.className = 'guild-tag-link';
-      applyGuildTagStyle(tagSpan, state.myData.guildTagStyle);
-      tagSpan.onclick = (ev) => { ev.stopPropagation(); window.openGuildFromTag(state.myData.guildId, 'menu-screen'); };
-      labelEl.appendChild(tagSpan);
-    }
-    // span dedicado (não textNode direto) só pra poder levar a classe do
-    // nick amarelo do Passe Semanal (ver applyWeeklyPassNickColor) sem
-    // colorir o resto do cumprimento (avatar/sigla do clã já têm suas
-    // próprias cores)
-    const nickSpan = document.createElement('span');
-    nickSpan.textContent = T[state.lang].user_greeting(state.myData.nick || '');
-    applyWeeklyPassNickColor(nickSpan, state.myData);
-    labelEl.appendChild(nickSpan);
+    renderMenuUserLabel();
     $('menu-logout-btn').textContent = T[state.lang].sair_label;
   }
   // menu é a "raiz" da navegação — zera a pilha de "voltar" (ver

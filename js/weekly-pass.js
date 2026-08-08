@@ -4,6 +4,8 @@ import { $ } from './dom.js';
 import { state } from './state.js';
 import { T } from './i18n.js';
 import { isWeeklyPassActive, pigmentIconSvg } from './levels.js';
+import { renderMenuUserLabel } from './menu.js';
+import { updateDailyMenuCard } from './daily-challenge.js';
 
 // Passe Semanal (IAP via RevenueCat) — R$9,90/US$1,99, dá por 7 dias a
 // partir da compra: nick amarelo (ver applyWeeklyPassNickColor em
@@ -308,6 +310,12 @@ function reloadMyScoreAfterPurchase() {
     // visibilidade -- é o que faz o balão sumir de vez agora que o passe
     // está ativo (ver eligible em refreshWeeklyPassBubble)
     refreshWeeklyPassBubble();
+    // nick amarelo (cumprimento do menu) e tentativas do Desafio Diário
+    // (3→4) também dependem de weeklyPassExpiresAt, mas nenhum dos dois se
+    // redesenha sozinho só porque state.myData mudou -- sem isso, ficavam
+    // errados até a pessoa sair/voltar pro menu ou dar refresh na página
+    renderMenuUserLabel();
+    updateDailyMenuCard();
   }, 2500);
 }
 
