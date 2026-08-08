@@ -141,6 +141,25 @@ export const DAILY_PALETTE_OVERRIDE = {
       pattern: 'repeating-linear-gradient(45deg, #1a1a1a 0px, #1a1a1a 10px, #ffffff 10px, #ffffff 20px)',
     },
   ],
+  // 08/08/2026: reaproveita a MESMA paleta de 12 cores de 31/07 e 01/08 a
+  // pedido — sem a zebra dessa vez (diferente de 04/08, que era só tons
+  // neutros). Sem DAILY_MODE_OVERRIDE correspondente em
+  // js/daily-challenge.js: o sorteio normal (DAILY_ROTATION_MODES) já cai
+  // em Reverso nesse dia sozinho, então não precisa forçar.
+  '2026-08-08': [
+    { key: 'yellow', name: { pt: 'AMARELO',  en: 'YELLOW', es: 'AMARILLO' }, hex: '#ffd32a' },
+    { key: 'blue',   name: { pt: 'AZUL',     en: 'BLUE',   es: 'AZUL'     }, hex: '#1e90ff' },
+    { key: 'green',  name: { pt: 'VERDE',    en: 'GREEN',  es: 'VERDE'    }, hex: '#2ed573' },
+    { key: 'purple', name: { pt: 'ROXO',     en: 'PURPLE', es: 'MORADO'   }, hex: '#a55eea' },
+    { key: 'cyan',   name: { pt: 'CIANO',    en: 'CYAN',   es: 'CIAN'     }, hex: '#00d2d3' },
+    { key: 'red',    name: { pt: 'VERMELHO', en: 'RED',    es: 'ROJO'     }, hex: '#ff3c3c' },
+    { key: 'orange', name: { pt: 'LARANJA',  en: 'ORANGE', es: 'NARANJA'  }, hex: '#ff7f24' },
+    { key: 'pink',   name: { pt: 'ROSA',     en: 'PINK',   es: 'ROSA'     }, hex: '#ff6b9d' },
+    { key: 'brown',  name: { pt: 'MARROM',   en: 'BROWN',  es: 'MARRÓN'   }, hex: '#73421c' },
+    { key: 'gray',   name: { pt: 'CINZA',    en: 'GRAY',   es: 'GRIS'     }, hex: '#8a8a8a' },
+    { key: 'white',  name: { pt: 'BRANCO',   en: 'WHITE',  es: 'BLANCO'   }, hex: '#ffffff' },
+    { key: 'black',  name: { pt: 'PRETO',    en: 'BLACK',  es: 'NEGRO'    }, hex: '#1a1a1a' },
+  ],
 };
 // DAILY_SHAPES_OVERRIDE: mesma ideia do DAILY_PALETTE_OVERRIDE (acima), só
 // que pro pool de FORMAS do desafio diário -- força um dia específico a usar
