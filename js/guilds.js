@@ -1096,7 +1096,7 @@ function ensureChatListener(guildId) {
     if (guildTab === 'chat' && document.querySelector('.screen.active') && document.querySelector('.screen.active').id === 'guild-screen') {
       renderChatMessages('guild-chat-messages');
     }
-    if (guildChatPopupOpen) {
+    if (isGuildChatPaneVisible()) {
       renderChatMessages('guild-chat-popup-messages');
       markChatRead(guildId);
     }
@@ -1397,15 +1397,8 @@ window.confirmReportGuildMessage = async () => {
   } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 };
 
-/* -------- balãozinho flutuante (tipo o chat do Messenger) -------- */
-// telas "principais" do jogo — fora de partida/duelo, onde o balão pode
-// ficar por cima sem atrapalhar. Fora dessa lista, o balão some sozinho.
-const GUILD_CHAT_BUBBLE_SCREENS = new Set([
-  'menu-screen', 'shop-screen', 'ranking-screen', 'replay-screen',
-  'profile-screen', 'friends-screen', 'guild-list-screen',
-]);
-let guildChatPopupOpen = false;
-
+/* -------- balãozinho flutuante (agora ÚNICO, compartilhado com o de
+   amigos -- ver comentário grande em index.html/js/dms.js) -------- */
 // "visto por último" é só local (localStorage), por conta — não precisa de
 // servidor pra isso, é puramente "já espiei essa conversa nesse aparelho"
 function guildChatStorageKey(guildId) { return `guildChatLastRead_${guildId}`; }
@@ -1416,45 +1409,48 @@ function markChatRead(guildId) {
   try { localStorage.setItem(guildChatStorageKey(guildId), String(Date.now())); } catch {}
   updateChatBubbleBadge(guildId);
 }
+// a aba "Clã" está com o pane dela visível AGORA dentro do balãozinho único
+// (independe de qual módulo foi quem mandou trocar de aba -- lê o DOM em vez
+// de guardar um booleano próprio, evitando precisar sincronizar estado com
+// js/dms.js, que é quem realmente dono do balão)
+function isGuildChatPaneVisible() {
+  const pane = $('chat-popup-pane-guild');
+  return !!(pane && pane.style.display !== 'none');
+}
 function updateChatBubbleBadge(guildId) {
-  const badge = $('guild-chat-bubble-badge');
+  const badge = $('chat-tab-guild-badge');
   if (!badge) return;
   const lastRead = loadLastReadChatAt(guildId);
   const myUid = state.currentUser && state.currentUser.uid;
   const unread = chatMessages.filter(m => m.uid !== myUid && m.at && typeof m.at.toMillis === 'function' && m.at.toMillis() > lastRead).length;
   badge.textContent = unread;
-  badge.style.display = (unread > 0 && !guildChatPopupOpen) ? '' : 'none';
+  badge.style.display = (unread > 0 && !isGuildChatPaneVisible()) ? '' : 'none';
+  if (window.refreshCombinedChatBadge) window.refreshCombinedChatBadge(); // bolinha do balão em si (soma com a de amigos, ver js/dms.js)
 }
 
-// chamada sempre que a tela ativa muda (ver MutationObserver no fim do
-// arquivo) — decide se o balão aparece e liga/desliga o listener de fundo
+// chamada por refreshDmChatBubble (js/dms.js) toda vez que a tela ativa
+// muda -- ANTES era um MutationObserver próprio aqui, mas dependia da ordem
+// de registro dos observers pra ler o balão único (já dono de js/dms.js)
+// depois dele atualizado; uma chamada explícita elimina essa corrida
 function refreshGuildChatBubble() {
-  const bubble = $('guild-chat-bubble');
-  if (!bubble) return;
-  const active = document.querySelector('.screen.active');
-  const eligible = !!(active && GUILD_CHAT_BUBBLE_SCREENS.has(active.id) && !state.offline && state.currentUser && state.myData.guildId);
-  bubble.style.display = eligible ? 'flex' : 'none';
+  const bubble = $('dm-chat-bubble'); // balão único, ver index.html
+  const eligible = !!(bubble && bubble.style.display !== 'none' && !state.offline && state.currentUser && state.myData.guildId);
   if (eligible) {
     ensureChatListener(state.myData.guildId);
     updateChatBubbleBadge(state.myData.guildId);
-  } else {
-    if (guildChatPopupOpen) window.toggleGuildChatPopup();
   }
 }
+window.refreshGuildChatBubble = refreshGuildChatBubble;
 
-window.toggleGuildChatPopup = () => {
-  guildChatPopupOpen = !guildChatPopupOpen;
-  const popup = $('guild-chat-popup');
-  popup.style.display = guildChatPopupOpen ? 'flex' : 'none';
-  if (guildChatPopupOpen && state.myData.guildId) {
-    $('guild-chat-popup-title').textContent = state.myData.guildTag ? `💬 [${state.myData.guildTag}]` : '💬';
-    ensureChatListener(state.myData.guildId);
-    renderChatMessages('guild-chat-popup-messages');
-    renderTypingIndicators();
-    markChatRead(state.myData.guildId);
-  } else {
-    updateChatBubbleBadge(state.myData.guildId);
-  }
+// chamada por setChatPopupTab (js/dms.js) ao trocar pra aba "Clã" -- mesma
+// coisa que toggleGuildChatPopup fazia antes de virar aba (garante listener,
+// desenha as mensagens/digitando e marca como lida)
+window.openGuildChatPane = () => {
+  if (!state.myData.guildId) return;
+  ensureChatListener(state.myData.guildId);
+  renderChatMessages('guild-chat-popup-messages');
+  renderTypingIndicators();
+  markChatRead(state.myData.guildId);
 };
 
 window.sendGuildChatPopupMessage = async () => {
@@ -1464,16 +1460,6 @@ window.sendGuildChatPopupMessage = async () => {
   input.value = '';
   try { await callSendGuildMessage({ text }); } catch (e) { /* melhor esforço */ }
 };
-
-// observa a troca da classe "active" em qualquer .screen (é assim que
-// show(), em js/nav.js, navega entre telas) — um MutationObserver evita
-// precisar que nav.js importe algo daqui (guilds.js já importa de nav.js;
-// o caminho inverso criaria um ciclo de import)
-function setupGuildChatBubbleWatcher() {
-  const observer = new MutationObserver(() => refreshGuildChatBubble());
-  document.querySelectorAll('.screen').forEach(s => observer.observe(s, { attributes: true, attributeFilter: ['class'] }));
-}
-setupGuildChatBubbleWatcher();
 
 /* ================== ações (chamadas às Cloud Functions) ================== */
 async function uiRequestJoinGuild(guildId) {

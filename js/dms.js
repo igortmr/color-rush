@@ -24,6 +24,9 @@ let dmPopupOpen = false;
 let dmView = 'list'; // 'list' | 'chat'
 let activeFriendUid = null;
 let activeChatId = null;
+// balãozinho ÚNICO (amigos + clã, ver comentário grande no HTML) -- qual das
+// duas conversas está visível dentro da mesma janela agora
+let chatPopupTab = 'friends'; // 'friends' | 'guild'
 
 let dmSummaryUnsub = null;
 let dmSummaries = {}; // chatId -> { members, nicks, unread, lastMessageAt, lastMessageText }
@@ -56,14 +59,33 @@ function ensureDmSummaryListener() {
 }
 
 function updateDmBubbleBadge() {
-  const badge = $('dm-chat-bubble-badge');
-  if (!badge) return;
+  const tabBadge = $('chat-tab-friends-badge');
   const myUid = state.currentUser && state.currentUser.uid;
   let unread = 0;
   if (myUid) Object.values(dmSummaries).forEach(s => { unread += (s.unread && s.unread[myUid]) || 0; });
-  badge.textContent = unread;
-  badge.style.display = (unread > 0 && !dmPopupOpen) ? '' : 'none';
+  const friendsPaneVisible = dmPopupOpen && chatPopupTab === 'friends';
+  if (tabBadge) {
+    tabBadge.textContent = unread;
+    tabBadge.style.display = (unread > 0 && !friendsPaneVisible) ? '' : 'none';
+  }
+  refreshCombinedChatBadge();
 }
+
+// bolinha do balão em si = soma das duas abas (amigos + clã) — chamada tanto
+// daqui quanto de updateChatBubbleBadge em js/guilds.js (via window, já que
+// a contagem de cada aba é calculada em módulos diferentes); lê o texto já
+// escrito nas duas bolinhas de aba em vez de duplicar a conta de não lidas
+// de cada uma
+function refreshCombinedChatBadge() {
+  const badge = $('dm-chat-bubble-badge');
+  if (!badge) return;
+  const dmUnread = parseInt(($('chat-tab-friends-badge') && $('chat-tab-friends-badge').textContent) || '0', 10) || 0;
+  const guildUnread = parseInt(($('chat-tab-guild-badge') && $('chat-tab-guild-badge').textContent) || '0', 10) || 0;
+  const total = dmUnread + guildUnread;
+  badge.textContent = total;
+  badge.style.display = (total > 0 && !dmPopupOpen) ? '' : 'none';
+}
+window.refreshCombinedChatBadge = refreshCombinedChatBadge;
 
 // "online" é aproximado a partir de lastActiveAt (batimento a cada ~5min
 // enquanto a aba fica aberta, ver startActivityHeartbeat em js/auth.js) —
@@ -274,7 +296,7 @@ function openDmConversation(uid, nick) {
   activeChatId = dmChatIdFor(state.currentUser.uid, uid);
   dmView = 'chat';
   setDmChatTitle(uid, nick);
-  $('dm-chat-back-btn').style.display = '';
+  updateChatPopupHead();
   $('dm-chat-list-view').style.display = 'none';
   $('dm-chat-conversation-view').style.display = 'flex';
   ensureDmChatListener(activeChatId);
@@ -324,18 +346,59 @@ async function markDmChatRead() {
   try { await callMarkDmRead({ chatId }); } catch {}
 }
 
+// alterna entre as abas Amigos/Clã dentro da MESMA janela — as duas
+// conversas coexistem (o listener de cada uma continua rodando mesmo com a
+// aba não visível, ver refreshDmChatBubble/refreshGuildChatBubble abaixo),
+// isso aqui só troca qual pane está desenhado e marca como lida a que ficou
+// visível
+window.setChatPopupTab = (tab) => {
+  if (tab === chatPopupTab) return;
+  chatPopupTab = tab;
+  setChatPopupPane(tab);
+  updateChatPopupHead();
+  if (tab === 'guild') {
+    if (window.openGuildChatPane) window.openGuildChatPane();
+  } else if (dmView === 'chat') {
+    markDmChatRead();
+  } else {
+    updateDmBubbleBadge();
+  }
+};
+
+// desenha o pane certo (amigos ou clã) -- separado de setChatPopupTab pra
+// também ser chamado na abertura do balão (sempre volta pra aba amigos, ver
+// toggleDmChatPopup) sem disparar a lógica de "marcar como lida" de novo
+function setChatPopupPane(tab) {
+  $('chat-popup-tab-friends').classList.toggle('active', tab === 'friends');
+  $('chat-popup-tab-guild').classList.toggle('active', tab === 'guild');
+  $('chat-popup-pane-friends').style.display = tab === 'friends' ? 'flex' : 'none';
+  $('chat-popup-pane-guild').style.display = tab === 'guild' ? 'flex' : 'none';
+  const hasGuild = !!state.myData.guildId;
+  $('chat-popup-guild-empty').style.display = (tab === 'guild' && !hasGuild) ? '' : 'none';
+  $('guild-chat-pane-content').style.display = (tab === 'guild' && hasGuild) ? 'flex' : 'none';
+}
+
+// abas (Amigos/Clã) OU título de conversa (voltar + nick) no cabeçalho —
+// nunca os dois ao mesmo tempo, só um cabe no espaço do balãozinho
+function updateChatPopupHead() {
+  const inConversation = chatPopupTab === 'friends' && dmView === 'chat';
+  $('chat-popup-tabs').style.display = inConversation ? 'none' : 'flex';
+  $('dm-chat-conversation-title-wrap').style.display = inConversation ? 'flex' : 'none';
+}
+
 window.toggleDmChatPopup = () => {
   dmPopupOpen = !dmPopupOpen;
   const popup = $('dm-chat-popup');
   popup.style.display = dmPopupOpen ? 'flex' : 'none';
   if (dmPopupOpen) {
+    chatPopupTab = 'friends'; // sempre abre pela aba de amigos, mesmo padrão de antes
     dmView = 'list';
     activeFriendUid = null;
     activeChatId = null;
-    $('dm-chat-back-btn').style.display = 'none';
-    $('dm-chat-popup-title').textContent = T[state.lang].dm_chat_title;
     $('dm-chat-list-view').style.display = 'flex';
     $('dm-chat-conversation-view').style.display = 'none';
+    setChatPopupPane('friends');
+    updateChatPopupHead();
     ensureDmSummaryListener();
     renderDmFriendsList();
     updateDmBubbleBadge();
@@ -352,8 +415,7 @@ window.backToDmFriendsList = () => {
   activeChatId = null;
   if (dmChatUnsub) { dmChatUnsub(); dmChatUnsub = null; }
   stopDmTypingListener();
-  $('dm-chat-back-btn').style.display = 'none';
-  $('dm-chat-popup-title').textContent = T[state.lang].dm_chat_title;
+  updateChatPopupHead();
   $('dm-chat-conversation-view').style.display = 'none';
   $('dm-chat-list-view').style.display = 'flex';
   renderDmFriendsList();
@@ -378,37 +440,37 @@ window.openDmChatWithFriend = (uid, nick) => {
     $('dm-chat-popup').style.display = 'flex';
     ensureDmSummaryListener();
   }
+  chatPopupTab = 'friends';
+  setChatPopupPane('friends');
   openDmConversation(uid, nick);
 };
 
-/* -------- balãozinho flutuante (mesmo padrão do chat de clã) -------- */
+/* -------- balãozinho flutuante ÚNICO (amigos + clã) -------- */
+// união das telas em que cada balão aparecia separado antes -- o balão
+// mostra a aba de amigos em QUALQUER uma dessas telas, mesmo pra quem não
+// tem clã (a aba "Clã" só mostra o aviso de "sem clã" nesse caso, ver
+// setChatPopupPane)
 const DM_CHAT_BUBBLE_SCREENS = new Set([
   'menu-screen', 'shop-screen', 'ranking-screen', 'replay-screen',
   'profile-screen', 'friends-screen', 'guild-list-screen', 'guild-screen',
 ]);
 
-// quando os dois balõezinhos (clã + amigos) ficam visíveis ao mesmo tempo,
-// este aqui sobe pra cima do de clã em vez de sobrepor (ver .chat-bubble/
-// .chat-popup em css/style.css) — depende do balão de clã já ter sido
-// atualizado nesse mesmo ciclo, por isso js/dms.js é importado DEPOIS de
-// js/guilds.js em js/bootstrap.js
 function refreshDmChatBubble() {
   const bubble = $('dm-chat-bubble');
   if (!bubble) return;
   const active = document.querySelector('.screen.active');
   const eligible = !!(active && DM_CHAT_BUBBLE_SCREENS.has(active.id) && !state.offline && state.currentUser);
   bubble.style.display = eligible ? 'flex' : 'none';
-  const guildBubble = $('guild-chat-bubble');
-  const guildVisible = !!(guildBubble && guildBubble.style.display !== 'none');
-  bubble.style.bottom = guildVisible ? '88px' : '20px';
-  const popup = $('dm-chat-popup');
-  if (popup) popup.style.bottom = guildVisible ? '156px' : '88px';
   if (eligible) {
     ensureDmSummaryListener();
     updateDmBubbleBadge();
   } else if (dmPopupOpen) {
     window.toggleDmChatPopup();
   }
+  // garante o listener/badge do clã também, DEPOIS do balão já resolvido
+  // acima (chamada explícita em vez de depender de ordem de MutationObserver
+  // — ver refreshGuildChatBubble em js/guilds.js)
+  if (window.refreshGuildChatBubble) window.refreshGuildChatBubble();
 }
 
 // mesmo MutationObserver de refreshGuildChatBubble em js/guilds.js — observa

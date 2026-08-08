@@ -1129,54 +1129,60 @@
 
 </div><!-- fim de #scroll-area -->
 
-<!-- balãozinho de chat do clã (flutuante, tipo o chat do Messenger) — fora
-     de qualquer .screen de propósito, pra continuar visível trocando de
-     tela. Só aparece se a pessoa for membro de um clã, nas telas
-     "principais" do jogo (fora de partida/duelo) — ver
-     refreshGuildChatBubble em js/guilds.js. A aba de chat dentro da tela do
-     clã continua existindo do mesmo jeito; isso aqui é só um segundo
-     acesso, sem precisar navegar até lá. -->
-<button id="guild-chat-bubble" class="chat-bubble" style="display:none;" onclick="toggleGuildChatPopup()" aria-label="Chat do clã">
-  🛡️<span class="chat-bubble-dots">•••</span><span class="menu-quick-badge" id="guild-chat-bubble-badge" style="display:none;"></span>
-</button>
-<div id="guild-chat-popup" class="chat-popup" style="display:none;">
-  <div class="chat-popup-head">
-    <span class="chat-popup-head-title"><b id="guild-chat-popup-title"></b></span>
-    <button onclick="toggleGuildChatPopup()" aria-label="Fechar">×</button>
-  </div>
-  <div id="guild-chat-popup-messages" class="chat-popup-messages"></div>
-  <div class="muted chat-typing-indicator" id="guild-chat-popup-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
-  <div class="chat-mention-list" id="guild-chat-popup-mentions" style="display:none;"></div>
-  <div class="chat-popup-input-row">
-    <input type="text" id="guild-chat-popup-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="Digite uma mensagem..." oninput="handleGuildChatInput(this,'guild-chat-popup-mentions')" onkeydown="if(event.key==='Enter') sendGuildChatPopupMessage();">
-    <button onclick="sendGuildChatPopupMessage()" data-i18n="guild_chat_send">Enviar</button>
-  </div>
-</div>
-
-<!-- balãozinho de chat com amigos (flutuante, mesmo padrão do balãozinho de
-     clã acima) — ver refreshDmChatBubble/toggleDmChatPopup em js/dms.js.
-     Abre na lista de amigos (bolinha verde = online); clicar num amigo abre
-     a conversa 1-pra-1 com ele. O botão "iniciar chat" no perfil de um
-     amigo (ver js/friends.js) chama window.openDmChatWithFriend, que abre
-     esse balãozinho já direto na conversa. -->
-<button id="dm-chat-bubble" class="chat-bubble" style="display:none;" onclick="toggleDmChatPopup()" aria-label="Chat com amigos">
+<!-- balãozinho ÚNICO de chat (amigos + clã) — fora de qualquer .screen de
+     propósito, pra continuar visível trocando de tela. Antes eram DOIS
+     balões separados (um de clã, um de amigos); agora é um só (ícone/cor
+     do de amigos, ver refreshDmChatBubble em js/dms.js), com abas DENTRO da
+     mesma janela pra alternar entre as duas conversas sem fechar/abrir nada
+     (ver setChatPopupTab em js/dms.js). A aba de chat dentro da tela do clã
+     continua existindo do mesmo jeito; isso aqui é só um segundo acesso,
+     sem precisar navegar até lá. -->
+<button id="dm-chat-bubble" class="chat-bubble" style="display:none;" onclick="toggleDmChatPopup()" aria-label="Chat">
   💬<span class="menu-quick-badge" id="dm-chat-bubble-badge" style="display:none;"></span>
 </button>
 <div id="dm-chat-popup" class="chat-popup" style="display:none;">
   <div class="chat-popup-head">
-    <span class="chat-popup-head-title">
-      <button id="dm-chat-back-btn" class="chat-popup-back-btn" onclick="backToDmFriendsList()" aria-label="Voltar" style="display:none;">‹</button>
-      <b id="dm-chat-popup-title" data-i18n="dm_chat_title">💬 Amigos</b>
+    <!-- abas (Amigos/Clã) -- escondidas dentro de uma conversa 1-pra-1
+         aberta (ver updateChatPopupHead em js/dms.js), que aí mostra o
+         título abaixo (voltar + nick) no lugar delas -->
+    <div class="chat-popup-tabs" id="chat-popup-tabs">
+      <button class="chat-popup-tab active" id="chat-popup-tab-friends" onclick="setChatPopupTab('friends')">
+        <span data-i18n="dm_chat_title">💬 Amigos</span><span class="menu-quick-badge" id="chat-tab-friends-badge" style="display:none;"></span>
+      </button>
+      <button class="chat-popup-tab" id="chat-popup-tab-guild" onclick="setChatPopupTab('guild')">
+        <span data-i18n="dm_chat_tab_guild">🛡️ Clã</span><span class="menu-quick-badge" id="chat-tab-guild-badge" style="display:none;"></span>
+      </button>
+    </div>
+    <span class="chat-popup-head-title" id="dm-chat-conversation-title-wrap" style="display:none;">
+      <button id="dm-chat-back-btn" class="chat-popup-back-btn" onclick="backToDmFriendsList()" aria-label="Voltar">‹</button>
+      <b id="dm-chat-popup-title"></b>
     </span>
     <button onclick="toggleDmChatPopup()" aria-label="Fechar">×</button>
   </div>
-  <div id="dm-chat-list-view" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow-y:auto; padding:6px;"></div>
-  <div id="dm-chat-conversation-view" style="display:none; flex-direction:column; flex:1; min-height:0;">
-    <div id="dm-chat-messages" class="chat-popup-messages"></div>
-    <div class="muted chat-typing-indicator" id="dm-chat-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
-    <div class="chat-popup-input-row">
-      <input type="text" id="dm-chat-input" maxlength="300" data-i18n-placeholder="dm_chat_ph" placeholder="Digite uma mensagem..." oninput="pingDmTyping(this)" onkeydown="if(event.key==='Enter') sendDmChatMessage();">
-      <button onclick="sendDmChatMessage()" data-i18n="guild_chat_send">Enviar</button>
+  <!-- aba Amigos -->
+  <div id="chat-popup-pane-friends" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+    <div id="dm-chat-list-view" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow-y:auto; padding:6px;"></div>
+    <div id="dm-chat-conversation-view" style="display:none; flex-direction:column; flex:1; min-height:0;">
+      <div id="dm-chat-messages" class="chat-popup-messages"></div>
+      <div class="muted chat-typing-indicator" id="dm-chat-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
+      <div class="chat-popup-input-row">
+        <input type="text" id="dm-chat-input" maxlength="300" data-i18n-placeholder="dm_chat_ph" placeholder="Digite uma mensagem..." oninput="pingDmTyping(this)" onkeydown="if(event.key==='Enter') sendDmChatMessage();">
+        <button onclick="sendDmChatMessage()" data-i18n="guild_chat_send">Enviar</button>
+      </div>
+    </div>
+  </div>
+  <!-- aba Clã -- some pro aviso de "sem clã" quando a pessoa não tem
+       (ver setChatPopupPane em js/dms.js) -->
+  <div id="chat-popup-pane-guild" style="display:none; flex-direction:column; flex:1; min-height:0;">
+    <div class="muted" id="chat-popup-guild-empty" style="display:none; text-align:center; padding:20px 14px; font-size:0.85rem;" data-i18n="dm_chat_no_guild">Você ainda não tem clã. Entre em um (ou crie o seu) pra conversar aqui.</div>
+    <div id="guild-chat-pane-content" style="display:none; flex-direction:column; flex:1; min-height:0;">
+      <div id="guild-chat-popup-messages" class="chat-popup-messages"></div>
+      <div class="muted chat-typing-indicator" id="guild-chat-popup-typing" style="display:none; font-size:0.7rem; padding:0 12px;"></div>
+      <div class="chat-mention-list" id="guild-chat-popup-mentions" style="display:none;"></div>
+      <div class="chat-popup-input-row">
+        <input type="text" id="guild-chat-popup-input" maxlength="300" data-i18n-placeholder="guild_chat_ph" placeholder="Digite uma mensagem..." oninput="handleGuildChatInput(this,'guild-chat-popup-mentions')" onkeydown="if(event.key==='Enter') sendGuildChatPopupMessage();">
+        <button onclick="sendGuildChatPopupMessage()" data-i18n="guild_chat_send">Enviar</button>
+      </div>
     </div>
   </div>
 </div>

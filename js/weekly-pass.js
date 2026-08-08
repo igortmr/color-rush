@@ -58,9 +58,9 @@ function canSeeWeeklyPass() {
   return weeklyPassOnSale || (state.myData && state.myData.admin === true);
 }
 
-// mesmas telas "principais" dos balões de clã/amigos (ver
-// GUILD_CHAT_BUBBLE_SCREENS/DM_CHAT_BUBBLE_SCREENS) — fora dessas, some
-// sozinho (não atrapalha uma partida/duelo em andamento)
+// mesmas telas "principais" do balão de chat único (ver
+// DM_CHAT_BUBBLE_SCREENS em js/dms.js) — fora dessas, some sozinho (não
+// atrapalha uma partida/duelo em andamento)
 const WEEKLY_PASS_BUBBLE_SCREENS = new Set([
   'menu-screen', 'shop-screen', 'ranking-screen', 'replay-screen',
   'profile-screen', 'friends-screen', 'guild-list-screen', 'guild-screen',
@@ -119,8 +119,8 @@ function renderWeeklyPassPopupContent() {
 
 // chamada sempre que a tela ativa muda (ver MutationObserver no fim do
 // arquivo, mesmo padrão de refreshGuildChatBubble/refreshDmChatBubble) —
-// decide se o balão aparece e em cima de qual altura (empilhado acima dos
-// balões de clã/amigos que estiverem visíveis)
+// decide se o balão aparece e em cima de qual altura (empilhado acima do
+// balão de chat, se estiver visível)
 async function refreshWeeklyPassBubble() {
   const bubble = $('weekly-pass-bubble');
   if (!bubble) return;
@@ -134,15 +134,13 @@ async function refreshWeeklyPassBubble() {
   const eligible = !!(active && WEEKLY_PASS_BUBBLE_SCREENS.has(active.id) && canSeeWeeklyPass()
     && isNative && !state.offline && state.currentUser && state.myData.nick);
   bubble.style.display = eligible ? 'flex' : 'none';
-  // empilha por cima dos balões de clã/amigos que estiverem visíveis nesse
-  // instante (mesma ideia de refreshDmChatBubble em js/dms.js, só que
-  // somando os DOIS possíveis abaixo dele em vez de só um) -- depende dos
-  // dois já terem sido atualizados neste mesmo ciclo, por isso este módulo
-  // é importado por último em js/bootstrap.js/js/game-teste.js
-  const guildBubble = $('guild-chat-bubble');
+  // empilha por cima do balão de chat (agora ÚNICO, amigos+clã em abas — ver
+  // js/dms.js) se ele estiver visível nesse instante (mesma ideia de
+  // refreshDmChatBubble) -- depende dele já ter sido atualizado neste mesmo
+  // ciclo, por isso este módulo é importado por último em js/bootstrap.js/
+  // js/game-teste.js
   const dmBubble = $('dm-chat-bubble');
-  const stackedBelow = (guildBubble && guildBubble.style.display !== 'none' ? 1 : 0)
-    + (dmBubble && dmBubble.style.display !== 'none' ? 1 : 0);
+  const stackedBelow = (dmBubble && dmBubble.style.display !== 'none') ? 1 : 0;
   const baseBottom = 20 + stackedBelow * 68;
   bubble.style.bottom = baseBottom + 'px';
   const popup = $('weekly-pass-popup');
