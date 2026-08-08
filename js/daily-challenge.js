@@ -641,6 +641,7 @@ window.startDailyChallenge = async () => {
       dailyReplayRounds = [];
       dailyReplayMouse = [];
       dailyReplayStartMs = performance.now();
+      state.sawTouchThisMatch = false; // ver comentário no campo, em state.js (listener de touchstart fica em game-core.js, cobre os 2 modos)
       dailyNewRound(true);
     });
   } catch (e) {
@@ -833,7 +834,7 @@ async function dailyGameOver(reason) {
     // mesma ideia do modo livre (ver persistGameResult) — só sobe o "filme"
     // da tentativa quando ela vira a melhor pontuação do dia, em segundo
     // plano, sem atrasar a tela de resultado
-    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, kind: 'daily', rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
+    if (dailySessionId) saveMatchReplayWithRetry({ sessionId: dailySessionId, mode: dailyMode, kind: 'daily', rounds: dailyReplayRounds, mouseTrail: dailyReplayMouse, inputTouch: state.sawTouchThisMatch }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
   }
   dailyBestScore = bestScore;
   $('daily-result-best').textContent = dailyBestScore;

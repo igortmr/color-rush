@@ -45,6 +45,17 @@ export const state = {
   pendingScore: null,
   // sessão validada pelo servidor pra partida em andamento
   currentSessionId: null,
+  // true se algum 'touchstart' disparou durante a partida atual (mesmo em
+  // dispositivo com mouse E touch, ex: notebook 2-em-1) — reseta no início
+  // de cada partida (ver window.startGame em game-core.js e o reset
+  // equivalente em daily-challenge.js). Vai junto no payload de
+  // saveMatchReplay (campo "inputTouch") pra registrar no replay se o
+  // mouseTrail dessa partida é confiável pra checagens geométricas
+  // (teleporte de cursor etc.) — touch dispara só 1 mousemove sintético por
+  // toque (sem trajeto real), então um mouseTrail esparso é ESPERADO nesse
+  // caso, não suspeito; sem essa flag não dá pra distinguir os dois motivos
+  // depois dos fatos.
+  sawTouchThisMatch: false,
   // perfil completo da conta logada (scores/{uid} no Firestore) — o mesmo
   // objeto que alimenta ranking, badges, loja, perfil etc.
   myData: {

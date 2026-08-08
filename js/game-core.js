@@ -134,6 +134,7 @@ window.startGame = async (m) => {
   replayRounds = [];
   replayMouse = [];
   replayStartMs = performance.now();
+  state.sawTouchThisMatch = false; // ver comentário no campo, em state.js
   // Mosaico é o único modo com tabuleiro 3x3 (9 quadrados) em vez do padrão
   // 2x2 (ver squaresFor/MODE_SQUARES em constants.js) — grid-3x3 troca o
   // grid-template-columns pra 3 colunas (ver css/style.css)
@@ -177,6 +178,12 @@ function recordReplayMouseSample(clientX, clientY) {
   arr.push([Math.round(xPct * 1000) / 1000, Math.round(yPct * 1000) / 1000, Math.round(now - startMs)]);
 }
 window.addEventListener('mousemove', e => recordReplayMouseSample(e.clientX, e.clientY));
+// touch dispara 'mousemove' sintético (sem trajeto real, só no instante do
+// toque) em vários navegadores — sem isso o mouseTrail de quem joga no
+// celular pareceria um "teleporte" (salto de posição sem amostra no meio),
+// indistinguível de fraude. Só registra QUE aconteceu (não onde/quando),
+// ver state.sawTouchThisMatch em state.js
+window.addEventListener('touchstart', () => { state.sawTouchThisMatch = true; }, { passive: true });
 
 // Modo Trio: cada quadrado tem 3 cores independentes (fundo/bg, cor da
 // palavra/tc, e a palavra em si/word — que também é o nome de uma cor). A
@@ -756,7 +763,7 @@ async function persistGameResult(xpEarned = 0) {
     // não atrasa a tela de resultado.
     const onReplayWatchlist = state.currentUser && REPLAY_WATCHLIST_UIDS.includes(state.currentUser.uid);
     if (d.isNewRecord || d.guildBattleReplaySave || onReplayWatchlist) {
-      saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
+      saveMatchReplayWithRetry({ sessionId, mode, rounds: replayRounds, mouseTrail: replayMouse, inputTouch: state.sawTouchThisMatch }).catch(() => {}); // já logou dentro; aqui só evita unhandled rejection
     }
     return { credited: d.guildBattleReplaySave === true, reason: d.guildBattleReason || null };
   } catch (e) {
