@@ -422,6 +422,7 @@ function renderInboxList(msgs) {
     } else {
       const claimBtn = document.createElement('button');
       claimBtn.className = 'secondary';
+      claimBtn.style.cssText = 'padding:6px 14px; font-size:0.72rem;';
       claimBtn.textContent = T[state.lang].btn_claim;
       // usa o id do documento (não msg.dateStr) — pro prêmio do desafio
       // diário os dois sempre coincidem (o doc é salvo com o dateStr como id
