@@ -1593,6 +1593,7 @@
   .profile-header .big-nick { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 800; }
   .profile-top-row { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; }
   .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; }
+  .pagination button.link { text-decoration: none; } /* "‹ Anterior"/"Próxima ›" (ranking geral e do desafio diário, ver ranking.js/daily-ranking.js) */
 
   /* confete cosmético (loja) ao bater recorde — camada fixa cobrindo a tela toda */
   .confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 3000; }
