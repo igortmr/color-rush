@@ -825,6 +825,14 @@
     letter-spacing: 0.2px;
     cursor: pointer;
     box-shadow: none;
+  }
+  /* truncamento com reticências fica só no texto (não no botão inteiro) —
+     "overflow:hidden" direto no .chat-popup-tab cortava também o
+     .menu-quick-badge abaixo, que fica de propósito parcialmente PRA FORA
+     do botão (mesmo problema comentado lá em cima, perto de button::before) */
+  .chat-popup-tab > span:first-child {
+    display: block;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
