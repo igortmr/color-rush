@@ -1247,6 +1247,20 @@
   @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
   .record-line { color: #a9b4e0; font-size: 1rem; }
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  /* jogar de novo/compartilhar do fim de jogo — nowrap + flex:1 pra nunca
+     quebrar linha (encolhe em vez de empilhar), com um pouco menos de
+     padding/fonte que o botão padrão pra caber com folga lado a lado */
+  #over-btn-row { flex-wrap: nowrap; width: 100%; box-sizing: border-box; gap: 8px; }
+  #over-btn-row button {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 9px 8px;
+    font-size: 0.74rem;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   /* ranking */
   .ranking-select {

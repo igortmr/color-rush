@@ -395,7 +395,10 @@
 
 <!-- GAME OVER -->
 <div class="screen" id="over-screen">
-  <div class="go-title" id="over-reason" data-i18n="go_title_default">FIM DE JOGO</div>
+  <div class="profile-top-row" style="flex-wrap:wrap;">
+    <div class="go-title" id="over-reason" style="font-size:1.4rem; text-align:left; flex:1; min-width:0;" data-i18n="go_title_default">FIM DE JOGO</div>
+    <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
+  </div>
   <div class="new-record" id="new-record" data-i18n="new_record_text">🎉 NOVO RECORDE! 🎉</div>
   <div data-i18n="your_score">Sua pontuação:</div>
   <div class="final-score" id="final-score">0</div>
@@ -407,6 +410,10 @@
   </div>
   <div class="muted" id="sync-status"></div>
   <button id="signup-cta" style="display:none;" onclick="goSignup()" data-i18n="btn_create_save">🏆 CRIAR CONTA E SALVAR PONTOS</button>
+  <div class="btn-row" id="over-btn-row">
+    <button onclick="playAgain()" data-i18n="btn_play_again">JOGAR DE NOVO</button>
+    <button class="secondary" onclick="shareScore()" data-i18n="btn_share">📤 COMPARTILHAR</button>
+  </div>
   <div class="card" id="over-mini-ranking-card" style="padding:10px; gap:4px;">
     <table>
       <colgroup><col style="width:32px;"><col><col style="width:112px;"></colgroup>
@@ -422,11 +429,6 @@
   <div class="card" id="over-guild-battle-card" style="display:none; text-align:center;">
     <p id="over-guild-battle-text"></p>
     <button class="secondary" style="padding:8px 18px; font-size:0.8rem;" onclick="guildBattleCardClick()" data-i18n="guild_battle_over_view_btn">⚔️ Ver Batalha</button>
-  </div>
-  <div class="btn-row">
-    <button onclick="playAgain()" data-i18n="btn_play_again">JOGAR DE NOVO</button>
-    <button class="secondary" onclick="shareScore()" data-i18n="btn_share">📤 COMPARTILHAR</button>
-    <button class="secondary" onclick="showMenu()" data-i18n="btn_menu">MENU</button>
   </div>
 </div>
 
