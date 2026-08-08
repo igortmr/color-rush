@@ -18,12 +18,20 @@ import { isWeeklyPassActive, pigmentIconSvg } from './levels.js';
 // js/dms.js), empilhado por cima dos dois — abre um popup com a oferta ao
 // clicar, em vez de um card fixo na tela principal.
 //
-// AINDA NÃO À VENDA: balão só aparece se config/features.weeklyPassOnSale
-// (Firestore, documento público, ligado à mão no Firebase Console quando
-// for a hora de lançar) for true -- OU se a conta for admin (ver
-// canSeeWeeklyPass abaixo), pra dar pra conferir/testar sem expor pra
-// ninguém mais. Lido uma vez só, não é um listener — não precisa reagir em
-// tempo real a essa flag mudando enquanto alguém já está com o app aberto.
+// AINDA NÃO À VENDA: dentro do app nativo, balão só aparece se
+// config/features.weeklyPassOnSale (Firestore, documento público, ligado à
+// mão no Firebase Console quando for a hora de lançar) for true -- OU se a
+// conta for admin (ver canSeeWeeklyPass abaixo), pra dar pra conferir/testar
+// sem expor pra ninguém mais. Lido uma vez só, não é um listener — não
+// precisa reagir em tempo real a essa flag mudando enquanto alguém já está
+// com o app aberto.
+//
+// NO NAVEGADOR (PC ou celular, sem o WebView do Capacitor): ainda não tem
+// como comprar de verdade (falta o produto "Web Billing" do RevenueCat com
+// Stripe conectado -- não configurado ainda), então lá o balão só aparece
+// pra conta admin, mesmo que weeklyPassOnSale já esteja true (ver
+// refreshWeeklyPassBubble abaixo). Clicar em comprar mostra um aviso de
+// "em breve" em vez de tentar chamar o plugin nativo que não existe ali.
 //
 // A "Public API Key" do RevenueCat NÃO é segredo (mesmo status da chave do
 // Firebase já hardcoded em js/firebase.js — identifica o projeto, não
@@ -125,14 +133,23 @@ async function refreshWeeklyPassBubble() {
   const bubble = $('weekly-pass-bubble');
   if (!bubble) return;
   await ensureWeeklyPassFlagLoaded();
-  // compra real só existe dentro do app nativo (mesmo raciocínio já
-  // aplicado ao botão de Sign in with Apple, ver isNativeApp em js/nav.js —
-  // checagem duplicada aqui de propósito, não compensa um módulo
-  // compartilhado só pra isso, mesmo padrão já usado nos outros arquivos)
+  // checagem duplicada de propósito (mesmo raciocínio já aplicado ao botão
+  // de Sign in with Apple, ver isNativeApp em js/nav.js) — não compensa um
+  // módulo compartilhado só pra isso, mesmo padrão já usado nos outros
+  // arquivos
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  // no navegador (PC ou celular) ainda não existe forma de comprar de
+  // verdade — falta o produto "Web Billing" do RevenueCat com Stripe
+  // conectado, que ainda não foi configurado. Até isso existir, o balão só
+  // aparece no navegador pra conta admin (mesmo campo scores/{uid}.admin de
+  // canSeeWeeklyPass acima), pra dar pra conferir/testar a tela sem expor
+  // pra ninguém mais — mesmo com weeklyPassOnSale já ligado pro app nativo.
+  // Dentro do app nativo continua valendo a regra normal (canSeeWeeklyPass).
+  const isAdmin = !!(state.myData && state.myData.admin === true);
+  const visibleHere = isNative ? canSeeWeeklyPass() : isAdmin;
   const active = document.querySelector('.screen.active');
-  const eligible = !!(active && WEEKLY_PASS_BUBBLE_SCREENS.has(active.id) && canSeeWeeklyPass()
-    && isNative && !state.offline && state.currentUser && state.myData.nick);
+  const eligible = !!(active && WEEKLY_PASS_BUBBLE_SCREENS.has(active.id) && visibleHere
+    && !state.offline && state.currentUser && state.myData.nick);
   bubble.style.display = eligible ? 'flex' : 'none';
   // empilha por cima do balão de chat (agora ÚNICO, amigos+clã em abas — ver
   // js/dms.js) se ele estiver visível nesse instante (mesma ideia de
@@ -194,7 +211,11 @@ window.weeklyPassCardClick = async () => {
   // functions/index.js) mas não é o que o toque no botão faz aqui
   if (!canSeeWeeklyPass() || isWeeklyPassActive(state.myData)) return;
   const Purchases = purchasesPlugin();
-  if (!Purchases) { alert(T[state.lang].guild_err_generic); return; }
+  // sem o plugin nativo (navegador, ver isNative em refreshWeeklyPassBubble
+  // acima) ainda não tem como comprar de verdade -- mensagem específica em
+  // vez do erro genérico, já que quem chega aqui é só a conta admin
+  // conferindo a tela (ver visibleHere em refreshWeeklyPassBubble)
+  if (!Purchases) { alert(T[state.lang].weekly_pass_web_soon); return; }
   const statusEl = $('weekly-pass-status');
   const prevText = statusEl ? statusEl.textContent : '';
   try {
