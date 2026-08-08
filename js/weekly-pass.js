@@ -121,6 +121,18 @@ function isAdminAccount() {
   return !!(state.myData && state.myData.admin === true);
 }
 
+// moeda cobrada no navegador -- mesmo par PT→BRL / EN,ES→USD já usado no
+// preço estático T[lang].weekly_pass_price ("R$9,90"/"US$1.99"/"US$1,99").
+// getOfferings({currency}) do RevenueCat Web Billing (ver
+// GetOfferingsParams do SDK) é quem decide em qual das duas moedas
+// cadastradas no produto (weekly_pass_web tem preço em BRL e USD, ver
+// RevenueCat > Product catalog) a compra sai -- sem passar isso, cai na
+// moeda "padrão" configurada pro app inteiro (BRL), então sem isso um
+// visitante em inglês/espanhol também pagaria em reais.
+function weeklyPassCurrency() {
+  return state.lang === 'pt' ? 'BRL' : 'USD';
+}
+
 // mesmas telas "principais" do balão de chat único (ver
 // DM_CHAT_BUBBLE_SCREENS em js/dms.js) — fora dessas, some sozinho (não
 // atrapalha uma partida/duelo em andamento)
@@ -202,7 +214,7 @@ async function refreshWeeklyPassPricing() {
       // sem risco de carregar o SDK web/pedir preço do Stripe à toa
       if (!canBuyWeeklyPassWeb()) return;
       const purchases = await ensureWebPurchasesConfigured();
-      const offerings = await purchases.getOfferings();
+      const offerings = await purchases.getOfferings({ currency: weeklyPassCurrency() });
       const pkgs = (offerings.current && offerings.current.availablePackages) || [];
       const pkg = pkgs.find(p => p.webBillingProduct && p.webBillingProduct.identifier === WEEKLY_PASS_WEB_PRODUCT_ID);
       const price = pkg && pkg.webBillingProduct && pkg.webBillingProduct.price;
@@ -398,7 +410,7 @@ window.weeklyPassCardClick = async () => {
   try {
     if (statusEl) statusEl.textContent = T[state.lang].loading_text;
     const purchases = await ensureWebPurchasesConfigured();
-    const offerings = await purchases.getOfferings();
+    const offerings = await purchases.getOfferings({ currency: weeklyPassCurrency() });
     const pkgs = (offerings.current && offerings.current.availablePackages) || [];
     const pkg = pkgs.find(p => p.webBillingProduct && p.webBillingProduct.identifier === WEEKLY_PASS_WEB_PRODUCT_ID);
     if (!pkg) throw new Error('Produto do Passe Semanal (web) ainda não configurado no RevenueCat.');
