@@ -233,6 +233,10 @@ async function refreshWeeklyPassBubble() {
   const eligible = !!(active && WEEKLY_PASS_BUBBLE_SCREENS.has(active.id) && visibleHere
     && !state.offline && state.currentUser && state.myData.nick);
   bubble.style.display = eligible ? 'flex' : 'none';
+  // selo verde de "✓" no canto -- só pra dar a entender de longe que essa
+  // conta já tem o passe comprado/ativo, sem precisar abrir o popup
+  const checkBadge = $('weekly-pass-bubble-check');
+  if (checkBadge) checkBadge.style.display = isWeeklyPassActive(state.myData) ? 'flex' : 'none';
   // empilha por cima do balão de chat (agora ÚNICO, amigos+clã em abas — ver
   // js/dms.js) se ele estiver visível nesse instante (mesma ideia de
   // refreshDmChatBubble) -- depende dele já ter sido atualizado neste mesmo
