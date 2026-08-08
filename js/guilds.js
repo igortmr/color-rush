@@ -59,12 +59,13 @@ function stopGuildListeners() {
 // deve sobreviver a uma troca de conta
 window.stopGuildListeners = stopGuildListeners;
 
-// convite de clã recebido (gravado em scores/{uid}.pendingGuildInvite por
-// inviteGuildMember, ver functions/index.js) — mesmo problema/solução da
-// bolinha de pedido de amizade (ver ensureFriendRequestsListener em
-// js/friends.js) e da caixa de mensagens do desafio diário (ver
-// ensureInboxBadgeListener em js/daily-challenge.js): sem isso, o convite só
-// aparecia (bolinha do menu + cartão de aceitar/recusar na tela do clã)
+// convites de clã recebidos (gravados em scores/{uid}.pendingGuildInvites por
+// inviteGuildMember, ver functions/index.js — mapa por guildId, já que dá pra
+// estar convidada por vários clãs ao mesmo tempo, ver comentário lá) — mesmo
+// problema/solução da bolinha de pedido de amizade (ver
+// ensureFriendRequestsListener em js/friends.js) e da caixa de mensagens do
+// desafio diário (ver ensureInboxBadgeListener em js/daily-challenge.js): sem
+// isso, um convite novo só aparecia (bolinha do menu + lista na tela de Clãs)
 // depois de sair/voltar a entrar no jogo. Diferente do resto do clã (guildUnsub/
 // joinReqUnsub/inviteUnsub acima), este listener não é preso à tela de um clã
 // específico — fica ativo a sessão toda, então NÃO entra em stopGuildListeners
@@ -72,7 +73,7 @@ window.stopGuildListeners = stopGuildListeners;
 // listener à toa). Ouve o PRÓPRIO doc scores/{uid} inteiro (não existe uma
 // coleção dedicada pra "convites que EU recebi", diferente de
 // guildInvites/{guildId} que é do lado de quem convida), mas só aplica o
-// campo pendingGuildInvite em state.myData — nunca sobrescreve os outros
+// campo pendingGuildInvites em state.myData — nunca sobrescreve os outros
 // campos (xp, recordes, etc.), que já têm suas próprias atualizações
 // otimistas espalhadas pelo resto do jogo.
 let myScoreInviteUnsub = null;
@@ -81,8 +82,15 @@ function ensureGuildInviteListener() {
   const myUid = state.currentUser.uid;
   myScoreInviteUnsub = onSnapshot(doc(db, 'scores', myUid), snap => {
     const data = snap.exists() ? snap.data() : {};
-    state.myData.pendingGuildInvite = data.pendingGuildInvite || null;
+    state.myData.pendingGuildInvites = data.pendingGuildInvites || {};
     refreshGuildMenuBadge();
+    // tela de Clãs (lista) ou tela de um clã específico já abertas quando um
+    // convite chega/é respondido em outra aba — re-renderiza sem precisar
+    // sair e voltar
+    const activeScreen = document.querySelector('.screen.active');
+    const activeId = activeScreen && activeScreen.id;
+    if (activeId === 'guild-list-screen') renderGuildList();
+    else if (activeId === 'guild-screen' && currentGuildData) renderGuildScreen();
   }, () => {});
 }
 window.ensureGuildInviteListener = ensureGuildInviteListener;
@@ -91,20 +99,14 @@ window.stopGuildInviteListener = () => {
 };
 
 /* ================== atalho do menu ================== */
-// "CLÃS" no menu vai direto pro próprio clã se a pessoa já estiver em um;
-// senão, abre a listagem geral pra procurar/criar um
+// "CLÃS" no menu sempre abre a listagem geral agora (antes pulava direto pro
+// próprio clã/convite pendente) — pedido explícito: a pessoa precisa
+// continuar vendo todos os clãs mesmo já estando em um ou com convite(s)
+// pendente(s). Quem já está num clã tem o atalho "Meu Clã" ali na própria
+// listagem (ver window.showMyGuild/renderGuildList), e quem tem convite(s)
+// vê a lista deles no topo da mesma tela.
 window.showGuildHome = () => {
-  if (state.myData.guildId) {
-    pushScreenAndShow('guild-screen', 'menu-screen');
-    openGuildScreen(state.myData.guildId);
-  } else if (state.myData.pendingGuildInvite) {
-    // convite pendente tem prioridade — leva direto pro clã que convidou,
-    // já mostrando o cartão de aceitar/recusar (ver nonMemberActionCard)
-    pushScreenAndShow('guild-screen', 'menu-screen');
-    openGuildScreen(state.myData.pendingGuildInvite.guildId);
-  } else {
-    window.showGuildList();
-  }
+  window.showGuildList();
 };
 
 /* ================== listagem de clãs ================== */
@@ -114,6 +116,14 @@ window.showGuildList = () => {
   stopGuildListeners();
   show('guild-list-screen');
   renderGuildList();
+};
+
+// atalho "Meu Clã" na listagem (ver renderGuildList) — só aparece pra quem já
+// é membro de algum clã
+window.showMyGuild = () => {
+  if (!state.myData.guildId) return;
+  pushScreenAndShow('guild-screen', 'guild-list-screen');
+  openGuildScreen(state.myData.guildId);
 };
 
 async function fetchAllGuilds(force) {
@@ -133,6 +143,8 @@ async function renderGuildList() {
   const body = $('guild-list-body');
   const createBtn = $('guild-create-btn');
   const createHint = $('guild-create-hint');
+  const myGuildBtn = $('guild-my-guild-btn');
+  const invitesWrap = $('guild-list-invites');
 
   if (state.offline || !state.currentUser) {
     body.innerHTML = `
@@ -142,8 +154,29 @@ async function renderGuildList() {
       </div>`;
     createBtn.style.display = 'none';
     createHint.style.display = 'none';
+    myGuildBtn.style.display = 'none';
+    invitesWrap.innerHTML = '';
     resetScroll('guild-list-screen');
     return;
+  }
+
+  // atalho "Meu Clã" — só pra quem já é membro de um. A lista completa
+  // abaixo continua aparecendo mesmo assim (pedido explícito), isso aqui é
+  // só um jeito rápido de achar o próprio clã sem precisar procurar nela
+  myGuildBtn.style.display = state.myData.guildId ? '' : 'none';
+
+  // convites de clã recebidos — só faz sentido oferecer escolha pra quem
+  // ainda não está em nenhum clã (quem já está não consegue aceitar outro,
+  // ver respondGuildInvite no servidor). Aceitar UM cancela os demais
+  // sozinho (mesma function), então essa lista não precisa filtrar nada além
+  // disso — ela simplesmente esvazia quando o servidor confirmar
+  invitesWrap.innerHTML = '';
+  if (!state.myData.guildId) {
+    const invites = Object.entries(state.myData.pendingGuildInvites || {});
+    if (invites.length) {
+      invitesWrap.insertAdjacentHTML('beforeend', `<div class="muted" style="text-align:center;">${T[state.lang].guild_invites_received_title}</div>`);
+      invites.forEach(([guildId, data]) => invitesWrap.appendChild(guildInviteRow(guildId, data)));
+    }
   }
 
   const myLevel = levelFromXp(myXp());
@@ -203,6 +236,37 @@ function guildListRow(g) {
     openGuildScreen(g.id);
   };
   return row;
+}
+
+// linha de convite recebido, na LISTA de clãs (não mais só dentro da tela de
+// um clã específico — ver nonMemberActionCard, que continua funcionando
+// igual se a pessoa abrir aquele clã por outro caminho, ex.: [TAG] clicável).
+// Cada convite tem seu próprio aceitar/recusar, já que dá pra ter vários ao
+// mesmo tempo — aceitar um faz o servidor cancelar os demais sozinho
+// (respondGuildInvite), então essa linha nem precisa se preocupar com isso.
+function guildInviteRow(guildId, data) {
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.style.textAlign = 'center';
+  const p = document.createElement('p');
+  p.textContent = T[state.lang].guild_invite_received(`[${data.tag}] ${data.name}`);
+  wrap.appendChild(p);
+  const row = document.createElement('div');
+  row.className = 'btn-row';
+  row.style.width = '100%';
+  const acceptBtn = document.createElement('button');
+  acceptBtn.style.flex = '1';
+  acceptBtn.textContent = T[state.lang].btn_accept;
+  acceptBtn.onclick = () => withBtnLoading(acceptBtn, () => respondGuildInviteFromList(guildId, true));
+  row.appendChild(acceptBtn);
+  const declineBtn = document.createElement('button');
+  declineBtn.className = 'secondary';
+  declineBtn.style.flex = '1';
+  declineBtn.textContent = T[state.lang].btn_decline;
+  declineBtn.onclick = () => withBtnLoading(declineBtn, () => respondGuildInviteFromList(guildId, false));
+  row.appendChild(declineBtn);
+  wrap.appendChild(row);
+  return wrap;
 }
 
 /* ================== criar clã ================== */
@@ -449,11 +513,14 @@ function nonMemberActionCard(g, myUid) {
     return wrap;
   }
   // convite recebido da líder desse clã (ver inviteGuildMember) — checado
-  // ANTES da solicitação enviada por mim, já que só dá pra ter uma das
-  // duas coisas de cada vez (não dá pra convidar quem já pediu, nem pedir
-  // pra entrar em outro depois de já ter um convite pendente)
-  const invite = state.myData.pendingGuildInvite;
-  if (invite && invite.guildId === g.id) {
+  // ANTES da solicitação enviada por mim. Dá pra ter convite de VÁRIOS clãs
+  // ao mesmo tempo (ver pendingGuildInvites, um mapa por guildId) — a lista
+  // completa deles aparece na tela de Clãs (ver guildInviteRow); esse card
+  // aqui é só um atalho a mais pra quando a pessoa já está vendo ESTE clã
+  // específico (ex.: abriu pela sigla [TAG] em algum lugar).
+  const invites = state.myData.pendingGuildInvites || {};
+  const invite = invites[g.id];
+  if (invite) {
     wrap.innerHTML = `<p>${T[state.lang].guild_invite_received(g.name)}</p>`;
     const row = document.createElement('div');
     row.className = 'btn-row';
@@ -461,13 +528,13 @@ function nonMemberActionCard(g, myUid) {
     const acceptBtn = document.createElement('button');
     acceptBtn.style.flex = '1';
     acceptBtn.textContent = T[state.lang].btn_accept;
-    acceptBtn.onclick = () => withBtnLoading(acceptBtn, () => respondGuildInvite(true));
+    acceptBtn.onclick = () => withBtnLoading(acceptBtn, () => respondGuildInvite(g.id, true));
     row.appendChild(acceptBtn);
     const declineBtn = document.createElement('button');
     declineBtn.className = 'secondary';
     declineBtn.style.flex = '1';
     declineBtn.textContent = T[state.lang].btn_decline;
-    declineBtn.onclick = () => withBtnLoading(declineBtn, () => respondGuildInvite(false));
+    declineBtn.onclick = () => withBtnLoading(declineBtn, () => respondGuildInvite(g.id, false));
     row.appendChild(declineBtn);
     wrap.appendChild(row);
     return wrap;
@@ -654,7 +721,7 @@ function leaderToolsSection(g) {
   }
   const btn = document.createElement('button');
   btn.className = 'secondary';
-  btn.style.color = 'var(--neon-red)';
+  btn.style.cssText = 'color:var(--neon-red); padding:8px 18px; font-size:0.8rem;';
   btn.textContent = T[state.lang].guild_btn_disband;
   btn.onclick = uiDisbandGuild;
   wrap.appendChild(btn);
@@ -1546,15 +1613,34 @@ window.renderGuildInviteAction = async (theirUid, theirNick, theirGuildId) => {
 async function uiCancelGuildInvite(uid) {
   try { await callCancelGuildInvite({ uid }); } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 }
-window.respondGuildInvite = async (accept) => {
+window.respondGuildInvite = async (guildId, accept) => {
   try {
-    const res = await callRespondGuildInvite({ accept });
-    state.myData.pendingGuildInvite = null;
+    const res = await callRespondGuildInvite({ guildId, accept });
     if (accept && res.data && res.data.accepted) {
       // já estamos vendo a tela desse clã (só dá pra aceitar de dentro
       // dela) — o listener ao vivo do próprio clã vai atualizar sozinho,
       // isso aqui só garante que o resto do app (menu etc.) saiba na hora
       state.myData.guildId = currentGuildId;
+    }
+  } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
+};
+// mesma ação, chamada de dentro da LISTA de clãs (ver guildInviteRow) em vez
+// de dentro da tela de um clã específico — currentGuildId não existe nesse
+// contexto (a pessoa nem abriu nenhum clã ainda), então precisa navegar pra
+// tela do clã manualmente ao aceitar
+window.respondGuildInviteFromList = async (guildId, accept) => {
+  try {
+    const res = await callRespondGuildInvite({ guildId, accept });
+    if (accept && res.data && res.data.accepted) {
+      state.myData.guildId = guildId;
+      pushScreenAndShow('guild-screen', 'guild-list-screen');
+      openGuildScreen(guildId);
+    } else {
+      // atualização otimista — o listener de scores/{uid} também vai remover
+      // essa linha sozinho quando a escrita do servidor chegar, isso aqui só
+      // evita esperar o round-trip pra sumir da lista
+      if (state.myData.pendingGuildInvites) delete state.myData.pendingGuildInvites[guildId];
+      renderGuildList();
     }
   } catch (e) { alert((e && e.message) || T[state.lang].guild_err_generic); }
 };
@@ -1732,10 +1818,11 @@ export async function refreshGuildMenuBadge() {
   const badge = $('menu-quick-guild-badge');
   if (!badge) return;
   if (state.offline || !state.currentUser) { badge.style.display = 'none'; return; }
-  // convite de clã pendente (recebido) conta mesmo sem estar em nenhum clã
-  // ainda — é justamente o que precisa de resposta
+  // convite(s) de clã pendente(s) (recebidos) contam mesmo sem estar em
+  // nenhum clã ainda — é justamente o que precisa de resposta; pode ter mais
+  // de um ao mesmo tempo agora (ver pendingGuildInvites)
   if (!state.myData.guildId) {
-    const n = state.myData.pendingGuildInvite ? 1 : 0;
+    const n = Object.keys(state.myData.pendingGuildInvites || {}).length;
     badge.textContent = n;
     badge.style.display = n > 0 ? '' : 'none';
     return;

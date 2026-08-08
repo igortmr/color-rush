@@ -1071,8 +1071,15 @@
     <h1 style="font-size:2rem; display:flex; align-items:center; gap:8px;"><img class="page-title-icon" src="img/menu-icons/guild.png" alt=""><span data-i18n="guild_list_title_plain">CLÃS</span></h1>
     <button class="pill-btn" onclick="showMenu()" data-i18n="btn_back">VOLTAR</button>
   </div>
+  <!-- atalho pro próprio clã -- só aparece pra quem já é membro de um (ver
+       renderGuildList em js/guilds.js); a lista completa mais abaixo continua
+       aparecendo mesmo assim, pedido explícito -->
+  <button id="guild-my-guild-btn" class="secondary" style="display:none; padding:8px 18px; font-size:0.85rem;" onclick="showMyGuild()" data-i18n="guild_btn_my_guild">🛡️ Meu Clã</button>
   <button id="guild-create-btn" style="display:none;" onclick="openCreateGuildModal()"></button>
   <div class="muted" id="guild-create-hint" style="display:none; text-align:center;"></div>
+  <!-- convite(s) de clã recebidos -- só pra quem ainda não está em nenhum
+       (ver renderGuildList/guildInviteRow em js/guilds.js) -->
+  <div id="guild-list-invites" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
   <div id="guild-list-body" style="width:100%; display:flex; flex-direction:column; gap:10px;"></div>
 </div>
 
