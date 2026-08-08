@@ -291,8 +291,8 @@ export async function buildShareImageBlob(score) {
   drawLogo(ctx, W / 2, 1020, C, 950);
 
   // "Fiz {score} pontos."
-  const prefixFont = "600 44px Rajdhani, sans-serif";
-  const scoreFont = "900 64px Orbitron, sans-serif";
+  const prefixFont = "600 54px Rajdhani, sans-serif";
+  const scoreFont = "900 78px Orbitron, sans-serif";
   const suffixFont = prefixFont;
   const prefix = t.share_img_prefix;
   const scoreStr = String(score);
@@ -318,7 +318,7 @@ export async function buildShareImageBlob(score) {
 
   // "Consegue me vencer?"
   ctx.fillStyle = '#eef1ff';
-  spacedText(ctx, t.share_img_question, "700 42px Rajdhani, sans-serif", 0, true, W / 2, 1330, 'center');
+  spacedText(ctx, t.share_img_question, "700 48px Rajdhani, sans-serif", 0, true, W / 2, 1345, 'center');
 
   // CTA
   drawCta(ctx, (W - 820) / 2, 1480, 820, 150, C, icon, t.share_img_cta);
