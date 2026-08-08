@@ -642,21 +642,23 @@
   .chat-bubble .menu-quick-badge { top: -4px; right: -4px; }
   #dm-chat-bubble { background: linear-gradient(135deg, var(--neon-green), var(--neon-blue)); }
   /* balãozinho do Passe Semanal (ver js/weekly-pass.js) -- mesmo padrão dos
-     de clã/amigos acima, mas amarelo brilhante com um pulso contínuo no
-     glow (não só no hover) de propósito, pra chamar atenção sozinho sem
-     precisar de nenhum texto do tipo "novidade!" */
+     de clã/amigos acima, mas com o mesmo fundo escuro do popup que ele abre
+     (#weekly-pass-popup, ver .chat-popup abaixo) + borda dourada com um
+     pulso contínuo no glow (não só no hover) de propósito, pra chamar
+     atenção sozinho sem precisar de nenhum texto do tipo "novidade!" */
   .weekly-pass-bubble {
-    background: linear-gradient(135deg, #ffe93c, #ff9f1c);
+    background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+    border: 2px solid #ffce3c;
     font-size: 1.8rem;
     animation: weeklyPassBubblePulse 2.2s ease-in-out infinite;
   }
-  /* drop-shadow de fora (0 4px 18px) fica FIXO nos dois momentos do pulso de
-     propósito -- quem realmente "pisca" agora é o glow inset (pra DENTRO do
-     círculo, atrás/ao redor da ⭐), a pedido do usuário, em vez do halo
-     crescendo pra fora que tinha antes */
+  /* drop-shadow de fora (0 4px 18px, neutro/escuro -- só profundidade) fica
+     FIXO nos dois momentos do pulso de propósito -- quem realmente "pisca"
+     é o glow dourado inset (pra DENTRO do círculo, atrás/ao redor da ⭐,
+     mesma cor da borda), em vez de crescer pra fora */
   @keyframes weeklyPassBubblePulse {
-    0%, 100% { box-shadow: 0 4px 18px rgba(255,233,60,0.45), 0 0 0 3px rgba(255,255,255,0.08), inset 0 0 8px rgba(255,255,255,0.18); }
-    50% { box-shadow: 0 4px 18px rgba(255,233,60,0.45), 0 0 0 3px rgba(255,255,255,0.08), inset 0 0 20px rgba(255,255,255,0.6); }
+    0%, 100% { box-shadow: 0 4px 18px rgba(0,0,0,0.4), inset 0 0 8px rgba(255,206,60,0.3); }
+    50% { box-shadow: 0 4px 18px rgba(0,0,0,0.4), inset 0 0 22px rgba(255,206,60,0.85); }
   }
   /* popup que abre ao clicar no balão -- borda dourada fixa + o mesmo tipo
      de pulso do balão (mas de fora, faz sentido num painel/card), pra ficar
