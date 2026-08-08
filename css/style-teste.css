@@ -641,9 +641,24 @@
     font-size: 1.8rem;
     animation: weeklyPassBubblePulse 2.2s ease-in-out infinite;
   }
+  /* drop-shadow de fora (0 4px 18px) fica FIXO nos dois momentos do pulso de
+     propósito -- quem realmente "pisca" agora é o glow inset (pra DENTRO do
+     círculo, atrás/ao redor da ⭐), a pedido do usuário, em vez do halo
+     crescendo pra fora que tinha antes */
   @keyframes weeklyPassBubblePulse {
-    0%, 100% { box-shadow: 0 4px 18px rgba(255,233,60,0.45), 0 0 0 3px rgba(255,255,255,0.08); }
-    50% { box-shadow: 0 4px 28px rgba(255,233,60,0.85), 0 0 0 6px rgba(255,233,60,0.25); }
+    0%, 100% { box-shadow: 0 4px 18px rgba(255,233,60,0.45), 0 0 0 3px rgba(255,255,255,0.08), inset 0 0 8px rgba(255,255,255,0.18); }
+    50% { box-shadow: 0 4px 18px rgba(255,233,60,0.45), 0 0 0 3px rgba(255,255,255,0.08), inset 0 0 20px rgba(255,255,255,0.6); }
+  }
+  /* popup que abre ao clicar no balão -- borda dourada fixa + o mesmo tipo
+     de pulso do balão (mas de fora, faz sentido num painel/card), pra ficar
+     visualmente "grudado" na origem dourada/brilhante do balão */
+  #weekly-pass-popup {
+    border-color: #ffce3c;
+    animation: weeklyPassPopupGlow 2.2s ease-in-out infinite;
+  }
+  @keyframes weeklyPassPopupGlow {
+    0%, 100% { box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 10px rgba(255,206,60,0.35); }
+    50% { box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 22px rgba(255,206,60,0.8); }
   }
   .weekly-pass-popup-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
   .weekly-pass-popup-body p { margin: 0; font-size: 0.88rem; line-height: 1.4; }
