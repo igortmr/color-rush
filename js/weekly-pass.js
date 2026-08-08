@@ -192,11 +192,21 @@ async function refreshWeeklyPassPricing() {
 function renderWeeklyPassPopupContent() {
   const statusEl = $('weekly-pass-status');
   if (!statusEl) return;
-  if (isWeeklyPassActive(state.myData)) {
+  const buyBtn = $('weekly-pass-buy-btn');
+  const active = isWeeklyPassActive(state.myData);
+  // com o passe já ativo, clicar não faz nada (ver weeklyPassCardClick) --
+  // desabilita de verdade o <button> em vez de só deixar sem função, assim
+  // ele cai automaticamente no mesmo estilo "button:disabled" (cinza, sem
+  // hover, cursor not-allowed) já usado em todo o resto do jogo, sem
+  // precisar de CSS novo só pra isso
+  if (buyBtn) buyBtn.disabled = active;
+  if (active) {
     const expMs = state.myData.weeklyPassExpiresAt.toMillis();
     const localeTag = state.lang === 'en' ? 'en-US' : state.lang === 'es' ? 'es-ES' : 'pt-BR';
-    const dateStr = new Date(expMs).toLocaleDateString(localeTag);
-    statusEl.textContent = T[state.lang].weekly_pass_active_until(dateStr);
+    const expDate = new Date(expMs);
+    const dateStr = expDate.toLocaleDateString(localeTag);
+    const timeStr = expDate.toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' });
+    statusEl.textContent = T[state.lang].weekly_pass_active_until(dateStr, timeStr);
   } else {
     statusEl.textContent = weeklyPassPriceString || T[state.lang].weekly_pass_price;
   }
