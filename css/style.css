@@ -630,7 +630,16 @@
   .chat-bubble {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    /* "right: 20px" sozinho cola no canto da JANELA -- em telas largas
+       (desktop) isso deixava o balão bem longe do jogo de verdade, que fica
+       centralizado e limitado a max-width:520px (ver .screen abaixo). Esse
+       calc() soma a metade da folga extra (viewport menos os 520px do
+       conteúdo) ao 20px normal, então o balão acompanha a borda direita do
+       conteúdo em vez da borda da janela -- em telas estreitas (celular,
+       viewport <= 520px) o max(0px, ...) zera essa soma e volta a ser
+       exatamente os 20px de sempre, sem mudar nada aí. Precisa bater com o
+       max-width de .screen se ele mudar um dia. */
+    right: calc(20px + max(0px, (100vw - 520px) / 2));
     width: 56px;
     height: 56px;
     border-radius: 50%;
@@ -703,7 +712,9 @@
   .chat-popup {
     position: fixed;
     bottom: 88px;
-    right: 20px;
+    /* mesmo raciocínio do .chat-bubble acima -- acompanha a borda do balão
+       que abre o popup em vez de colar na borda da janela em telas largas */
+    right: calc(20px + max(0px, (100vw - 520px) / 2));
     width: min(320px, calc(100vw - 32px));
     max-height: 420px;
     background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
