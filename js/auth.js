@@ -1,7 +1,7 @@
 import {
   onAuthStateChanged, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, signInWithCustomToken, GoogleAuthProvider, OAuthProvider, signInWithPopup,
-  signInWithCredential, signOut, sendEmailVerification
+  signInWithCredential, signOut, sendEmailVerification, sendPasswordResetEmail
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
@@ -97,6 +97,53 @@ window.doLogin = async () => {
     $('auth-error').textContent = isEmail ? authErrMsg(e) : T[state.lang].auth_nick_invalid;
   }
 };
+// olho de mostrar/ocultar senha -- reutilizado no login (#auth-pass) e na
+// criação de conta (#signup-pass), ver .pass-field-wrap/.pass-toggle-btn em
+// css/style.css. O botão é sempre o próximo irmão do input dentro do mesmo
+// .pass-field-wrap, então não precisa de id nenhum pra achar o campo certo.
+window.togglePasswordVisibility = (btn) => {
+  const input = btn.previousElementSibling;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.querySelector('.eye-show').style.display = show ? 'none' : '';
+  btn.querySelector('.eye-hide').style.display = show ? '' : 'none';
+};
+
+// "esqueci minha senha" -- só aceita E-MAIL (o campo de login aceita nick
+// também, mas sendPasswordResetEmail exige o e-mail de verdade; login por
+// nick nunca expõe o e-mail da conta pro client, ver comentário em doLogin
+// acima, então não dá pra resolver nick -> e-mail no cliente)
+window.openForgotPasswordModal = () => {
+  $('forgot-password-error').textContent = '';
+  $('forgot-password-success').style.display = 'none';
+  $('forgot-password-success').textContent = '';
+  // pré-preenche com o que já tava no campo de login, SE parecer um e-mail
+  const loginVal = $('auth-email').value.trim();
+  $('forgot-password-email').value = loginVal.includes('@') ? loginVal : '';
+  $('forgot-password-modal').style.display = 'flex';
+};
+window.closeForgotPasswordModal = () => {
+  $('forgot-password-modal').style.display = 'none';
+};
+window.doForgotPassword = async () => {
+  const errEl = $('forgot-password-error');
+  const successEl = $('forgot-password-success');
+  errEl.textContent = '';
+  successEl.style.display = 'none';
+  const email = $('forgot-password-email').value.trim();
+  if (!email.includes('@')) {
+    errEl.textContent = T[state.lang].forgot_password_need_email;
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    successEl.textContent = T[state.lang].forgot_password_sent;
+    successEl.style.display = '';
+  } catch (e) {
+    errEl.textContent = authErrMsg(e);
+  }
+};
+
 // criar conta agora só acontece pela popup #signup-modal (campos próprios,
 // separados dos de login) — a tela inicial fica exclusiva pra quem já tem conta
 window.openSignupModal = () => {

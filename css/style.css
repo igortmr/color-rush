@@ -186,6 +186,24 @@
   }
   input:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(45,214,255,0.15), 0 0 14px rgba(45,214,255,0.35); }
   input::placeholder { color: #6b76a8; }
+  /* ícone de olho (mostrar/ocultar senha) — ver togglePasswordVisibility em
+     js/auth.js. Espaço reservado no padding-right do input pro botão não
+     ficar por cima do texto digitado. */
+  .pass-field-wrap { position: relative; width: 100%; }
+  .pass-field-wrap input { padding-right: 42px; }
+  .pass-toggle-btn {
+    position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+    width: 34px; height: 34px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; box-shadow: none;
+    color: #6b76a8; cursor: pointer;
+  }
+  /* mesmo padrão do .inbox-icon-btn acima -- sem isso o brilho de vidro/
+     "desce no clique" genérico de button (ver comentário grande logo abaixo)
+     ficava sobrando por cima do ícone e descentralizava ele do input */
+  .pass-toggle-btn::before { content: none; }
+  .pass-toggle-btn:hover { color: #fff; box-shadow: none; transform: translateY(-50%); }
+  .pass-toggle-btn:active { transform: translateY(-50%); }
   /* o text-transform:uppercase do #ref-code-input (tela de nick) também
      forçava o placeholder pra maiúsculo, deixando o "ex:" errado — o
      ::placeholder é o único jeito de excluir só ele da transformação */
