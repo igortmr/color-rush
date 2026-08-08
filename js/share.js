@@ -8,6 +8,7 @@ import { T } from './i18n.js';
 import { track } from './utils.js';
 import { modeLabel } from './levels.js';
 import { mode, score } from './game-core.js';
+import { buildShareImageBlob } from './share-image.js';
 
 /* ================== indicação (referral) ================== */
 // captura ?ref=<código curto> da URL de compartilhamento e guarda até o cadastro terminar
@@ -73,11 +74,40 @@ window.shareScore = async () => {
   const link = await buildShareLink();
   const text = T[state.lang].share_text(score, modeName, rec, link);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // gera o cartão de pontuação em canvas (ver js/share-image.js) — se algo
+  // der errado (ex.: navegador antigo sem toBlob), cai pro compartilhamento
+  // só com texto, que já funcionava antes dessa imagem existir
+  let file = null;
+  try {
+    const blob = await buildShareImageBlob(score);
+    if (blob) file = new File([blob], 'color-rush.png', { type: 'image/png' });
+  } catch {}
+
   try {
     if (isMobile && navigator.share) {
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ text, files: [file] });
+          return;
+        } catch {
+          // usuário cancelou o share nativo (ou o navegador recusou o
+          // arquivo) — não cai pro texto puro nesse caso pra não abrir um
+          // segundo compartilhamento logo depois de fechar o primeiro
+          return;
+        }
+      }
       await navigator.share({ text });
     } else {
       await navigator.clipboard.writeText(text);
+      if (file) {
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'color-rush.png';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      }
       $('share-status').textContent = T[state.lang].share_copied;
       setTimeout(() => { $('share-status').textContent = ''; }, 3000);
     }
