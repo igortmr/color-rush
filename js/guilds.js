@@ -454,6 +454,16 @@ async function renderGuildScreen() {
       <button class="scope-tab ${guildTab === 'treasury' ? 'active' : ''}" onclick="setGuildTab('treasury')">${T[state.lang].guild_tab_treasury}</button>
       <button class="scope-tab ${guildTab === 'shop' ? 'active' : ''}" onclick="setGuildTab('shop')">${T[state.lang].guild_tab_shop}</button>`;
     body.appendChild(tabs);
+  } else {
+    // não é membro nem admin -- só a lista de membros faz sentido ver (Chat/
+    // Cofre/Loja exigem fazer parte do clã), mas mesmo com uma aba só o
+    // título "Membros" continua aparecendo, senão a lista fica solta sem
+    // contexto nenhum. Div em vez de button (sem onclick -- não tem outra
+    // aba pra trocar) pra não herdar cursor:pointer/estado de :disabled
+    const tabs = document.createElement('div');
+    tabs.className = 'scope-tabs';
+    tabs.innerHTML = `<div class="scope-tab active" style="cursor:default;">${T[state.lang].guild_tab_members}</div>`;
+    body.appendChild(tabs);
   }
 
   if (!canSeeTabs || guildTab === 'members') {
