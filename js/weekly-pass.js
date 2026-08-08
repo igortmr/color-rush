@@ -331,13 +331,23 @@ window.toggleWeeklyPassPopup = () => {
 // parte -- ver comentário no topo do arquivo); aqui só espera um instante
 // (tempo do evento chegar e a Cloud Function processar) e recarrega
 // scores/{uid} pra tela já refletir o novo prazo sem precisar recarregar a
-// página/reabrir o app
-function reloadMyScoreAfterPurchase() {
+// página/reabrir o app.
+//
+// celebrateIfActive: usado no caminho de "cancelou" do checkout web (ver
+// weeklyPassCardClick abaixo) -- a tela de sucesso do RevenueCat tem um
+// botão "Concluir" E um X, e clicar no X depois do pagamento já ter passado
+// ainda assim faz o purchase() rejeitar como UserCancelledError (mesmo o
+// dinheiro já tendo sido cobrado). Em vez de confiar cegamente nesse sinal,
+// esse flag deixa recarregar o estado de qualquer jeito e só então decidir
+// se comemora -- se depois do reload o passe estiver mesmo ativo, mostra a
+// mesma comemoração que mostraria clicando "Concluir".
+function reloadMyScoreAfterPurchase({ celebrateIfActive = false } = {}) {
   setTimeout(async () => {
     try {
       const snap = await getDoc(doc(db, 'scores', state.currentUser.uid));
       if (snap.exists()) Object.assign(state.myData, snap.data());
     } catch {}
+    if (celebrateIfActive && isWeeklyPassActive(state.myData)) showWeeklyPassSuccess();
     renderWeeklyPassPopupContent();
     if (window.renderUserPigmentos) window.renderUserPigmentos();
     // com weeklyPassExpiresAt já recarregado, refaz a checagem de
@@ -437,7 +447,19 @@ window.weeklyPassCardClick = async () => {
     showWeeklyPassSuccess();
     reloadMyScoreAfterPurchase();
   } catch (e) {
-    if (e && e.errorCode === 1 /* ErrorCode.UserCancelledError */) { renderWeeklyPassPopupContent(); return; } // cancelou -- sem alerta
+    // "cancelado" nem sempre significa "não pagou" -- a tela de sucesso do
+    // RevenueCat tem um botão "Concluir" E um X, e fechar pelo X DEPOIS do
+    // pagamento já ter passado ainda cai aqui como UserCancelledError,
+    // mesmo o dinheiro já tendo sido cobrado. Por isso, em vez de só sair
+    // sem fazer nada, recarrega o estado do mesmo jeito e comemora se
+    // descobrir que o passe ficou ativo mesmo assim (ver celebrateIfActive
+    // em reloadMyScoreAfterPurchase) -- num cancelamento de verdade (saiu
+    // antes de pagar), o passe continua inativo e nada extra acontece.
+    if (e && e.errorCode === 1 /* ErrorCode.UserCancelledError */) {
+      reloadMyScoreAfterPurchase({ celebrateIfActive: true });
+      renderWeeklyPassPopupContent();
+      return;
+    }
     if (statusEl) statusEl.textContent = prevText;
     alert((e && e.message) || T[state.lang].guild_err_generic);
   }
