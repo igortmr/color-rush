@@ -379,6 +379,21 @@ function renderInboxList(msgs) {
       benefitLine.style.cssText = 'text-align:left; margin-top:6px; font-size:0.85rem; display:flex; align-items:center; gap:5px;';
       benefitLine.innerHTML = `<span class="wp-benefit-arrow">▸</span> ${T[state.lang].guild_battle_inbox_xp_line}: <b>+${msg.xp || 0} XP</b>`;
       box.appendChild(benefitLine);
+    } else if (msg.type === 'weekly_pass_daily') {
+      // bônus diário do Passe Semanal (ver grantWeeklyPass/
+      // grantWeeklyPassDailyPigmentos em functions/index.js) -- título/corpo
+      // fixos (i18n), igual ao prêmio do desafio diário abaixo; o resgate em
+      // si (linha de coins + botão) já é genérico mais embaixo, sem precisar
+      // de nada especial aqui
+      const titleLine = document.createElement('div');
+      titleLine.className = 'pos-line';
+      titleLine.textContent = T[state.lang].weekly_pass_daily_title;
+      box.appendChild(titleLine);
+      const bodyLine = document.createElement('div');
+      bodyLine.className = 'muted';
+      bodyLine.style.cssText = 'text-align:left; margin-top:4px;';
+      bodyLine.textContent = T[state.lang].weekly_pass_daily_body;
+      box.appendChild(bodyLine);
     } else {
       // mesmo formato título (negrito) + corpo do admin_message acima, só que
       // com texto fixo em vez de vir do documento -- título sempre

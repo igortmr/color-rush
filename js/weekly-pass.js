@@ -7,11 +7,14 @@ import { isWeeklyPassActive, pigmentIconSvg } from './levels.js';
 
 // Passe Semanal (IAP via RevenueCat) — R$9,90/US$1,99, dá por 7 dias a
 // partir da compra: nick amarelo (ver applyWeeklyPassNickColor em
-// js/levels.js), +500 Pigmentos (uma vez, na hora) e +1 tentativa no
+// js/levels.js), +100 Pigmentos POR DIA (700 no total, um "🌟 Bônus Passe
+// Semanal" por dia na caixa de entrada -- precisa resgatar, não é creditado
+// sozinho, ver grantWeeklyPass/grantWeeklyPassDailyPigmentos em
+// functions/index.js e a UI em js/daily-challenge.js) e +1 tentativa no
 // Desafio Diário (ver dailyMaxAttempts em js/daily-challenge.js). Quem
-// credita de verdade é o webhook do RevenueCat (revenueCatWebhook em
-// functions/index.js) — este arquivo só dispara a compra e reflete o
-// estado na tela.
+// credita o prazo (weeklyPassExpiresAt) de verdade é o webhook do RevenueCat
+// (revenueCatWebhook em functions/index.js) — este arquivo só dispara a
+// compra e reflete o estado na tela.
 //
 // UI: balãozinho flutuante amarelo (mesmo padrão dos de clã/amigos, ver
 // refreshGuildChatBubble em js/guilds.js / refreshDmChatBubble em
@@ -275,10 +278,12 @@ window.toggleWeeklyPassPopup = () => {
 };
 
 // comum aos dois fluxos (nativo/web) -- webhook do RevenueCat
-// (revenueCatWebhook em functions/index.js) é quem credita de verdade
-// (Pigmentos + weeklyPassExpiresAt); aqui só espera um instante (tempo do
-// evento chegar e a Cloud Function processar) e recarrega scores/{uid} pra
-// tela já refletir sem precisar recarregar a página/reabrir o app
+// (revenueCatWebhook em functions/index.js) é quem credita weeklyPassExpiresAt
+// de verdade (os Pigmentos viram mensagem na caixa de entrada, resgatada à
+// parte -- ver comentário no topo do arquivo); aqui só espera um instante
+// (tempo do evento chegar e a Cloud Function processar) e recarrega
+// scores/{uid} pra tela já refletir o novo prazo sem precisar recarregar a
+// página/reabrir o app
 function reloadMyScoreAfterPurchase() {
   setTimeout(async () => {
     try {
